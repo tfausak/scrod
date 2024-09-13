@@ -1,5 +1,4 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Scrod where
 
@@ -22,7 +21,7 @@ parseLHsModule ::
   -- | The source code to parse. Not currently clear which encoding Haskell
   -- files are expected to use. Probably UTF-8?
   String ->
-  Either (ErrUtil.Messages PsErr.PsMessage) (LHsModule GHC.Hs.GhcPs)
+  Either (Messages PsErr.PsMessage) (LHsModule GHC.Hs.GhcPs)
 parseLHsModule filePath string =
   let parserOpts =
         Lexer.mkParserOpts
@@ -44,20 +43,26 @@ parseLHsModule filePath string =
           (StringBuffer.stringToStringBuffer string)
           realSrcLoc
    in case Lexer.unP Parser.parseModule pState of
-        Lexer.PFailed newPState -> Left $ Lexer.getPsErrorMessages newPState
-        Lexer.POk _warnings lHsModule -> Right lHsModule
+        Lexer.PFailed newPState -> Left . Messages $ Lexer.getPsErrorMessages newPState
+        Lexer.POk _warnings lHsModule -> Right $ LHsModule lHsModule
 
--- | Most other types have an @L*@ variant for 'SrcLoc.Located' versions, but
--- for some reason 'HS.HsModule' does not.
-type LHsModule a = SrcLoc.Located (HS.HsModule a)
+-- | Wrapper to avoid orphans.
+newtype LHsModule a = LHsModule
+  { unwrapLHsModule :: SrcLoc.Located (HS.HsModule a)
+  }
 
--- | Provided for convenience when using 'parseLHsModule' in GHCi.
-instance (ErrUtil.Diagnostic a) => Show (ErrUtil.Messages a) where
-  show = Outputable.showPprUnsafe
+-- | Provided for convenience in GHCi.
+instance Show (LHsModule GHC.Hs.GhcPs) where
+  show = ($ "") . gshows . unwrapLHsModule
 
--- | Provided for convenience when using 'parseLHsModule' in GHCi.
-instance Show (HS.HsModule GHC.Hs.GhcPs) where
-  show = ($ "") . gshows
+-- | Wrapper to avoid orphans.
+newtype Messages a = Messages
+  { unwrapMessages :: ErrUtil.Messages a
+  }
+
+-- | Provided for convenience in GHCi.
+instance (ErrUtil.Diagnostic a) => Show (Messages a) where
+  show = Outputable.showPprUnsafe . unwrapMessages
 
 -- | Taken from <https://hackage.haskell.org/package/syb-0.7.2.4>.
 gshows :: (Data.Data a) => a -> ShowS
@@ -68,7 +73,7 @@ gshows =
       extQ f g a = maybe (f a) g (Data.cast a)
    in ( \t ->
           showChar '('
-            . (showString . Data.showConstr $ Data.toConstr t)
+            . showString (Data.showConstr $ Data.toConstr t)
             . foldr (.) id (Data.gmapQ ((showChar ' ' .) . gshows) t)
             . showChar ')'
       )

@@ -36,6 +36,7 @@ library
     -Wno-missing-deriving-strategies
     -Wno-missing-export-lists
     -Wno-missing-kind-signatures
+    -Wno-missing-role-annotations
     -Wno-missing-safe-haskell-mode
     -Wno-prepositive-qualified-module
     -Wno-safe

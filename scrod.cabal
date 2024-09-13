@@ -1,0 +1,46 @@
+cabal-version: 3.12
+name: scrod
+version: 0.2024.9.12
+category: Documentation
+description: Scrod is like Haddock but worse.
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+license-file: LICENSE.txt
+license: MIT
+maintainer: Taylor Fausak
+synopsis: Like Haddock but worse.
+
+source-repository head
+  location: https://github.com/tfausak/scrod
+  type: git
+
+flag pedantic
+  default: False
+  manual: True
+
+library
+  autogen-modules: PackageInfo_scrod
+  build-depends:
+    base ^>=4.20.0.0
+
+  default-language: Haskell2010
+  -- cabal-gild: discover source/library
+  exposed-modules: Scrod
+  ghc-options:
+    -Weverything
+    -Wno-implicit-prelude
+    -Wno-missing-deriving-strategies
+    -Wno-missing-export-lists
+    -Wno-missing-kind-signatures
+    -Wno-missing-safe-haskell-mode
+    -Wno-prepositive-qualified-module
+    -Wno-safe
+    -Wno-unsafe
+
+  hs-source-dirs: source/library
+  other-modules: PackageInfo_scrod
+
+  if flag(pedantic)
+    ghc-options: -Werror

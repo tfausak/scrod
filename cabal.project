@@ -1,1 +1,2 @@
 packages: .
+allow-newer: lucid2:base

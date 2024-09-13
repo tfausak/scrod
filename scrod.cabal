@@ -20,15 +20,9 @@ flag pedantic
   default: False
   manual: True
 
-library
-  autogen-modules: Paths_scrod
-  build-depends:
-    base ^>=4.20.0.0,
-    ghc ^>=9.10.1,
-
+common library
+  build-depends: base ^>=4.20.0.0
   default-language: Haskell2010
-  -- cabal-gild: discover source/library
-  exposed-modules: Scrod
   ghc-options:
     -Weverything
     -Wno-all-missed-specialisations
@@ -42,8 +36,32 @@ library
     -Wno-safe
     -Wno-unsafe
 
+  if flag(pedantic)
+    ghc-options: -Werror
+
+common executable
+  import: library
+  build-depends: scrod
+  ghc-options:
+    -rtsopts
+    -threaded
+
+library
+  import: library
+  autogen-modules: Paths_scrod
+  build-depends:
+    bytestring ^>=0.12.1.0,
+    ghc ^>=9.10.1,
+    haddock-library ^>=1.11.0,
+    lucid2 ^>=0.0.20240424,
+    text ^>=2.1.1,
+
+  -- cabal-gild: discover source/library
+  exposed-modules: Scrod
   hs-source-dirs: source/library
   other-modules: Paths_scrod
 
-  if flag(pedantic)
-    ghc-options: -Werror
+executable scrod
+  import: executable
+  hs-source-dirs: source/executable
+  main-is: Main.hs

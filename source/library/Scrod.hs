@@ -69,7 +69,7 @@ gshows =
    in ( \t ->
           showChar '('
             . (showString . Data.showConstr $ Data.toConstr t)
-            . (foldr (.) id $ Data.gmapQ ((showChar ' ' .) . gshows) t)
+            . foldr (.) id (Data.gmapQ ((showChar ' ' .) . gshows) t)
             . showChar ')'
       )
         `extQ` (shows :: String -> ShowS)

@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: scrod
-version: 0.2024.9.12
+version: 0.2024.9.13
 category: Documentation
 description: Scrod is like Haddock but worse.
 extra-doc-files:
@@ -53,6 +53,7 @@ library
     bytestring ^>=0.12.1.0,
     ghc ^>=9.10.1,
     haddock-library ^>=1.11.0,
+    hspec ^>=2.11.9,
     lucid2 ^>=0.0.20240424,
     text ^>=2.1.1,
 
@@ -65,3 +66,9 @@ executable scrod
   import: executable
   hs-source-dirs: source/executable
   main-is: Main.hs
+
+test-suite scrod-test-suite
+  import: executable
+  hs-source-dirs: source/test-suite
+  main-is: Main.hs
+  type: exitcode-stdio-1.0

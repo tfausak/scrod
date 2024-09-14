@@ -24,9 +24,14 @@ import qualified GHC.Utils.Error as ErrUtil
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as HS
 import qualified Lucid as H
+import qualified Test.Hspec as Hspec
 
-defaultMain :: IO ()
-defaultMain = do
+testSuite :: IO ()
+testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
+  pure ()
+
+executable :: IO ()
+executable = do
   contents <- getContents
   lHsModule <- case parseLHsModule "<interactive>" contents of
     Left messages -> fail $ show messages

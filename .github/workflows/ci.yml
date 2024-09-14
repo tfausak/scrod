@@ -10,7 +10,7 @@ jobs:
         with:
           ghc-version: '9.10'
       - run: cabal sdist --output-dir artifact
-      - run: cabal configure --flags=pedantic
+      - run: cabal configure --enable-tests --flags=pedantic
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: cabal freeze
@@ -29,6 +29,7 @@ jobs:
         with:
           name: scrod-${{ github.sha }}
           path: artifact.tar
+      - run: cabal test --test-options '--randomize --strict'
   cabal:
     name: Cabal
     runs-on: ubuntu-latest

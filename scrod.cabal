@@ -51,11 +51,15 @@ library
   autogen-modules: Paths_scrod
   build-depends:
     bytestring ^>=0.12.1.0,
+    case-insensitive ^>=1.2.1.0,
     ghc ^>=9.10.1,
     haddock-library ^>=1.11.0,
     hspec ^>=2.11.9,
+    http-types ^>=0.12.4,
     lucid2 ^>=0.0.20240424,
     text ^>=2.1.1,
+    wai ^>=3.2.4,
+    warp ^>=3.4.1,
 
   -- cabal-gild: discover source/library
   exposed-modules: Scrod

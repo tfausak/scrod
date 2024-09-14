@@ -36,6 +36,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: cabal check
+  deploy:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    name: Deploy
+    needs: build
+    secrets: inherit
+    uses: ./.github/workflows/deploy.yml
   gild:
     name: Gild
     runs-on: ubuntu-latest

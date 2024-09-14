@@ -102,7 +102,7 @@ newtype Messages a = Messages
 instance (ErrUtil.Diagnostic a) => Show (Messages a) where
   show = Outputable.showPprUnsafe . unwrapMessages
 
--- | Taken from <https://hackage.haskell.org/package/syb-0.7.2.4>.
+-- | Adapted from <https://hackage.haskell.org/package/syb-0.7.2.4>.
 gshows :: (Data.Data a) => a -> ShowS
 gshows =
   let extQ ::
@@ -112,7 +112,10 @@ gshows =
    in ( \t ->
           showChar '('
             . showString (Data.showConstr $ Data.toConstr t)
-            . foldr (.) id (Data.gmapQ ((showChar ' ' .) . gshows) t)
+            . ( case Data.cast t of
+                  Nothing -> foldr (.) id $ Data.gmapQ ((showChar ' ' .) . gshows) t
+                  Just hdsc -> showString . show $ GHC.Hs.renderHsDocString hdsc
+              )
             . showChar ')'
       )
         `extQ` (shows :: String -> ShowS)

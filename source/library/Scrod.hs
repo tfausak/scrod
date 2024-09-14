@@ -68,7 +68,7 @@ parseLHsModule filePath string =
           [] -- supported extensions
           False -- enable safe imports?
           True -- keep Haddock comments?
-          True -- keep regular comments?
+          False -- keep regular comments?
           False -- allow position to be updated by pragmas?
       realSrcLoc =
         SrcLoc.mkRealSrcLoc
@@ -124,10 +124,8 @@ extractHsDocStrings = Data.gmapQ $ \d -> case Data.cast d of
   Nothing -> concat $ extractHsDocStrings d
   Just hds -> [hds]
 
--- TODO: Figure out why some doc strings are duplicated.
-
 getHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.HsDocString]
-getHsDocStrings = List.nub . concat . extractHsDocStrings . unwrapLHsModule
+getHsDocStrings = concat . extractHsDocStrings . unwrapLHsModule
 
 parseHsDocString :: GHC.Hs.HsDocString -> Haddock.DocH Void.Void (Haddock.Namespace, String)
 parseHsDocString =

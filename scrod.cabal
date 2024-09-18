@@ -1,6 +1,6 @@
 cabal-version: 2.2
 name: scrod
-version: 0.2024.9.13
+version: 0.2024.9.17
 category: Documentation
 description: Scrod is like Haddock but worse.
 extra-doc-files:
@@ -53,6 +53,7 @@ library
     bytestring ^>=0.12.1.0,
     case-insensitive ^>=1.2.1.0,
     ghc ^>=9.10.1,
+    ghc-boot-th ^>=9.10.1,
     haddock-library ^>=1.11.0,
     hspec ^>=2.11.9,
     http-types ^>=0.12.4,

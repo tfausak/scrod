@@ -21,9 +21,13 @@ import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer
 import qualified GHC.Hs
+import qualified GHC.LanguageExtensions.Type as X
 import qualified GHC.Parser as Parser
 import qualified GHC.Parser.Errors.Types as PsErr
 import qualified GHC.Parser.Lexer as Lexer
+import qualified GHC.Stack as Stack
+import qualified GHC.Types.Name.Occurrence as OccName
+import qualified GHC.Types.Name.Reader as RdrName
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Error as ErrUtil
 import qualified GHC.Utils.Outputable as Outputable
@@ -40,7 +44,193 @@ import qualified Text.Printf as Printf
 
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
-  pure ()
+  Hspec.describe "getItems" $ do
+    let f = either (error . show) getItems . parseLHsModule ""
+
+    Hspec.it "empty" $ do
+      f "" `Hspec.shouldBe` []
+
+    Hspec.it "type family" $ do
+      f "type family A" `Hspec.shouldBe` [Item "A"]
+
+    Hspec.it "data family" $ do
+      f "data family B" `Hspec.shouldBe` [Item "B"]
+
+    Hspec.it "type synonym" $ do
+      f "type C = ()" `Hspec.shouldBe` [Item "C"]
+
+    Hspec.it "data" $ do
+      f "data D" `Hspec.shouldBe` [Item "D"]
+
+    Hspec.it "class" $ do
+      f "class E" `Hspec.shouldBe` [Item "E"]
+
+    Hspec.it "class instance" $ do
+      f "instance F" `Hspec.shouldBe` [Item "F"]
+
+    Hspec.it "data instance" $ do
+      f "data instance G" `Hspec.shouldBe` [Item "G"]
+
+    Hspec.it "newtype instance" $ do
+      f "newtype instance H = X" `Hspec.shouldBe` [Item "H"]
+
+    Hspec.it "type instance" $ do
+      f "type instance I = X" `Hspec.shouldBe` [Item "I"]
+
+    Hspec.it "deriving instance" $ do
+      f "deriving instance J" `Hspec.shouldBe` [Item "J"]
+
+    Hspec.it "function" $ do
+      f "h x = x" `Hspec.shouldBe` [Item "h"]
+
+    Hspec.it "variable" $ do
+      f "i = ()" `Hspec.shouldBe` [Item "i"]
+
+    Hspec.it "strict variable" $ do
+      f "!j = ()" `Hspec.shouldBe` [Item "j"]
+
+    Hspec.it "wildcard pattern" $ do
+      f "_ = ()" `Hspec.shouldBe` []
+
+    Hspec.it "lazy pattern" $ do
+      f "~k = ()" `Hspec.shouldBe` [Item "k"]
+
+    Hspec.it "as pattern" $ do
+      f "l@m = ()" `Hspec.shouldBe` [Item "l", Item "m"]
+
+    Hspec.it "patenthesized pattern" $ do
+      f "(n) = ()" `Hspec.shouldBe` [Item "n"]
+
+    Hspec.it "bang pattern" $ do
+      -- Note that this is different than the "strict variable" test case!
+      f "(!o) = ()" `Hspec.shouldBe` [Item "o"]
+
+    Hspec.it "list pattern" $ do
+      f "[p] = ()" `Hspec.shouldBe` [Item "p"]
+
+    Hspec.it "tuple pattern" $ do
+      f "(q, r) = ()" `Hspec.shouldBe` [Item "q", Item "r"]
+
+    Hspec.it "anonymous sum pattern" $ do
+      f "(# s | #) = ()" `Hspec.shouldBe` [Item "s"]
+
+    Hspec.it "prefix constructor pattern" $ do
+      f "Just t = ()" `Hspec.shouldBe` [Item "t"]
+
+    Hspec.it "record constructor pattern" $ do
+      f "X { u = v } = ()" `Hspec.shouldBe` [Item "v"]
+
+    Hspec.it "punned record pattern" $ do
+      f "X { w } = ()" `Hspec.shouldBe` [Item "w"]
+
+    Hspec.it "wild card record pattern" $ do
+      f "X { .. } = ()" `Hspec.shouldBe` []
+
+    Hspec.it "infix constructor pattern" $ do
+      f "(x : _) = ()" `Hspec.shouldBe` [Item "x"]
+
+    Hspec.it "view pattern" $ do
+      f "(f -> y) = ()" `Hspec.shouldBe` [Item "y"]
+
+    Hspec.it "splice pattern" $ do
+      f "$( x ) = ()" `Hspec.shouldBe` []
+
+    Hspec.it "literal pattern" $ do
+      f "'x' = ()" `Hspec.shouldBe` []
+
+    Hspec.it "natural pattern" $ do
+      f "0 = ()" `Hspec.shouldBe` []
+
+    Hspec.it "n+k pattern" $ do
+      f "(z + 1) = ()" `Hspec.shouldBe` [Item "z"]
+
+    Hspec.it "signature pattern" $ do
+      f "(a :: ()) = ()" `Hspec.shouldBe` [Item "a"]
+
+    Hspec.it "bidirectional pattern synonym" $ do
+      f "pattern B = ()" `Hspec.shouldBe` [Item "B"]
+
+    Hspec.it "unidirectional pattern synonym" $ do
+      f "pattern C <- ()" `Hspec.shouldBe` [Item "C"]
+
+    Hspec.it "explicitly bidirectional pattern synonym" $ do
+      -- The two names always have to match, so this is only a single item.
+      f "pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D"]
+
+    Hspec.it "type signature" $ do
+      f "e :: ()" `Hspec.shouldBe` [Item "e"]
+
+    Hspec.it "pattern type signature" $ do
+      f "pattern F :: ()" `Hspec.shouldBe` [Item "F"]
+
+    Hspec.it "method signature" $ do
+      f "class X where g :: ()" `Hspec.shouldBe` [Item "X", Item "g"]
+
+    Hspec.it "default method signature" $ do
+      f "class X where default h :: ()" `Hspec.shouldBe` [Item "X", Item "h"]
+
+    Hspec.it "fixity declaration" $ do
+      f "infix 5 %" `Hspec.shouldBe` [Item "%"]
+
+    Hspec.it "inline pragma" $ do
+      f "{-# inline i #-}" `Hspec.shouldBe` []
+
+    Hspec.it "inline pragma with phase control" $ do
+      f "{-# inline [1] j #-}" `Hspec.shouldBe` []
+
+    Hspec.it "inline pragma with inverted phase control" $ do
+      f "{-# inline [~2] k #-}" `Hspec.shouldBe` []
+
+    Hspec.it "noinline pragma" $ do
+      f "{-# noinline l #-}" `Hspec.shouldBe` []
+
+    Hspec.it "specialize pragma" $ do
+      f "{-# specialize j :: () #-}" `Hspec.shouldBe` []
+
+    Hspec.it "specialize instance pragma" $ do
+      f "{-# specialize instance K #-}" `Hspec.shouldBe` []
+
+    Hspec.it "minimal pragma" $ do
+      f "{-# minimal l #-}" `Hspec.shouldBe` []
+
+    Hspec.it "set cost center pragma" $ do
+      f "{-# scc m #-}" `Hspec.shouldBe` []
+
+    Hspec.it "complete pragma" $ do
+      f "{-# complete N #-}" `Hspec.shouldBe` []
+
+    Hspec.it "standalone kind signature" $ do
+      f "type O :: ()" `Hspec.shouldBe` [Item "O"]
+
+    Hspec.it "default declaration" $ do
+      f "default ()" `Hspec.shouldBe` []
+
+    Hspec.it "foreign import" $ do
+      f "foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [Item "p"]
+
+    Hspec.it "warning pragma" $ do
+      f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
+
+    Hspec.it "value annotation" $ do
+      f "{-# ann x () #-}" `Hspec.shouldBe` []
+
+    Hspec.it "type annotation" $ do
+      f "{-# ann type X () #-}" `Hspec.shouldBe` []
+
+    Hspec.it "module annotation" $ do
+      f "{-# ann module () #-}" `Hspec.shouldBe` []
+
+    Hspec.it "rules pragma" $ do
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [Item "q"]
+
+    Hspec.it "splice declaration" $ do
+      f "$( x )" `Hspec.shouldBe` []
+
+    Hspec.it "documentation" $ do
+      f "-- | x" `Hspec.shouldBe` []
+
+    Hspec.it "role annotation" $ do
+      f "type role R nominal" `Hspec.shouldBe` [Item "R"]
 
 -- Executable -----------------------------------------------------------------
 
@@ -97,6 +287,10 @@ application request respond = do
             H.details_ $ do
               H.summary_ $ html "Click to expand."
               H.pre_ . H.code_ . html $ show lHsModule
+
+            H.h2_ $ html "Items"
+            H.ul_ $ Monad.forM_ (getItems lHsModule) $ \item ->
+              H.li_ . html $ itemName item
 
             H.h2_ $ html "Haddocks"
             H.ul_ $ Monad.forM_ (getHsDocStrings lHsModule) $ \hsDocString -> do
@@ -157,7 +351,16 @@ parseLHsModule ::
 parseLHsModule filePath string =
   let parserOpts =
         Lexer.mkParserOpts
-          EnumSet.empty -- enabled extensions
+          -- TODO: Parsing extension pragmas requires dealing with DynFlags.
+          -- https://github.com/tfausak/monadoc-5/blob/22a743f6/src/lib/Monadoc/Utility/Ghc.hs#L62
+          ( EnumSet.fromList
+              [ X.ForeignFunctionInterface,
+                X.NPlusKPatterns,
+                X.PatternSynonyms,
+                X.TemplateHaskellQuotes,
+                X.UnboxedSums
+              ]
+          ) -- enabled extensions
           ErrUtil.emptyDiagOpts -- diagnostic options
           [] -- supported extensions
           False -- enable safe imports?
@@ -204,6 +407,173 @@ extractHsDocStrings = Data.gmapQ $ \d -> case Data.cast d of
 getHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.HsDocString]
 getHsDocStrings = concat . extractHsDocStrings . unwrapLHsModule
 
+newtype Item = Item
+  { itemName :: String
+  }
+  deriving (Eq, Show)
+
+-- data Position = Position
+--   { positionLine :: Int,
+--     positionColumn :: Int
+--   }
+--   deriving (Eq, Show)
+
+-- epAnnToPosition :: GHC.Hs.EpAnn a -> Position
+-- epAnnToPosition ea =
+--   let rsl = SrcLoc.realSrcSpanStart . GHC.Hs.epaLocationRealSrcSpan $ GHC.Hs.entry ea
+--    in Position
+--         { positionLine = SrcLoc.srcLocLine rsl,
+--           positionColumn = SrcLoc.srcLocCol rsl
+--         }
+
+getItems :: LHsModule GHC.Hs.GhcPs -> [Item]
+getItems lHsModule = case SrcLoc.unLoc $ unwrapLHsModule lHsModule of
+  HS.HsModule {HS.hsmodDecls = lHsDecls} -> concatMap getLHsDeclItems lHsDecls
+
+getLHsDeclItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item]
+getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
+  HS.TyClD _ tyClDecl -> case tyClDecl of
+    HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
+      HS.FamilyDecl {HS.fdLName = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+    HS.SynDecl {HS.tcdLName = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+    HS.DataDecl {HS.tcdLName = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+    HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
+      Item (rdrNameToString $ SrcLoc.unLoc lIdP)
+        : concatMap (sigToItems . SrcLoc.unLoc) lSigs
+  HS.InstD _ instDecl -> case instDecl of
+    HS.ClsInstD {HS.cid_inst = clsInstDecl} -> case clsInstDecl of
+      HS.ClsInstDecl {HS.cid_poly_ty = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
+    HS.DataFamInstD {HS.dfid_inst = dataFamInstDecl} -> famEqnToItems $ HS.dfid_eqn dataFamInstDecl
+    HS.TyFamInstD {HS.tfid_inst = tyFamInstDecl} -> case tyFamInstDecl of
+      HS.TyFamInstDecl {HS.tfid_eqn = tyFamInstEqn} -> famEqnToItems tyFamInstEqn
+  HS.DerivD _ derivDecl -> case derivDecl of
+    HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
+      HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
+  HS.ValD _ hsBind -> case hsBind of
+    HS.FunBind {HS.fun_id = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+    HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
+    HS.PatSynBind _ patSynBind -> [Item . rdrNameToString . SrcLoc.unLoc $ HS.psb_id patSynBind]
+    HS.VarBind {} -> impossible "unexpected VarBind"
+  HS.SigD _ sig -> sigToItems sig
+  HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
+    HS.StandaloneKindSig _ lIdP _ -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+  HS.DefD _ _ ->
+    -- TODO: This currently doesn't introduce anything that can be exported,
+    -- but it will after this GHC proposal is implemented:
+    -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
+    []
+  HS.ForD _ foreignDecl -> case foreignDecl of
+    HS.ForeignImport {HS.fd_name = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+    HS.ForeignExport {} -> []
+  HS.WarningD _ warnDecls -> case warnDecls of
+    HS.Warnings {HS.wd_warnings = lWarnDecls} ->
+      concatMap
+        ( \lWarnDecl -> case SrcLoc.unLoc lWarnDecl of
+            HS.Warning {} ->
+              -- TODO: This doesn't introduce any items, but it's associated
+              -- with another identifier.
+              []
+        )
+        lWarnDecls
+  HS.AnnD _ annDecl -> case annDecl of
+    HS.HsAnnotation {} ->
+      -- TODO: This doesn't introduce any items, but it's associated with
+      -- another identifier.
+      []
+  HS.RuleD _ ruleDecls -> case ruleDecls of
+    HS.HsRules {HS.rds_rules = lRuleDecls} ->
+      concatMap
+        ( \lRuleDecl -> case SrcLoc.unLoc lRuleDecl of
+            HS.HsRule {HS.rd_name = lRuleName} -> [Item . FastString.unpackFS $ SrcLoc.unLoc lRuleName]
+        )
+        lRuleDecls
+  HS.SpliceD {} ->
+    -- TODO: Warn that splices can't be resolved by the parser.
+    []
+  HS.DocD {} -> []
+  HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
+    HS.RoleAnnotDecl _ lIdP _ -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+
+sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item]
+sigToItems sig = case sig of
+  HS.TypeSig _ lIdPs _ -> fmap (Item . rdrNameToString . SrcLoc.unLoc) lIdPs
+  HS.PatSynSig _ lIdPs _ -> fmap (Item . rdrNameToString . SrcLoc.unLoc) lIdPs
+  HS.ClassOpSig _ _ lIdPs _ -> fmap (Item . rdrNameToString . SrcLoc.unLoc) lIdPs
+  HS.FixSig _ fixitySig -> case fixitySig of
+    HS.FixitySig _ lIdPs _ -> fmap (Item . rdrNameToString . SrcLoc.unLoc) lIdPs
+  HS.InlineSig {} -> []
+  HS.SpecSig {} -> []
+  HS.SpecInstSig {} -> []
+  HS.MinimalSig {} ->
+    -- TOOD: This doesn't introduce any items, but it's associated with a type
+    -- class.
+    []
+  HS.SCCFunSig {} -> []
+  HS.CompleteMatchSig {} ->
+    -- TODO: This doesn't introduce any items, but it's associated with a
+    -- pattern synonym.
+    []
+
+patToItems :: HS.Pat GHC.Hs.GhcPs -> [Item]
+patToItems pat = case pat of
+  HS.WildPat {} -> []
+  HS.VarPat _ lIdP -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+  HS.LazyPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
+  HS.AsPat _ lIdP lPat2 -> Item (rdrNameToString (SrcLoc.unLoc lIdP)) : patToItems (SrcLoc.unLoc lPat2)
+  HS.ParPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
+  HS.BangPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
+  HS.ListPat _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
+  HS.TuplePat _ lPats _ -> concatMap (patToItems . SrcLoc.unLoc) lPats
+  HS.SumPat _ lPat2 _ _ -> patToItems $ SrcLoc.unLoc lPat2
+  HS.ConPat {HS.pat_args = hsConPatDetails} -> case hsConPatDetails of
+    HS.PrefixCon _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
+    HS.RecCon hsRecFields ->
+      concatMap
+        ( ( \hsRecField ->
+              if HS.hfbPun hsRecField
+                then case SrcLoc.unLoc $ HS.hfbLHS hsRecField of
+                  HS.FieldOcc {HS.foLabel = lRdrName} -> [Item . rdrNameToString $ SrcLoc.unLoc lRdrName]
+                else patToItems . SrcLoc.unLoc $ HS.hfbRHS hsRecField
+          )
+            . SrcLoc.unLoc
+        )
+        (HS.rec_flds hsRecFields)
+        -- TODO: Warn that record wild cards can't be resolved by the parser.
+        <> maybe [] (const []) (HS.rec_dotdot hsRecFields)
+    HS.InfixCon l r -> patToItems (SrcLoc.unLoc l) <> patToItems (SrcLoc.unLoc r)
+  HS.ViewPat _ _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
+  HS.SplicePat {} ->
+    -- TODO: Warn that splices can't be resolved by the parser.
+    []
+  HS.LitPat {} -> []
+  HS.NPat {} -> []
+  HS.NPlusKPat _ lIdP _ _ _ _ -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+  HS.SigPat _ lPat2 _ -> patToItems $ SrcLoc.unLoc lPat2
+  HS.EmbTyPat {} -> impossible "unexpected EmbTyPat"
+  HS.InvisPat {} -> impossible "unexpected InvisPat"
+
+hsSigTypeToItems :: HS.HsSigType GHC.Hs.GhcPs -> [Item]
+hsSigTypeToItems hsSigType = case hsSigType of
+  HS.HsSig {HS.sig_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
+
+hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item]
+hsTypeToItems hsType = case hsType of
+  HS.HsTyVar _ _ lIdP -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+  _ -> error $ dataShowS hsType " -- unknown HsType"
+
+famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item]
+famEqnToItems famEqn = case famEqn of
+  HS.FamEqn {HS.feqn_tycon = lIdP} -> [Item . rdrNameToString $ SrcLoc.unLoc lIdP]
+
+rdrNameToString :: RdrName.RdrName -> String
+rdrNameToString rdrName = case rdrName of
+  RdrName.Unqual occName -> OccName.occNameString occName
+  -- RdrName.Qual moduleName occName -> HS.moduleNameString moduleName <> "." <> OccName.occNameString occName
+  _ -> error $ dataShowS rdrName " -- unknown RdrName"
+
+impossible :: (Stack.HasCallStack) => String -> a
+impossible = error . mappend "impossible: "
+
 -- Haddock --------------------------------------------------------------------
 
 hsDocStringToDocH :: GHC.Hs.HsDocString -> Haddock.DocH Void.Void (Haddock.Namespace, String)
@@ -240,9 +610,9 @@ htmlDocMarkupH =
       Haddock.markupPic = \x -> H.img_ [H.alt_ . maybe Text.empty text $ Haddock.pictureTitle x, H.src_ . text $ Haddock.pictureUri x],
       Haddock.markupProperty = H.pre_ . H.code_ . html . mappend "prop> ",
       Haddock.markupString = html,
-      Haddock.markupTable = error "impossible: markupTable",
+      Haddock.markupTable = impossible "markupTable",
       Haddock.markupUnorderedList = H.ul_ . foldMap H.li_,
-      Haddock.markupWarning = error "impossible: markupWarning"
+      Haddock.markupWarning = impossible "markupWarning"
     }
 
 -- Helpers --------------------------------------------------------------------
@@ -260,9 +630,11 @@ dataShowS =
    in ( \t ->
           showChar '('
             . showString (Data.showConstr $ Data.toConstr t)
-            . ( case Data.cast t of
-                  Nothing -> foldr (.) id $ Data.gmapQ ((showChar ' ' .) . dataShowS) t
-                  Just hdsc -> showString . show $ GHC.Hs.renderHsDocString hdsc
+            . ( case () of
+                  ()
+                    | Just x <- Data.cast t -> showString . show $ GHC.Hs.renderHsDocString x
+                    | Just x <- Data.cast t -> showString . show $ OccName.occNameString x
+                    | otherwise -> foldr (.) id $ Data.gmapQ ((showChar ' ' .) . dataShowS) t
               )
             . showChar ')'
       )

@@ -14,6 +14,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.String as String
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
+import qualified Data.Version as Version
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Markup as Haddock
 import qualified Documentation.Haddock.Parser as Haddock
@@ -37,6 +38,7 @@ import qualified Lucid as H
 import qualified Network.HTTP.Types as Http
 import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
+import qualified Paths_scrod as Package
 import qualified System.IO as IO
 import qualified Test.Hspec as Hspec
 import qualified Text.Printf as Printf
@@ -294,8 +296,7 @@ application request respond = do
         H.title_ $ html "Scrod"
         H.style_ $ text "pre { white-space: pre-wrap; }"
       H.body_ $ do
-        H.h1_ $ do
-          H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "Scrod"
+        H.h1_ $ html "Scrod"
 
         H.form_ [H.method_ $ text "post"] $ do
           H.textarea_ [H.name_ $ text "input"] $ html input
@@ -321,8 +322,19 @@ application request respond = do
                 html $ itemName item
 
             H.h2_ $ html "Haddocks"
-            H.ul_ $ Monad.forM_ (getHsDocStrings lHsModule) $ \hsDocString -> do
-              H.li_ . html $ docHToHtml . hsDocStringToDocH $ hsDocString
+            H.ul_ $ Monad.forM_ (getDocs lHsModule) $ \doc -> do
+              H.li_ $ do
+                html . maybe "?" (show . positionLine) $ locatedToPosition doc
+                html ":"
+                html . maybe "?" (show . positionColumn) $ locatedToPosition doc
+                html ": "
+                docHToHtml . hsDocStringToDocH . GHC.Hs.hsDocString $ SrcLoc.unLoc doc
+
+        html "Powered by "
+        H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "tfausak/scrod"
+        html " version "
+        html $ Version.showVersion Package.version
+        html "."
 
 defaultHeaders :: Http.ResponseHeaders
 defaultHeaders =
@@ -427,13 +439,15 @@ newtype Messages a = Messages
 instance (ErrUtil.Diagnostic a) => Show (Messages a) where
   show = Outputable.showPprUnsafe . unwrapMessages
 
-extractHsDocStrings :: (Data.Data a) => a -> [[GHC.Hs.HsDocString]]
-extractHsDocStrings = Data.gmapQ $ \d -> case Data.cast d of
-  Nothing -> concat $ extractHsDocStrings d
+type Doc = SrcLoc.Located (GHC.Hs.WithHsDocIdentifiers GHC.Hs.HsDocString GHC.Hs.GhcPs)
+
+extractDocs :: (Data.Data a) => a -> [[Doc]]
+extractDocs = Data.gmapQ $ \d -> case Data.cast d of
+  Nothing -> concat $ extractDocs d
   Just hds -> [hds]
 
-getHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.HsDocString]
-getHsDocStrings = concat . extractHsDocStrings . unwrapLHsModule
+getDocs :: LHsModule GHC.Hs.GhcPs -> [Doc]
+getDocs = concat . extractDocs . unwrapLHsModule
 
 data Item = Item
   { itemName :: String,
@@ -446,6 +460,14 @@ data Position = Position
     positionColumn :: Int
   }
   deriving (Eq, Show)
+
+locatedToPosition :: SrcLoc.Located a -> Maybe Position
+locatedToPosition = srcSpanToPosition . SrcLoc.getLoc
+
+srcSpanToPosition :: SrcLoc.SrcSpan -> Maybe Position
+srcSpanToPosition x = case x of
+  SrcLoc.RealSrcSpan y _ -> Just $ realSrcSpanToPosition y
+  SrcLoc.UnhelpfulSpan {} -> Nothing
 
 locatedAnToPosition :: GHC.Hs.LocatedAn a b -> Position
 locatedAnToPosition = epAnnToPosition . SrcLoc.getLoc
@@ -555,7 +577,7 @@ sigToItems sig = case sig of
   HS.SpecSig {} -> []
   HS.SpecInstSig {} -> []
   HS.MinimalSig {} ->
-    -- TOOD: This doesn't introduce any items, but it's associated with a type
+    -- TODO: This doesn't introduce any items, but it's associated with a type
     -- class.
     []
   HS.SCCFunSig {} -> []

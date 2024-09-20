@@ -9,6 +9,7 @@ import qualified Data.CaseInsensitive as CI
 import qualified Data.Data as Data
 import Data.Function ((&))
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Maybe as Maybe
 import qualified Data.String as String
 import qualified Data.Text as Text
@@ -61,6 +62,12 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
     Hspec.it "data" $ do
       f "data D" `Hspec.shouldBe` [Item "D" $ Position 1 6]
+
+    Hspec.it "data constructor" $ do
+      f "data X = E" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 10]
+
+    Hspec.it "gadt constructor" $ do
+      f "data X where E :: X" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 14]
 
     Hspec.it "class" $ do
       f "class E" `Hspec.shouldBe` [Item "E" $ Position 1 7]
@@ -456,7 +463,11 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
       HS.FamilyDecl {HS.fdLName = lIdP} -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
     HS.SynDecl {HS.tcdLName = lIdP} -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
-    HS.DataDecl {HS.tcdLName = lIdP} -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+    HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
+      Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)
+        : case HS.dd_cons hsDataDefn of
+          HS.NewTypeCon lConDecl -> conDeclToItems $ SrcLoc.unLoc lConDecl
+          HS.DataTypeCons _ lConDecls -> concatMap (conDeclToItems . SrcLoc.unLoc) lConDecls
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
       Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
@@ -515,6 +526,13 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
     HS.RoleAnnotDecl _ lIdP _ -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+
+conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item]
+conDeclToItems conDecl = case conDecl of
+  HS.ConDeclH98 {HS.con_name = lIdP} ->
+    [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+  HS.ConDeclGADT {HS.con_names = lIdPs} ->
+    NonEmpty.toList $ fmap (\lIdP -> Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)) lIdPs
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item]
 sigToItems sig = case sig of

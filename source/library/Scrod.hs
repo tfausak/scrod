@@ -90,6 +90,16 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "function" $ do
       f "h x = x" `Hspec.shouldBe` [Item "h" $ Position 1 1]
 
+    Hspec.it "infix function" $ do
+      f "_ `f` _ = ()" `Hspec.shouldBe` [Item "f" $ Position 1 3]
+
+    Hspec.it "infix operator" $ do
+      f "_ & _ = ()" `Hspec.shouldBe` [Item "&" $ Position 1 3]
+
+    Hspec.it "prefix operator" $ do
+      -- TODO: Why is this at column 1 rather than 2?
+      f "(&) = ()" `Hspec.shouldBe` [Item "&" $ Position 1 1]
+
     Hspec.it "variable" $ do
       f "i = ()" `Hspec.shouldBe` [Item "i" $ Position 1 1]
 

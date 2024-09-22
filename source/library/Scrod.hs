@@ -334,13 +334,13 @@ application request respond = do
                 html $ itemName item
 
             H.h2_ $ html "Haddocks"
-            H.ul_ $ Monad.forM_ (getDocs lHsModule) $ \doc -> do
+            H.ul_ $ Monad.forM_ (getLHsDocStrings lHsModule) $ \lHsDocString -> do
               H.li_ $ do
-                html . maybe "?" (show . positionLine) $ locatedToPosition doc
+                html . maybe "?" (show . positionLine) $ locatedToPosition lHsDocString
                 html ":"
-                html . maybe "?" (show . positionColumn) $ locatedToPosition doc
+                html . maybe "?" (show . positionColumn) $ locatedToPosition lHsDocString
                 html ": "
-                docHToHtml . hsDocStringToDocH . GHC.Hs.hsDocString $ SrcLoc.unLoc doc
+                docHToHtml . hsDocStringToDocH $ SrcLoc.unLoc lHsDocString
 
         html "Powered by "
         H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "tfausak/scrod"
@@ -451,15 +451,13 @@ newtype Messages a = Messages
 instance (ErrUtil.Diagnostic a) => Show (Messages a) where
   show = Outputable.showPprUnsafe . unwrapMessages
 
-type Doc = SrcLoc.Located (GHC.Hs.WithHsDocIdentifiers GHC.Hs.HsDocString GHC.Hs.GhcPs)
-
-extractDocs :: (Data.Data a) => a -> [[Doc]]
+extractDocs :: (Data.Data a) => a -> [[SrcLoc.Located (GHC.Hs.WithHsDocIdentifiers GHC.Hs.HsDocString GHC.Hs.GhcPs)]]
 extractDocs = Data.gmapQ $ \d -> case Data.cast d of
   Nothing -> concat $ extractDocs d
   Just hds -> [hds]
 
-getDocs :: LHsModule GHC.Hs.GhcPs -> [Doc]
-getDocs = concat . extractDocs . unwrapLHsModule
+getLHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.LHsDocString]
+getLHsDocStrings = fmap (fmap GHC.Hs.hsDocString) . concat . extractDocs . unwrapLHsModule
 
 data Item = Item
   { itemName :: String,

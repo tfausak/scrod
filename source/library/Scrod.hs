@@ -269,6 +269,49 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "role annotation" $ do
       f "type role R nominal" `Hspec.shouldBe` [Item "R" $ Position 1 11]
 
+  Hspec.describe "associateDocStrings" $ do
+    let mkItem n l = Item n . Position l
+        mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
+        mkSrcSpan (l1, c1) (l2, c2) = SrcLoc.mkSrcSpan (mkSrcLoc l1 c1) (mkSrcLoc l2 c2)
+
+    Hspec.it "empty" $ do
+      associateDocStrings [] [] `Hspec.shouldBe` []
+
+    Hspec.it "item only" $ do
+      let item = mkItem "a" 1 1
+      associateDocStrings [item] [] `Hspec.shouldBe` [(item, [])]
+
+    Hspec.it "doc only" $ do
+      let lHsDocString =
+            SrcLoc.L
+              (mkSrcSpan (1, 1) (1, 1))
+              ( GHC.Hs.MultiLineDocString
+                  GHC.Hs.HsDocStringNext
+                  ( pure
+                      ( SrcLoc.L
+                          (mkSrcSpan (1, 1) (1, 1))
+                          (GHC.Hs.mkHsDocStringChunk "a")
+                      )
+                  )
+              )
+      associateDocStrings [] [lHsDocString] `Hspec.shouldBe` []
+
+    Hspec.it "doc before item" $ do
+      let item = mkItem "a" 2 1
+          lHsDocString =
+            SrcLoc.L
+              (mkSrcSpan (1, 1) (1, 1))
+              ( GHC.Hs.MultiLineDocString
+                  GHC.Hs.HsDocStringNext
+                  ( pure
+                      ( SrcLoc.L
+                          (mkSrcSpan (1, 1) (1, 1))
+                          (GHC.Hs.mkHsDocStringChunk "b")
+                      )
+                  )
+              )
+      associateDocStrings [item] [lHsDocString] `Hspec.shouldBe` [(item, ["b"])]
+
 -- Executable -----------------------------------------------------------------
 
 executable :: IO ()
@@ -459,6 +502,32 @@ extractDocs = Data.gmapQ $ \d -> case Data.cast d of
 getLHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.LHsDocString]
 getLHsDocStrings = fmap (fmap GHC.Hs.hsDocString) . concat . extractDocs . unwrapLHsModule
 
+associateDocStrings :: [Item] -> [GHC.Hs.LHsDocString] -> [(Item, [String])]
+associateDocStrings items lHsDocStrings = case items of
+  [] -> []
+  i : is ->
+    let (before, after) =
+          span
+            ( \lHsDocString -> case locatedToPosition lHsDocString of
+                Nothing -> True
+                Just p -> case getHsDocStringDecorator $ SrcLoc.unLoc lHsDocString of
+                  Nothing -> True
+                  Just hsDocStringDecorator -> case hsDocStringDecorator of
+                    GHC.Hs.HsDocStringNext -> p <= itemPosition i
+                    GHC.Hs.HsDocStringPrevious -> error "TODO"
+                    GHC.Hs.HsDocStringNamed {} -> error "TODO"
+                    GHC.Hs.HsDocStringGroup {} -> error "TODO"
+            )
+            lHsDocStrings
+     in (i, fmap (GHC.Hs.renderHsDocString . SrcLoc.unLoc) before)
+          : associateDocStrings is after
+
+getHsDocStringDecorator :: GHC.Hs.HsDocString -> Maybe GHC.Hs.HsDocStringDecorator
+getHsDocStringDecorator x = case x of
+  GHC.Hs.MultiLineDocString y _ -> Just y
+  GHC.Hs.NestedDocString y _ -> Just y
+  GHC.Hs.GeneratedDocString {} -> Nothing
+
 data Item = Item
   { itemName :: String,
     itemPosition :: Position
@@ -469,7 +538,7 @@ data Position = Position
   { positionLine :: Int,
     positionColumn :: Int
   }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 locatedToPosition :: SrcLoc.Located a -> Maybe Position
 locatedToPosition = srcSpanToPosition . SrcLoc.getLoc

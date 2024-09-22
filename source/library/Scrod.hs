@@ -68,8 +68,20 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "data constructor" $ do
       f "data X = E" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 10]
 
-    Hspec.it "gadt constructor" $ do
+    Hspec.it "data constructor gadt" $ do
       f "data X where E :: X" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 14]
+
+    Hspec.it "record field" $ do
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17]
+
+    Hspec.it "record fields with one signature" $ do
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 20]
+
+    Hspec.it "record fields with separate signatures" $ do
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 26]
+
+    Hspec.it "record field gadt" $ do
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 17, Item "f" $ Position 1 24]
 
     Hspec.it "class" $ do
       f "class E" `Hspec.shouldBe` [Item "E" $ Position 1 7]
@@ -561,10 +573,26 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
 
 conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item]
 conDeclToItems conDecl = case conDecl of
-  HS.ConDeclH98 {HS.con_name = lIdP} ->
-    [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
-  HS.ConDeclGADT {HS.con_names = lIdPs} ->
-    NonEmpty.toList $ fmap (\lIdP -> Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)) lIdPs
+  HS.ConDeclH98 {HS.con_name = lIdP, HS.con_args = hsConDetails} ->
+    Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)
+      : case hsConDetails of
+        HS.PrefixCon {} -> []
+        HS.RecCon lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
+        HS.InfixCon {} -> []
+  HS.ConDeclGADT {HS.con_names = lIdPs, HS.con_g_args = hsConDeclGADTDetails} ->
+    NonEmpty.toList (fmap (\lIdP -> Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)) lIdPs)
+      <> case hsConDeclGADTDetails of
+        HS.PrefixConGADT {} -> []
+        HS.RecConGADT _ lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
+
+lConDeclFieldToItems :: HS.LConDeclField GHC.Hs.GhcPs -> [Item]
+lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
+  HS.ConDeclField {HS.cd_fld_names = lFieldOccs} ->
+    fmap
+      ( \lFieldOcc -> case SrcLoc.unLoc lFieldOcc of
+          HS.FieldOcc {HS.foLabel = lRdrName} -> Item (rdrNameToString $ SrcLoc.unLoc lRdrName) (locatedAnToPosition lRdrName)
+      )
+      lFieldOccs
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item]
 sigToItems sig = case sig of

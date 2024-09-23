@@ -7,6 +7,7 @@ import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.CaseInsensitive as CI
 import qualified Data.Data as Data
+import qualified Data.Either as Either
 import Data.Function ((&))
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
@@ -14,6 +15,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.String as String
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
+import qualified Data.Tuple as Tuple
 import qualified Data.Version as Version
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Markup as Haddock
@@ -273,6 +275,15 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     let mkItem n l = Item n . Position l
         mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
         mkSrcSpan (l1, c1) (l2, c2) = SrcLoc.mkSrcSpan (mkSrcLoc l1 c1) (mkSrcLoc l2 c2)
+        mkDocString (l1, c1) (l2, c2) d =
+          GHC.Hs.MultiLineDocString
+            ( case d of
+                Next -> GHC.Hs.HsDocStringNext
+                Previous -> GHC.Hs.HsDocStringPrevious
+            )
+            . pure
+            . SrcLoc.L (mkSrcSpan (l1, c1) (l2, c2))
+            . GHC.Hs.mkHsDocStringChunk
 
     Hspec.it "empty" $ do
       associateDocStrings [] [] `Hspec.shouldBe` []
@@ -283,34 +294,33 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
     Hspec.it "doc only" $ do
       let lHsDocString =
-            SrcLoc.L
-              (mkSrcSpan (1, 1) (1, 1))
-              ( GHC.Hs.MultiLineDocString
-                  GHC.Hs.HsDocStringNext
-                  ( pure
-                      ( SrcLoc.L
-                          (mkSrcSpan (1, 1) (1, 1))
-                          (GHC.Hs.mkHsDocStringChunk "a")
-                      )
-                  )
-              )
+            SrcLoc.L (mkSrcSpan (1, 1) (1, 1)) $
+              mkDocString (1, 1) (1, 1) Next "a"
       associateDocStrings [] [lHsDocString] `Hspec.shouldBe` []
 
     Hspec.it "doc before item" $ do
       let item = mkItem "a" 2 1
           lHsDocString =
-            SrcLoc.L
-              (mkSrcSpan (1, 1) (1, 1))
-              ( GHC.Hs.MultiLineDocString
-                  GHC.Hs.HsDocStringNext
-                  ( pure
-                      ( SrcLoc.L
-                          (mkSrcSpan (1, 1) (1, 1))
-                          (GHC.Hs.mkHsDocStringChunk "b")
-                      )
-                  )
-              )
+            SrcLoc.L (mkSrcSpan (1, 1) (1, 1)) $
+              mkDocString (1, 1) (1, 1) Next "b"
       associateDocStrings [item] [lHsDocString] `Hspec.shouldBe` [(item, ["b"])]
+
+    Hspec.it "doc after item" $ do
+      let item = mkItem "a" 1 1
+          lHsDocString =
+            SrcLoc.L (mkSrcSpan (2, 1) (2, 1)) $
+              mkDocString (2, 1) (2, 1) Previous "b"
+      associateDocStrings [item] [lHsDocString] `Hspec.shouldBe` [(item, ["b"])]
+
+    Hspec.it "docs around item" $ do
+      let item = mkItem "b" 2 1
+          d1 =
+            SrcLoc.L (mkSrcSpan (1, 1) (1, 1)) $
+              mkDocString (1, 1) (1, 1) Next "a"
+          d2 =
+            SrcLoc.L (mkSrcSpan (3, 1) (3, 1)) $
+              mkDocString (3, 1) (3, 1) Previous "c"
+      associateDocStrings [item] [d1, d2] `Hspec.shouldBe` [(item, ["a", "c"])]
 
 -- Executable -----------------------------------------------------------------
 
@@ -368,22 +378,20 @@ application request respond = do
               H.pre_ . H.code_ . html $ show lHsModule
 
             H.h2_ $ html "Items"
-            H.ul_ $ Monad.forM_ (getItems lHsModule) $ \item ->
-              H.li_ $ do
-                html . show . positionLine $ itemPosition item
-                html ":"
-                html . show . positionColumn $ itemPosition item
-                html ": "
-                html $ itemName item
-
-            H.h2_ $ html "Haddocks"
-            H.ul_ $ Monad.forM_ (getLHsDocStrings lHsModule) $ \lHsDocString -> do
-              H.li_ $ do
-                html . maybe "?" (show . positionLine) $ locatedToPosition lHsDocString
-                html ":"
-                html . maybe "?" (show . positionColumn) $ locatedToPosition lHsDocString
-                html ": "
-                docHToHtml . hsDocStringToDocH $ SrcLoc.unLoc lHsDocString
+            let items = getItems lHsModule
+                lHsDocStrings = getLHsDocStrings lHsModule
+                tuples = associateDocStrings items lHsDocStrings
+            H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
+              html . show . positionLine $ itemPosition item
+              html ":"
+              html . show . positionColumn $ itemPosition item
+              html ": "
+              html $ itemName item
+              docHToHtml
+                . Haddock.overIdentifier (curry Just)
+                . Haddock._doc
+                . Haddock.parseParas Nothing
+                $ List.intercalate "\n\n" docStrings
 
         html "Powered by "
         H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "tfausak/scrod"
@@ -503,24 +511,60 @@ getLHsDocStrings :: LHsModule GHC.Hs.GhcPs -> [GHC.Hs.LHsDocString]
 getLHsDocStrings = fmap (fmap GHC.Hs.hsDocString) . concat . extractDocs . unwrapLHsModule
 
 associateDocStrings :: [Item] -> [GHC.Hs.LHsDocString] -> [(Item, [String])]
-associateDocStrings items lHsDocStrings = case items of
+associateDocStrings items lHsDocStrings =
+  -- TODO: Do something with these named and group doc strings.
+  let (_other, xs) = associateDocStrings2 lHsDocStrings items
+   in fmap Tuple.swap xs
+
+associateDocStrings2 ::
+  [GHC.Hs.LHsDocString] ->
+  [Item] ->
+  ([GHC.Hs.LHsDocString], [([String], Item)])
+associateDocStrings2 lHsDocStrings items =
+  let es = fmap simplifyDocString lHsDocStrings
+      (xs, ts) = Either.partitionEithers es
+      (ns, ps) =
+        List.partition
+          ( \t -> case snd $ fst t of
+              Next -> True
+              Previous -> False
+          )
+          ts
+      -- TODO: Account for doc strings that don't get associated with an item,
+      -- like a "previous" doc string at the beginning of the file.
+      is1 = associateDocStringsHelper Next (fmap (\((p, _), s) -> (p, s)) ns) $ fmap ((,) []) items
+      is2 = associateDocStringsHelper Previous (fmap (\((p, _), s) -> (p, s)) ps) $ reverse is1
+   in (xs, reverse is2)
+
+associateDocStringsHelper ::
+  Direction ->
+  [(Position, String)] ->
+  [([String], Item)] ->
+  [([String], Item)]
+associateDocStringsHelper x ds items = case items of
   [] -> []
-  i : is ->
-    let (before, after) =
-          span
-            ( \lHsDocString -> case locatedToPosition lHsDocString of
-                Nothing -> True
-                Just p -> case getHsDocStringDecorator $ SrcLoc.unLoc lHsDocString of
-                  Nothing -> True
-                  Just hsDocStringDecorator -> case hsDocStringDecorator of
-                    GHC.Hs.HsDocStringNext -> p <= itemPosition i
-                    GHC.Hs.HsDocStringPrevious -> error "TODO"
-                    GHC.Hs.HsDocStringNamed {} -> error "TODO"
-                    GHC.Hs.HsDocStringGroup {} -> error "TODO"
-            )
-            lHsDocStrings
-     in (i, fmap (GHC.Hs.renderHsDocString . SrcLoc.unLoc) before)
-          : associateDocStrings is after
+  (ss, i) : is ->
+    let (before, after) = span (\d -> (if x == Next then (<=) else (>=)) (fst d) (itemPosition i)) ds
+     in (ss <> fmap snd before, i) : associateDocStringsHelper x after is
+
+simplifyDocString ::
+  GHC.Hs.LHsDocString ->
+  Either GHC.Hs.LHsDocString ((Position, Direction), String)
+simplifyDocString lHsDocString = Maybe.fromMaybe (Left lHsDocString) $ do
+  let hsDocString = SrcLoc.unLoc lHsDocString
+  hsDocStringDecorator <- getHsDocStringDecorator hsDocString
+  direction <- case hsDocStringDecorator of
+    GHC.Hs.HsDocStringNext -> Just Next
+    GHC.Hs.HsDocStringPrevious -> Just Previous
+    GHC.Hs.HsDocStringNamed {} -> Nothing
+    GHC.Hs.HsDocStringGroup {} -> Nothing
+  position <- locatedToPosition lHsDocString
+  pure $ Right ((position, direction), GHC.Hs.renderHsDocString hsDocString)
+
+data Direction
+  = Next
+  | Previous
+  deriving (Eq, Show)
 
 getHsDocStringDecorator :: GHC.Hs.HsDocString -> Maybe GHC.Hs.HsDocStringDecorator
 getHsDocStringDecorator x = case x of

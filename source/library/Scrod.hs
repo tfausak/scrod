@@ -1,3 +1,4 @@
+{- hlint ignore "Use tuple-section" -}
 {-# LANGUAGE FlexibleInstances #-}
 
 module Scrod where

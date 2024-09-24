@@ -92,6 +92,15 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "class instance" $ do
       f "instance F" `Hspec.shouldBe` [Item "F" $ Position 1 10]
 
+    Hspec.it "class instance with arguments" $ do
+      f "instance G a" `Hspec.shouldBe` [Item "G" $ Position 1 10]
+
+    Hspec.it "class instance with parentheses" $ do
+      f "instance (H)" `Hspec.shouldBe` [Item "H" $ Position 1 11]
+
+    Hspec.it "class instance with context" $ do
+      f "instance () => I" `Hspec.shouldBe` [Item "I" $ Position 1 16]
+
     Hspec.it "data instance" $ do
       f "data instance G" `Hspec.shouldBe` [Item "G" $ Position 1 15]
 
@@ -513,7 +522,7 @@ getLHsDocStrings = fmap (fmap GHC.Hs.hsDocString) . concat . extractDocs . unwra
 
 associateDocStrings :: [Item] -> [GHC.Hs.LHsDocString] -> [(Item, [String])]
 associateDocStrings items lHsDocStrings =
-  -- TODO: Do something with these named and group doc strings.
+  -- TODO: Do something with these other (named and group) doc strings.
   let (_other, xs) = associateDocStrings2 lHsDocStrings items
    in fmap Tuple.swap xs
 
@@ -771,6 +780,9 @@ hsSigTypeToItems hsSigType = case hsSigType of
 hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item]
 hsTypeToItems hsType = case hsType of
   HS.HsTyVar _ _ lIdP -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+  HS.HsAppTy _ lHsType _ -> hsTypeToItems $ SrcLoc.unLoc lHsType
+  HS.HsParTy _ lHsType -> hsTypeToItems $ SrcLoc.unLoc lHsType
+  HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
   _ -> error $ dataShowS hsType " -- unknown HsType"
 
 famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item]

@@ -1,5 +1,7 @@
+{- hlint ignore "Use lambda-case" -}
 {- hlint ignore "Use tuple-section" -}
 {-# LANGUAGE FlexibleInstances #-}
+{-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Scrod where
 
@@ -22,17 +24,24 @@ import qualified Data.Void as Void
 import qualified Documentation.Haddock.Markup as Haddock
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
+import qualified GHC.Core.Unfold as Unfold
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer
+import qualified GHC.Driver.Backend as Backend
+import qualified GHC.Driver.Session as Session
 import qualified GHC.Hs
 import qualified GHC.LanguageExtensions.Type as X
 import qualified GHC.Parser as Parser
 import qualified GHC.Parser.Errors.Types as PsErr
+import qualified GHC.Parser.Header as Header
 import qualified GHC.Parser.Lexer as Lexer
+import qualified GHC.Platform as Platform
+import qualified GHC.Settings as Settings
 import qualified GHC.Stack as Stack
 import qualified GHC.Types.Name.Occurrence as OccName
 import qualified GHC.Types.Name.Reader as RdrName
+import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Error as ErrUtil
 import qualified GHC.Utils.Outputable as Outputable
@@ -43,6 +52,7 @@ import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Paths_scrod as Package
 import qualified System.IO as IO
+import qualified System.IO.Unsafe as Unsafe
 import qualified Test.Hspec as Hspec
 import qualified Text.Printf as Printf
 
@@ -51,7 +61,8 @@ import qualified Text.Printf as Printf
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
   Hspec.describe "getItems" $ do
-    let f = either (error . show) getItems . parseLHsModule ""
+    let f :: (Stack.HasCallStack) => String -> [Item]
+        f = either (error . show) getItems . parseLHsModule ""
 
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
@@ -161,7 +172,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "(q, r) = ()" `Hspec.shouldBe` [Item "q" $ Position 1 2, Item "r" $ Position 1 5]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "(# s | #) = ()" `Hspec.shouldBe` [Item "s" $ Position 1 4]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [Item "s" $ Position 1 33]
 
     Hspec.it "prefix constructor pattern" $ do
       f "Just t = ()" `Hspec.shouldBe` [Item "t" $ Position 1 6]
@@ -182,7 +193,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "(f -> y) = ()" `Hspec.shouldBe` [Item "y" $ Position 1 7]
 
     Hspec.it "splice pattern" $ do
-      f "$( x ) = ()" `Hspec.shouldBe` []
+      f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
 
     Hspec.it "literal pattern" $ do
       f "'x' = ()" `Hspec.shouldBe` []
@@ -191,26 +202,26 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "(z + 1) = ()" `Hspec.shouldBe` [Item "z" $ Position 1 2]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [Item "z" $ Position 1 34]
 
     Hspec.it "signature pattern" $ do
       f "(a :: ()) = ()" `Hspec.shouldBe` [Item "a" $ Position 1 2]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "pattern B = ()" `Hspec.shouldBe` [Item "B" $ Position 1 9]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [Item "B" $ Position 1 42]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "pattern C <- ()" `Hspec.shouldBe` [Item "C" $ Position 1 9]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [Item "C" $ Position 1 42]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
       -- The two names always have to match, so this is only a single item.
-      f "pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 9]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 42]
 
     Hspec.it "type signature" $ do
       f "e :: ()" `Hspec.shouldBe` [Item "e" $ Position 1 1]
 
     Hspec.it "pattern type signature" $ do
-      f "pattern F :: ()" `Hspec.shouldBe` [Item "F" $ Position 1 9]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [Item "F" $ Position 1 42]
 
     Hspec.it "method signature" $ do
       f "class X where g :: ()" `Hspec.shouldBe` [Item "X" $ Position 1 7, Item "g" $ Position 1 15]
@@ -255,7 +266,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [Item "p" $ Position 1 25]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [Item "p" $ Position 1 67]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -273,7 +284,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [Item "q" $ Position 1 11]
 
     Hspec.it "splice declaration" $ do
-      f "$( x )" `Hspec.shouldBe` []
+      f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
 
     Hspec.it "documentation" $ do
       f "-- | x" `Hspec.shouldBe` []
@@ -331,6 +342,57 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
             SrcLoc.L (mkSrcSpan (3, 1) (3, 1)) $
               mkDocString (3, 1) (3, 1) Previous "c"
       associateDocStrings [item] [d1, d2] `Hspec.shouldBe` [(item, ["a", "c"])]
+
+  Hspec.describe "discoverExtensions" $ do
+    Hspec.it "works" $ do
+      discoverExtensions "{-# LANGUAGE CPP #-}" `Hspec.shouldBe` [Session.On X.Cpp]
+
+discoverExtensions :: String -> [Session.OnOff X.Extension]
+discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
+
+discoverExtensionsIO :: String -> IO [Session.OnOff X.Extension]
+discoverExtensionsIO string = do
+  let dynFlags =
+        Session.DynFlags
+          { Session.backend = Backend.noBackend,
+            Session.dmdUnboxWidth = 0,
+            Session.dynamicNow = False,
+            Session.enableTimeStats = False,
+            Session.extensions = mempty,
+            Session.extensionFlags = mempty,
+            Session.fileSettings = Session.FileSettings {},
+            Session.generalFlags = mempty,
+            Session.ghcHeapSize = Nothing,
+            Session.ghcLink = Session.NoLink,
+            Session.ghcNameVersion = Session.GhcNameVersion {},
+            Session.language = Nothing,
+            Session.platformMisc = Session.PlatformMisc {},
+            Session.safeHaskell = SafeHaskell.Sf_Ignore,
+            Session.safeInfer = False,
+            Session.targetPlatform = Platform.genericPlatform,
+            Session.targetWays_ = mempty,
+            Session.toolSettings = Settings.ToolSettings {},
+            Session.unfoldingOpts = Unfold.defaultUnfoldingOpts
+          }
+      stringBuffer = StringBuffer.stringToStringBuffer string
+      supported =
+        Session.supportedLanguagesAndExtensions
+          Platform.ArchOS
+            { Platform.archOS_arch = Platform.ArchUnknown,
+              Platform.archOS_OS = Platform.OSUnknown
+            }
+      parserOpts =
+        Lexer.mkParserOpts
+          mempty
+          ErrUtil.emptyDiagOpts
+          supported
+          False
+          False
+          False
+          False
+      (_, locatedStrings) = Header.getOptions parserOpts stringBuffer "<interactive>"
+  (newDynFlags, _, _) <- Session.parseDynamicFilePragma dynFlags locatedStrings
+  pure $ Session.extensions newDynFlags
 
 -- Executable -----------------------------------------------------------------
 
@@ -462,20 +524,19 @@ parseLHsModule ::
   String ->
   Either (Messages PsErr.PsMessage) (LHsModule GHC.Hs.GhcPs)
 parseLHsModule filePath string =
-  let parserOpts =
+  let extensions =
+        EnumSet.fromList
+          . Maybe.mapMaybe
+            ( \o -> case o of
+                Session.On x -> Just x
+                Session.Off _ -> Nothing
+            )
+          $ discoverExtensions string
+      parserOpts =
         Lexer.mkParserOpts
-          -- TODO: Parsing extension pragmas requires dealing with DynFlags.
-          -- https://github.com/tfausak/monadoc-5/blob/22a743f6/src/lib/Monadoc/Utility/Ghc.hs#L62
-          ( EnumSet.fromList
-              [ X.ForeignFunctionInterface,
-                X.NPlusKPatterns,
-                X.PatternSynonyms,
-                X.TemplateHaskellQuotes,
-                X.UnboxedSums
-              ]
-          ) -- enabled extensions
+          extensions -- enabled extensions
           ErrUtil.emptyDiagOpts -- diagnostic options
-          [] -- supported extensions
+          mempty -- supported extensions
           False -- enable safe imports?
           True -- keep Haddock comments?
           False -- keep regular comments?

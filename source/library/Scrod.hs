@@ -214,8 +214,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [Item "C" $ Position 1 42]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      -- The two names always have to match, so this is only a single item.
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 42, Item "D" $ Position 1 56]
 
     Hspec.it "type signature" $ do
       f "e :: ()" `Hspec.shouldBe` [Item "e" $ Position 1 1]
@@ -728,14 +727,25 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.ValD _ hsBind -> case hsBind of
     HS.FunBind {HS.fun_id = lIdP} -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
-    HS.PatSynBind _ patSynBind ->
-      let lIdP = HS.psb_id patSynBind
-       in [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+    HS.PatSynBind _ patSynBind -> case patSynBind of
+      HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
+        Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)
+          : case hsPatSynDir of
+            HS.Unidirectional -> []
+            HS.ImplicitBidirectional -> []
+            HS.ExplicitBidirectional matchGroup -> case matchGroup of
+              HS.MG {HS.mg_alts = lMatches} ->
+                ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
+                    HS.FunRhs {HS.mc_fun = lIdP2} -> Item (rdrNameToString $ SrcLoc.unLoc lIdP2) (locatedAnToPosition lIdP2)
+                    _ -> error $ dataShowS hsMatchContext " -- unknown HsMatchContext"
+                )
+                  . SrcLoc.unLoc
+                  <$> SrcLoc.unLoc lMatches
     HS.VarBind {} -> impossible "unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
     HS.StandaloneKindSig _ lIdP _ -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
-  HS.DefD _ _ ->
+  HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>

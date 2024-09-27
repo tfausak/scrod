@@ -61,136 +61,140 @@ import qualified Text.Printf as Printf
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
   Hspec.describe "getItems" $ do
-    let f :: (Stack.HasCallStack) => String -> [Item]
-        f = either (error . show) getItems . parseLHsModule ""
+    let f :: (Stack.HasCallStack) => String -> [(Item, [String])]
+        f string =
+          let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
+              items = getItems lHsModule
+              lHsDocStrings = getLHsDocStrings lHsModule
+           in associateDocStrings items lHsDocStrings
 
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 
     Hspec.it "type family" $ do
-      f "type family A" `Hspec.shouldBe` [Item "A" $ Position 1 13]
+      f "type family A" `Hspec.shouldBe` [(Item "A" $ Position 1 13, [])]
 
     Hspec.it "data family" $ do
-      f "data family B" `Hspec.shouldBe` [Item "B" $ Position 1 13]
+      f "data family B" `Hspec.shouldBe` [(Item "B" $ Position 1 13, [])]
 
     Hspec.it "type synonym" $ do
-      f "type C = ()" `Hspec.shouldBe` [Item "C" $ Position 1 6]
+      f "type C = ()" `Hspec.shouldBe` [(Item "C" $ Position 1 6, [])]
 
     Hspec.it "data" $ do
-      f "data D" `Hspec.shouldBe` [Item "D" $ Position 1 6]
+      f "data D" `Hspec.shouldBe` [(Item "D" $ Position 1 6, [])]
 
     Hspec.it "data constructor" $ do
-      f "data X = E" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 10]
+      f "data X = E" `Hspec.shouldBe` [(Item "X" $ Position 1 6, []), (Item "E" $ Position 1 10, [])]
 
     Hspec.it "data constructor gadt" $ do
-      f "data X where E :: X" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 14]
+      f "data X where E :: X" `Hspec.shouldBe` [(Item "X" $ Position 1 6, []), (Item "E" $ Position 1 14, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 20]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, []), (Item "g" $ Position 1 20, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 26]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, []), (Item "g" $ Position 1 26, [])]
 
     Hspec.it "record field gadt" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 17, Item "f" $ Position 1 24]
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 17, []), (Item "f" $ Position 1 24, [])]
 
     Hspec.it "class" $ do
-      f "class E" `Hspec.shouldBe` [Item "E" $ Position 1 7]
+      f "class E" `Hspec.shouldBe` [(Item "E" $ Position 1 7, [])]
 
     Hspec.it "class instance" $ do
-      f "instance F" `Hspec.shouldBe` [Item "F" $ Position 1 10]
+      f "instance F" `Hspec.shouldBe` [(Item "F" $ Position 1 10, [])]
 
     Hspec.it "class instance with arguments" $ do
-      f "instance G a" `Hspec.shouldBe` [Item "G" $ Position 1 10]
+      f "instance G a" `Hspec.shouldBe` [(Item "G" $ Position 1 10, [])]
 
     Hspec.it "class instance with parentheses" $ do
-      f "instance (H)" `Hspec.shouldBe` [Item "H" $ Position 1 11]
+      f "instance (H)" `Hspec.shouldBe` [(Item "H" $ Position 1 11, [])]
 
     Hspec.it "class instance with context" $ do
-      f "instance () => I" `Hspec.shouldBe` [Item "I" $ Position 1 16]
+      f "instance () => I" `Hspec.shouldBe` [(Item "I" $ Position 1 16, [])]
 
     Hspec.it "data instance" $ do
-      f "data instance G" `Hspec.shouldBe` [Item "G" $ Position 1 15]
+      f "data instance G" `Hspec.shouldBe` [(Item "G" $ Position 1 15, [])]
 
     Hspec.it "newtype instance" $ do
-      f "newtype instance H = X" `Hspec.shouldBe` [Item "H" $ Position 1 18]
+      f "newtype instance H = X" `Hspec.shouldBe` [(Item "H" $ Position 1 18, [])]
 
     Hspec.it "type instance" $ do
-      f "type instance I = X" `Hspec.shouldBe` [Item "I" $ Position 1 15]
+      f "type instance I = X" `Hspec.shouldBe` [(Item "I" $ Position 1 15, [])]
 
     Hspec.it "deriving instance" $ do
-      f "deriving instance J" `Hspec.shouldBe` [Item "J" $ Position 1 19]
+      f "deriving instance J" `Hspec.shouldBe` [(Item "J" $ Position 1 19, [])]
 
     Hspec.it "function" $ do
-      f "h x = x" `Hspec.shouldBe` [Item "h" $ Position 1 1]
+      f "h x = x" `Hspec.shouldBe` [(Item "h" $ Position 1 1, [])]
 
     Hspec.it "infix function" $ do
-      f "_ `f` _ = ()" `Hspec.shouldBe` [Item "f" $ Position 1 3]
+      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item "f" $ Position 1 3, [])]
 
     Hspec.it "infix operator" $ do
-      f "_ & _ = ()" `Hspec.shouldBe` [Item "&" $ Position 1 3]
+      f "_ & _ = ()" `Hspec.shouldBe` [(Item "&" $ Position 1 3, [])]
 
     Hspec.it "prefix operator" $ do
       -- TODO: Why is this at column 1 rather than 2?
-      f "(&) = ()" `Hspec.shouldBe` [Item "&" $ Position 1 1]
+      f "(&) = ()" `Hspec.shouldBe` [(Item "&" $ Position 1 1, [])]
 
     Hspec.it "variable" $ do
-      f "i = ()" `Hspec.shouldBe` [Item "i" $ Position 1 1]
+      f "i = ()" `Hspec.shouldBe` [(Item "i" $ Position 1 1, [])]
 
     Hspec.it "variable on another line" $ do
-      f "\ni = ()" `Hspec.shouldBe` [Item "i" $ Position 2 1]
+      f "\ni = ()" `Hspec.shouldBe` [(Item "i" $ Position 2 1, [])]
 
     Hspec.it "variable indented" $ do
-      f " i = ()" `Hspec.shouldBe` [Item "i" $ Position 1 2]
+      f " i = ()" `Hspec.shouldBe` [(Item "i" $ Position 1 2, [])]
 
     Hspec.it "strict variable" $ do
-      f "!j = ()" `Hspec.shouldBe` [Item "j" $ Position 1 2]
+      f "!j = ()" `Hspec.shouldBe` [(Item "j" $ Position 1 2, [])]
 
     Hspec.it "wildcard pattern" $ do
       f "_ = ()" `Hspec.shouldBe` []
 
     Hspec.it "lazy pattern" $ do
-      f "~k = ()" `Hspec.shouldBe` [Item "k" $ Position 1 2]
+      f "~k = ()" `Hspec.shouldBe` [(Item "k" $ Position 1 2, [])]
 
     Hspec.it "as pattern" $ do
-      f "l@m = ()" `Hspec.shouldBe` [Item "l" $ Position 1 1, Item "m" $ Position 1 3]
+      f "l@m = ()" `Hspec.shouldBe` [(Item "l" $ Position 1 1, []), (Item "m" $ Position 1 3, [])]
 
     Hspec.it "patenthesized pattern" $ do
-      f "(n) = ()" `Hspec.shouldBe` [Item "n" $ Position 1 2]
+      f "(n) = ()" `Hspec.shouldBe` [(Item "n" $ Position 1 2, [])]
 
     Hspec.it "bang pattern" $ do
       -- Note that this is different than the "strict variable" test case!
-      f "(!o) = ()" `Hspec.shouldBe` [Item "o" $ Position 1 3]
+      f "(!o) = ()" `Hspec.shouldBe` [(Item "o" $ Position 1 3, [])]
 
     Hspec.it "list pattern" $ do
-      f "[p] = ()" `Hspec.shouldBe` [Item "p" $ Position 1 2]
+      f "[p] = ()" `Hspec.shouldBe` [(Item "p" $ Position 1 2, [])]
 
     Hspec.it "tuple pattern" $ do
-      f "(q, r) = ()" `Hspec.shouldBe` [Item "q" $ Position 1 2, Item "r" $ Position 1 5]
+      f "(q, r) = ()" `Hspec.shouldBe` [(Item "q" $ Position 1 2, []), (Item "r" $ Position 1 5, [])]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [Item "s" $ Position 1 33]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item "s" $ Position 1 33, [])]
 
     Hspec.it "prefix constructor pattern" $ do
-      f "Just t = ()" `Hspec.shouldBe` [Item "t" $ Position 1 6]
+      f "Just t = ()" `Hspec.shouldBe` [(Item "t" $ Position 1 6, [])]
 
     Hspec.it "record constructor pattern" $ do
-      f "X { u = v } = ()" `Hspec.shouldBe` [Item "v" $ Position 1 9]
+      f "X { u = v } = ()" `Hspec.shouldBe` [(Item "v" $ Position 1 9, [])]
 
     Hspec.it "punned record pattern" $ do
-      f "X { w } = ()" `Hspec.shouldBe` [Item "w" $ Position 1 5]
+      f "X { w } = ()" `Hspec.shouldBe` [(Item "w" $ Position 1 5, [])]
 
     Hspec.it "wild card record pattern" $ do
       f "X { .. } = ()" `Hspec.shouldBe` []
 
     Hspec.it "infix constructor pattern" $ do
-      f "(x : _) = ()" `Hspec.shouldBe` [Item "x" $ Position 1 2]
+      f "(x : _) = ()" `Hspec.shouldBe` [(Item "x" $ Position 1 2, [])]
 
     Hspec.it "view pattern" $ do
-      f "(f -> y) = ()" `Hspec.shouldBe` [Item "y" $ Position 1 7]
+      f "(f -> y) = ()" `Hspec.shouldBe` [(Item "y" $ Position 1 7, [])]
 
     Hspec.it "splice pattern" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
@@ -202,34 +206,34 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [Item "z" $ Position 1 34]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item "z" $ Position 1 34, [])]
 
     Hspec.it "signature pattern" $ do
-      f "(a :: ()) = ()" `Hspec.shouldBe` [Item "a" $ Position 1 2]
+      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item "a" $ Position 1 2, [])]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [Item "B" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item "B" $ Position 1 42, [])]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [Item "C" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item "C" $ Position 1 42, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 42, Item "D" $ Position 1 56]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item "D" $ Position 1 42, []), (Item "D" $ Position 1 56, [])]
 
     Hspec.it "type signature" $ do
-      f "e :: ()" `Hspec.shouldBe` [Item "e" $ Position 1 1]
+      f "e :: ()" `Hspec.shouldBe` [(Item "e" $ Position 1 1, [])]
 
     Hspec.it "pattern type signature" $ do
-      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [Item "F" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item "F" $ Position 1 42, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [Item "X" $ Position 1 7, Item "g" $ Position 1 15]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item "X" $ Position 1 7, []), (Item "g" $ Position 1 15, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [Item "X" $ Position 1 7, Item "h" $ Position 1 23]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item "X" $ Position 1 7, []), (Item "h" $ Position 1 23, [])]
 
     Hspec.it "fixity declaration" $ do
-      f "infix 5 %" `Hspec.shouldBe` [Item "%" $ Position 1 9]
+      f "infix 5 %" `Hspec.shouldBe` [(Item "%" $ Position 1 9, [])]
 
     Hspec.it "inline pragma" $ do
       f "{-# inline i #-}" `Hspec.shouldBe` []
@@ -259,13 +263,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# complete N #-}" `Hspec.shouldBe` []
 
     Hspec.it "standalone kind signature" $ do
-      f "type O :: ()" `Hspec.shouldBe` [Item "O" $ Position 1 6]
+      f "type O :: ()" `Hspec.shouldBe` [(Item "O" $ Position 1 6, [])]
 
     Hspec.it "default declaration" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [Item "p" $ Position 1 67]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item "p" $ Position 1 67, [])]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -280,7 +284,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# ann module () #-}" `Hspec.shouldBe` []
 
     Hspec.it "rules pragma" $ do
-      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [Item "q" $ Position 1 11]
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item "q" $ Position 1 11, [])]
 
     Hspec.it "splice declaration" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
@@ -289,7 +293,16 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "-- | x" `Hspec.shouldBe` []
 
     Hspec.it "role annotation" $ do
-      f "type role R nominal" `Hspec.shouldBe` [Item "R" $ Position 1 11]
+      f "type role R nominal" `Hspec.shouldBe` [(Item "R" $ Position 1 11, [])]
+
+    Hspec.it "documentation before item" $ do
+      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item "y" $ Position 2 1, [" x"])]
+
+    Hspec.it "documentation after item" $ do
+      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item "x" $ Position 1 1, [" y"])]
+
+    Hspec.it "documentation around item" $ do
+      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item "y" $ Position 2 1, [" x", " z"])]
 
   Hspec.describe "associateDocStrings" $ do
     let mkItem n l = Item n . Position l

@@ -304,6 +304,9 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "documentation around item" $ do
       f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item "y" $ Position 2 1, [" x", " z"])]
 
+    Hspec.it "" $ do
+      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item "a" $ Position 1 1, [" 1"]), (Item "b" $ Position 3 1, [" 2"])]
+
   Hspec.describe "associateDocStrings" $ do
     let mkItem n l = Item n . Position l
         mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
@@ -445,12 +448,41 @@ executable = do
       (Right Http.POST, []) -> application request respond
       _ -> respond $ statusResponse Http.status404 defaultHeaders
 
+defaultInput :: Text.Text
+defaultInput =
+  text $
+    unlines
+      [ "-- | A [__Bool__ean data type](https://en.wikipedia.org/wiki/Boolean_data_type), introduced by George Boole in /The Mathematical Analysis of Logic/.",
+        "data Bool",
+        "  = False -- ^ Also known as 0.",
+        "  | True -- ^ Also known as 1.",
+        "",
+        "-- | Negates the input. Sometimes denoted as @¬@. Hopefully \\(O(1)\\).",
+        "--",
+        "-- prop> not (not x) == x",
+        "not :: Bool -> Bool",
+        "not x = case x of",
+        "  False -> True",
+        "  _ -> False",
+        "",
+        "-- | A 'first' and 'last' name together in one record.",
+        "data Name = Name",
+        "  { first :: String -- ^ The first name, like \\\"Haskell\\\".",
+        "  , last :: String -- ^ The last name, like \\\"Curry\\\"",
+        "  }",
+        "",
+        "-- | A type class for things that can be compared for __eq__uality.",
+        "class Eq a where",
+        "  -- | Returns 'True' if the two values are equal, 'False' otherwise.",
+        "  (==) :: a -> a -> Bool"
+      ]
+
 application :: Wai.Application
 application request respond = do
   body <- Wai.strictRequestBody request
   let input =
         Text.unpack
-          . maybe Text.empty Encoding.decodeUtf8Lenient
+          . maybe defaultInput Encoding.decodeUtf8Lenient
           . Monad.join
           . lookup (utf8 "input")
           . Http.parseQuery
@@ -477,6 +509,13 @@ application request respond = do
             H.integrity_ $ text "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH",
             H.rel_ $ text "stylesheet"
           ]
+        H.script_
+          [ H.async_ $ text "async",
+            H.crossorigin_ $ text "anonymous",
+            H.integrity_ $ text "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei",
+            H.src_ $ text "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"
+          ]
+          $ html ""
       H.body_ $ do
         H.header_ [H.class_ $ text "bg-primary mb-3 navbar"] $ do
           H.div_ [H.class_ $ text "container"] $ do
@@ -501,22 +540,18 @@ application request respond = do
                     H.h2_ [H.class_ $ text "alert-heading"] $ html "Error"
                     H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show message
                   Right lHsModule -> do
-                    H.h2_ $ html "Parsed"
-                    H.details_ $ do
-                      H.summary_ $ html "Click to expand."
-                      H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show lHsModule
-
-                    H.h2_ $ html "Items"
                     let items = getItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
                         tuples = mergeItems $ associateDocStrings items lHsDocStrings
-                    H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-                      H.code_ . html $ itemName item
-                      docHToHtml
-                        . Haddock.overIdentifier (curry Just)
-                        . Haddock._doc
-                        . Haddock.parseParas Nothing
-                        $ List.intercalate "\n\n" docStrings
+                    if null tuples
+                      then H.p_ $ html "Nothing to see here."
+                      else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
+                        H.code_ . html $ itemName item
+                        docHToHtml
+                          . Haddock.overIdentifier (curry Just)
+                          . Haddock._doc
+                          . Haddock.parseParas Nothing
+                          $ List.intercalate "\n\n" docStrings
 
         H.footer_ [H.class_ $ text "my-3 text-secondary"] $ do
           H.div_ [H.class_ $ text "border-top container pt-3"] $ do
@@ -655,10 +690,11 @@ associateDocStrings2 lHsDocStrings items =
               Previous -> False
           )
           ts
+      sp = reverse ps
       -- TODO: Account for doc strings that don't get associated with an item,
       -- like a "previous" doc string at the beginning of the file.
       is1 = associateDocStringsHelper Next (fmap (\((p, _), s) -> (p, s)) ns) $ fmap ((,) []) items
-      is2 = associateDocStringsHelper Previous (fmap (\((p, _), s) -> (p, s)) ps) $ reverse is1
+      is2 = associateDocStringsHelper Previous (fmap (\((p, _), s) -> (p, s)) sp) $ reverse is1
    in (xs, reverse is2)
 
 associateDocStringsHelper ::

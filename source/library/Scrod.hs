@@ -471,45 +471,61 @@ application request respond = do
             H.content_ $ text "initial-scale = 1, width = device-width"
           ]
         H.title_ $ html "Scrod"
-        H.style_ $ text "pre { white-space: pre-wrap; }"
+        H.link_
+          [ H.crossorigin_ $ text "anonymous",
+            H.href_ $ text "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+            H.integrity_ $ text "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH",
+            H.rel_ $ text "stylesheet"
+          ]
       H.body_ $ do
-        H.h1_ $ html "Scrod"
+        H.header_ [H.class_ $ text "bg-primary mb-3 navbar"] $ do
+          H.div_ [H.class_ $ text "container"] $ do
+            H.a_ [H.class_ $ text "navbar-brand text-light", H.href_ $ text "/"] $ do
+              html "Scrod"
 
-        H.form_ [H.method_ $ text "post"] $ do
-          H.textarea_ [H.name_ $ text "input"] $ html input
-          H.button_ [] $ html "Submit"
+        H.main_ [H.class_ $ text "my-3"] $ do
+          H.div_ [H.class_ $ text "container"] $ do
+            H.div_ [H.class_ $ text "row"] $ do
+              H.div_ [H.class_ $ text "col-lg"] $ do
+                H.form_ [H.method_ $ text "post"] $ do
+                  H.textarea_
+                    [ H.class_ $ text "font-monospace form-control mb-3",
+                      H.name_ $ text "input",
+                      H.rows_ $ text "10"
+                    ]
+                    $ html input
+                  H.button_ [H.class_ $ text "btn btn-primary", H.type_ $ text "submit"] $ html "Submit"
+              H.div_ [H.class_ $ text "col-lg"] $ do
+                case result of
+                  Left message -> H.div_ [H.class_ $ text "alert alert-danger"] $ do
+                    H.h2_ [H.class_ $ text "alert-heading"] $ html "Error"
+                    H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show message
+                  Right lHsModule -> do
+                    H.h2_ $ html "Parsed"
+                    H.details_ $ do
+                      H.summary_ $ html "Click to expand."
+                      H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show lHsModule
 
-        case result of
-          Left message -> do
-            H.h2_ $ html "Error"
-            H.pre_ . H.code_ . html $ show message
-          Right lHsModule -> do
-            H.h2_ $ html "Parsed"
-            H.details_ $ do
-              H.summary_ $ html "Click to expand."
-              H.pre_ . H.code_ . html $ show lHsModule
+                    H.h2_ $ html "Items"
+                    let items = getItems lHsModule
+                        lHsDocStrings = getLHsDocStrings lHsModule
+                        tuples = mergeItems $ associateDocStrings items lHsDocStrings
+                    H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
+                      H.code_ . html $ itemName item
+                      docHToHtml
+                        . Haddock.overIdentifier (curry Just)
+                        . Haddock._doc
+                        . Haddock.parseParas Nothing
+                        $ List.intercalate "\n\n" docStrings
 
-            H.h2_ $ html "Items"
-            let items = getItems lHsModule
-                lHsDocStrings = getLHsDocStrings lHsModule
-                tuples = associateDocStrings items lHsDocStrings
-            H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-              html . show . positionLine $ itemPosition item
-              html ":"
-              html . show . positionColumn $ itemPosition item
-              html ": "
-              html $ itemName item
-              docHToHtml
-                . Haddock.overIdentifier (curry Just)
-                . Haddock._doc
-                . Haddock.parseParas Nothing
-                $ List.intercalate "\n\n" docStrings
-
-        html "Powered by "
-        H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "tfausak/scrod"
-        html " version "
-        html $ Version.showVersion Package.version
-        html "."
+        H.footer_ [H.class_ $ text "my-3 text-secondary"] $ do
+          H.div_ [H.class_ $ text "border-top container pt-3"] $ do
+            html "Powered by "
+            H.a_ [H.class_ $ text "link-secondary", H.href_ $ text "https://github.com/tfausak/scrod"] $ do
+              html "tfausak/scrod"
+            html " version "
+            html $ Version.showVersion Package.version
+            html "."
 
 defaultHeaders :: Http.ResponseHeaders
 defaultHeaders =

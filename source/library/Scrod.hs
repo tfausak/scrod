@@ -61,136 +61,140 @@ import qualified Text.Printf as Printf
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
   Hspec.describe "getItems" $ do
-    let f :: (Stack.HasCallStack) => String -> [Item]
-        f = either (error . show) getItems . parseLHsModule ""
+    let f :: (Stack.HasCallStack) => String -> [(Item, [String])]
+        f string =
+          let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
+              items = getItems lHsModule
+              lHsDocStrings = getLHsDocStrings lHsModule
+           in mergeItems $ associateDocStrings items lHsDocStrings
 
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 
     Hspec.it "type family" $ do
-      f "type family A" `Hspec.shouldBe` [Item "A" $ Position 1 13]
+      f "type family A" `Hspec.shouldBe` [(Item "A" $ Position 1 13, [])]
 
     Hspec.it "data family" $ do
-      f "data family B" `Hspec.shouldBe` [Item "B" $ Position 1 13]
+      f "data family B" `Hspec.shouldBe` [(Item "B" $ Position 1 13, [])]
 
     Hspec.it "type synonym" $ do
-      f "type C = ()" `Hspec.shouldBe` [Item "C" $ Position 1 6]
+      f "type C = ()" `Hspec.shouldBe` [(Item "C" $ Position 1 6, [])]
 
     Hspec.it "data" $ do
-      f "data D" `Hspec.shouldBe` [Item "D" $ Position 1 6]
+      f "data D" `Hspec.shouldBe` [(Item "D" $ Position 1 6, [])]
 
     Hspec.it "data constructor" $ do
-      f "data X = E" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 10]
+      f "data X = E" `Hspec.shouldBe` [(Item "X" $ Position 1 6, []), (Item "E" $ Position 1 10, [])]
 
     Hspec.it "data constructor gadt" $ do
-      f "data X where E :: X" `Hspec.shouldBe` [Item "X" $ Position 1 6, Item "E" $ Position 1 14]
+      f "data X where E :: X" `Hspec.shouldBe` [(Item "X" $ Position 1 6, []), (Item "E" $ Position 1 14, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 20]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, []), (Item "g" $ Position 1 20, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 13, Item "f" $ Position 1 17, Item "g" $ Position 1 26]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 13, []), (Item "f" $ Position 1 17, []), (Item "g" $ Position 1 26, [])]
 
     Hspec.it "record field gadt" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [Item "T" $ Position 1 9, Item "C" $ Position 1 17, Item "f" $ Position 1 24]
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item "T" $ Position 1 9, []), (Item "C" $ Position 1 17, []), (Item "f" $ Position 1 24, [])]
 
     Hspec.it "class" $ do
-      f "class E" `Hspec.shouldBe` [Item "E" $ Position 1 7]
+      f "class E" `Hspec.shouldBe` [(Item "E" $ Position 1 7, [])]
 
     Hspec.it "class instance" $ do
-      f "instance F" `Hspec.shouldBe` [Item "F" $ Position 1 10]
+      f "instance F" `Hspec.shouldBe` [(Item "F" $ Position 1 10, [])]
 
     Hspec.it "class instance with arguments" $ do
-      f "instance G a" `Hspec.shouldBe` [Item "G" $ Position 1 10]
+      f "instance G a" `Hspec.shouldBe` [(Item "G" $ Position 1 10, [])]
 
     Hspec.it "class instance with parentheses" $ do
-      f "instance (H)" `Hspec.shouldBe` [Item "H" $ Position 1 11]
+      f "instance (H)" `Hspec.shouldBe` [(Item "H" $ Position 1 11, [])]
 
     Hspec.it "class instance with context" $ do
-      f "instance () => I" `Hspec.shouldBe` [Item "I" $ Position 1 16]
+      f "instance () => I" `Hspec.shouldBe` [(Item "I" $ Position 1 16, [])]
 
     Hspec.it "data instance" $ do
-      f "data instance G" `Hspec.shouldBe` [Item "G" $ Position 1 15]
+      f "data instance G" `Hspec.shouldBe` [(Item "G" $ Position 1 15, [])]
 
     Hspec.it "newtype instance" $ do
-      f "newtype instance H = X" `Hspec.shouldBe` [Item "H" $ Position 1 18]
+      f "newtype instance H = X" `Hspec.shouldBe` [(Item "H" $ Position 1 18, [])]
 
     Hspec.it "type instance" $ do
-      f "type instance I = X" `Hspec.shouldBe` [Item "I" $ Position 1 15]
+      f "type instance I = X" `Hspec.shouldBe` [(Item "I" $ Position 1 15, [])]
 
     Hspec.it "deriving instance" $ do
-      f "deriving instance J" `Hspec.shouldBe` [Item "J" $ Position 1 19]
+      f "deriving instance J" `Hspec.shouldBe` [(Item "J" $ Position 1 19, [])]
 
     Hspec.it "function" $ do
-      f "h x = x" `Hspec.shouldBe` [Item "h" $ Position 1 1]
+      f "h x = x" `Hspec.shouldBe` [(Item "h" $ Position 1 1, [])]
 
     Hspec.it "infix function" $ do
-      f "_ `f` _ = ()" `Hspec.shouldBe` [Item "f" $ Position 1 3]
+      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item "f" $ Position 1 3, [])]
 
     Hspec.it "infix operator" $ do
-      f "_ & _ = ()" `Hspec.shouldBe` [Item "&" $ Position 1 3]
+      f "_ & _ = ()" `Hspec.shouldBe` [(Item "&" $ Position 1 3, [])]
 
     Hspec.it "prefix operator" $ do
       -- TODO: Why is this at column 1 rather than 2?
-      f "(&) = ()" `Hspec.shouldBe` [Item "&" $ Position 1 1]
+      f "(&) = ()" `Hspec.shouldBe` [(Item "&" $ Position 1 1, [])]
 
     Hspec.it "variable" $ do
-      f "i = ()" `Hspec.shouldBe` [Item "i" $ Position 1 1]
+      f "i = ()" `Hspec.shouldBe` [(Item "i" $ Position 1 1, [])]
 
     Hspec.it "variable on another line" $ do
-      f "\ni = ()" `Hspec.shouldBe` [Item "i" $ Position 2 1]
+      f "\ni = ()" `Hspec.shouldBe` [(Item "i" $ Position 2 1, [])]
 
     Hspec.it "variable indented" $ do
-      f " i = ()" `Hspec.shouldBe` [Item "i" $ Position 1 2]
+      f " i = ()" `Hspec.shouldBe` [(Item "i" $ Position 1 2, [])]
 
     Hspec.it "strict variable" $ do
-      f "!j = ()" `Hspec.shouldBe` [Item "j" $ Position 1 2]
+      f "!j = ()" `Hspec.shouldBe` [(Item "j" $ Position 1 2, [])]
 
     Hspec.it "wildcard pattern" $ do
       f "_ = ()" `Hspec.shouldBe` []
 
     Hspec.it "lazy pattern" $ do
-      f "~k = ()" `Hspec.shouldBe` [Item "k" $ Position 1 2]
+      f "~k = ()" `Hspec.shouldBe` [(Item "k" $ Position 1 2, [])]
 
     Hspec.it "as pattern" $ do
-      f "l@m = ()" `Hspec.shouldBe` [Item "l" $ Position 1 1, Item "m" $ Position 1 3]
+      f "l@m = ()" `Hspec.shouldBe` [(Item "l" $ Position 1 1, []), (Item "m" $ Position 1 3, [])]
 
     Hspec.it "patenthesized pattern" $ do
-      f "(n) = ()" `Hspec.shouldBe` [Item "n" $ Position 1 2]
+      f "(n) = ()" `Hspec.shouldBe` [(Item "n" $ Position 1 2, [])]
 
     Hspec.it "bang pattern" $ do
       -- Note that this is different than the "strict variable" test case!
-      f "(!o) = ()" `Hspec.shouldBe` [Item "o" $ Position 1 3]
+      f "(!o) = ()" `Hspec.shouldBe` [(Item "o" $ Position 1 3, [])]
 
     Hspec.it "list pattern" $ do
-      f "[p] = ()" `Hspec.shouldBe` [Item "p" $ Position 1 2]
+      f "[p] = ()" `Hspec.shouldBe` [(Item "p" $ Position 1 2, [])]
 
     Hspec.it "tuple pattern" $ do
-      f "(q, r) = ()" `Hspec.shouldBe` [Item "q" $ Position 1 2, Item "r" $ Position 1 5]
+      f "(q, r) = ()" `Hspec.shouldBe` [(Item "q" $ Position 1 2, []), (Item "r" $ Position 1 5, [])]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [Item "s" $ Position 1 33]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item "s" $ Position 1 33, [])]
 
     Hspec.it "prefix constructor pattern" $ do
-      f "Just t = ()" `Hspec.shouldBe` [Item "t" $ Position 1 6]
+      f "Just t = ()" `Hspec.shouldBe` [(Item "t" $ Position 1 6, [])]
 
     Hspec.it "record constructor pattern" $ do
-      f "X { u = v } = ()" `Hspec.shouldBe` [Item "v" $ Position 1 9]
+      f "X { u = v } = ()" `Hspec.shouldBe` [(Item "v" $ Position 1 9, [])]
 
     Hspec.it "punned record pattern" $ do
-      f "X { w } = ()" `Hspec.shouldBe` [Item "w" $ Position 1 5]
+      f "X { w } = ()" `Hspec.shouldBe` [(Item "w" $ Position 1 5, [])]
 
     Hspec.it "wild card record pattern" $ do
       f "X { .. } = ()" `Hspec.shouldBe` []
 
     Hspec.it "infix constructor pattern" $ do
-      f "(x : _) = ()" `Hspec.shouldBe` [Item "x" $ Position 1 2]
+      f "(x : _) = ()" `Hspec.shouldBe` [(Item "x" $ Position 1 2, [])]
 
     Hspec.it "view pattern" $ do
-      f "(f -> y) = ()" `Hspec.shouldBe` [Item "y" $ Position 1 7]
+      f "(f -> y) = ()" `Hspec.shouldBe` [(Item "y" $ Position 1 7, [])]
 
     Hspec.it "splice pattern" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
@@ -202,35 +206,34 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [Item "z" $ Position 1 34]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item "z" $ Position 1 34, [])]
 
     Hspec.it "signature pattern" $ do
-      f "(a :: ()) = ()" `Hspec.shouldBe` [Item "a" $ Position 1 2]
+      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item "a" $ Position 1 2, [])]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [Item "B" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item "B" $ Position 1 42, [])]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [Item "C" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item "C" $ Position 1 42, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      -- The two names always have to match, so this is only a single item.
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [Item "D" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item "D" $ Position 1 42, [])]
 
     Hspec.it "type signature" $ do
-      f "e :: ()" `Hspec.shouldBe` [Item "e" $ Position 1 1]
+      f "e :: ()" `Hspec.shouldBe` [(Item "e" $ Position 1 1, [])]
 
     Hspec.it "pattern type signature" $ do
-      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [Item "F" $ Position 1 42]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item "F" $ Position 1 42, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [Item "X" $ Position 1 7, Item "g" $ Position 1 15]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item "X" $ Position 1 7, []), (Item "g" $ Position 1 15, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [Item "X" $ Position 1 7, Item "h" $ Position 1 23]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item "X" $ Position 1 7, []), (Item "h" $ Position 1 23, [])]
 
     Hspec.it "fixity declaration" $ do
-      f "infix 5 %" `Hspec.shouldBe` [Item "%" $ Position 1 9]
+      f "infix 5 %" `Hspec.shouldBe` [(Item "%" $ Position 1 9, [])]
 
     Hspec.it "inline pragma" $ do
       f "{-# inline i #-}" `Hspec.shouldBe` []
@@ -260,13 +263,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# complete N #-}" `Hspec.shouldBe` []
 
     Hspec.it "standalone kind signature" $ do
-      f "type O :: ()" `Hspec.shouldBe` [Item "O" $ Position 1 6]
+      f "type O :: ()" `Hspec.shouldBe` [(Item "O" $ Position 1 6, [])]
 
     Hspec.it "default declaration" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [Item "p" $ Position 1 67]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item "p" $ Position 1 67, [])]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -281,7 +284,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# ann module () #-}" `Hspec.shouldBe` []
 
     Hspec.it "rules pragma" $ do
-      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [Item "q" $ Position 1 11]
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item "q" $ Position 1 11, [])]
 
     Hspec.it "splice declaration" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
@@ -290,7 +293,16 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "-- | x" `Hspec.shouldBe` []
 
     Hspec.it "role annotation" $ do
-      f "type role R nominal" `Hspec.shouldBe` [Item "R" $ Position 1 11]
+      f "type role R nominal" `Hspec.shouldBe` [(Item "R" $ Position 1 11, [])]
+
+    Hspec.it "documentation before item" $ do
+      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item "y" $ Position 2 1, [" x"])]
+
+    Hspec.it "documentation after item" $ do
+      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item "x" $ Position 1 1, [" y"])]
+
+    Hspec.it "documentation around item" $ do
+      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item "y" $ Position 2 1, [" x", " z"])]
 
   Hspec.describe "associateDocStrings" $ do
     let mkItem n l = Item n . Position l
@@ -344,13 +356,41 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       associateDocStrings [item] [d1, d2] `Hspec.shouldBe` [(item, ["a", "c"])]
 
   Hspec.describe "discoverExtensions" $ do
-    Hspec.it "works" $ do
-      discoverExtensions "{-# LANGUAGE CPP #-}" `Hspec.shouldBe` [Session.On X.Cpp]
+    Hspec.it "discovers an enabled extension" $ do
+      discoverExtensions "{-# language CPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp])
 
-discoverExtensions :: String -> [Session.OnOff X.Extension]
+    Hspec.it "discovers a disabled extension" $ do
+      discoverExtensions "{-# language NoCPP #-}" `Hspec.shouldBe` (Nothing, [Session.Off X.Cpp])
+
+    Hspec.it "discovers an extension from a ghc option" $ do
+      discoverExtensions "{-# options_ghc -XCPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp])
+
+    Hspec.it "discovers two extensions in one pragma" $ do
+      discoverExtensions "{-# language CPP, DeriveGeneric #-}" `Hspec.shouldBe` (Nothing, [Session.On X.DeriveGeneric, Session.On X.Cpp])
+
+    Hspec.it "discovers two extensions in separate pragmas" $ do
+      discoverExtensions "{-# language CPP #-} {-# language DeriveGeneric #-}" `Hspec.shouldBe` (Nothing, [Session.On X.DeriveGeneric, Session.On X.Cpp])
+
+    Hspec.it "discovers the same extension twice" $ do
+      discoverExtensions "{-# language CPP #-} {-# language CPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp, Session.On X.Cpp])
+
+    Hspec.it "discovers the same extension on then off" $ do
+      discoverExtensions "{-# language CPP #-} {-# language NoCPP #-}" `Hspec.shouldBe` (Nothing, [Session.Off X.Cpp, Session.On X.Cpp])
+
+    Hspec.it "discovers a language edition" $ do
+      discoverExtensions "{-# language GHC2021 #-}" `Hspec.shouldBe` (Just Session.GHC2021, [])
+
+mergeItems :: (Monoid a) => [(Item, a)] -> [(Item, a)]
+mergeItems items = case items of
+  [] -> items
+  (i, a) : is ->
+    let (ts, fs) = List.partition ((==) (itemName i) . itemName . fst) is
+     in (i, a <> foldMap snd ts) : mergeItems fs
+
+discoverExtensions :: String -> (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
-discoverExtensionsIO :: String -> IO [Session.OnOff X.Extension]
+discoverExtensionsIO :: String -> IO (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensionsIO string = do
   let dynFlags =
         Session.DynFlags
@@ -392,7 +432,7 @@ discoverExtensionsIO string = do
           False
       (_, locatedStrings) = Header.getOptions parserOpts stringBuffer "<interactive>"
   (newDynFlags, _, _) <- Session.parseDynamicFilePragma dynFlags locatedStrings
-  pure $ Session.extensions newDynFlags
+  pure (Session.language newDynFlags, Session.extensions newDynFlags)
 
 -- Executable -----------------------------------------------------------------
 
@@ -431,45 +471,61 @@ application request respond = do
             H.content_ $ text "initial-scale = 1, width = device-width"
           ]
         H.title_ $ html "Scrod"
-        H.style_ $ text "pre { white-space: pre-wrap; }"
+        H.link_
+          [ H.crossorigin_ $ text "anonymous",
+            H.href_ $ text "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+            H.integrity_ $ text "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH",
+            H.rel_ $ text "stylesheet"
+          ]
       H.body_ $ do
-        H.h1_ $ html "Scrod"
+        H.header_ [H.class_ $ text "bg-primary mb-3 navbar"] $ do
+          H.div_ [H.class_ $ text "container"] $ do
+            H.a_ [H.class_ $ text "navbar-brand text-light", H.href_ $ text "/"] $ do
+              html "Scrod"
 
-        H.form_ [H.method_ $ text "post"] $ do
-          H.textarea_ [H.name_ $ text "input"] $ html input
-          H.button_ [] $ html "Submit"
+        H.main_ [H.class_ $ text "my-3"] $ do
+          H.div_ [H.class_ $ text "container"] $ do
+            H.div_ [H.class_ $ text "row"] $ do
+              H.div_ [H.class_ $ text "col-lg"] $ do
+                H.form_ [H.method_ $ text "post"] $ do
+                  H.textarea_
+                    [ H.class_ $ text "font-monospace form-control mb-3",
+                      H.name_ $ text "input",
+                      H.rows_ $ text "10"
+                    ]
+                    $ html input
+                  H.button_ [H.class_ $ text "btn btn-primary", H.type_ $ text "submit"] $ html "Submit"
+              H.div_ [H.class_ $ text "col-lg"] $ do
+                case result of
+                  Left message -> H.div_ [H.class_ $ text "alert alert-danger"] $ do
+                    H.h2_ [H.class_ $ text "alert-heading"] $ html "Error"
+                    H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show message
+                  Right lHsModule -> do
+                    H.h2_ $ html "Parsed"
+                    H.details_ $ do
+                      H.summary_ $ html "Click to expand."
+                      H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show lHsModule
 
-        case result of
-          Left message -> do
-            H.h2_ $ html "Error"
-            H.pre_ . H.code_ . html $ show message
-          Right lHsModule -> do
-            H.h2_ $ html "Parsed"
-            H.details_ $ do
-              H.summary_ $ html "Click to expand."
-              H.pre_ . H.code_ . html $ show lHsModule
+                    H.h2_ $ html "Items"
+                    let items = getItems lHsModule
+                        lHsDocStrings = getLHsDocStrings lHsModule
+                        tuples = mergeItems $ associateDocStrings items lHsDocStrings
+                    H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
+                      H.code_ . html $ itemName item
+                      docHToHtml
+                        . Haddock.overIdentifier (curry Just)
+                        . Haddock._doc
+                        . Haddock.parseParas Nothing
+                        $ List.intercalate "\n\n" docStrings
 
-            H.h2_ $ html "Items"
-            let items = getItems lHsModule
-                lHsDocStrings = getLHsDocStrings lHsModule
-                tuples = associateDocStrings items lHsDocStrings
-            H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-              html . show . positionLine $ itemPosition item
-              html ":"
-              html . show . positionColumn $ itemPosition item
-              html ": "
-              html $ itemName item
-              docHToHtml
-                . Haddock.overIdentifier (curry Just)
-                . Haddock._doc
-                . Haddock.parseParas Nothing
-                $ List.intercalate "\n\n" docStrings
-
-        html "Powered by "
-        H.a_ [H.href_ $ text "https://github.com/tfausak/scrod"] $ html "tfausak/scrod"
-        html " version "
-        html $ Version.showVersion Package.version
-        html "."
+        H.footer_ [H.class_ $ text "my-3 text-secondary"] $ do
+          H.div_ [H.class_ $ text "border-top container pt-3"] $ do
+            html "Powered by "
+            H.a_ [H.class_ $ text "link-secondary", H.href_ $ text "https://github.com/tfausak/scrod"] $ do
+              html "tfausak/scrod"
+            html " version "
+            html $ Version.showVersion Package.version
+            html "."
 
 defaultHeaders :: Http.ResponseHeaders
 defaultHeaders =
@@ -524,14 +580,12 @@ parseLHsModule ::
   String ->
   Either (Messages PsErr.PsMessage) (LHsModule GHC.Hs.GhcPs)
 parseLHsModule filePath string =
-  let extensions =
-        EnumSet.fromList
-          . Maybe.mapMaybe
-            ( \o -> case o of
-                Session.On x -> Just x
-                Session.Off _ -> Nothing
-            )
-          $ discoverExtensions string
+  let onToJust :: Session.OnOff a -> Maybe a
+      onToJust x = case x of
+        Session.On y -> Just y
+        Session.Off _ -> Nothing
+      (lang, exts) = discoverExtensions string
+      extensions = EnumSet.fromList $ Session.languageExtensions lang <> Maybe.mapMaybe onToJust exts
       parserOpts =
         Lexer.mkParserOpts
           extensions -- enabled extensions
@@ -709,14 +763,25 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.ValD _ hsBind -> case hsBind of
     HS.FunBind {HS.fun_id = lIdP} -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
-    HS.PatSynBind _ patSynBind ->
-      let lIdP = HS.psb_id patSynBind
-       in [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
+    HS.PatSynBind _ patSynBind -> case patSynBind of
+      HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
+        Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)
+          : case hsPatSynDir of
+            HS.Unidirectional -> []
+            HS.ImplicitBidirectional -> []
+            HS.ExplicitBidirectional matchGroup -> case matchGroup of
+              HS.MG {HS.mg_alts = lMatches} ->
+                ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
+                    HS.FunRhs {HS.mc_fun = lIdP2} -> Item (rdrNameToString $ SrcLoc.unLoc lIdP2) (locatedAnToPosition lIdP2)
+                    _ -> error $ dataShowS hsMatchContext " -- unknown HsMatchContext"
+                )
+                  . SrcLoc.unLoc
+                  <$> SrcLoc.unLoc lMatches
     HS.VarBind {} -> impossible "unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
     HS.StandaloneKindSig _ lIdP _ -> [Item (rdrNameToString $ SrcLoc.unLoc lIdP) (locatedAnToPosition lIdP)]
-  HS.DefD _ _ ->
+  HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
@@ -861,13 +926,6 @@ impossible = error . mappend "impossible: "
 
 -- Haddock --------------------------------------------------------------------
 
-hsDocStringToDocH :: GHC.Hs.HsDocString -> Haddock.DocH Void.Void (Haddock.Namespace, String)
-hsDocStringToDocH =
-  Haddock.overIdentifier (curry Just)
-    . Haddock._doc
-    . Haddock.parseParas Nothing
-    . GHC.Hs.renderHsDocString
-
 docHToHtml :: Haddock.DocH Void.Void (Haddock.Namespace, String) -> H.Html ()
 docHToHtml = Haddock.markup htmlDocMarkupH
 
@@ -910,7 +968,10 @@ dataShowS :: (Data.Data a) => a -> ShowS
 dataShowS =
   let extQ ::
         (Data.Typeable a, Data.Typeable b) =>
-        (a -> r) -> (b -> r) -> a -> r
+        (a -> r) ->
+        (b -> r) ->
+        a ->
+        r
       extQ f g a = maybe (f a) g (Data.cast a)
    in ( \t ->
           showChar '('

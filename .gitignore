@@ -1,3 +1,7 @@
+/.devenv.flake.nix
+/.devenv/
+/.direnv/
 /.vscode/
 /cabal.project.*
+/devenv.lock
 /dist-newstyle/

@@ -890,13 +890,6 @@ impossible = error . mappend "impossible: "
 
 -- Haddock --------------------------------------------------------------------
 
-hsDocStringToDocH :: GHC.Hs.HsDocString -> Haddock.DocH Void.Void (Haddock.Namespace, String)
-hsDocStringToDocH =
-  Haddock.overIdentifier (curry Just)
-    . Haddock._doc
-    . Haddock.parseParas Nothing
-    . GHC.Hs.renderHsDocString
-
 docHToHtml :: Haddock.DocH Void.Void (Haddock.Namespace, String) -> H.Html ()
 docHToHtml = Haddock.markup htmlDocMarkupH
 

@@ -545,15 +545,12 @@ parseLHsModule ::
   String ->
   Either (Messages PsErr.PsMessage) (LHsModule GHC.Hs.GhcPs)
 parseLHsModule filePath string =
-  let extensions =
-        EnumSet.fromList
-          . Maybe.mapMaybe
-            ( \o -> case o of
-                Session.On x -> Just x
-                Session.Off _ -> Nothing
-            )
-          . snd
-          $ discoverExtensions string
+  let onToJust :: Session.OnOff a -> Maybe a
+      onToJust x = case x of
+        Session.On y -> Just y
+        Session.Off _ -> Nothing
+      (lang, exts) = discoverExtensions string
+      extensions = EnumSet.fromList $ Session.languageExtensions lang <> Maybe.mapMaybe onToJust exts
       parserOpts =
         Lexer.mkParserOpts
           extensions -- enabled extensions

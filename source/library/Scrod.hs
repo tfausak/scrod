@@ -66,7 +66,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
           let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
               items = getItems lHsModule
               lHsDocStrings = getLHsDocStrings lHsModule
-           in associateDocStrings items lHsDocStrings
+           in mergeItems $ associateDocStrings items lHsDocStrings
 
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
@@ -218,7 +218,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item "C" $ Position 1 42, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item "D" $ Position 1 42, []), (Item "D" $ Position 1 56, [])]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item "D" $ Position 1 42, [])]
 
     Hspec.it "type signature" $ do
       f "e :: ()" `Hspec.shouldBe` [(Item "e" $ Position 1 1, [])]
@@ -379,6 +379,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
     Hspec.it "discovers a language edition" $ do
       discoverExtensions "{-# language GHC2021 #-}" `Hspec.shouldBe` (Just Session.GHC2021, [])
+
+mergeItems :: (Monoid a) => [(Item, a)] -> [(Item, a)]
+mergeItems items = case items of
+  [] -> items
+  (i, a) : is ->
+    let (ts, fs) = List.partition ((==) (itemName i) . itemName . fst) is
+     in (i, a <> foldMap snd ts) : mergeItems fs
 
 discoverExtensions :: String -> (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO

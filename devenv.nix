@@ -6,6 +6,7 @@
 
   packages = [
     pkgs.haskellPackages.cabal-gild
+    pkgs.ghcid
     pkgs.hlint
     pkgs.ormolu
   ];

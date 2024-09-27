@@ -344,13 +344,34 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       associateDocStrings [item] [d1, d2] `Hspec.shouldBe` [(item, ["a", "c"])]
 
   Hspec.describe "discoverExtensions" $ do
-    Hspec.it "works" $ do
-      discoverExtensions "{-# LANGUAGE CPP #-}" `Hspec.shouldBe` [Session.On X.Cpp]
+    Hspec.it "discovers an enabled extension" $ do
+      discoverExtensions "{-# language CPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp])
 
-discoverExtensions :: String -> [Session.OnOff X.Extension]
+    Hspec.it "discovers a disabled extension" $ do
+      discoverExtensions "{-# language NoCPP #-}" `Hspec.shouldBe` (Nothing, [Session.Off X.Cpp])
+
+    Hspec.it "discovers an extension from a ghc option" $ do
+      discoverExtensions "{-# options_ghc -XCPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp])
+
+    Hspec.it "discovers two extensions in one pragma" $ do
+      discoverExtensions "{-# language CPP, DeriveGeneric #-}" `Hspec.shouldBe` (Nothing, [Session.On X.DeriveGeneric, Session.On X.Cpp])
+
+    Hspec.it "discovers two extensions in separate pragmas" $ do
+      discoverExtensions "{-# language CPP #-} {-# language DeriveGeneric #-}" `Hspec.shouldBe` (Nothing, [Session.On X.DeriveGeneric, Session.On X.Cpp])
+
+    Hspec.it "discovers the same extension twice" $ do
+      discoverExtensions "{-# language CPP #-} {-# language CPP #-}" `Hspec.shouldBe` (Nothing, [Session.On X.Cpp, Session.On X.Cpp])
+
+    Hspec.it "discovers the same extension on then off" $ do
+      discoverExtensions "{-# language CPP #-} {-# language NoCPP #-}" `Hspec.shouldBe` (Nothing, [Session.Off X.Cpp, Session.On X.Cpp])
+
+    Hspec.it "discovers a language edition" $ do
+      discoverExtensions "{-# language GHC2021 #-}" `Hspec.shouldBe` (Just Session.GHC2021, [])
+
+discoverExtensions :: String -> (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
-discoverExtensionsIO :: String -> IO [Session.OnOff X.Extension]
+discoverExtensionsIO :: String -> IO (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensionsIO string = do
   let dynFlags =
         Session.DynFlags
@@ -392,7 +413,7 @@ discoverExtensionsIO string = do
           False
       (_, locatedStrings) = Header.getOptions parserOpts stringBuffer "<interactive>"
   (newDynFlags, _, _) <- Session.parseDynamicFilePragma dynFlags locatedStrings
-  pure $ Session.extensions newDynFlags
+  pure (Session.language newDynFlags, Session.extensions newDynFlags)
 
 -- Executable -----------------------------------------------------------------
 
@@ -531,6 +552,7 @@ parseLHsModule filePath string =
                 Session.On x -> Just x
                 Session.Off _ -> Nothing
             )
+          . snd
           $ discoverExtensions string
       parserOpts =
         Lexer.mkParserOpts
@@ -910,7 +932,10 @@ dataShowS :: (Data.Data a) => a -> ShowS
 dataShowS =
   let extQ ::
         (Data.Typeable a, Data.Typeable b) =>
-        (a -> r) -> (b -> r) -> a -> r
+        (a -> r) ->
+        (b -> r) ->
+        a ->
+        r
       extQ f g a = maybe (f a) g (Data.cast a)
    in ( \t ->
           showChar '('

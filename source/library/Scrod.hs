@@ -999,28 +999,53 @@ htmlDocMarkupH =
 ci :: (CI.FoldCase a) => a -> CI.CI a
 ci = CI.mk
 
--- | Adapted from <https://hackage.haskell.org/package/syb-0.7.2.4>.
+-- | Adapted from <https://hackage.haskell.org/package/syb-0.7.2.4>
+-- and <https://chrisdone.com/posts/data-typeable/>.
 dataShowS :: (Data.Data a) => a -> ShowS
-dataShowS =
-  let extQ ::
-        (Data.Typeable a, Data.Typeable b) =>
-        (a -> r) ->
-        (b -> r) ->
-        a ->
-        r
-      extQ f g a = maybe (f a) g (Data.cast a)
-   in ( \t ->
-          showChar '('
-            . showString (Data.showConstr $ Data.toConstr t)
-            . ( case () of
-                  ()
-                    | Just x <- Data.cast t -> showString . show $ GHC.Hs.renderHsDocString x
-                    | Just x <- Data.cast t -> showString . show $ OccName.occNameString x
-                    | otherwise -> foldr (.) id $ Data.gmapQ ((showChar ' ' .) . dataShowS) t
-              )
-            . showChar ')'
-      )
-        `extQ` (shows :: String -> ShowS)
+dataShowS x
+  | isTuple x =
+      showParen True
+        . foldr (.) id
+        . List.intersperse (showString ", ")
+        $ Data.gmapQ dataShowS x
+  | Just string <- Data.cast x = shows (string :: String)
+  | Just occName <- Data.cast x = dataShowS $ OccName.occNameString occName
+  | Just srcSpan <- Data.cast x = srcSpanToShowS srcSpan
+  | Just realSrcSpan <- Data.cast x = realSrcSpanToShowS realSrcSpan
+  | otherwise =
+      let xs = Data.gmapQ ((showChar ' ' .) . dataShowS) x
+       in showParen (not $ null xs) $
+            showString (Data.showConstr $ Data.toConstr x)
+              . foldr (.) id xs
+
+isTuple :: (Data.Data a) => a -> Bool
+isTuple =
+  all (== ',')
+    . filter (\c -> c /= '(' && c /= ')')
+    . Data.showConstr
+    . Data.toConstr
+
+srcSpanToShowS :: SrcLoc.SrcSpan -> ShowS
+srcSpanToShowS srcSpan = case srcSpan of
+  SrcLoc.RealSrcSpan realSrcSpan _ -> realSrcSpanToShowS realSrcSpan
+  SrcLoc.UnhelpfulSpan {} -> shows "unhelpful"
+
+realSrcSpanToShowS :: SrcLoc.RealSrcSpan -> ShowS
+realSrcSpanToShowS realSrcSpan =
+  realSrcLocToShowS (SrcLoc.realSrcSpanStart realSrcSpan)
+    . showChar '-'
+    . realSrcLocToShowS (SrcLoc.realSrcSpanEnd realSrcSpan)
+
+srcLocToShowS :: SrcLoc.SrcLoc -> ShowS
+srcLocToShowS srcLoc = case srcLoc of
+  SrcLoc.RealSrcLoc realSrcLoc _ -> realSrcLocToShowS realSrcLoc
+  SrcLoc.UnhelpfulLoc {} -> shows "unhelpful"
+
+realSrcLocToShowS :: SrcLoc.RealSrcLoc -> ShowS
+realSrcLocToShowS realSrcLoc =
+  shows (SrcLoc.srcLocLine realSrcLoc)
+    . showChar ':'
+    . shows (SrcLoc.srcLocCol realSrcLoc)
 
 html :: (H.ToHtml a) => a -> H.Html ()
 html = H.toHtml

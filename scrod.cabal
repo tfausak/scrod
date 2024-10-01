@@ -51,7 +51,6 @@ library
   autogen-modules: Paths_scrod
   build-depends:
     bytestring ^>=0.12.1.0,
-    case-insensitive ^>=1.2.1.0,
     ghc ^>=9.10.1,
     ghc-boot-th ^>=9.10.1,
     haddock-library ^>=1.11.0,

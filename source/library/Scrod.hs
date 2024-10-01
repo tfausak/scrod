@@ -1,14 +1,13 @@
 {- hlint ignore "Use lambda-case" -}
 {- hlint ignore "Use tuple-section" -}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-missing-fields #-}
 
 module Scrod where
 
 import qualified Control.Monad as Monad
-import qualified Data.ByteString as ByteString
 import qualified Data.ByteString.Lazy as LazyByteString
-import qualified Data.CaseInsensitive as CI
 import qualified Data.Data as Data
 import qualified Data.Either as Either
 import Data.Function ((&))
@@ -450,7 +449,7 @@ executable = do
 
 defaultInput :: Text.Text
 defaultInput =
-  text $
+  Text.pack $
     unlines
       [ "-- | A [__Bool__ean data type](https://en.wikipedia.org/wiki/Boolean_data_type), introduced by George Boole in /The Mathematical Analysis of Logic/.",
         "data Bool",
@@ -484,12 +483,12 @@ application request respond = do
         Text.unpack
           . maybe defaultInput Encoding.decodeUtf8Lenient
           . Monad.join
-          . lookup (utf8 "input")
+          . lookup "input"
           . Http.parseQuery
           $ LazyByteString.toStrict body
       result = parseLHsModule "<interactive>" input
       headers =
-        (Http.hContentType, utf8 "text/html;charset=utf-8")
+        (Http.hContentType, "text/html;charset=utf-8")
           : defaultHeaders
   respond
     . Wai.responseLBS Http.ok200 headers
@@ -497,88 +496,85 @@ application request respond = do
     . H.doctypehtml_
     $ do
       H.head_ $ do
-        H.meta_ [H.charset_ $ text "utf-8"]
+        H.meta_ [H.charset_ "utf-8"]
         H.meta_
-          [ H.name_ $ text "viewport",
-            H.content_ $ text "initial-scale = 1, width = device-width"
+          [ H.name_ "viewport",
+            H.content_ "initial-scale = 1, width = device-width"
           ]
-        H.title_ $ html "Scrod"
+        H.title_ "Scrod"
         H.link_
-          [ H.crossorigin_ $ text "anonymous",
-            H.href_ $ text "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
-            H.integrity_ $ text "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH",
-            H.rel_ $ text "stylesheet"
+          [ H.crossorigin_ "anonymous",
+            H.href_ "https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css",
+            H.integrity_ "sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH",
+            H.rel_ "stylesheet"
           ]
         H.script_
-          [ H.async_ $ text "async",
-            H.crossorigin_ $ text "anonymous",
-            H.integrity_ $ text "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei",
-            H.src_ $ text "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"
-          ]
-          $ html ""
+          [ H.async_ "async",
+            H.crossorigin_ "anonymous",
+            H.integrity_ "sha384-Wuix6BuhrWbjDBs24bXrjf4ZQ5aFeFWBuKkFekO2t8xFU0iNaLQfp2K6/1Nxveei",
+            H.src_ "https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js"
+          ] (mempty :: H.Html ())
       H.body_ $ do
-        H.header_ [H.class_ $ text "bg-primary mb-3 navbar"] $ do
-          H.div_ [H.class_ $ text "container"] $ do
-            H.a_ [H.class_ $ text "navbar-brand text-light", H.href_ $ text "/"] $ do
-              html "Scrod"
+        H.header_ [H.class_ "bg-primary mb-3 navbar"] $ do
+          H.div_ [H.class_ "container"] $ do
+            H.a_ [H.class_ "navbar-brand text-light", H.href_ "/"] "Scrod"
 
-        H.main_ [H.class_ $ text "my-3"] $ do
-          H.div_ [H.class_ $ text "container"] $ do
-            H.div_ [H.class_ $ text "row"] $ do
-              H.div_ [H.class_ $ text "col-lg"] $ do
-                H.form_ [H.method_ $ text "post"] $ do
+        H.main_ [H.class_ "my-3"] $ do
+          H.div_ [H.class_ "container"] $ do
+            H.div_ [H.class_ "row"] $ do
+              H.div_ [H.class_ "col-lg"] $ do
+                H.form_ [H.method_ "post"] $ do
                   H.textarea_
-                    [ H.class_ $ text "font-monospace form-control mb-3",
-                      H.name_ $ text "input",
-                      H.rows_ $ text "10"
+                    [ H.class_ "font-monospace form-control mb-3",
+                      H.name_ "input",
+                      H.rows_ "10"
                     ]
-                    $ html input
-                  H.button_ [H.class_ $ text "btn btn-primary", H.type_ $ text "submit"] $ html "Submit"
-              H.div_ [H.class_ $ text "col-lg"] $ do
+                    $ H.toHtml input
+                  H.button_ [H.class_ "btn btn-primary", H.type_ "submit"] "Submit"
+              H.div_ [H.class_ "col-lg"] $ do
                 case result of
-                  Left message -> H.div_ [H.class_ $ text "alert alert-danger"] $ do
-                    H.h2_ [H.class_ $ text "alert-heading"] $ html "Error"
-                    H.pre_ [H.class_ $ text "text-break text-wrap"] . H.code_ . html $ show message
+                  Left message -> H.div_ [H.class_ "alert alert-danger"] $ do
+                    H.h2_ [H.class_ "alert-heading"] "Error"
+                    H.pre_ [H.class_ "text-break text-wrap"] . H.code_ . H.toHtml $ show message
                   Right lHsModule -> do
                     let items = getItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
                         tuples = mergeItems $ associateDocStrings items lHsDocStrings
                     if null tuples
-                      then H.p_ $ html "Nothing to see here."
+                      then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-                        H.code_ . html $ itemName item
+                        H.code_ . H.toHtml $ itemName item
                         docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc
                           . Haddock.parseParas Nothing
                           $ List.intercalate "\n\n" docStrings
 
-        H.footer_ [H.class_ $ text "my-3 text-secondary"] $ do
-          H.div_ [H.class_ $ text "border-top container pt-3"] $ do
-            html "Powered by "
-            H.a_ [H.class_ $ text "link-secondary", H.href_ $ text "https://github.com/tfausak/scrod"] $ do
-              html "tfausak/scrod"
-            html " version "
-            html $ Version.showVersion Package.version
-            html "."
+        H.footer_ [H.class_ "my-3 text-secondary"] $ do
+          H.div_ [H.class_ "border-top container pt-3"] $ do
+            "Powered by "
+            H.a_ [H.class_ "link-secondary", H.href_ "https://github.com/tfausak/scrod"] "tfausak/scrod"
+            " version "
+            H.toHtml $ Version.showVersion Package.version
+            "."
 
 defaultHeaders :: Http.ResponseHeaders
 defaultHeaders =
-  [ (ci $ utf8 "Referrer-Policy", utf8 "no-referrer"),
-    (ci $ utf8 "Strict-Transport-Security", utf8 "max-age=31536000"),
-    (ci $ utf8 "X-Content-Type-Options", utf8 "nosniff"),
-    (ci $ utf8 "X-Frame-Options", utf8 "DENY"),
-    (ci $ utf8 "X-XSS-Protection", utf8 "1; mode=block")
+  [ (  "Referrer-Policy",  "no-referrer"),
+    (  "Strict-Transport-Security",  "max-age=31536000"),
+    (  "X-Content-Type-Options",  "nosniff"),
+    (  "X-Frame-Options",  "DENY"),
+    (  "X-XSS-Protection",  "1; mode=block")
   ]
 
 statusResponse :: Http.Status -> Http.ResponseHeaders -> Wai.Response
 statusResponse status headers =
   Wai.responseLBS
     status
-    ((Http.hContentType, utf8 "text/plain;charset=utf-8") : headers)
+    ((Http.hContentType,  "text/plain;charset=utf-8") : headers)
     . LazyByteString.fromStrict
-    . (\bs -> bs <> utf8 " " <> Http.statusMessage status)
-    . utf8
+    . (\bs -> bs <>  " " <> Http.statusMessage status)
+    . Encoding.encodeUtf8 . Text.pack
     . show
     $ Http.statusCode status
 
@@ -968,36 +964,33 @@ docHToHtml = Haddock.markup htmlDocMarkupH
 htmlDocMarkupH :: Haddock.DocMarkupH Void.Void (Haddock.Namespace, String) (H.Html ())
 htmlDocMarkupH =
   Haddock.Markup
-    { Haddock.markupAName = \x -> H.a_ [H.name_ $ text x] mempty,
+    { Haddock.markupAName = \x -> H.a_ [H.name_ $ Text.pack x] mempty,
       Haddock.markupAppend = mappend,
       Haddock.markupBold = H.strong_,
       Haddock.markupCodeBlock = H.pre_ . H.code_,
       Haddock.markupDefList = H.dl_ . foldMap (\(t, d) -> H.dt_ t <> H.dd_ d),
       Haddock.markupEmphasis = H.em_,
       Haddock.markupEmpty = mempty,
-      Haddock.markupExample = foldMap $ \x -> H.pre_ . H.code_ . html . List.intercalate "\n" $ (">>> " <> Haddock.exampleExpression x) : Haddock.exampleResult x,
-      Haddock.markupHeader = \x -> H.term (text $ "h" <> show (Haddock.headerLevel x)) $ Haddock.headerTitle x,
-      Haddock.markupHyperlink = \x -> let url = text $ Haddock.hyperlinkUrl x in H.a_ [H.href_ url, H.rel_ $ text "nofollow"] . Maybe.fromMaybe (html url) $ Haddock.hyperlinkLabel x,
-      Haddock.markupIdentifier = H.code_ . html . snd,
+      Haddock.markupExample = foldMap $ \x -> H.pre_ . H.code_ . H.toHtml . List.intercalate "\n" $ (">>> " <> Haddock.exampleExpression x) : Haddock.exampleResult x,
+      Haddock.markupHeader = \x -> H.term (Text.pack $ "h" <> show (Haddock.headerLevel x)) $ Haddock.headerTitle x,
+      Haddock.markupHyperlink = \x -> let url = Text.pack $ Haddock.hyperlinkUrl x in H.a_ [H.href_ url, H.rel_ $ Text.pack "nofollow"] . Maybe.fromMaybe (H.toHtml url) $ Haddock.hyperlinkLabel x,
+      Haddock.markupIdentifier = H.code_ . H.toHtml . snd,
       Haddock.markupIdentifierUnchecked = Void.absurd,
-      Haddock.markupMathDisplay = \x -> H.div_ . html $ "\\[" <> x <> "\\]",
-      Haddock.markupMathInline = \x -> H.span_ . html $ "\\(" <> x <> "\\)",
-      Haddock.markupModule = \x -> H.code_ . Maybe.fromMaybe (html $ Haddock.modLinkName x) $ Haddock.modLinkLabel x,
+      Haddock.markupMathDisplay = \x -> H.div_ . H.toHtml $ "\\[" <> x <> "\\]",
+      Haddock.markupMathInline = \x -> H.span_ . H.toHtml $ "\\(" <> x <> "\\)",
+      Haddock.markupModule = \x -> H.code_ . Maybe.fromMaybe (H.toHtml $ Haddock.modLinkName x) $ Haddock.modLinkLabel x,
       Haddock.markupMonospaced = H.code_,
-      Haddock.markupOrderedList = H.ol_ . foldMap (\(i, x) -> H.li_ [H.value_ . text $ show i] x),
+      Haddock.markupOrderedList = H.ol_ . foldMap (\(i, x) -> H.li_ [H.value_ . Text.pack $ show i] x),
       Haddock.markupParagraph = H.p_,
-      Haddock.markupPic = \x -> H.img_ [H.alt_ . maybe Text.empty text $ Haddock.pictureTitle x, H.src_ . text $ Haddock.pictureUri x],
-      Haddock.markupProperty = H.pre_ . H.code_ . html . mappend "prop> ",
-      Haddock.markupString = html,
+      Haddock.markupPic = \x -> H.img_ [H.alt_ . maybe Text.empty Text.pack $ Haddock.pictureTitle x, H.src_ . Text.pack $ Haddock.pictureUri x],
+      Haddock.markupProperty = H.pre_ . H.code_ . H.toHtml . mappend "prop> ",
+      Haddock.markupString = H.toHtml,
       Haddock.markupTable = impossible "markupTable",
       Haddock.markupUnorderedList = H.ul_ . foldMap H.li_,
       Haddock.markupWarning = impossible "markupWarning"
     }
 
 -- Helpers --------------------------------------------------------------------
-
-ci :: (CI.FoldCase a) => a -> CI.CI a
-ci = CI.mk
 
 -- | Adapted from <https://hackage.haskell.org/package/syb-0.7.2.4>
 -- and <https://chrisdone.com/posts/data-typeable/>.
@@ -1028,7 +1021,7 @@ isTuple =
 srcSpanToShowS :: SrcLoc.SrcSpan -> ShowS
 srcSpanToShowS srcSpan = case srcSpan of
   SrcLoc.RealSrcSpan realSrcSpan _ -> realSrcSpanToShowS realSrcSpan
-  SrcLoc.UnhelpfulSpan {} -> shows "unhelpful"
+  SrcLoc.UnhelpfulSpan {} -> showString "{UnhelpfulSpan}"
 
 realSrcSpanToShowS :: SrcLoc.RealSrcSpan -> ShowS
 realSrcSpanToShowS realSrcSpan =
@@ -1039,19 +1032,10 @@ realSrcSpanToShowS realSrcSpan =
 srcLocToShowS :: SrcLoc.SrcLoc -> ShowS
 srcLocToShowS srcLoc = case srcLoc of
   SrcLoc.RealSrcLoc realSrcLoc _ -> realSrcLocToShowS realSrcLoc
-  SrcLoc.UnhelpfulLoc {} -> shows "unhelpful"
+  SrcLoc.UnhelpfulLoc {} -> showString "{UnhelpfulLoc}"
 
 realSrcLocToShowS :: SrcLoc.RealSrcLoc -> ShowS
 realSrcLocToShowS realSrcLoc =
   shows (SrcLoc.srcLocLine realSrcLoc)
     . showChar ':'
     . shows (SrcLoc.srcLocCol realSrcLoc)
-
-html :: (H.ToHtml a) => a -> H.Html ()
-html = H.toHtml
-
-text :: String -> Text.Text
-text = Text.pack
-
-utf8 :: String -> ByteString.ByteString
-utf8 = Encoding.encodeUtf8 . text

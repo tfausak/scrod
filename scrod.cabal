@@ -62,7 +62,17 @@ library
     warp ^>=3.4.1,
 
   -- cabal-gild: discover source/library
-  exposed-modules: Scrod
+  exposed-modules:
+    Scrod
+    Scrod.Extra.Data
+    Scrod.Extra.Haddock
+    Scrod.Extra.SrcLoc
+    Scrod.Type.Direction
+    Scrod.Type.Item
+    Scrod.Type.LHsModule
+    Scrod.Type.Messages
+    Scrod.Type.Position
+
   hs-source-dirs: source/library
   other-modules: Paths_scrod
 

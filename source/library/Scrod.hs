@@ -53,6 +53,7 @@ import qualified Scrod.Type.Direction as Direction
 import qualified Scrod.Type.Item as Item
 import qualified Scrod.Type.LHsModule as LHsModule
 import qualified Scrod.Type.Messages as Messages
+import qualified Scrod.Type.Name as Name
 import qualified Scrod.Type.Position as Position
 import qualified System.IO as IO
 import qualified System.IO.Unsafe as Unsafe
@@ -71,133 +72,135 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
               lHsDocStrings = getLHsDocStrings lHsModule
            in mergeItems $ associateDocStrings items lHsDocStrings
 
+        p l c = Position.Position {Position.line = l, Position.column = c}
+
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 
     Hspec.it "type family" $ do
-      f "type family A" `Hspec.shouldBe` [(Item.Item "A" $ Position.Position 1 13, [])]
+      f "type family A" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "A", Item.position = p 1 13}, [])]
 
     Hspec.it "data family" $ do
-      f "data family B" `Hspec.shouldBe` [(Item.Item "B" $ Position.Position 1 13, [])]
+      f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 13}, [])]
 
     Hspec.it "type synonym" $ do
-      f "type C = ()" `Hspec.shouldBe` [(Item.Item "C" $ Position.Position 1 6, [])]
+      f "type C = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 6}, [])]
 
     Hspec.it "data" $ do
-      f "data D" `Hspec.shouldBe` [(Item.Item "D" $ Position.Position 1 6, [])]
+      f "data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 6}, [])]
 
     Hspec.it "data constructor" $ do
-      f "data X = E" `Hspec.shouldBe` [(Item.Item "X" $ Position.Position 1 6, []), (Item.Item "E" $ Position.Position 1 10, [])]
+      f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 10}, [])]
 
     Hspec.it "data constructor gadt" $ do
-      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item "X" $ Position.Position 1 6, []), (Item.Item "E" $ Position.Position 1 14, [])]
+      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 14}, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item "T" $ Position.Position 1 9, []), (Item.Item "C" $ Position.Position 1 13, []), (Item.Item "f" $ Position.Position 1 17, [])]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item "T" $ Position.Position 1 9, []), (Item.Item "C" $ Position.Position 1 13, []), (Item.Item "f" $ Position.Position 1 17, []), (Item.Item "g" $ Position.Position 1 20, [])]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 20}, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item "T" $ Position.Position 1 9, []), (Item.Item "C" $ Position.Position 1 13, []), (Item.Item "f" $ Position.Position 1 17, []), (Item.Item "g" $ Position.Position 1 26, [])]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 26}, [])]
 
     Hspec.it "record field gadt" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item "T" $ Position.Position 1 9, []), (Item.Item "C" $ Position.Position 1 17, []), (Item.Item "f" $ Position.Position 1 24, [])]
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 24}, [])]
 
     Hspec.it "class" $ do
-      f "class E" `Hspec.shouldBe` [(Item.Item "E" $ Position.Position 1 7, [])]
+      f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "E", Item.position = p 1 7}, [])]
 
     Hspec.it "class instance" $ do
-      f "instance F" `Hspec.shouldBe` [(Item.Item "F" $ Position.Position 1 10, [])]
+      f "instance F" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with arguments" $ do
-      f "instance G a" `Hspec.shouldBe` [(Item.Item "G" $ Position.Position 1 10, [])]
+      f "instance G a" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with parentheses" $ do
-      f "instance (H)" `Hspec.shouldBe` [(Item.Item "H" $ Position.Position 1 11, [])]
+      f "instance (H)" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 11}, [])]
 
     Hspec.it "class instance with context" $ do
-      f "instance () => I" `Hspec.shouldBe` [(Item.Item "I" $ Position.Position 1 16, [])]
+      f "instance () => I" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 16}, [])]
 
     Hspec.it "data instance" $ do
-      f "data instance G" `Hspec.shouldBe` [(Item.Item "G" $ Position.Position 1 15, [])]
+      f "data instance G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 15}, [])]
 
     Hspec.it "newtype instance" $ do
-      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item "H" $ Position.Position 1 18, [])]
+      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 18}, [])]
 
     Hspec.it "type instance" $ do
-      f "type instance I = X" `Hspec.shouldBe` [(Item.Item "I" $ Position.Position 1 15, [])]
+      f "type instance I = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 15}, [])]
 
     Hspec.it "deriving instance" $ do
-      f "deriving instance J" `Hspec.shouldBe` [(Item.Item "J" $ Position.Position 1 19, [])]
+      f "deriving instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "J", Item.position = p 1 19}, [])]
 
     Hspec.it "function" $ do
-      f "h x = x" `Hspec.shouldBe` [(Item.Item "h" $ Position.Position 1 1, [])]
+      f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "h", Item.position = p 1 1}, [])]
 
     Hspec.it "infix function" $ do
-      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item "f" $ Position.Position 1 3, [])]
+      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "f", Item.position = p 1 3}, [])]
 
     Hspec.it "infix operator" $ do
-      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item "&" $ Position.Position 1 3, [])]
+      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 3}, [])]
 
     Hspec.it "prefix operator" $ do
       -- TODO: Why is this at column 1 rather than 2?
-      f "(&) = ()" `Hspec.shouldBe` [(Item.Item "&" $ Position.Position 1 1, [])]
+      f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
 
     Hspec.it "variable" $ do
-      f "i = ()" `Hspec.shouldBe` [(Item.Item "i" $ Position.Position 1 1, [])]
+      f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 1}, [])]
 
     Hspec.it "variable on another line" $ do
-      f "\ni = ()" `Hspec.shouldBe` [(Item.Item "i" $ Position.Position 2 1, [])]
+      f "\ni = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 2 1}, [])]
 
     Hspec.it "variable indented" $ do
-      f " i = ()" `Hspec.shouldBe` [(Item.Item "i" $ Position.Position 1 2, [])]
+      f " i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 2}, [])]
 
     Hspec.it "strict variable" $ do
-      f "!j = ()" `Hspec.shouldBe` [(Item.Item "j" $ Position.Position 1 2, [])]
+      f "!j = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "j", Item.position = p 1 2}, [])]
 
     Hspec.it "wildcard pattern" $ do
       f "_ = ()" `Hspec.shouldBe` []
 
     Hspec.it "lazy pattern" $ do
-      f "~k = ()" `Hspec.shouldBe` [(Item.Item "k" $ Position.Position 1 2, [])]
+      f "~k = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "k", Item.position = p 1 2}, [])]
 
     Hspec.it "as pattern" $ do
-      f "l@m = ()" `Hspec.shouldBe` [(Item.Item "l" $ Position.Position 1 1, []), (Item.Item "m" $ Position.Position 1 3, [])]
+      f "l@m = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "l", Item.position = p 1 1}, []), (Item.Item {Item.name = Name.Other "m", Item.position = p 1 3}, [])]
 
     Hspec.it "patenthesized pattern" $ do
-      f "(n) = ()" `Hspec.shouldBe` [(Item.Item "n" $ Position.Position 1 2, [])]
+      f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "n", Item.position = p 1 2}, [])]
 
     Hspec.it "bang pattern" $ do
       -- Note that this is different than the "strict variable" test case!
-      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item "o" $ Position.Position 1 3, [])]
+      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "o", Item.position = p 1 3}, [])]
 
     Hspec.it "list pattern" $ do
-      f "[p] = ()" `Hspec.shouldBe` [(Item.Item "p" $ Position.Position 1 2, [])]
+      f "[p] = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 2}, [])]
 
     Hspec.it "tuple pattern" $ do
-      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item "q" $ Position.Position 1 2, []), (Item.Item "r" $ Position.Position 1 5, [])]
+      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 2}, []), (Item.Item {Item.name = Name.Other "r", Item.position = p 1 5}, [])]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item "s" $ Position.Position 1 33, [])]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "s", Item.position = p 1 33}, [])]
 
     Hspec.it "prefix constructor pattern" $ do
-      f "Just t = ()" `Hspec.shouldBe` [(Item.Item "t" $ Position.Position 1 6, [])]
+      f "Just t = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "t", Item.position = p 1 6}, [])]
 
     Hspec.it "record constructor pattern" $ do
-      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item "v" $ Position.Position 1 9, [])]
+      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "v", Item.position = p 1 9}, [])]
 
     Hspec.it "punned record pattern" $ do
-      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item "w" $ Position.Position 1 5, [])]
+      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "w", Item.position = p 1 5}, [])]
 
     Hspec.it "wild card record pattern" $ do
       f "X { .. } = ()" `Hspec.shouldBe` []
 
     Hspec.it "infix constructor pattern" $ do
-      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item "x" $ Position.Position 1 2, [])]
+      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 2}, [])]
 
     Hspec.it "view pattern" $ do
-      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item "y" $ Position.Position 1 7, [])]
+      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 1 7}, [])]
 
     Hspec.it "splice pattern" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
@@ -209,34 +212,34 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item "z" $ Position.Position 1 34, [])]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "z", Item.position = p 1 34}, [])]
 
     Hspec.it "signature pattern" $ do
-      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item "a" $ Position.Position 1 2, [])]
+      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 2}, [])]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item "B" $ Position.Position 1 42, [])]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 42}, [])]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item "C" $ Position.Position 1 42, [])]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 42}, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item "D" $ Position.Position 1 42, [])]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 42}, [])]
 
     Hspec.it "type signature" $ do
-      f "e :: ()" `Hspec.shouldBe` [(Item.Item "e" $ Position.Position 1 1, [])]
+      f "e :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "e", Item.position = p 1 1}, [])]
 
     Hspec.it "pattern type signature" $ do
-      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item "F" $ Position.Position 1 42, [])]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 42}, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item "X" $ Position.Position 1 7, []), (Item.Item "g" $ Position.Position 1 15, [])]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 15}, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item "X" $ Position.Position 1 7, []), (Item.Item "h" $ Position.Position 1 23, [])]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "h", Item.position = p 1 23}, [])]
 
     Hspec.it "fixity declaration" $ do
-      f "infix 5 %" `Hspec.shouldBe` [(Item.Item "%" $ Position.Position 1 9, [])]
+      f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "%", Item.position = p 1 9}, [])]
 
     Hspec.it "inline pragma" $ do
       f "{-# inline i #-}" `Hspec.shouldBe` []
@@ -266,13 +269,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# complete N #-}" `Hspec.shouldBe` []
 
     Hspec.it "standalone kind signature" $ do
-      f "type O :: ()" `Hspec.shouldBe` [(Item.Item "O" $ Position.Position 1 6, [])]
+      f "type O :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "O", Item.position = p 1 6}, [])]
 
     Hspec.it "default declaration" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item "p" $ Position.Position 1 67, [])]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 67}, [])]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -287,7 +290,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# ann module () #-}" `Hspec.shouldBe` []
 
     Hspec.it "rules pragma" $ do
-      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item "q" $ Position.Position 1 11, [])]
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 11}, [])]
 
     Hspec.it "splice declaration" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
@@ -296,22 +299,22 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "-- | x" `Hspec.shouldBe` []
 
     Hspec.it "role annotation" $ do
-      f "type role R nominal" `Hspec.shouldBe` [(Item.Item "R" $ Position.Position 1 11, [])]
+      f "type role R nominal" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "R", Item.position = p 1 11}, [])]
 
     Hspec.it "documentation before item" $ do
-      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item "y" $ Position.Position 2 1, [" x"])]
+      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x"])]
 
     Hspec.it "documentation after item" $ do
-      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item "x" $ Position.Position 1 1, [" y"])]
+      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 1}, [" y"])]
 
     Hspec.it "documentation around item" $ do
-      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item "y" $ Position.Position 2 1, [" x", " z"])]
+      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x", " z"])]
 
     Hspec.it "" $ do
-      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item "a" $ Position.Position 1 1, [" 1"]), (Item.Item "b" $ Position.Position 3 1, [" 2"])]
+      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 3 1}, [" 2"])]
 
   Hspec.describe "associateDocStrings" $ do
-    let mkItem n l = Item.Item n . Position.Position l
+    let mkItem n l c = Item.Item {Item.name = Name.Other n, Item.position = Position.Position {Position.line = l, Position.column = c}}
         mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
         mkSrcSpan (l1, c1) (l2, c2) = SrcLoc.mkSrcSpan (mkSrcLoc l1 c1) (mkSrcLoc l2 c2)
         mkDocString (l1, c1) (l2, c2) d =
@@ -548,7 +551,8 @@ application request respond = do
                     if null tuples
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-                        H.code_ . H.toHtml $ Item.name item
+                        case Item.name item of
+                          Name.Other string -> H.code_ $ H.toHtml string
                         Haddock.docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc
@@ -720,15 +724,15 @@ getLHsDeclItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
 getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
-      HS.FamilyDecl {HS.fdLName = lIdP} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
-    HS.SynDecl {HS.tcdLName = lIdP} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+      HS.FamilyDecl {HS.fdLName = lIdP} -> [lIdPToItem lIdP]
+    HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem lIdP]
     HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
-      Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)
+      lIdPToItem lIdP
         : case HS.dd_cons hsDataDefn of
           HS.NewTypeCon lConDecl -> conDeclToItems $ SrcLoc.unLoc lConDecl
           HS.DataTypeCons _ lConDecls -> concatMap (conDeclToItems . SrcLoc.unLoc) lConDecls
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
-      Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)
+      lIdPToItem lIdP
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
   HS.InstD _ instDecl -> case instDecl of
     HS.ClsInstD {HS.cid_inst = clsInstDecl} -> case clsInstDecl of
@@ -740,18 +744,18 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
       HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
   HS.ValD _ hsBind -> case hsBind of
-    HS.FunBind {HS.fun_id = lIdP} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem lIdP]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
     HS.PatSynBind _ patSynBind -> case patSynBind of
       HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
-        Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)
+        lIdPToItem lIdP
           : case hsPatSynDir of
             HS.Unidirectional -> []
             HS.ImplicitBidirectional -> []
             HS.ExplicitBidirectional matchGroup -> case matchGroup of
               HS.MG {HS.mg_alts = lMatches} ->
                 ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
-                    HS.FunRhs {HS.mc_fun = lIdP2} -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP2) (Position.fromLocatedAn lIdP2)
+                    HS.FunRhs {HS.mc_fun = lIdP2} -> lIdPToItem lIdP2
                     _ -> error $ Data.showS hsMatchContext " -- unknown HsMatchContext"
                 )
                   . SrcLoc.unLoc
@@ -759,14 +763,14 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.VarBind {} -> error "impossible: unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
-    HS.StandaloneKindSig _ lIdP _ -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem lIdP]
   HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
     []
   HS.ForD _ foreignDecl -> case foreignDecl of
-    HS.ForeignImport {HS.fd_name = lIdP} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem lIdP]
     HS.ForeignExport {} -> []
   HS.WarningD _ warnDecls -> case warnDecls of
     HS.Warnings {HS.wd_warnings = lWarnDecls} ->
@@ -787,7 +791,7 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.HsRules {HS.rds_rules = lRuleDecls} ->
       concatMap
         ( \lRuleDecl -> case SrcLoc.unLoc lRuleDecl of
-            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
+            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (Name.Other . FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
         )
         lRuleDecls
   HS.SpliceD {} ->
@@ -795,18 +799,18 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     []
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
-    HS.RoleAnnotDecl _ lIdP _ -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem lIdP]
 
 conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item.Item]
 conDeclToItems conDecl = case conDecl of
   HS.ConDeclH98 {HS.con_name = lIdP, HS.con_args = hsConDetails} ->
-    Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)
+    lIdPToItem lIdP
       : case hsConDetails of
         HS.PrefixCon {} -> []
         HS.RecCon lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
         HS.InfixCon {} -> []
   HS.ConDeclGADT {HS.con_names = lIdPs, HS.con_g_args = hsConDeclGADTDetails} ->
-    NonEmpty.toList (fmap (\lIdP -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)) lIdPs)
+    NonEmpty.toList (fmap lIdPToItem lIdPs)
       <> case hsConDeclGADTDetails of
         HS.PrefixConGADT {} -> []
         HS.RecConGADT _ lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
@@ -816,17 +820,17 @@ lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
   HS.ConDeclField {HS.cd_fld_names = lFieldOccs} ->
     fmap
       ( \lFieldOcc -> case SrcLoc.unLoc lFieldOcc of
-          HS.FieldOcc {HS.foLabel = lRdrName} -> Item.Item (rdrNameToString $ SrcLoc.unLoc lRdrName) (Position.fromLocatedAn lRdrName)
+          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem lRdrName
       )
       lFieldOccs
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item.Item]
 sigToItems sig = case sig of
-  HS.TypeSig _ lIdPs _ -> fmap (\lIdP -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)) lIdPs
-  HS.PatSynSig _ lIdPs _ -> fmap (\lIdP -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)) lIdPs
-  HS.ClassOpSig _ _ lIdPs _ -> fmap (\lIdP -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)) lIdPs
+  HS.TypeSig _ lIdPs _ -> fmap lIdPToItem lIdPs
+  HS.PatSynSig _ lIdPs _ -> fmap lIdPToItem lIdPs
+  HS.ClassOpSig _ _ lIdPs _ -> fmap lIdPToItem lIdPs
   HS.FixSig _ fixitySig -> case fixitySig of
-    HS.FixitySig _ lIdPs _ -> fmap (\lIdP -> Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)) lIdPs
+    HS.FixitySig _ lIdPs _ -> fmap lIdPToItem lIdPs
   HS.InlineSig {} -> []
   HS.SpecSig {} -> []
   HS.SpecInstSig {} -> []
@@ -843,9 +847,9 @@ sigToItems sig = case sig of
 patToItems :: HS.Pat GHC.Hs.GhcPs -> [Item.Item]
 patToItems pat = case pat of
   HS.WildPat {} -> []
-  HS.VarPat _ lIdP -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+  HS.VarPat _ lIdP -> [lIdPToItem lIdP]
   HS.LazyPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
-  HS.AsPat _ lIdP lPat2 -> Item.Item (rdrNameToString (SrcLoc.unLoc lIdP)) (Position.fromLocatedAn lIdP) : patToItems (SrcLoc.unLoc lPat2)
+  HS.AsPat _ lIdP lPat2 -> lIdPToItem lIdP : patToItems (SrcLoc.unLoc lPat2)
   HS.ParPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.BangPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.ListPat _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
@@ -858,7 +862,7 @@ patToItems pat = case pat of
         ( ( \hsRecField ->
               if HS.hfbPun hsRecField
                 then case SrcLoc.unLoc $ HS.hfbLHS hsRecField of
-                  HS.FieldOcc {HS.foLabel = lRdrName} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lRdrName) (Position.fromLocatedAn lRdrName)]
+                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem lRdrName]
                 else patToItems . SrcLoc.unLoc $ HS.hfbRHS hsRecField
           )
             . SrcLoc.unLoc
@@ -873,7 +877,7 @@ patToItems pat = case pat of
     []
   HS.LitPat {} -> []
   HS.NPat {} -> []
-  HS.NPlusKPat _ lIdP _ _ _ _ -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem lIdP]
   HS.SigPat _ lPat2 _ -> patToItems $ SrcLoc.unLoc lPat2
   HS.EmbTyPat {} -> error "impossible: unexpected EmbTyPat"
   HS.InvisPat {} -> error "impossible: unexpected InvisPat"
@@ -884,7 +888,7 @@ hsSigTypeToItems hsSigType = case hsSigType of
 
 hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item.Item]
 hsTypeToItems hsType = case hsType of
-  HS.HsTyVar _ _ lIdP -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+  HS.HsTyVar _ _ lIdP -> [lIdPToItem lIdP]
   HS.HsAppTy _ lHsType _ -> hsTypeToItems $ SrcLoc.unLoc lHsType
   HS.HsParTy _ lHsType -> hsTypeToItems $ SrcLoc.unLoc lHsType
   HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
@@ -892,10 +896,17 @@ hsTypeToItems hsType = case hsType of
 
 famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
 famEqnToItems famEqn = case famEqn of
-  HS.FamEqn {HS.feqn_tycon = lIdP} -> [Item.Item (rdrNameToString $ SrcLoc.unLoc lIdP) (Position.fromLocatedAn lIdP)]
+  HS.FamEqn {HS.feqn_tycon = lIdP} -> [lIdPToItem lIdP]
 
 rdrNameToString :: RdrName.RdrName -> String
 rdrNameToString rdrName = case rdrName of
   RdrName.Unqual occName -> OccName.occNameString occName
   -- RdrName.Qual moduleName occName -> HS.moduleNameString moduleName <> "." <> OccName.occNameString occName
   _ -> error $ Data.showS rdrName " -- unknown RdrName"
+
+lIdPToItem :: HS.LIdP GHC.Hs.GhcPs -> Item.Item
+lIdPToItem lIdP =
+  Item.Item
+    { Item.name = Name.Other . rdrNameToString $ SrcLoc.unLoc lIdP,
+      Item.position = Position.fromLocatedAn lIdP
+    }

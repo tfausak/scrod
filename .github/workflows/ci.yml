@@ -24,11 +24,11 @@ jobs:
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
-      - run: tar --create --file artifact.tar --verbose artifact
+      - run: cp $( cabal list-bin scrod ) artifact
       - uses: actions/upload-artifact@v4
         with:
           name: scrod-${{ github.sha }}
-          path: artifact.tar
+          path: artifact
       - run: cabal test --test-options '--randomize --strict'
   cabal:
     name: Cabal

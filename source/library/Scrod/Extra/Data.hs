@@ -14,6 +14,9 @@ showS x
         . foldr (.) id
         . List.intersperse (showString ", ")
         $ Data.gmapQ showS x
+  | isList x,
+    [h, t] <- Data.gmapQ showS x =
+      showParen True $ h . showString " : " . t
   | Just string <- Data.cast x = shows (string :: String)
   | Just occName <- Data.cast x = showS $ OccName.occNameString occName
   | Just srcSpan <- Data.cast x = SrcLoc.srcSpanToShowS srcSpan
@@ -30,3 +33,6 @@ isTuple =
     . filter (\c -> c /= '(' && c /= ')')
     . Data.showConstr
     . Data.toConstr
+
+isList :: (Data.Data a) => a -> Bool
+isList = (==) "(:)" . Data.showConstr . Data.toConstr

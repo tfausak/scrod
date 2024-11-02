@@ -143,8 +143,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 3}, [])]
 
     Hspec.it "prefix operator" $ do
-      -- TODO: Why is this at column 1 rather than 2?
+      -- Note that this starts at column one (where the open parenthesis is)
+      -- rather than column two (where the operator actually starts). This is
+      -- because there can be space around the operator inside the parentheses.
       f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
+
+    Hspec.it "prefix operator with spaces" $ do
+      f "( & ) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
 
     Hspec.it "variable" $ do
       f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 1}, [])]
@@ -171,7 +176,8 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "n", Item.position = p 1 2}, [])]
 
     Hspec.it "bang pattern" $ do
-      -- Note that this is different than the "strict variable" test case!
+      -- Note that this is a dramatically different parse tree than the "strict
+      -- variable" test case!
       f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "o", Item.position = p 1 3}, [])]
 
     Hspec.it "list pattern" $ do
@@ -223,6 +229,8 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 42}, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
+      -- Note that the inner pattern synonym is not an item because it cannot
+      -- have documentation attached to it.
       f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 42}, [])]
 
     Hspec.it "type signature" $ do
@@ -309,7 +317,10 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "documentation around item" $ do
       f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x", " z"])]
 
-    Hspec.it "" $ do
+    Hspec.it "two items with leading documentation" $ do
+      f "-- | 1\na = ()\n-- | 2\nb = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 2 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 4 1}, [" 2"])]
+
+    Hspec.it "two items with trailing documentation" $ do
       f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 3 1}, [" 2"])]
 
   Hspec.describe "associateDocStrings" $ do

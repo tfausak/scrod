@@ -20,11 +20,9 @@ import qualified Data.Tuple as Tuple
 import qualified Data.Version as Version
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
-import qualified GHC.Core.Unfold as Unfold
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer
-import qualified GHC.Driver.Backend as Backend
 import qualified GHC.Driver.Session as Session
 import qualified GHC.Hs
 import qualified GHC.LanguageExtensions.Type as X
@@ -33,11 +31,9 @@ import qualified GHC.Parser.Errors.Types as PsErr
 import qualified GHC.Parser.Header as Header
 import qualified GHC.Parser.Lexer as Lexer
 import qualified GHC.Platform as Platform
-import qualified GHC.Settings as Settings
 import qualified GHC.Stack as Stack
 import qualified GHC.Types.Name.Occurrence as OccName
 import qualified GHC.Types.Name.Reader as RdrName
-import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Error as ErrUtil
 import qualified Language.Haskell.Syntax as HS
@@ -47,6 +43,7 @@ import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Paths_scrod as Package
 import qualified Scrod.Extra.Data as Data
+import qualified Scrod.Extra.DynFlags as DynFlags
 import qualified Scrod.Extra.Haddock as Haddock
 import qualified Scrod.Type.Direction as Direction
 import qualified Scrod.Type.Item as Item
@@ -411,225 +408,7 @@ discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
 discoverExtensionsIO :: String -> IO (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensionsIO string = do
-  let dynFlags =
-        Session.DynFlags
-          { Session.backend = Backend.noBackend,
-            Session.dmdUnboxWidth = 0,
-            Session.dynamicNow = False,
-            Session.enableTimeStats = False,
-            Session.extensions = mempty,
-            Session.extensionFlags = mempty,
-            Session.fileSettings =
-              Session.FileSettings
-                { Session.fileSettings_ghciUsagePath = error "fileSettings_ghciUsagePath",
-                  Session.fileSettings_ghcUsagePath = error "fileSettings_ghcUsagePath",
-                  Session.fileSettings_globalPackageDatabase = error "fileSettings_globalPackageDatabase",
-                  Session.fileSettings_toolDir = error "fileSettings_toolDir",
-                  Session.fileSettings_topDir = error "fileSettings_topDir"
-                },
-            Session.generalFlags = mempty,
-            Session.ghcHeapSize = Nothing,
-            Session.ghcLink = Session.NoLink,
-            Session.ghcNameVersion =
-              Session.GhcNameVersion
-                { Session.ghcNameVersion_programName = error "ghcNameVersion_programName",
-                  Session.ghcNameVersion_projectVersion = error "ghcNameVersion_projectVersion"
-                },
-            Session.language = Nothing,
-            Session.platformMisc =
-              Session.PlatformMisc
-                { Session.platformMisc_ghcWithInterpreter = error "platformMisc_ghcWithInterpreter",
-                  Session.platformMisc_libFFI = error "platformMisc_libFFI",
-                  Session.platformMisc_llvmTarget = error "platformMisc_llvmTarget",
-                  Session.platformMisc_targetPlatformString = error "platformMisc_targetPlatformString"
-                },
-            Session.safeHaskell = SafeHaskell.Sf_Ignore,
-            Session.safeInfer = False,
-            Session.targetPlatform = Platform.genericPlatform,
-            Session.targetWays_ = mempty,
-            Session.toolSettings =
-              Settings.ToolSettings
-                { Settings.toolSettings_arSupportsDashL = error "toolSettings_arSupportsDashL",
-                  Settings.toolSettings_ccSupportsNoPie = error "toolSettings_ccSupportsNoPie",
-                  Settings.toolSettings_extraGccViaCFlags = error "toolSettings_extraGccViaCFlags",
-                  Settings.toolSettings_ldIsGnuLd = error "toolSettings_ldIsGnuLd",
-                  Settings.toolSettings_ldSupportsCompactUnwind = error "toolSettings_ldSupportsCompactUnwind",
-                  Settings.toolSettings_ldSupportsFilelist = error "toolSettings_ldSupportsFilelist",
-                  Settings.toolSettings_ldSupportsSingleModule = error "toolSettings_ldSupportsSingleModule",
-                  Settings.toolSettings_mergeObjsSupportsResponseFiles = error "toolSettings_mergeObjsSupportsResponseFiles",
-                  Settings.toolSettings_opt_a = error "toolSettings_opt_a",
-                  Settings.toolSettings_opt_c = error "toolSettings_opt_c",
-                  Settings.toolSettings_opt_cxx = error "toolSettings_opt_cxx",
-                  Settings.toolSettings_opt_F = error "toolSettings_opt_F",
-                  Settings.toolSettings_opt_i = error "toolSettings_opt_i",
-                  Settings.toolSettings_opt_l = error "toolSettings_opt_l",
-                  Settings.toolSettings_opt_L = error "toolSettings_opt_L",
-                  Settings.toolSettings_opt_las = error "toolSettings_opt_las",
-                  Settings.toolSettings_opt_lc = error "toolSettings_opt_lc",
-                  Settings.toolSettings_opt_lm = error "toolSettings_opt_lm",
-                  Settings.toolSettings_opt_lo = error "toolSettings_opt_lo",
-                  Settings.toolSettings_opt_P = error "toolSettings_opt_P",
-                  Settings.toolSettings_opt_P_fingerprint = error "toolSettings_opt_P_fingerprint",
-                  Settings.toolSettings_opt_windres = error "toolSettings_opt_windres",
-                  Settings.toolSettings_pgm_a = error "toolSettings_pgm_a",
-                  Settings.toolSettings_pgm_ar = error "toolSettings_pgm_ar",
-                  Settings.toolSettings_pgm_c = error "toolSettings_pgm_c",
-                  Settings.toolSettings_pgm_cpp = error "toolSettings_pgm_cpp",
-                  Settings.toolSettings_pgm_cxx = error "toolSettings_pgm_cxx",
-                  Settings.toolSettings_pgm_F = error "toolSettings_pgm_F",
-                  Settings.toolSettings_pgm_i = error "toolSettings_pgm_i",
-                  Settings.toolSettings_pgm_install_name_tool = error "toolSettings_pgm_install_name_tool",
-                  Settings.toolSettings_pgm_l = error "toolSettings_pgm_l",
-                  Settings.toolSettings_pgm_L = error "toolSettings_pgm_L",
-                  Settings.toolSettings_pgm_las = error "toolSettings_pgm_las",
-                  Settings.toolSettings_pgm_lc = error "toolSettings_pgm_lc",
-                  Settings.toolSettings_pgm_lm = error "toolSettings_pgm_lm",
-                  Settings.toolSettings_pgm_lo = error "toolSettings_pgm_lo",
-                  Settings.toolSettings_pgm_otool = error "toolSettings_pgm_otool",
-                  Settings.toolSettings_pgm_P = error "toolSettings_pgm_P",
-                  Settings.toolSettings_pgm_ranlib = error "toolSettings_pgm_ranlib",
-                  Settings.toolSettings_pgm_windres = error "toolSettings_pgm_windres",
-                  Settings.toolSettings_useInplaceMinGW = error "toolSettings_useInplaceMinGW"
-                },
-            Session.unfoldingOpts = Unfold.defaultUnfoldingOpts,
-            Session.avx = error "avx",
-            Session.avx2 = error "avx2",
-            Session.avx512cd = error "avx512cd",
-            Session.avx512er = error "avx512er",
-            Session.avx512f = error "avx512f",
-            Session.avx512pf = error "avx512pf",
-            Session.binBlobThreshold = error "binBlobThreshold",
-            Session.bmiVersion = error "bmiVersion",
-            Session.callerCcFilters = error "callerCcFilters",
-            Session.canUseColor = error "canUseColor",
-            Session.canUseErrorLinks = error "canUseErrorLinks",
-            Session.cfgWeights = error "cfgWeights",
-            Session.cmdlineFrameworks = error "cmdlineFrameworks",
-            Session.cmmProcAlignment = error "cmmProcAlignment",
-            Session.colScheme = error "colScheme",
-            Session.customWarningCategories = error "customWarningCategories",
-            Session.debugLevel = error "debugLevel",
-            Session.depExcludeMods = error "depExcludeMods",
-            Session.depIncludeCppDeps = error "depIncludeCppDeps",
-            Session.depIncludePkgDeps = error "depIncludePkgDeps",
-            Session.depMakefile = error "depMakefile",
-            Session.depSuffixes = error "depSuffixes",
-            Session.deriveViaOnLoc = error "deriveViaOnLoc",
-            Session.dumpDir = error "dumpDir",
-            Session.dumpFlags = error "dumpFlags",
-            Session.dumpPrefix = error "dumpPrefix",
-            Session.dumpPrefixForce = error "dumpPrefixForce",
-            Session.dylibInstallName = error "dylibInstallName",
-            Session.dynHiSuf_ = error "dynHiSuf_",
-            Session.dynLibLoader = error "dynLibLoader",
-            Session.dynObjectSuf_ = error "dynObjectSuf_",
-            Session.dynOutputFile_ = error "dynOutputFile_",
-            Session.dynOutputHi = error "dynOutputHi",
-            Session.externalPluginSpecs = error "externalPluginSpecs",
-            Session.fatalCustomWarningCategories = error "fatalCustomWarningCategories",
-            Session.fatalWarningFlags = error "fatalWarningFlags",
-            Session.floatLamArgs = error "floatLamArgs",
-            Session.flushOut = error "flushOut",
-            Session.fma = error "fma",
-            Session.frameworkPaths = error "frameworkPaths",
-            Session.frontendPluginOpts = error "frontendPluginOpts",
-            Session.ghciHistSize = error "ghciHistSize",
-            Session.ghciScripts = error "ghciScripts",
-            Session.ghcMode = error "ghcMode",
-            Session.ghcVersionFile = error "ghcVersionFile",
-            Session.givensFuel = error "givensFuel",
-            Session.haddockOptions = error "haddockOptions",
-            Session.hcSuf = error "hcSuf",
-            Session.hiddenModules = error "hiddenModules",
-            Session.hiDir = error "hiDir",
-            Session.hieDir = error "hieDir",
-            Session.hieSuf = error "hieSuf",
-            Session.historySize = error "historySize",
-            Session.hiSuf_ = error "hiSuf_",
-            Session.homeUnitId_ = error "homeUnitId_",
-            Session.homeUnitInstanceOf_ = error "homeUnitInstanceOf_",
-            Session.homeUnitInstantiations_ = error "homeUnitInstantiations_",
-            Session.hpcDir = error "hpcDir",
-            Session.ignorePackageFlags = error "ignorePackageFlags",
-            Session.importPaths = error "importPaths",
-            Session.includePaths = error "includePaths",
-            Session.incoherentOnLoc = error "incoherentOnLoc",
-            Session.initialUnique = error "initialUnique",
-            Session.interactivePrint = error "interactivePrint",
-            Session.ldInputs = error "ldInputs",
-            Session.liberateCaseThreshold = error "liberateCaseThreshold",
-            Session.libraryPaths = error "libraryPaths",
-            Session.liftLamsKnown = error "liftLamsKnown",
-            Session.liftLamsNonRecArgs = error "liftLamsNonRecArgs",
-            Session.liftLamsRecArgs = error "liftLamsRecArgs",
-            Session.llvmOptLevel = error "llvmOptLevel",
-            Session.mainFunIs = error "mainFunIs",
-            Session.mainModuleNameIs = error "mainModuleNameIs",
-            Session.maxErrors = error "maxErrors",
-            Session.maxInlineAllocSize = error "maxInlineAllocSize",
-            Session.maxInlineMemcpyInsns = error "maxInlineMemcpyInsns",
-            Session.maxInlineMemsetInsns = error "maxInlineMemsetInsns",
-            Session.maxPmCheckModels = error "maxPmCheckModels",
-            Session.maxRefHoleFits = error "maxRefHoleFits",
-            Session.maxRelevantBinds = error "maxRelevantBinds",
-            Session.maxSimplIterations = error "maxSimplIterations",
-            Session.maxUncoveredPatterns = error "maxUncoveredPatterns",
-            Session.maxValidHoleFits = error "maxValidHoleFits",
-            Session.maxWorkerArgs = error "maxWorkerArgs",
-            Session.newDerivOnLoc = error "newDerivOnLoc",
-            Session.objectDir = error "objectDir",
-            Session.objectSuf_ = error "objectSuf_",
-            Session.outputFile_ = error "outputFile_",
-            Session.outputHi = error "outputHi",
-            Session.overlapInstLoc = error "overlapInstLoc",
-            Session.packageDBFlags = error "packageDBFlags",
-            Session.packageEnv = error "packageEnv",
-            Session.packageFlags = error "packageFlags",
-            Session.parMakeCount = error "parMakeCount",
-            Session.pkgTrustOnLoc = error "pkgTrustOnLoc",
-            Session.pluginModNameOpts = error "pluginModNameOpts",
-            Session.pluginModNames = error "pluginModNames",
-            Session.pluginPackageFlags = error "pluginPackageFlags",
-            Session.pprCols = error "pprCols",
-            Session.pprUserLength = error "pprUserLength",
-            Session.profAuto = error "profAuto",
-            Session.qcsFuel = error "qcsFuel",
-            Session.rawSettings = error "rawSettings",
-            Session.reductionDepth = error "reductionDepth",
-            Session.reexportedModules = error "reexportedModules",
-            Session.refLevelHoleFits = error "refLevelHoleFits",
-            Session.reverseErrors = error "reverseErrors",
-            Session.rtsOpts = error "rtsOpts",
-            Session.rtsOptsEnabled = error "rtsOptsEnabled",
-            Session.rtsOptsSuggestions = error "rtsOptsSuggestions",
-            Session.ruleCheck = error "ruleCheck",
-            Session.safeInferred = error "safeInferred",
-            Session.simplPhases = error "simplPhases",
-            Session.simplTickFactor = error "simplTickFactor",
-            Session.solverIterations = error "solverIterations",
-            Session.specConstrCount = error "specConstrCount",
-            Session.specConstrRecursive = error "specConstrRecursive",
-            Session.specConstrThreshold = error "specConstrThreshold",
-            Session.splitInfo = error "splitInfo",
-            Session.sseVersion = error "sseVersion",
-            Session.strictnessBefore = error "strictnessBefore",
-            Session.stubDir = error "stubDir",
-            Session.thisPackageName = error "thisPackageName",
-            Session.thOnLoc = error "thOnLoc",
-            Session.tmpDir = error "tmpDir",
-            Session.trustFlags = error "trustFlags",
-            Session.trustworthyOnLoc = error "trustworthyOnLoc",
-            Session.uniqueIncrement = error "uniqueIncrement",
-            Session.useColor = error "useColor",
-            Session.useErrorLinks = error "useErrorLinks",
-            Session.useUnicode = error "useUnicode",
-            Session.verbosity = error "verbosity",
-            Session.wantedsFuel = error "wantedsFuel",
-            Session.warningFlags = error "warningFlags",
-            Session.warnSafeOnLoc = error "warnSafeOnLoc",
-            Session.warnUnsafeOnLoc = error "warnUnsafeOnLoc",
-            Session.workingDirectory = error "workingDirectory"
-          }
+  let dynFlags = DynFlags.emptyDynFlags
       stringBuffer = StringBuffer.stringToStringBuffer string
       supported =
         Session.supportedLanguagesAndExtensions
@@ -1108,7 +887,6 @@ famEqnToItems famEqn = case famEqn of
 rdrNameToString :: RdrName.RdrName -> String
 rdrNameToString rdrName = case rdrName of
   RdrName.Unqual occName -> OccName.occNameString occName
-  -- RdrName.Qual moduleName occName -> HS.moduleNameString moduleName <> "." <> OccName.occNameString occName
   _ -> error $ Data.showS rdrName " -- unknown RdrName"
 
 lIdPToItem :: HS.LIdP GHC.Hs.GhcPs -> Item.Item

@@ -70,38 +70,46 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
         p l c = Position.Position {Position.line = l, Position.column = c}
 
+        debug = putStrLn . either show (flip Data.showS "" . LHsModule.unwrap) . parseLHsModule ""
+
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 
-    Hspec.it "type family" $ do
-      f "type family A" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "A", Item.position = p 1 13}, [])]
+    Hspec.it "open type family" $ do
+      f "type family A" `Hspec.shouldBe` [(Item.Item {Item.name = Name.OpenTypeFamily "A", Item.position = p 1 13}, [])]
+
+    Hspec.it "closed type family" $ do
+      f "type family A where" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, [])]
 
     Hspec.it "data family" $ do
-      f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 13}, [])]
+      f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataFamily "B", Item.position = p 1 13}, [])]
 
     Hspec.it "type synonym" $ do
-      f "type C = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 6}, [])]
+      f "type C = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeSynonym "C", Item.position = p 1 6}, [])]
 
     Hspec.it "data" $ do
-      f "data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 6}, [])]
+      f "data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "D", Item.position = p 1 6}, [])]
+
+    Hspec.it "type-level data" $ do
+      f "type data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "D", Item.position = p 1 11}, [])]
 
     Hspec.it "data constructor" $ do
-      f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 10}, [])]
+      f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Constructor "E", Item.position = p 1 10}, [])]
 
-    Hspec.it "data constructor gadt" $ do
-      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 14}, [])]
+    Hspec.it "data constructor GADT" $ do
+      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.GADT "E", Item.position = p 1 14}, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, [])]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 20}, [])]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 20}, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 26}, [])]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 26}, [])]
 
-    Hspec.it "record field gadt" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 24}, [])]
+    Hspec.it "record field GADT" $ do
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 24}, [])]
 
     Hspec.it "class" $ do
       f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "E", Item.position = p 1 7}, [])]
@@ -537,8 +545,17 @@ application request respond = do
                     if null tuples
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-                        case Item.name item of
-                          Name.Other string -> H.code_ $ H.toHtml string
+                        H.code_ . H.toHtml $ case Item.name item of
+                          Name.ClosedTypeFamily x -> x
+                          Name.Constructor x -> x
+                          Name.Data x -> x
+                          Name.DataFamily x -> x
+                          Name.GADT x -> x
+                          Name.Newtype x -> x
+                          Name.OpenTypeFamily x -> x
+                          Name.TypeData x -> x
+                          Name.TypeSynonym x -> x
+                          Name.Other x -> x
                         Haddock.docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc
@@ -710,15 +727,35 @@ getLHsDeclItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
 getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
-      HS.FamilyDecl {HS.fdLName = lIdP} -> [lIdPToItem lIdP]
-    HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem lIdP]
+      HS.FamilyDecl {HS.fdInfo = familyInfo, HS.fdLName = lIdP} ->
+        [ lIdPToItem
+            ( case familyInfo of
+                HS.DataFamily -> Name.DataFamily
+                HS.OpenTypeFamily -> Name.OpenTypeFamily
+                HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
+            )
+            lIdP
+        ]
+    HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem Name.TypeSynonym lIdP]
     HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
-      lIdPToItem lIdP
-        : case HS.dd_cons hsDataDefn of
-          HS.NewTypeCon lConDecl -> conDeclToItems $ SrcLoc.unLoc lConDecl
-          HS.DataTypeCons _ lConDecls -> concatMap (conDeclToItems . SrcLoc.unLoc) lConDecls
+      let dataDefnCons = HS.dd_cons hsDataDefn
+       in lIdPToItem
+            ( case dataDefnCons of
+                HS.NewTypeCon {} -> Name.Newtype
+                HS.DataTypeCons isTypeData _ ->
+                  if isTypeData
+                    then Name.TypeData
+                    else Name.Data
+            )
+            lIdP
+            : concatMap
+              (conDeclToItems . SrcLoc.unLoc)
+              ( case dataDefnCons of
+                  HS.NewTypeCon lConDecl -> [lConDecl]
+                  HS.DataTypeCons _ lConDecls -> lConDecls
+              )
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
-      lIdPToItem lIdP
+      lIdPToItem Name.Other lIdP
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
   HS.InstD _ instDecl -> case instDecl of
     HS.ClsInstD {HS.cid_inst = clsInstDecl} -> case clsInstDecl of
@@ -730,18 +767,18 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
       HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
   HS.ValD _ hsBind -> case hsBind of
-    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem lIdP]
+    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem Name.Other lIdP]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
     HS.PatSynBind _ patSynBind -> case patSynBind of
       HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
-        lIdPToItem lIdP
+        lIdPToItem Name.Other lIdP
           : case hsPatSynDir of
             HS.Unidirectional -> []
             HS.ImplicitBidirectional -> []
             HS.ExplicitBidirectional matchGroup -> case matchGroup of
               HS.MG {HS.mg_alts = lMatches} ->
                 ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
-                    HS.FunRhs {HS.mc_fun = lIdP2} -> lIdPToItem lIdP2
+                    HS.FunRhs {HS.mc_fun = lIdP2} -> lIdPToItem Name.Other lIdP2
                     _ -> error $ Data.showS hsMatchContext " -- unknown HsMatchContext"
                 )
                   . SrcLoc.unLoc
@@ -749,14 +786,14 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.VarBind {} -> error "impossible: unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
-    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem lIdP]
+    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem Name.Other lIdP]
   HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
     []
   HS.ForD _ foreignDecl -> case foreignDecl of
-    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem lIdP]
+    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem Name.Other lIdP]
     HS.ForeignExport {} -> []
   HS.WarningD _ warnDecls -> case warnDecls of
     HS.Warnings {HS.wd_warnings = lWarnDecls} ->
@@ -785,18 +822,18 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     []
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
-    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem lIdP]
+    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Other lIdP]
 
 conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item.Item]
 conDeclToItems conDecl = case conDecl of
   HS.ConDeclH98 {HS.con_name = lIdP, HS.con_args = hsConDetails} ->
-    lIdPToItem lIdP
+    lIdPToItem Name.Constructor lIdP
       : case hsConDetails of
         HS.PrefixCon {} -> []
         HS.RecCon lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
         HS.InfixCon {} -> []
   HS.ConDeclGADT {HS.con_names = lIdPs, HS.con_g_args = hsConDeclGADTDetails} ->
-    NonEmpty.toList (fmap lIdPToItem lIdPs)
+    NonEmpty.toList (fmap (lIdPToItem Name.GADT) lIdPs)
       <> case hsConDeclGADTDetails of
         HS.PrefixConGADT {} -> []
         HS.RecConGADT _ lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
@@ -806,17 +843,17 @@ lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
   HS.ConDeclField {HS.cd_fld_names = lFieldOccs} ->
     fmap
       ( \lFieldOcc -> case SrcLoc.unLoc lFieldOcc of
-          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem lRdrName
+          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem Name.Other lRdrName
       )
       lFieldOccs
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item.Item]
 sigToItems sig = case sig of
-  HS.TypeSig _ lIdPs _ -> fmap lIdPToItem lIdPs
-  HS.PatSynSig _ lIdPs _ -> fmap lIdPToItem lIdPs
-  HS.ClassOpSig _ _ lIdPs _ -> fmap lIdPToItem lIdPs
+  HS.TypeSig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
+  HS.PatSynSig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
+  HS.ClassOpSig _ _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
   HS.FixSig _ fixitySig -> case fixitySig of
-    HS.FixitySig _ lIdPs _ -> fmap lIdPToItem lIdPs
+    HS.FixitySig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
   HS.InlineSig {} -> []
   HS.SpecSig {} -> []
   HS.SpecInstSig {} -> []
@@ -833,9 +870,9 @@ sigToItems sig = case sig of
 patToItems :: HS.Pat GHC.Hs.GhcPs -> [Item.Item]
 patToItems pat = case pat of
   HS.WildPat {} -> []
-  HS.VarPat _ lIdP -> [lIdPToItem lIdP]
+  HS.VarPat _ lIdP -> [lIdPToItem Name.Other lIdP]
   HS.LazyPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
-  HS.AsPat _ lIdP lPat2 -> lIdPToItem lIdP : patToItems (SrcLoc.unLoc lPat2)
+  HS.AsPat _ lIdP lPat2 -> lIdPToItem Name.Other lIdP : patToItems (SrcLoc.unLoc lPat2)
   HS.ParPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.BangPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.ListPat _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
@@ -848,7 +885,7 @@ patToItems pat = case pat of
         ( ( \hsRecField ->
               if HS.hfbPun hsRecField
                 then case SrcLoc.unLoc $ HS.hfbLHS hsRecField of
-                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem lRdrName]
+                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem Name.Other lRdrName]
                 else patToItems . SrcLoc.unLoc $ HS.hfbRHS hsRecField
           )
             . SrcLoc.unLoc
@@ -863,7 +900,7 @@ patToItems pat = case pat of
     []
   HS.LitPat {} -> []
   HS.NPat {} -> []
-  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem lIdP]
+  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem Name.Other lIdP]
   HS.SigPat _ lPat2 _ -> patToItems $ SrcLoc.unLoc lPat2
   HS.EmbTyPat {} -> error "impossible: unexpected EmbTyPat"
   HS.InvisPat {} -> error "impossible: unexpected InvisPat"
@@ -874,7 +911,7 @@ hsSigTypeToItems hsSigType = case hsSigType of
 
 hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item.Item]
 hsTypeToItems hsType = case hsType of
-  HS.HsTyVar _ _ lIdP -> [lIdPToItem lIdP]
+  HS.HsTyVar _ _ lIdP -> [lIdPToItem Name.Other lIdP]
   HS.HsAppTy _ lHsType _ -> hsTypeToItems $ SrcLoc.unLoc lHsType
   HS.HsParTy _ lHsType -> hsTypeToItems $ SrcLoc.unLoc lHsType
   HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
@@ -882,16 +919,16 @@ hsTypeToItems hsType = case hsType of
 
 famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
 famEqnToItems famEqn = case famEqn of
-  HS.FamEqn {HS.feqn_tycon = lIdP} -> [lIdPToItem lIdP]
+  HS.FamEqn {HS.feqn_tycon = lIdP} -> [lIdPToItem Name.Other lIdP]
 
 rdrNameToString :: RdrName.RdrName -> String
 rdrNameToString rdrName = case rdrName of
   RdrName.Unqual occName -> OccName.occNameString occName
   _ -> error $ Data.showS rdrName " -- unknown RdrName"
 
-lIdPToItem :: HS.LIdP GHC.Hs.GhcPs -> Item.Item
-lIdPToItem lIdP =
+lIdPToItem :: (String -> Name.Name) -> HS.LIdP GHC.Hs.GhcPs -> Item.Item
+lIdPToItem toName lIdP =
   Item.Item
-    { Item.name = Name.Other . rdrNameToString $ SrcLoc.unLoc lIdP,
+    { Item.name = toName . rdrNameToString $ SrcLoc.unLoc lIdP,
       Item.position = Position.fromLocatedAn lIdP
     }

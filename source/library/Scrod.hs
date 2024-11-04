@@ -93,6 +93,12 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "type-level data" $ do
       f "type data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "D", Item.position = p 1 11}, [])]
 
+    Hspec.it "type-level data constructor" $ do
+      f "type data T = C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "T", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 15}, [])]
+
+    Hspec.it "type-level data constructor GADT" $ do
+      f "type data T where C :: T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "T", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 19}, [])]
+
     Hspec.it "data constructor" $ do
       f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Constructor "E", Item.position = p 1 10}, [])]
 
@@ -100,43 +106,66 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.GADT "E", Item.position = p 1 14}, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, [])]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 20}, [])]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "g", Item.position = p 1 20}, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 26}, [])]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "g", Item.position = p 1 26}, [])]
 
     Hspec.it "record field GADT" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 24}, [])]
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 24}, [])]
 
     Hspec.it "class" $ do
-      f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "E", Item.position = p 1 7}, [])]
+      f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "E", Item.position = p 1 7}, [])]
 
     Hspec.it "class instance" $ do
-      f "instance F" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 10}, [])]
+      f "instance F" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "F", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with arguments" $ do
-      f "instance G a" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 10}, [])]
+      f "instance G a" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "G", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with parentheses" $ do
-      f "instance (H)" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 11}, [])]
+      f "instance (H)" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "H", Item.position = p 1 11}, [])]
 
     Hspec.it "class instance with context" $ do
-      f "instance () => I" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 16}, [])]
+      f "instance () => I" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "I", Item.position = p 1 16}, [])]
 
     Hspec.it "data instance" $ do
-      f "data instance G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 15}, [])]
+      f "data instance G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, [])]
+
+    Hspec.it "data instance constructor" $ do
+      f "data instance G = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, []), (Item.Item {Item.name = Name.Constructor "X", Item.position = p 1 19}, [])]
+
+    Hspec.it "data instance constructor GADT" $ do
+      f "data instance G where X :: G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, []), (Item.Item {Item.name = Name.GADT "X", Item.position = p 1 23}, [])]
 
     Hspec.it "newtype instance" $ do
-      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 18}, [])]
+      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.NewtypeInstance "H", Item.position = p 1 18}, []), (Item.Item {Item.name = Name.Constructor "X", Item.position = p 1 22}, [])]
+
+    Hspec.it "newtype instance constructor GADT" $ do
+      f "newtype instance H where X :: H" `Hspec.shouldBe` [(Item.Item {Item.name = Name.NewtypeInstance "H", Item.position = p 1 18}, []), (Item.Item {Item.name = Name.GADT "X", Item.position = p 1 26}, [])]
 
     Hspec.it "type instance" $ do
-      f "type instance I = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 15}, [])]
+      f "type instance I = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeInstance "I", Item.position = p 1 15}, [])]
 
-    Hspec.it "deriving instance" $ do
-      f "deriving instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "J", Item.position = p 1 19}, [])]
+    Hspec.it "standalone deriving" $ do
+      f "deriving instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 19}, [])]
+
+    Hspec.it "standalone deriving stock" $ do
+      f "deriving stock instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 25}, [])]
+
+    Hspec.it "standalone deriving newtype" $ do
+      f "deriving newtype instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 27}, [])]
+
+    Hspec.it "standalone deriving anyclass" $ do
+      f "deriving anyclass instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 28}, [])]
+
+    Hspec.it "standalone deriving via" $ do
+      f "deriving via x instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 25}, [])]
+
+    -- TODO: Test deriving connected to data declaration.
 
     Hspec.it "function" $ do
       f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "h", Item.position = p 1 1}, [])]
@@ -245,10 +274,10 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 42}, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 15}, [])]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 15}, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "h", Item.position = p 1 23}, [])]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "h", Item.position = p 1 23}, [])]
 
     Hspec.it "fixity declaration" $ do
       f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "%", Item.position = p 1 9}, [])]
@@ -546,14 +575,20 @@ application request respond = do
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
                         H.code_ . H.toHtml $ case Item.name item of
+                          Name.Class x -> x
+                          Name.ClassInstance x -> x
                           Name.ClosedTypeFamily x -> x
                           Name.Constructor x -> x
                           Name.Data x -> x
                           Name.DataFamily x -> x
+                          Name.DataInstance x -> x
+                          Name.Field x -> x
                           Name.GADT x -> x
                           Name.Newtype x -> x
+                          Name.NewtypeInstance x -> x
                           Name.OpenTypeFamily x -> x
                           Name.TypeData x -> x
+                          Name.TypeInstance x -> x
                           Name.TypeSynonym x -> x
                           Name.Other x -> x
                         Haddock.docHToHtml
@@ -748,24 +783,28 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
                     else Name.Data
             )
             lIdP
-            : concatMap
-              (conDeclToItems . SrcLoc.unLoc)
-              ( case dataDefnCons of
-                  HS.NewTypeCon lConDecl -> [lConDecl]
-                  HS.DataTypeCons _ lConDecls -> lConDecls
-              )
+            : dataDefnConsToItems dataDefnCons
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
-      lIdPToItem Name.Other lIdP
+      lIdPToItem Name.Class lIdP
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
   HS.InstD _ instDecl -> case instDecl of
     HS.ClsInstD {HS.cid_inst = clsInstDecl} -> case clsInstDecl of
-      HS.ClsInstDecl {HS.cid_poly_ty = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
-    HS.DataFamInstD {HS.dfid_inst = dataFamInstDecl} -> famEqnToItems $ HS.dfid_eqn dataFamInstDecl
+      HS.ClsInstDecl {HS.cid_poly_ty = lHsSigType} -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
+    HS.DataFamInstD {HS.dfid_inst = dataFamInstDecl} ->
+      let famEqn = HS.dfid_eqn dataFamInstDecl
+       in famEqnToItems
+            ( case HS.feqn_rhs famEqn of
+                HS.HsDataDefn {HS.dd_cons = dataDefnCons} -> case dataDefnCons of
+                  HS.NewTypeCon {} -> Name.NewtypeInstance
+                  HS.DataTypeCons {} -> Name.DataInstance
+            )
+            (\HS.HsDataDefn {HS.dd_cons = dataDefnCons} -> dataDefnConsToItems dataDefnCons)
+            famEqn
     HS.TyFamInstD {HS.tfid_inst = tyFamInstDecl} -> case tyFamInstDecl of
-      HS.TyFamInstDecl {HS.tfid_eqn = tyFamInstEqn} -> famEqnToItems tyFamInstEqn
+      HS.TyFamInstDecl {HS.tfid_eqn = tyFamInstEqn} -> famEqnToItems Name.TypeInstance (const []) tyFamInstEqn
   HS.DerivD _ derivDecl -> case derivDecl of
     HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
-      HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
+      HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
   HS.ValD _ hsBind -> case hsBind of
     HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem Name.Other lIdP]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
@@ -824,6 +863,14 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
     HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Other lIdP]
 
+dataDefnConsToItems :: HS.DataDefnCons (HS.LConDecl GHC.Hs.GhcPs) -> [Item.Item]
+dataDefnConsToItems dataDefnCons =
+  concatMap
+    (conDeclToItems . SrcLoc.unLoc)
+    $ case dataDefnCons of
+      HS.NewTypeCon lConDecl -> [lConDecl]
+      HS.DataTypeCons _ lConDecls -> lConDecls
+
 conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item.Item]
 conDeclToItems conDecl = case conDecl of
   HS.ConDeclH98 {HS.con_name = lIdP, HS.con_args = hsConDetails} ->
@@ -843,7 +890,7 @@ lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
   HS.ConDeclField {HS.cd_fld_names = lFieldOccs} ->
     fmap
       ( \lFieldOcc -> case SrcLoc.unLoc lFieldOcc of
-          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem Name.Other lRdrName
+          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem Name.Field lRdrName
       )
       lFieldOccs
 
@@ -905,21 +952,22 @@ patToItems pat = case pat of
   HS.EmbTyPat {} -> error "impossible: unexpected EmbTyPat"
   HS.InvisPat {} -> error "impossible: unexpected InvisPat"
 
-hsSigTypeToItems :: HS.HsSigType GHC.Hs.GhcPs -> [Item.Item]
-hsSigTypeToItems hsSigType = case hsSigType of
-  HS.HsSig {HS.sig_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
+hsSigTypeToItems :: (String -> Name.Name) -> HS.HsSigType GHC.Hs.GhcPs -> [Item.Item]
+hsSigTypeToItems toName hsSigType = case hsSigType of
+  HS.HsSig {HS.sig_body = lHsType} -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
 
-hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item.Item]
-hsTypeToItems hsType = case hsType of
-  HS.HsTyVar _ _ lIdP -> [lIdPToItem Name.Other lIdP]
-  HS.HsAppTy _ lHsType _ -> hsTypeToItems $ SrcLoc.unLoc lHsType
-  HS.HsParTy _ lHsType -> hsTypeToItems $ SrcLoc.unLoc lHsType
-  HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
+hsTypeToItems :: (String -> Name.Name) -> HS.HsType GHC.Hs.GhcPs -> [Item.Item]
+hsTypeToItems toName hsType = case hsType of
+  HS.HsTyVar _ _ lIdP -> [lIdPToItem toName lIdP]
+  HS.HsAppTy _ lHsType _ -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
+  HS.HsParTy _ lHsType -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
+  HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
   _ -> error $ Data.showS hsType " -- unknown HsType"
 
-famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
-famEqnToItems famEqn = case famEqn of
-  HS.FamEqn {HS.feqn_tycon = lIdP} -> [lIdPToItem Name.Other lIdP]
+famEqnToItems :: (String -> Name.Name) -> (rhs -> [Item.Item]) -> HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
+famEqnToItems toName toItems famEqn = case famEqn of
+  HS.FamEqn {HS.feqn_tycon = lIdP, HS.feqn_rhs = rhs} ->
+    lIdPToItem toName lIdP : toItems rhs
 
 rdrNameToString :: RdrName.RdrName -> String
 rdrNameToString rdrName = case rdrName of

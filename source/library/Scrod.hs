@@ -70,8 +70,6 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
         p l c = Position.Position {Position.line = l, Position.column = c}
 
-        debug = putStrLn . either show (flip Data.showS "" . LHsModule.unwrap) . parseLHsModule ""
-
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 

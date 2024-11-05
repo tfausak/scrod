@@ -3,6 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- <https://downloads.haskell.org/ghc/9.10.1/docs/users_guide/>
+-- <https://hackage.haskell.org/package/ghc-9.10.1>
 module Scrod where
 
 import qualified Control.Monad as Monad
@@ -60,11 +63,11 @@ import qualified Text.Printf as Printf
 
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
-  Hspec.describe "getItems" $ do
+  Hspec.describe "lHsModuleToItems" $ do
     let f :: (Stack.HasCallStack) => String -> [(Item.Item, [String])]
         f string =
           let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
-              items = getItems lHsModule
+              items = lHsModuleToItems lHsModule
               lHsDocStrings = getLHsDocStrings lHsModule
            in mergeItems $ associateDocStrings items lHsDocStrings
 
@@ -78,6 +81,8 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
     Hspec.it "closed type family" $ do
       f "type family A where" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, [])]
+
+    -- TODO: Add items for closed type families: `type family A where B = C`.
 
     Hspec.it "data family" $ do
       f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataFamily "B", Item.position = p 1 13}, [])]
@@ -162,6 +167,24 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
 
     Hspec.it "standalone deriving via" $ do
       f "deriving via x instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 25}, [])]
+
+    Hspec.it "data deriving" $ do
+      f "data A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "A", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 17}, [])]
+
+    Hspec.it "data GADT deriving" $ do
+      f "data A where deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "A", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 23}, [])]
+
+    Hspec.it "type data deriving" $ do
+      f "type data A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "A", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 22}, [])]
+
+    Hspec.it "type data GADT deriving" $ do
+      f "type data A where deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "A", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 28}, [])]
+
+    Hspec.it "newtype deriving" $ do
+      f "newtype A = B deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "A", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "B", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 24}, [])]
+
+    Hspec.it "newtype GADT deriving" $ do
+      f "newtype A where B :: A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "A", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "B", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 33}, [])]
 
     -- TODO: Test deriving connected to data declaration.
 
@@ -566,7 +589,7 @@ application request respond = do
                     H.h2_ [H.class_ "alert-heading"] "Error"
                     H.pre_ [H.class_ "text-break text-wrap"] . H.code_ . H.toHtml $ show message
                   Right lHsModule -> do
-                    let items = getItems lHsModule
+                    let items = lHsModuleToItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
                         tuples = mergeItems $ associateDocStrings items lHsDocStrings
                     if null tuples
@@ -752,12 +775,12 @@ getHsDocStringDecorator x = case x of
   GHC.Hs.NestedDocString y _ -> Just y
   GHC.Hs.GeneratedDocString {} -> Nothing
 
-getItems :: LHsModule.LHsModule GHC.Hs.GhcPs -> [Item.Item]
-getItems lHsModule = case SrcLoc.unLoc $ LHsModule.unwrap lHsModule of
-  HS.HsModule {HS.hsmodDecls = lHsDecls} -> concatMap getLHsDeclItems lHsDecls
+lHsModuleToItems :: LHsModule.LHsModule GHC.Hs.GhcPs -> [Item.Item]
+lHsModuleToItems lHsModule = case SrcLoc.unLoc $ LHsModule.unwrap lHsModule of
+  HS.HsModule {HS.hsmodDecls = lHsDecls} -> concatMap lHsDeclToItems lHsDecls
 
-getLHsDeclItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
-getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
+lHsDeclToItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
+lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
       HS.FamilyDecl {HS.fdInfo = familyInfo, HS.fdLName = lIdP} ->
@@ -782,6 +805,7 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
             )
             lIdP
             : dataDefnConsToItems dataDefnCons
+              <> concatMap (hsDerivingClauseToItems . SrcLoc.unLoc) (HS.dd_derivs hsDataDefn)
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
       lIdPToItem Name.Class lIdP
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
@@ -860,6 +884,15 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
     HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Other lIdP]
+
+hsDerivingClauseToItems :: HS.HsDerivingClause GHC.Hs.GhcPs -> [Item.Item]
+hsDerivingClauseToItems hsDerivingClause = case hsDerivingClause of
+  HS.HsDerivingClause {HS.deriv_clause_tys = lDerivClauseTys} -> derivClauseTysToItems $ SrcLoc.unLoc lDerivClauseTys
+
+derivClauseTysToItems :: HS.DerivClauseTys GHC.Hs.GhcPs -> [Item.Item]
+derivClauseTysToItems derivClauseTys = case derivClauseTys of
+  HS.DctSingle _ lHsSigType -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
+  HS.DctMulti _ lHsSigTypes -> concatMap (hsSigTypeToItems Name.ClassInstance . SrcLoc.unLoc) lHsSigTypes
 
 dataDefnConsToItems :: HS.DataDefnCons (HS.LConDecl GHC.Hs.GhcPs) -> [Item.Item]
 dataDefnConsToItems dataDefnCons =

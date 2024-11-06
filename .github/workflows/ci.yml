@@ -39,7 +39,7 @@ jobs:
   deploy:
     if: ${{ github.ref == 'refs/heads/main' }}
     name: Deploy
-    needs: build
+    needs: docker
     secrets: inherit
     uses: ./.github/workflows/deploy.yml
   docker:

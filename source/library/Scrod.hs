@@ -4,8 +4,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- |
--- <https://downloads.haskell.org/ghc/9.10.1/docs/users_guide/>
--- <https://hackage.haskell.org/package/ghc-9.10.1>
+-- <https://downloads.haskell.org/ghc/9.10.1/docs/users_guide>
+-- <https://downloads.haskell.org/ghc/9.10.1/docs/libraries/ghc-9.10.1-25ec>
 module Scrod where
 
 import qualified Control.Monad as Monad
@@ -186,81 +186,79 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "newtype GADT deriving" $ do
       f "newtype A where B :: A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "A", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "B", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 33}, [])]
 
-    -- TODO: Test deriving connected to data declaration.
-
     Hspec.it "function" $ do
-      f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "h", Item.position = p 1 1}, [])]
+      f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "h", Item.position = p 1 1}, [])]
 
     Hspec.it "infix function" $ do
-      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "f", Item.position = p 1 3}, [])]
+      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "f", Item.position = p 1 3}, [])]
 
     Hspec.it "infix operator" $ do
-      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 3}, [])]
+      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 3}, [])]
 
     Hspec.it "prefix operator" $ do
       -- Note that this starts at column one (where the open parenthesis is)
       -- rather than column two (where the operator actually starts). This is
       -- because there can be space around the operator inside the parentheses.
-      f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
+      f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 1}, [])]
 
     Hspec.it "prefix operator with spaces" $ do
-      f "( & ) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
+      f "( & ) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 1}, [])]
 
     Hspec.it "variable" $ do
-      f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 1}, [])]
+      f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 1 1}, [])]
 
     Hspec.it "variable on another line" $ do
-      f "\ni = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 2 1}, [])]
+      f "\ni = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 2 1}, [])]
 
     Hspec.it "variable indented" $ do
-      f " i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 2}, [])]
+      f " i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 1 2}, [])]
 
     Hspec.it "strict variable" $ do
-      f "!j = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "j", Item.position = p 1 2}, [])]
+      f "!j = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "j", Item.position = p 1 2}, [])]
 
     Hspec.it "wildcard pattern" $ do
       f "_ = ()" `Hspec.shouldBe` []
 
     Hspec.it "lazy pattern" $ do
-      f "~k = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "k", Item.position = p 1 2}, [])]
+      f "~k = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "k", Item.position = p 1 2}, [])]
 
     Hspec.it "as pattern" $ do
-      f "l@m = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "l", Item.position = p 1 1}, []), (Item.Item {Item.name = Name.Other "m", Item.position = p 1 3}, [])]
+      f "l@m = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "l", Item.position = p 1 1}, []), (Item.Item {Item.name = Name.Variable "m", Item.position = p 1 3}, [])]
 
     Hspec.it "patenthesized pattern" $ do
-      f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "n", Item.position = p 1 2}, [])]
+      f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "n", Item.position = p 1 2}, [])]
 
     Hspec.it "bang pattern" $ do
       -- Note that this is a dramatically different parse tree than the "strict
       -- variable" test case!
-      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "o", Item.position = p 1 3}, [])]
+      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "o", Item.position = p 1 3}, [])]
 
     Hspec.it "list pattern" $ do
-      f "[p] = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 2}, [])]
+      f "[p] = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "p", Item.position = p 1 2}, [])]
 
     Hspec.it "tuple pattern" $ do
-      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 2}, []), (Item.Item {Item.name = Name.Other "r", Item.position = p 1 5}, [])]
+      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "q", Item.position = p 1 2}, []), (Item.Item {Item.name = Name.Variable "r", Item.position = p 1 5}, [])]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "s", Item.position = p 1 33}, [])]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "s", Item.position = p 1 33}, [])]
 
     Hspec.it "prefix constructor pattern" $ do
-      f "Just t = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "t", Item.position = p 1 6}, [])]
+      f "Just t = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "t", Item.position = p 1 6}, [])]
 
     Hspec.it "record constructor pattern" $ do
-      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "v", Item.position = p 1 9}, [])]
+      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "v", Item.position = p 1 9}, [])]
 
     Hspec.it "punned record pattern" $ do
-      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "w", Item.position = p 1 5}, [])]
+      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "w", Item.position = p 1 5}, [])]
 
     Hspec.it "wild card record pattern" $ do
       f "X { .. } = ()" `Hspec.shouldBe` []
 
     Hspec.it "infix constructor pattern" $ do
-      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 2}, [])]
+      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "x", Item.position = p 1 2}, [])]
 
     Hspec.it "view pattern" $ do
-      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 1 7}, [])]
+      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 1 7}, [])]
 
     Hspec.it "splice pattern" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
@@ -272,36 +270,36 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "z", Item.position = p 1 34}, [])]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "z", Item.position = p 1 34}, [])]
 
     Hspec.it "signature pattern" $ do
-      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 2}, [])]
+      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 1 2}, [])]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "B", Item.position = p 1 42}, [])]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "C", Item.position = p 1 42}, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
       -- Note that the inner pattern synonym is not an item because it cannot
       -- have documentation attached to it.
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "D", Item.position = p 1 42}, [])]
 
     Hspec.it "type signature" $ do
-      f "e :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "e", Item.position = p 1 1}, [])]
+      f "e :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeSignature "e", Item.position = p 1 1}, [])]
 
     Hspec.it "pattern type signature" $ do
-      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSignature "F", Item.position = p 1 42}, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 15}, [])]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.MethodSignature "g", Item.position = p 1 15}, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "h", Item.position = p 1 23}, [])]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.DefaultMethodSignature "h", Item.position = p 1 23}, [])]
 
     Hspec.it "fixity declaration" $ do
-      f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "%", Item.position = p 1 9}, [])]
+      f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Fixity "%", Item.position = p 1 9}, [])]
 
     Hspec.it "inline pragma" $ do
       f "{-# inline i #-}" `Hspec.shouldBe` []
@@ -331,13 +329,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# complete N #-}" `Hspec.shouldBe` []
 
     Hspec.it "standalone kind signature" $ do
-      f "type O :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "O", Item.position = p 1 6}, [])]
+      f "type O :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.KindSignature "O", Item.position = p 1 6}, [])]
 
     Hspec.it "default declaration" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 67}, [])]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ForeignImport "p", Item.position = p 1 67}, [])]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -352,7 +350,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# ann module () #-}" `Hspec.shouldBe` []
 
     Hspec.it "rules pragma" $ do
-      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 11}, [])]
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Rule "q", Item.position = p 1 11}, [])]
 
     Hspec.it "splice declaration" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
@@ -361,25 +359,33 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "-- | x" `Hspec.shouldBe` []
 
     Hspec.it "role annotation" $ do
-      f "type role R nominal" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "R", Item.position = p 1 11}, [])]
+      f "type role R nominal" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Role "R", Item.position = p 1 11}, [])]
 
     Hspec.it "documentation before item" $ do
-      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x"])]
+      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 2 1}, [" x"])]
 
     Hspec.it "documentation after item" $ do
-      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 1}, [" y"])]
+      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "x", Item.position = p 1 1}, [" y"])]
 
     Hspec.it "documentation around item" $ do
-      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x", " z"])]
+      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 2 1}, [" x", " z"])]
 
     Hspec.it "two items with leading documentation" $ do
-      f "-- | 1\na = ()\n-- | 2\nb = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 2 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 4 1}, [" 2"])]
+      f "-- | 1\na = ()\n-- | 2\nb = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 2 1}, [" 1"]), (Item.Item {Item.name = Name.Variable "b", Item.position = p 4 1}, [" 2"])]
 
     Hspec.it "two items with trailing documentation" $ do
-      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 3 1}, [" 2"])]
+      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Variable "b", Item.position = p 3 1}, [" 2"])]
 
   Hspec.describe "associateDocStrings" $ do
-    let mkItem n l c = Item.Item {Item.name = Name.Other n, Item.position = Position.Position {Position.line = l, Position.column = c}}
+    let mkItem n l c =
+          Item.Item
+            { Item.name = Name.Variable n,
+              Item.position =
+                Position.Position
+                  { Position.line = l,
+                    Position.column = c
+                  }
+            }
         mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
         mkSrcSpan (l1, c1) (l2, c2) = SrcLoc.mkSrcSpan (mkSrcLoc l1 c1) (mkSrcLoc l2 c2)
         mkDocString (l1, c1) (l2, c2) d =
@@ -603,15 +609,25 @@ application request respond = do
                           Name.Data x -> x
                           Name.DataFamily x -> x
                           Name.DataInstance x -> x
+                          Name.DefaultMethodSignature x -> x
                           Name.Field x -> x
+                          Name.Fixity x -> x
+                          Name.ForeignImport x -> x
                           Name.GADT x -> x
+                          Name.KindSignature x -> x
+                          Name.MethodSignature x -> x
                           Name.Newtype x -> x
                           Name.NewtypeInstance x -> x
                           Name.OpenTypeFamily x -> x
+                          Name.PatternSignature x -> x
+                          Name.PatternSynonym x -> x
+                          Name.Role x -> x
+                          Name.Rule x -> x
                           Name.TypeData x -> x
                           Name.TypeInstance x -> x
+                          Name.TypeSignature x -> x
                           Name.TypeSynonym x -> x
-                          Name.Other x -> x
+                          Name.Variable x -> x
                         Haddock.docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc
@@ -828,33 +844,30 @@ lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
       HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
   HS.ValD _ hsBind -> case hsBind of
-    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem Name.Other lIdP]
+    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem Name.Variable lIdP]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
     HS.PatSynBind _ patSynBind -> case patSynBind of
       HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
-        lIdPToItem Name.Other lIdP
+        lIdPToItem Name.PatternSynonym lIdP
           : case hsPatSynDir of
             HS.Unidirectional -> []
             HS.ImplicitBidirectional -> []
-            HS.ExplicitBidirectional matchGroup -> case matchGroup of
-              HS.MG {HS.mg_alts = lMatches} ->
-                ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
-                    HS.FunRhs {HS.mc_fun = lIdP2} -> lIdPToItem Name.Other lIdP2
-                    _ -> error $ Data.showS hsMatchContext " -- unknown HsMatchContext"
-                )
-                  . SrcLoc.unLoc
-                  <$> SrcLoc.unLoc lMatches
+            HS.ExplicitBidirectional {} ->
+              -- Note that there is something in here, but we don't convert it
+              -- to an item because (a) it can't have documentation attached
+              -- anyway and (b) the name is always the same as the outer one.
+              []
     HS.VarBind {} -> error "impossible: unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
-    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem Name.Other lIdP]
+    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem Name.KindSignature lIdP]
   HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
     []
   HS.ForD _ foreignDecl -> case foreignDecl of
-    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem Name.Other lIdP]
+    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem Name.ForeignImport lIdP]
     HS.ForeignExport {} -> []
   HS.WarningD _ warnDecls -> case warnDecls of
     HS.Warnings {HS.wd_warnings = lWarnDecls} ->
@@ -875,7 +888,7 @@ lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.HsRules {HS.rds_rules = lRuleDecls} ->
       concatMap
         ( \lRuleDecl -> case SrcLoc.unLoc lRuleDecl of
-            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (Name.Other . FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
+            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (Name.Rule . FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
         )
         lRuleDecls
   HS.SpliceD {} ->
@@ -883,7 +896,7 @@ lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     []
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
-    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Other lIdP]
+    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Role lIdP]
 
 hsDerivingClauseToItems :: HS.HsDerivingClause GHC.Hs.GhcPs -> [Item.Item]
 hsDerivingClauseToItems hsDerivingClause = case hsDerivingClause of
@@ -927,11 +940,11 @@ lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item.Item]
 sigToItems sig = case sig of
-  HS.TypeSig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
-  HS.PatSynSig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
-  HS.ClassOpSig _ _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
+  HS.TypeSig _ lIdPs _ -> fmap (lIdPToItem Name.TypeSignature) lIdPs
+  HS.PatSynSig _ lIdPs _ -> fmap (lIdPToItem Name.PatternSignature) lIdPs
+  HS.ClassOpSig _ isDefault lIdPs _ -> fmap (lIdPToItem $ if isDefault then Name.DefaultMethodSignature else Name.MethodSignature) lIdPs
   HS.FixSig _ fixitySig -> case fixitySig of
-    HS.FixitySig _ lIdPs _ -> fmap (lIdPToItem Name.Other) lIdPs
+    HS.FixitySig _ lIdPs _ -> fmap (lIdPToItem Name.Fixity) lIdPs
   HS.InlineSig {} -> []
   HS.SpecSig {} -> []
   HS.SpecInstSig {} -> []
@@ -948,9 +961,9 @@ sigToItems sig = case sig of
 patToItems :: HS.Pat GHC.Hs.GhcPs -> [Item.Item]
 patToItems pat = case pat of
   HS.WildPat {} -> []
-  HS.VarPat _ lIdP -> [lIdPToItem Name.Other lIdP]
+  HS.VarPat _ lIdP -> [lIdPToItem Name.Variable lIdP]
   HS.LazyPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
-  HS.AsPat _ lIdP lPat2 -> lIdPToItem Name.Other lIdP : patToItems (SrcLoc.unLoc lPat2)
+  HS.AsPat _ lIdP lPat2 -> lIdPToItem Name.Variable lIdP : patToItems (SrcLoc.unLoc lPat2)
   HS.ParPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.BangPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.ListPat _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
@@ -963,7 +976,7 @@ patToItems pat = case pat of
         ( ( \hsRecField ->
               if HS.hfbPun hsRecField
                 then case SrcLoc.unLoc $ HS.hfbLHS hsRecField of
-                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem Name.Other lRdrName]
+                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem Name.Variable lRdrName]
                 else patToItems . SrcLoc.unLoc $ HS.hfbRHS hsRecField
           )
             . SrcLoc.unLoc
@@ -978,7 +991,7 @@ patToItems pat = case pat of
     []
   HS.LitPat {} -> []
   HS.NPat {} -> []
-  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem Name.Other lIdP]
+  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem Name.Variable lIdP]
   HS.SigPat _ lPat2 _ -> patToItems $ SrcLoc.unLoc lPat2
   HS.EmbTyPat {} -> error "impossible: unexpected EmbTyPat"
   HS.InvisPat {} -> error "impossible: unexpected InvisPat"

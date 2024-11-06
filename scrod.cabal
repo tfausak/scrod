@@ -65,8 +65,13 @@ library
   exposed-modules:
     Scrod
     Scrod.Extra.Data
+    Scrod.Extra.DynFlags
+    Scrod.Extra.FileSettings
+    Scrod.Extra.GhcNameVersion
     Scrod.Extra.Haddock
+    Scrod.Extra.PlatformMisc
     Scrod.Extra.SrcLoc
+    Scrod.Extra.ToolSettings
     Scrod.Type.Direction
     Scrod.Type.Item
     Scrod.Type.LHsModule

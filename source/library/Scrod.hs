@@ -3,6 +3,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+-- |
+-- <https://downloads.haskell.org/ghc/9.10.1/docs/users_guide>
+-- <https://downloads.haskell.org/ghc/9.10.1/docs/libraries/ghc-9.10.1-25ec>
 module Scrod where
 
 import qualified Control.Monad as Monad
@@ -20,11 +23,9 @@ import qualified Data.Tuple as Tuple
 import qualified Data.Version as Version
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
-import qualified GHC.Core.Unfold as Unfold
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer
-import qualified GHC.Driver.Backend as Backend
 import qualified GHC.Driver.Session as Session
 import qualified GHC.Hs
 import qualified GHC.LanguageExtensions.Type as X
@@ -33,11 +34,9 @@ import qualified GHC.Parser.Errors.Types as PsErr
 import qualified GHC.Parser.Header as Header
 import qualified GHC.Parser.Lexer as Lexer
 import qualified GHC.Platform as Platform
-import qualified GHC.Settings as Settings
 import qualified GHC.Stack as Stack
 import qualified GHC.Types.Name.Occurrence as OccName
 import qualified GHC.Types.Name.Reader as RdrName
-import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Error as ErrUtil
 import qualified Language.Haskell.Syntax as HS
@@ -47,6 +46,7 @@ import qualified Network.Wai as Wai
 import qualified Network.Wai.Handler.Warp as Warp
 import qualified Paths_scrod as Package
 import qualified Scrod.Extra.Data as Data
+import qualified Scrod.Extra.DynFlags as DynFlags
 import qualified Scrod.Extra.Haddock as Haddock
 import qualified Scrod.Type.Direction as Direction
 import qualified Scrod.Type.Item as Item
@@ -63,11 +63,11 @@ import qualified Text.Printf as Printf
 
 testSuite :: IO ()
 testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
-  Hspec.describe "getItems" $ do
+  Hspec.describe "lHsModuleToItems" $ do
     let f :: (Stack.HasCallStack) => String -> [(Item.Item, [String])]
         f string =
           let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
-              items = getItems lHsModule
+              items = lHsModuleToItems lHsModule
               lHsDocStrings = getLHsDocStrings lHsModule
            in mergeItems $ associateDocStrings items lHsDocStrings
 
@@ -76,130 +76,189 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "empty" $ do
       f "" `Hspec.shouldBe` []
 
-    Hspec.it "type family" $ do
-      f "type family A" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "A", Item.position = p 1 13}, [])]
+    Hspec.it "open type family" $ do
+      f "type family A" `Hspec.shouldBe` [(Item.Item {Item.name = Name.OpenTypeFamily "A", Item.position = p 1 13}, [])]
+
+    Hspec.it "closed type family" $ do
+      f "type family A where" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, [])]
+
+    -- TODO: Add items for closed type families: `type family A where B = C`.
 
     Hspec.it "data family" $ do
-      f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 13}, [])]
+      f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataFamily "B", Item.position = p 1 13}, [])]
 
     Hspec.it "type synonym" $ do
-      f "type C = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 6}, [])]
+      f "type C = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeSynonym "C", Item.position = p 1 6}, [])]
 
     Hspec.it "data" $ do
-      f "data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 6}, [])]
+      f "data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "D", Item.position = p 1 6}, [])]
+
+    Hspec.it "type-level data" $ do
+      f "type data D" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "D", Item.position = p 1 11}, [])]
+
+    Hspec.it "type-level data constructor" $ do
+      f "type data T = C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "T", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 15}, [])]
+
+    Hspec.it "type-level data constructor GADT" $ do
+      f "type data T where C :: T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "T", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 19}, [])]
 
     Hspec.it "data constructor" $ do
-      f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 10}, [])]
+      f "data X = E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Constructor "E", Item.position = p 1 10}, [])]
 
-    Hspec.it "data constructor gadt" $ do
-      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.Other "E", Item.position = p 1 14}, [])]
+    Hspec.it "data constructor GADT" $ do
+      f "data X where E :: X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "X", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.GADT "E", Item.position = p 1 14}, [])]
 
     Hspec.it "record field" $ do
-      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, [])]
+      f "newtype T = C { f :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, [])]
 
     Hspec.it "record fields with one signature" $ do
-      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 20}, [])]
+      f "newtype T = C { f, g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "g", Item.position = p 1 20}, [])]
 
     Hspec.it "record fields with separate signatures" $ do
-      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 26}, [])]
+      f "newtype T = C { f :: (), g :: () }" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "C", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "g", Item.position = p 1 26}, [])]
 
-    Hspec.it "record field gadt" $ do
-      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Other "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Other "f", Item.position = p 1 24}, [])]
+    Hspec.it "record field GADT" $ do
+      f "newtype T where C :: { f :: () } -> T" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "T", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "C", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.Field "f", Item.position = p 1 24}, [])]
 
     Hspec.it "class" $ do
-      f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "E", Item.position = p 1 7}, [])]
+      f "class E" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "E", Item.position = p 1 7}, [])]
 
     Hspec.it "class instance" $ do
-      f "instance F" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 10}, [])]
+      f "instance F" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "F", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with arguments" $ do
-      f "instance G a" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 10}, [])]
+      f "instance G a" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "G", Item.position = p 1 10}, [])]
 
     Hspec.it "class instance with parentheses" $ do
-      f "instance (H)" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 11}, [])]
+      f "instance (H)" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "H", Item.position = p 1 11}, [])]
 
     Hspec.it "class instance with context" $ do
-      f "instance () => I" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 16}, [])]
+      f "instance () => I" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "I", Item.position = p 1 16}, [])]
 
     Hspec.it "data instance" $ do
-      f "data instance G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "G", Item.position = p 1 15}, [])]
+      f "data instance G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, [])]
+
+    Hspec.it "data instance constructor" $ do
+      f "data instance G = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, []), (Item.Item {Item.name = Name.Constructor "X", Item.position = p 1 19}, [])]
+
+    Hspec.it "data instance constructor GADT" $ do
+      f "data instance G where X :: G" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataInstance "G", Item.position = p 1 15}, []), (Item.Item {Item.name = Name.GADT "X", Item.position = p 1 23}, [])]
 
     Hspec.it "newtype instance" $ do
-      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "H", Item.position = p 1 18}, [])]
+      f "newtype instance H = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.NewtypeInstance "H", Item.position = p 1 18}, []), (Item.Item {Item.name = Name.Constructor "X", Item.position = p 1 22}, [])]
+
+    Hspec.it "newtype instance constructor GADT" $ do
+      f "newtype instance H where X :: H" `Hspec.shouldBe` [(Item.Item {Item.name = Name.NewtypeInstance "H", Item.position = p 1 18}, []), (Item.Item {Item.name = Name.GADT "X", Item.position = p 1 26}, [])]
 
     Hspec.it "type instance" $ do
-      f "type instance I = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "I", Item.position = p 1 15}, [])]
+      f "type instance I = X" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeInstance "I", Item.position = p 1 15}, [])]
 
-    Hspec.it "deriving instance" $ do
-      f "deriving instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "J", Item.position = p 1 19}, [])]
+    Hspec.it "standalone deriving" $ do
+      f "deriving instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 19}, [])]
+
+    Hspec.it "standalone deriving stock" $ do
+      f "deriving stock instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 25}, [])]
+
+    Hspec.it "standalone deriving newtype" $ do
+      f "deriving newtype instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 27}, [])]
+
+    Hspec.it "standalone deriving anyclass" $ do
+      f "deriving anyclass instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 28}, [])]
+
+    Hspec.it "standalone deriving via" $ do
+      f "deriving via x instance J" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClassInstance "J", Item.position = p 1 25}, [])]
+
+    Hspec.it "data deriving" $ do
+      f "data A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "A", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 17}, [])]
+
+    Hspec.it "data GADT deriving" $ do
+      f "data A where deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Data "A", Item.position = p 1 6}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 23}, [])]
+
+    Hspec.it "type data deriving" $ do
+      f "type data A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "A", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 22}, [])]
+
+    Hspec.it "type data GADT deriving" $ do
+      f "type data A where deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeData "A", Item.position = p 1 11}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 28}, [])]
+
+    Hspec.it "newtype deriving" $ do
+      f "newtype A = B deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "A", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.Constructor "B", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 24}, [])]
+
+    Hspec.it "newtype GADT deriving" $ do
+      f "newtype A where B :: A deriving C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Newtype "A", Item.position = p 1 9}, []), (Item.Item {Item.name = Name.GADT "B", Item.position = p 1 17}, []), (Item.Item {Item.name = Name.ClassInstance "C", Item.position = p 1 33}, [])]
 
     Hspec.it "function" $ do
-      f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "h", Item.position = p 1 1}, [])]
+      f "h x = x" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "h", Item.position = p 1 1}, [])]
 
     Hspec.it "infix function" $ do
-      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "f", Item.position = p 1 3}, [])]
+      f "_ `f` _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "f", Item.position = p 1 3}, [])]
 
     Hspec.it "infix operator" $ do
-      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 3}, [])]
+      f "_ & _ = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 3}, [])]
 
     Hspec.it "prefix operator" $ do
-      -- TODO: Why is this at column 1 rather than 2?
-      f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "&", Item.position = p 1 1}, [])]
+      -- Note that this starts at column one (where the open parenthesis is)
+      -- rather than column two (where the operator actually starts). This is
+      -- because there can be space around the operator inside the parentheses.
+      f "(&) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 1}, [])]
+
+    Hspec.it "prefix operator with spaces" $ do
+      f "( & ) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "&", Item.position = p 1 1}, [])]
 
     Hspec.it "variable" $ do
-      f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 1}, [])]
+      f "i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 1 1}, [])]
 
     Hspec.it "variable on another line" $ do
-      f "\ni = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 2 1}, [])]
+      f "\ni = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 2 1}, [])]
 
     Hspec.it "variable indented" $ do
-      f " i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "i", Item.position = p 1 2}, [])]
+      f " i = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "i", Item.position = p 1 2}, [])]
 
     Hspec.it "strict variable" $ do
-      f "!j = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "j", Item.position = p 1 2}, [])]
+      f "!j = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "j", Item.position = p 1 2}, [])]
 
     Hspec.it "wildcard pattern" $ do
       f "_ = ()" `Hspec.shouldBe` []
 
     Hspec.it "lazy pattern" $ do
-      f "~k = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "k", Item.position = p 1 2}, [])]
+      f "~k = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "k", Item.position = p 1 2}, [])]
 
     Hspec.it "as pattern" $ do
-      f "l@m = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "l", Item.position = p 1 1}, []), (Item.Item {Item.name = Name.Other "m", Item.position = p 1 3}, [])]
+      f "l@m = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "l", Item.position = p 1 1}, []), (Item.Item {Item.name = Name.Variable "m", Item.position = p 1 3}, [])]
 
     Hspec.it "patenthesized pattern" $ do
-      f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "n", Item.position = p 1 2}, [])]
+      f "(n) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "n", Item.position = p 1 2}, [])]
 
     Hspec.it "bang pattern" $ do
-      -- Note that this is different than the "strict variable" test case!
-      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "o", Item.position = p 1 3}, [])]
+      -- Note that this is a dramatically different parse tree than the "strict
+      -- variable" test case!
+      f "(!o) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "o", Item.position = p 1 3}, [])]
 
     Hspec.it "list pattern" $ do
-      f "[p] = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 2}, [])]
+      f "[p] = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "p", Item.position = p 1 2}, [])]
 
     Hspec.it "tuple pattern" $ do
-      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 2}, []), (Item.Item {Item.name = Name.Other "r", Item.position = p 1 5}, [])]
+      f "(q, r) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "q", Item.position = p 1 2}, []), (Item.Item {Item.name = Name.Variable "r", Item.position = p 1 5}, [])]
 
     Hspec.it "anonymous sum pattern" $ do
-      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "s", Item.position = p 1 33}, [])]
+      f "{-# language UnboxedSums #-} (# s | #) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "s", Item.position = p 1 33}, [])]
 
     Hspec.it "prefix constructor pattern" $ do
-      f "Just t = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "t", Item.position = p 1 6}, [])]
+      f "Just t = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "t", Item.position = p 1 6}, [])]
 
     Hspec.it "record constructor pattern" $ do
-      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "v", Item.position = p 1 9}, [])]
+      f "X { u = v } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "v", Item.position = p 1 9}, [])]
 
     Hspec.it "punned record pattern" $ do
-      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "w", Item.position = p 1 5}, [])]
+      f "X { w } = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "w", Item.position = p 1 5}, [])]
 
     Hspec.it "wild card record pattern" $ do
       f "X { .. } = ()" `Hspec.shouldBe` []
 
     Hspec.it "infix constructor pattern" $ do
-      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 2}, [])]
+      f "(x : _) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "x", Item.position = p 1 2}, [])]
 
     Hspec.it "view pattern" $ do
-      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 1 7}, [])]
+      f "(f -> y) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 1 7}, [])]
 
     Hspec.it "splice pattern" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x ) = ()" `Hspec.shouldBe` []
@@ -211,34 +270,36 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "0 = ()" `Hspec.shouldBe` []
 
     Hspec.it "n+k pattern" $ do
-      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "z", Item.position = p 1 34}, [])]
+      f "{-# language NPlusKPatterns #-} (z + 1) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "z", Item.position = p 1 34}, [])]
 
     Hspec.it "signature pattern" $ do
-      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 2}, [])]
+      f "(a :: ()) = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 1 2}, [])]
 
     Hspec.it "bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "B", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern B = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "B", Item.position = p 1 42}, [])]
 
     Hspec.it "unidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "C", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern C <- ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "C", Item.position = p 1 42}, [])]
 
     Hspec.it "explicitly bidirectional pattern synonym" $ do
-      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "D", Item.position = p 1 42}, [])]
+      -- Note that the inner pattern synonym is not an item because it cannot
+      -- have documentation attached to it.
+      f "{-# language PatternSynonyms #-} pattern D <- () where D = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSynonym "D", Item.position = p 1 42}, [])]
 
     Hspec.it "type signature" $ do
-      f "e :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "e", Item.position = p 1 1}, [])]
+      f "e :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.TypeSignature "e", Item.position = p 1 1}, [])]
 
     Hspec.it "pattern type signature" $ do
-      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "F", Item.position = p 1 42}, [])]
+      f "{-# language PatternSynonyms #-} pattern F :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.PatternSignature "F", Item.position = p 1 42}, [])]
 
     Hspec.it "method signature" $ do
-      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "g", Item.position = p 1 15}, [])]
+      f "class X where g :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.MethodSignature "g", Item.position = p 1 15}, [])]
 
     Hspec.it "default method signature" $ do
-      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.Other "h", Item.position = p 1 23}, [])]
+      f "class X where default h :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Class "X", Item.position = p 1 7}, []), (Item.Item {Item.name = Name.DefaultMethodSignature "h", Item.position = p 1 23}, [])]
 
     Hspec.it "fixity declaration" $ do
-      f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "%", Item.position = p 1 9}, [])]
+      f "infix 5 %" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Fixity "%", Item.position = p 1 9}, [])]
 
     Hspec.it "inline pragma" $ do
       f "{-# inline i #-}" `Hspec.shouldBe` []
@@ -268,13 +329,13 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# complete N #-}" `Hspec.shouldBe` []
 
     Hspec.it "standalone kind signature" $ do
-      f "type O :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "O", Item.position = p 1 6}, [])]
+      f "type O :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.KindSignature "O", Item.position = p 1 6}, [])]
 
     Hspec.it "default declaration" $ do
       f "default ()" `Hspec.shouldBe` []
 
     Hspec.it "foreign import" $ do
-      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "p", Item.position = p 1 67}, [])]
+      f "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ForeignImport "p", Item.position = p 1 67}, [])]
 
     Hspec.it "warning pragma" $ do
       f "{-# warning x \"\" #-}" `Hspec.shouldBe` []
@@ -289,7 +350,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "{-# ann module () #-}" `Hspec.shouldBe` []
 
     Hspec.it "rules pragma" $ do
-      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "q", Item.position = p 1 11}, [])]
+      f "{-# rules \"q\" x = () #-}" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Rule "q", Item.position = p 1 11}, [])]
 
     Hspec.it "splice declaration" $ do
       f "{-# language TemplateHaskellQuotes #-} $( x )" `Hspec.shouldBe` []
@@ -298,22 +359,33 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
       f "-- | x" `Hspec.shouldBe` []
 
     Hspec.it "role annotation" $ do
-      f "type role R nominal" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "R", Item.position = p 1 11}, [])]
+      f "type role R nominal" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Role "R", Item.position = p 1 11}, [])]
 
     Hspec.it "documentation before item" $ do
-      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x"])]
+      f "-- | x\ny = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 2 1}, [" x"])]
 
     Hspec.it "documentation after item" $ do
-      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "x", Item.position = p 1 1}, [" y"])]
+      f "x = ()\n-- ^ y" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "x", Item.position = p 1 1}, [" y"])]
 
     Hspec.it "documentation around item" $ do
-      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "y", Item.position = p 2 1}, [" x", " z"])]
+      f "-- | x\ny = ()\n-- ^ z" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "y", Item.position = p 2 1}, [" x", " z"])]
 
-    Hspec.it "" $ do
-      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Other "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Other "b", Item.position = p 3 1}, [" 2"])]
+    Hspec.it "two items with leading documentation" $ do
+      f "-- | 1\na = ()\n-- | 2\nb = ()" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 2 1}, [" 1"]), (Item.Item {Item.name = Name.Variable "b", Item.position = p 4 1}, [" 2"])]
+
+    Hspec.it "two items with trailing documentation" $ do
+      f "a = ()\n-- ^ 1\nb = ()\n-- ^ 2" `Hspec.shouldBe` [(Item.Item {Item.name = Name.Variable "a", Item.position = p 1 1}, [" 1"]), (Item.Item {Item.name = Name.Variable "b", Item.position = p 3 1}, [" 2"])]
 
   Hspec.describe "associateDocStrings" $ do
-    let mkItem n l c = Item.Item {Item.name = Name.Other n, Item.position = Position.Position {Position.line = l, Position.column = c}}
+    let mkItem n l c =
+          Item.Item
+            { Item.name = Name.Variable n,
+              Item.position =
+                Position.Position
+                  { Position.line = l,
+                    Position.column = c
+                  }
+            }
         mkSrcLoc = SrcLoc.mkSrcLoc $ FastString.mkFastString ""
         mkSrcSpan (l1, c1) (l2, c2) = SrcLoc.mkSrcSpan (mkSrcLoc l1 c1) (mkSrcLoc l2 c2)
         mkDocString (l1, c1) (l2, c2) d =
@@ -400,225 +472,7 @@ discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
 discoverExtensionsIO :: String -> IO (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensionsIO string = do
-  let dynFlags =
-        Session.DynFlags
-          { Session.backend = Backend.noBackend,
-            Session.dmdUnboxWidth = 0,
-            Session.dynamicNow = False,
-            Session.enableTimeStats = False,
-            Session.extensions = mempty,
-            Session.extensionFlags = mempty,
-            Session.fileSettings =
-              Session.FileSettings
-                { Session.fileSettings_ghciUsagePath = error "fileSettings_ghciUsagePath",
-                  Session.fileSettings_ghcUsagePath = error "fileSettings_ghcUsagePath",
-                  Session.fileSettings_globalPackageDatabase = error "fileSettings_globalPackageDatabase",
-                  Session.fileSettings_toolDir = error "fileSettings_toolDir",
-                  Session.fileSettings_topDir = error "fileSettings_topDir"
-                },
-            Session.generalFlags = mempty,
-            Session.ghcHeapSize = Nothing,
-            Session.ghcLink = Session.NoLink,
-            Session.ghcNameVersion =
-              Session.GhcNameVersion
-                { Session.ghcNameVersion_programName = error "ghcNameVersion_programName",
-                  Session.ghcNameVersion_projectVersion = error "ghcNameVersion_projectVersion"
-                },
-            Session.language = Nothing,
-            Session.platformMisc =
-              Session.PlatformMisc
-                { Session.platformMisc_ghcWithInterpreter = error "platformMisc_ghcWithInterpreter",
-                  Session.platformMisc_libFFI = error "platformMisc_libFFI",
-                  Session.platformMisc_llvmTarget = error "platformMisc_llvmTarget",
-                  Session.platformMisc_targetPlatformString = error "platformMisc_targetPlatformString"
-                },
-            Session.safeHaskell = SafeHaskell.Sf_Ignore,
-            Session.safeInfer = False,
-            Session.targetPlatform = Platform.genericPlatform,
-            Session.targetWays_ = mempty,
-            Session.toolSettings =
-              Settings.ToolSettings
-                { Settings.toolSettings_arSupportsDashL = error "toolSettings_arSupportsDashL",
-                  Settings.toolSettings_ccSupportsNoPie = error "toolSettings_ccSupportsNoPie",
-                  Settings.toolSettings_extraGccViaCFlags = error "toolSettings_extraGccViaCFlags",
-                  Settings.toolSettings_ldIsGnuLd = error "toolSettings_ldIsGnuLd",
-                  Settings.toolSettings_ldSupportsCompactUnwind = error "toolSettings_ldSupportsCompactUnwind",
-                  Settings.toolSettings_ldSupportsFilelist = error "toolSettings_ldSupportsFilelist",
-                  Settings.toolSettings_ldSupportsSingleModule = error "toolSettings_ldSupportsSingleModule",
-                  Settings.toolSettings_mergeObjsSupportsResponseFiles = error "toolSettings_mergeObjsSupportsResponseFiles",
-                  Settings.toolSettings_opt_a = error "toolSettings_opt_a",
-                  Settings.toolSettings_opt_c = error "toolSettings_opt_c",
-                  Settings.toolSettings_opt_cxx = error "toolSettings_opt_cxx",
-                  Settings.toolSettings_opt_F = error "toolSettings_opt_F",
-                  Settings.toolSettings_opt_i = error "toolSettings_opt_i",
-                  Settings.toolSettings_opt_l = error "toolSettings_opt_l",
-                  Settings.toolSettings_opt_L = error "toolSettings_opt_L",
-                  Settings.toolSettings_opt_las = error "toolSettings_opt_las",
-                  Settings.toolSettings_opt_lc = error "toolSettings_opt_lc",
-                  Settings.toolSettings_opt_lm = error "toolSettings_opt_lm",
-                  Settings.toolSettings_opt_lo = error "toolSettings_opt_lo",
-                  Settings.toolSettings_opt_P = error "toolSettings_opt_P",
-                  Settings.toolSettings_opt_P_fingerprint = error "toolSettings_opt_P_fingerprint",
-                  Settings.toolSettings_opt_windres = error "toolSettings_opt_windres",
-                  Settings.toolSettings_pgm_a = error "toolSettings_pgm_a",
-                  Settings.toolSettings_pgm_ar = error "toolSettings_pgm_ar",
-                  Settings.toolSettings_pgm_c = error "toolSettings_pgm_c",
-                  Settings.toolSettings_pgm_cpp = error "toolSettings_pgm_cpp",
-                  Settings.toolSettings_pgm_cxx = error "toolSettings_pgm_cxx",
-                  Settings.toolSettings_pgm_F = error "toolSettings_pgm_F",
-                  Settings.toolSettings_pgm_i = error "toolSettings_pgm_i",
-                  Settings.toolSettings_pgm_install_name_tool = error "toolSettings_pgm_install_name_tool",
-                  Settings.toolSettings_pgm_l = error "toolSettings_pgm_l",
-                  Settings.toolSettings_pgm_L = error "toolSettings_pgm_L",
-                  Settings.toolSettings_pgm_las = error "toolSettings_pgm_las",
-                  Settings.toolSettings_pgm_lc = error "toolSettings_pgm_lc",
-                  Settings.toolSettings_pgm_lm = error "toolSettings_pgm_lm",
-                  Settings.toolSettings_pgm_lo = error "toolSettings_pgm_lo",
-                  Settings.toolSettings_pgm_otool = error "toolSettings_pgm_otool",
-                  Settings.toolSettings_pgm_P = error "toolSettings_pgm_P",
-                  Settings.toolSettings_pgm_ranlib = error "toolSettings_pgm_ranlib",
-                  Settings.toolSettings_pgm_windres = error "toolSettings_pgm_windres",
-                  Settings.toolSettings_useInplaceMinGW = error "toolSettings_useInplaceMinGW"
-                },
-            Session.unfoldingOpts = Unfold.defaultUnfoldingOpts,
-            Session.avx = error "avx",
-            Session.avx2 = error "avx2",
-            Session.avx512cd = error "avx512cd",
-            Session.avx512er = error "avx512er",
-            Session.avx512f = error "avx512f",
-            Session.avx512pf = error "avx512pf",
-            Session.binBlobThreshold = error "binBlobThreshold",
-            Session.bmiVersion = error "bmiVersion",
-            Session.callerCcFilters = error "callerCcFilters",
-            Session.canUseColor = error "canUseColor",
-            Session.canUseErrorLinks = error "canUseErrorLinks",
-            Session.cfgWeights = error "cfgWeights",
-            Session.cmdlineFrameworks = error "cmdlineFrameworks",
-            Session.cmmProcAlignment = error "cmmProcAlignment",
-            Session.colScheme = error "colScheme",
-            Session.customWarningCategories = error "customWarningCategories",
-            Session.debugLevel = error "debugLevel",
-            Session.depExcludeMods = error "depExcludeMods",
-            Session.depIncludeCppDeps = error "depIncludeCppDeps",
-            Session.depIncludePkgDeps = error "depIncludePkgDeps",
-            Session.depMakefile = error "depMakefile",
-            Session.depSuffixes = error "depSuffixes",
-            Session.deriveViaOnLoc = error "deriveViaOnLoc",
-            Session.dumpDir = error "dumpDir",
-            Session.dumpFlags = error "dumpFlags",
-            Session.dumpPrefix = error "dumpPrefix",
-            Session.dumpPrefixForce = error "dumpPrefixForce",
-            Session.dylibInstallName = error "dylibInstallName",
-            Session.dynHiSuf_ = error "dynHiSuf_",
-            Session.dynLibLoader = error "dynLibLoader",
-            Session.dynObjectSuf_ = error "dynObjectSuf_",
-            Session.dynOutputFile_ = error "dynOutputFile_",
-            Session.dynOutputHi = error "dynOutputHi",
-            Session.externalPluginSpecs = error "externalPluginSpecs",
-            Session.fatalCustomWarningCategories = error "fatalCustomWarningCategories",
-            Session.fatalWarningFlags = error "fatalWarningFlags",
-            Session.floatLamArgs = error "floatLamArgs",
-            Session.flushOut = error "flushOut",
-            Session.fma = error "fma",
-            Session.frameworkPaths = error "frameworkPaths",
-            Session.frontendPluginOpts = error "frontendPluginOpts",
-            Session.ghciHistSize = error "ghciHistSize",
-            Session.ghciScripts = error "ghciScripts",
-            Session.ghcMode = error "ghcMode",
-            Session.ghcVersionFile = error "ghcVersionFile",
-            Session.givensFuel = error "givensFuel",
-            Session.haddockOptions = error "haddockOptions",
-            Session.hcSuf = error "hcSuf",
-            Session.hiddenModules = error "hiddenModules",
-            Session.hiDir = error "hiDir",
-            Session.hieDir = error "hieDir",
-            Session.hieSuf = error "hieSuf",
-            Session.historySize = error "historySize",
-            Session.hiSuf_ = error "hiSuf_",
-            Session.homeUnitId_ = error "homeUnitId_",
-            Session.homeUnitInstanceOf_ = error "homeUnitInstanceOf_",
-            Session.homeUnitInstantiations_ = error "homeUnitInstantiations_",
-            Session.hpcDir = error "hpcDir",
-            Session.ignorePackageFlags = error "ignorePackageFlags",
-            Session.importPaths = error "importPaths",
-            Session.includePaths = error "includePaths",
-            Session.incoherentOnLoc = error "incoherentOnLoc",
-            Session.initialUnique = error "initialUnique",
-            Session.interactivePrint = error "interactivePrint",
-            Session.ldInputs = error "ldInputs",
-            Session.liberateCaseThreshold = error "liberateCaseThreshold",
-            Session.libraryPaths = error "libraryPaths",
-            Session.liftLamsKnown = error "liftLamsKnown",
-            Session.liftLamsNonRecArgs = error "liftLamsNonRecArgs",
-            Session.liftLamsRecArgs = error "liftLamsRecArgs",
-            Session.llvmOptLevel = error "llvmOptLevel",
-            Session.mainFunIs = error "mainFunIs",
-            Session.mainModuleNameIs = error "mainModuleNameIs",
-            Session.maxErrors = error "maxErrors",
-            Session.maxInlineAllocSize = error "maxInlineAllocSize",
-            Session.maxInlineMemcpyInsns = error "maxInlineMemcpyInsns",
-            Session.maxInlineMemsetInsns = error "maxInlineMemsetInsns",
-            Session.maxPmCheckModels = error "maxPmCheckModels",
-            Session.maxRefHoleFits = error "maxRefHoleFits",
-            Session.maxRelevantBinds = error "maxRelevantBinds",
-            Session.maxSimplIterations = error "maxSimplIterations",
-            Session.maxUncoveredPatterns = error "maxUncoveredPatterns",
-            Session.maxValidHoleFits = error "maxValidHoleFits",
-            Session.maxWorkerArgs = error "maxWorkerArgs",
-            Session.newDerivOnLoc = error "newDerivOnLoc",
-            Session.objectDir = error "objectDir",
-            Session.objectSuf_ = error "objectSuf_",
-            Session.outputFile_ = error "outputFile_",
-            Session.outputHi = error "outputHi",
-            Session.overlapInstLoc = error "overlapInstLoc",
-            Session.packageDBFlags = error "packageDBFlags",
-            Session.packageEnv = error "packageEnv",
-            Session.packageFlags = error "packageFlags",
-            Session.parMakeCount = error "parMakeCount",
-            Session.pkgTrustOnLoc = error "pkgTrustOnLoc",
-            Session.pluginModNameOpts = error "pluginModNameOpts",
-            Session.pluginModNames = error "pluginModNames",
-            Session.pluginPackageFlags = error "pluginPackageFlags",
-            Session.pprCols = error "pprCols",
-            Session.pprUserLength = error "pprUserLength",
-            Session.profAuto = error "profAuto",
-            Session.qcsFuel = error "qcsFuel",
-            Session.rawSettings = error "rawSettings",
-            Session.reductionDepth = error "reductionDepth",
-            Session.reexportedModules = error "reexportedModules",
-            Session.refLevelHoleFits = error "refLevelHoleFits",
-            Session.reverseErrors = error "reverseErrors",
-            Session.rtsOpts = error "rtsOpts",
-            Session.rtsOptsEnabled = error "rtsOptsEnabled",
-            Session.rtsOptsSuggestions = error "rtsOptsSuggestions",
-            Session.ruleCheck = error "ruleCheck",
-            Session.safeInferred = error "safeInferred",
-            Session.simplPhases = error "simplPhases",
-            Session.simplTickFactor = error "simplTickFactor",
-            Session.solverIterations = error "solverIterations",
-            Session.specConstrCount = error "specConstrCount",
-            Session.specConstrRecursive = error "specConstrRecursive",
-            Session.specConstrThreshold = error "specConstrThreshold",
-            Session.splitInfo = error "splitInfo",
-            Session.sseVersion = error "sseVersion",
-            Session.strictnessBefore = error "strictnessBefore",
-            Session.stubDir = error "stubDir",
-            Session.thisPackageName = error "thisPackageName",
-            Session.thOnLoc = error "thOnLoc",
-            Session.tmpDir = error "tmpDir",
-            Session.trustFlags = error "trustFlags",
-            Session.trustworthyOnLoc = error "trustworthyOnLoc",
-            Session.uniqueIncrement = error "uniqueIncrement",
-            Session.useColor = error "useColor",
-            Session.useErrorLinks = error "useErrorLinks",
-            Session.useUnicode = error "useUnicode",
-            Session.verbosity = error "verbosity",
-            Session.wantedsFuel = error "wantedsFuel",
-            Session.warningFlags = error "warningFlags",
-            Session.warnSafeOnLoc = error "warnSafeOnLoc",
-            Session.warnUnsafeOnLoc = error "warnUnsafeOnLoc",
-            Session.workingDirectory = error "workingDirectory"
-          }
+  let dynFlags = DynFlags.emptyDynFlags
       stringBuffer = StringBuffer.stringToStringBuffer string
       supported =
         Session.supportedLanguagesAndExtensions
@@ -741,14 +595,39 @@ application request respond = do
                     H.h2_ [H.class_ "alert-heading"] "Error"
                     H.pre_ [H.class_ "text-break text-wrap"] . H.code_ . H.toHtml $ show message
                   Right lHsModule -> do
-                    let items = getItems lHsModule
+                    let items = lHsModuleToItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
                         tuples = mergeItems $ associateDocStrings items lHsDocStrings
                     if null tuples
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
-                        case Item.name item of
-                          Name.Other string -> H.code_ $ H.toHtml string
+                        H.code_ . H.toHtml $ case Item.name item of
+                          Name.Class x -> x
+                          Name.ClassInstance x -> x
+                          Name.ClosedTypeFamily x -> x
+                          Name.Constructor x -> x
+                          Name.Data x -> x
+                          Name.DataFamily x -> x
+                          Name.DataInstance x -> x
+                          Name.DefaultMethodSignature x -> x
+                          Name.Field x -> x
+                          Name.Fixity x -> x
+                          Name.ForeignImport x -> x
+                          Name.GADT x -> x
+                          Name.KindSignature x -> x
+                          Name.MethodSignature x -> x
+                          Name.Newtype x -> x
+                          Name.NewtypeInstance x -> x
+                          Name.OpenTypeFamily x -> x
+                          Name.PatternSignature x -> x
+                          Name.PatternSynonym x -> x
+                          Name.Role x -> x
+                          Name.Rule x -> x
+                          Name.TypeData x -> x
+                          Name.TypeInstance x -> x
+                          Name.TypeSignature x -> x
+                          Name.TypeSynonym x -> x
+                          Name.Variable x -> x
                         Haddock.docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc
@@ -912,61 +791,83 @@ getHsDocStringDecorator x = case x of
   GHC.Hs.NestedDocString y _ -> Just y
   GHC.Hs.GeneratedDocString {} -> Nothing
 
-getItems :: LHsModule.LHsModule GHC.Hs.GhcPs -> [Item.Item]
-getItems lHsModule = case SrcLoc.unLoc $ LHsModule.unwrap lHsModule of
-  HS.HsModule {HS.hsmodDecls = lHsDecls} -> concatMap getLHsDeclItems lHsDecls
+lHsModuleToItems :: LHsModule.LHsModule GHC.Hs.GhcPs -> [Item.Item]
+lHsModuleToItems lHsModule = case SrcLoc.unLoc $ LHsModule.unwrap lHsModule of
+  HS.HsModule {HS.hsmodDecls = lHsDecls} -> concatMap lHsDeclToItems lHsDecls
 
-getLHsDeclItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
-getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
+lHsDeclToItems :: HS.LHsDecl GHC.Hs.GhcPs -> [Item.Item]
+lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
-      HS.FamilyDecl {HS.fdLName = lIdP} -> [lIdPToItem lIdP]
-    HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem lIdP]
+      HS.FamilyDecl {HS.fdInfo = familyInfo, HS.fdLName = lIdP} ->
+        [ lIdPToItem
+            ( case familyInfo of
+                HS.DataFamily -> Name.DataFamily
+                HS.OpenTypeFamily -> Name.OpenTypeFamily
+                HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
+            )
+            lIdP
+        ]
+    HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem Name.TypeSynonym lIdP]
     HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
-      lIdPToItem lIdP
-        : case HS.dd_cons hsDataDefn of
-          HS.NewTypeCon lConDecl -> conDeclToItems $ SrcLoc.unLoc lConDecl
-          HS.DataTypeCons _ lConDecls -> concatMap (conDeclToItems . SrcLoc.unLoc) lConDecls
+      let dataDefnCons = HS.dd_cons hsDataDefn
+       in lIdPToItem
+            ( case dataDefnCons of
+                HS.NewTypeCon {} -> Name.Newtype
+                HS.DataTypeCons isTypeData _ ->
+                  if isTypeData
+                    then Name.TypeData
+                    else Name.Data
+            )
+            lIdP
+            : dataDefnConsToItems dataDefnCons
+              <> concatMap (hsDerivingClauseToItems . SrcLoc.unLoc) (HS.dd_derivs hsDataDefn)
     HS.ClassDecl {HS.tcdLName = lIdP, HS.tcdSigs = lSigs} ->
-      lIdPToItem lIdP
+      lIdPToItem Name.Class lIdP
         : concatMap (sigToItems . SrcLoc.unLoc) lSigs
   HS.InstD _ instDecl -> case instDecl of
     HS.ClsInstD {HS.cid_inst = clsInstDecl} -> case clsInstDecl of
-      HS.ClsInstDecl {HS.cid_poly_ty = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
-    HS.DataFamInstD {HS.dfid_inst = dataFamInstDecl} -> famEqnToItems $ HS.dfid_eqn dataFamInstDecl
+      HS.ClsInstDecl {HS.cid_poly_ty = lHsSigType} -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
+    HS.DataFamInstD {HS.dfid_inst = dataFamInstDecl} ->
+      let famEqn = HS.dfid_eqn dataFamInstDecl
+       in famEqnToItems
+            ( case HS.feqn_rhs famEqn of
+                HS.HsDataDefn {HS.dd_cons = dataDefnCons} -> case dataDefnCons of
+                  HS.NewTypeCon {} -> Name.NewtypeInstance
+                  HS.DataTypeCons {} -> Name.DataInstance
+            )
+            (\HS.HsDataDefn {HS.dd_cons = dataDefnCons} -> dataDefnConsToItems dataDefnCons)
+            famEqn
     HS.TyFamInstD {HS.tfid_inst = tyFamInstDecl} -> case tyFamInstDecl of
-      HS.TyFamInstDecl {HS.tfid_eqn = tyFamInstEqn} -> famEqnToItems tyFamInstEqn
+      HS.TyFamInstDecl {HS.tfid_eqn = tyFamInstEqn} -> famEqnToItems Name.TypeInstance (const []) tyFamInstEqn
   HS.DerivD _ derivDecl -> case derivDecl of
     HS.DerivDecl {HS.deriv_type = lHsSigWcType} -> case lHsSigWcType of
-      HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems $ SrcLoc.unLoc lHsSigType
+      HS.HsWC {HS.hswc_body = lHsSigType} -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
   HS.ValD _ hsBind -> case hsBind of
-    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem lIdP]
+    HS.FunBind {HS.fun_id = lIdP} -> [lIdPToItem Name.Variable lIdP]
     HS.PatBind {HS.pat_lhs = lPat} -> patToItems $ SrcLoc.unLoc lPat
     HS.PatSynBind _ patSynBind -> case patSynBind of
       HS.PSB {HS.psb_id = lIdP, HS.psb_dir = hsPatSynDir} ->
-        lIdPToItem lIdP
+        lIdPToItem Name.PatternSynonym lIdP
           : case hsPatSynDir of
             HS.Unidirectional -> []
             HS.ImplicitBidirectional -> []
-            HS.ExplicitBidirectional matchGroup -> case matchGroup of
-              HS.MG {HS.mg_alts = lMatches} ->
-                ( \HS.Match {HS.m_ctxt = hsMatchContext} -> case hsMatchContext of
-                    HS.FunRhs {HS.mc_fun = lIdP2} -> lIdPToItem lIdP2
-                    _ -> error $ Data.showS hsMatchContext " -- unknown HsMatchContext"
-                )
-                  . SrcLoc.unLoc
-                  <$> SrcLoc.unLoc lMatches
+            HS.ExplicitBidirectional {} ->
+              -- Note that there is something in here, but we don't convert it
+              -- to an item because (a) it can't have documentation attached
+              -- anyway and (b) the name is always the same as the outer one.
+              []
     HS.VarBind {} -> error "impossible: unexpected VarBind"
   HS.SigD _ sig -> sigToItems sig
   HS.KindSigD _ standaloneKindSig -> case standaloneKindSig of
-    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem lIdP]
+    HS.StandaloneKindSig _ lIdP _ -> [lIdPToItem Name.KindSignature lIdP]
   HS.DefD {} ->
     -- TODO: This currently doesn't introduce anything that can be exported,
     -- but it will after this GHC proposal is implemented:
     -- <https://github.com/ghc-proposals/ghc-proposals/pull/409>
     []
   HS.ForD _ foreignDecl -> case foreignDecl of
-    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem lIdP]
+    HS.ForeignImport {HS.fd_name = lIdP} -> [lIdPToItem Name.ForeignImport lIdP]
     HS.ForeignExport {} -> []
   HS.WarningD _ warnDecls -> case warnDecls of
     HS.Warnings {HS.wd_warnings = lWarnDecls} ->
@@ -987,7 +888,7 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     HS.HsRules {HS.rds_rules = lRuleDecls} ->
       concatMap
         ( \lRuleDecl -> case SrcLoc.unLoc lRuleDecl of
-            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (Name.Other . FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
+            HS.HsRule {HS.rd_name = lRuleName} -> [Item.Item (Name.Rule . FastString.unpackFS $ SrcLoc.unLoc lRuleName) (Position.fromLocatedAn lRuleName)]
         )
         lRuleDecls
   HS.SpliceD {} ->
@@ -995,18 +896,35 @@ getLHsDeclItems lHsDecl = case SrcLoc.unLoc lHsDecl of
     []
   HS.DocD {} -> []
   HS.RoleAnnotD _ roleAnnotDecl -> case roleAnnotDecl of
-    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem lIdP]
+    HS.RoleAnnotDecl _ lIdP _ -> [lIdPToItem Name.Role lIdP]
+
+hsDerivingClauseToItems :: HS.HsDerivingClause GHC.Hs.GhcPs -> [Item.Item]
+hsDerivingClauseToItems hsDerivingClause = case hsDerivingClause of
+  HS.HsDerivingClause {HS.deriv_clause_tys = lDerivClauseTys} -> derivClauseTysToItems $ SrcLoc.unLoc lDerivClauseTys
+
+derivClauseTysToItems :: HS.DerivClauseTys GHC.Hs.GhcPs -> [Item.Item]
+derivClauseTysToItems derivClauseTys = case derivClauseTys of
+  HS.DctSingle _ lHsSigType -> hsSigTypeToItems Name.ClassInstance $ SrcLoc.unLoc lHsSigType
+  HS.DctMulti _ lHsSigTypes -> concatMap (hsSigTypeToItems Name.ClassInstance . SrcLoc.unLoc) lHsSigTypes
+
+dataDefnConsToItems :: HS.DataDefnCons (HS.LConDecl GHC.Hs.GhcPs) -> [Item.Item]
+dataDefnConsToItems dataDefnCons =
+  concatMap
+    (conDeclToItems . SrcLoc.unLoc)
+    $ case dataDefnCons of
+      HS.NewTypeCon lConDecl -> [lConDecl]
+      HS.DataTypeCons _ lConDecls -> lConDecls
 
 conDeclToItems :: HS.ConDecl GHC.Hs.GhcPs -> [Item.Item]
 conDeclToItems conDecl = case conDecl of
   HS.ConDeclH98 {HS.con_name = lIdP, HS.con_args = hsConDetails} ->
-    lIdPToItem lIdP
+    lIdPToItem Name.Constructor lIdP
       : case hsConDetails of
         HS.PrefixCon {} -> []
         HS.RecCon lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
         HS.InfixCon {} -> []
   HS.ConDeclGADT {HS.con_names = lIdPs, HS.con_g_args = hsConDeclGADTDetails} ->
-    NonEmpty.toList (fmap lIdPToItem lIdPs)
+    NonEmpty.toList (fmap (lIdPToItem Name.GADT) lIdPs)
       <> case hsConDeclGADTDetails of
         HS.PrefixConGADT {} -> []
         HS.RecConGADT _ lConDeclFields -> concatMap lConDeclFieldToItems $ SrcLoc.unLoc lConDeclFields
@@ -1016,17 +934,17 @@ lConDeclFieldToItems lConDeclField = case SrcLoc.unLoc lConDeclField of
   HS.ConDeclField {HS.cd_fld_names = lFieldOccs} ->
     fmap
       ( \lFieldOcc -> case SrcLoc.unLoc lFieldOcc of
-          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem lRdrName
+          HS.FieldOcc {HS.foLabel = lRdrName} -> lIdPToItem Name.Field lRdrName
       )
       lFieldOccs
 
 sigToItems :: HS.Sig GHC.Hs.GhcPs -> [Item.Item]
 sigToItems sig = case sig of
-  HS.TypeSig _ lIdPs _ -> fmap lIdPToItem lIdPs
-  HS.PatSynSig _ lIdPs _ -> fmap lIdPToItem lIdPs
-  HS.ClassOpSig _ _ lIdPs _ -> fmap lIdPToItem lIdPs
+  HS.TypeSig _ lIdPs _ -> fmap (lIdPToItem Name.TypeSignature) lIdPs
+  HS.PatSynSig _ lIdPs _ -> fmap (lIdPToItem Name.PatternSignature) lIdPs
+  HS.ClassOpSig _ isDefault lIdPs _ -> fmap (lIdPToItem $ if isDefault then Name.DefaultMethodSignature else Name.MethodSignature) lIdPs
   HS.FixSig _ fixitySig -> case fixitySig of
-    HS.FixitySig _ lIdPs _ -> fmap lIdPToItem lIdPs
+    HS.FixitySig _ lIdPs _ -> fmap (lIdPToItem Name.Fixity) lIdPs
   HS.InlineSig {} -> []
   HS.SpecSig {} -> []
   HS.SpecInstSig {} -> []
@@ -1043,9 +961,9 @@ sigToItems sig = case sig of
 patToItems :: HS.Pat GHC.Hs.GhcPs -> [Item.Item]
 patToItems pat = case pat of
   HS.WildPat {} -> []
-  HS.VarPat _ lIdP -> [lIdPToItem lIdP]
+  HS.VarPat _ lIdP -> [lIdPToItem Name.Variable lIdP]
   HS.LazyPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
-  HS.AsPat _ lIdP lPat2 -> lIdPToItem lIdP : patToItems (SrcLoc.unLoc lPat2)
+  HS.AsPat _ lIdP lPat2 -> lIdPToItem Name.Variable lIdP : patToItems (SrcLoc.unLoc lPat2)
   HS.ParPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.BangPat _ lPat2 -> patToItems $ SrcLoc.unLoc lPat2
   HS.ListPat _ lPats -> concatMap (patToItems . SrcLoc.unLoc) lPats
@@ -1058,7 +976,7 @@ patToItems pat = case pat of
         ( ( \hsRecField ->
               if HS.hfbPun hsRecField
                 then case SrcLoc.unLoc $ HS.hfbLHS hsRecField of
-                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem lRdrName]
+                  HS.FieldOcc {HS.foLabel = lRdrName} -> [lIdPToItem Name.Variable lRdrName]
                 else patToItems . SrcLoc.unLoc $ HS.hfbRHS hsRecField
           )
             . SrcLoc.unLoc
@@ -1073,36 +991,36 @@ patToItems pat = case pat of
     []
   HS.LitPat {} -> []
   HS.NPat {} -> []
-  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem lIdP]
+  HS.NPlusKPat _ lIdP _ _ _ _ -> [lIdPToItem Name.Variable lIdP]
   HS.SigPat _ lPat2 _ -> patToItems $ SrcLoc.unLoc lPat2
   HS.EmbTyPat {} -> error "impossible: unexpected EmbTyPat"
   HS.InvisPat {} -> error "impossible: unexpected InvisPat"
 
-hsSigTypeToItems :: HS.HsSigType GHC.Hs.GhcPs -> [Item.Item]
-hsSigTypeToItems hsSigType = case hsSigType of
-  HS.HsSig {HS.sig_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
+hsSigTypeToItems :: (String -> Name.Name) -> HS.HsSigType GHC.Hs.GhcPs -> [Item.Item]
+hsSigTypeToItems toName hsSigType = case hsSigType of
+  HS.HsSig {HS.sig_body = lHsType} -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
 
-hsTypeToItems :: HS.HsType GHC.Hs.GhcPs -> [Item.Item]
-hsTypeToItems hsType = case hsType of
-  HS.HsTyVar _ _ lIdP -> [lIdPToItem lIdP]
-  HS.HsAppTy _ lHsType _ -> hsTypeToItems $ SrcLoc.unLoc lHsType
-  HS.HsParTy _ lHsType -> hsTypeToItems $ SrcLoc.unLoc lHsType
-  HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems $ SrcLoc.unLoc lHsType
+hsTypeToItems :: (String -> Name.Name) -> HS.HsType GHC.Hs.GhcPs -> [Item.Item]
+hsTypeToItems toName hsType = case hsType of
+  HS.HsTyVar _ _ lIdP -> [lIdPToItem toName lIdP]
+  HS.HsAppTy _ lHsType _ -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
+  HS.HsParTy _ lHsType -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
+  HS.HsQualTy {HS.hst_body = lHsType} -> hsTypeToItems toName $ SrcLoc.unLoc lHsType
   _ -> error $ Data.showS hsType " -- unknown HsType"
 
-famEqnToItems :: HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
-famEqnToItems famEqn = case famEqn of
-  HS.FamEqn {HS.feqn_tycon = lIdP} -> [lIdPToItem lIdP]
+famEqnToItems :: (String -> Name.Name) -> (rhs -> [Item.Item]) -> HS.FamEqn GHC.Hs.GhcPs rhs -> [Item.Item]
+famEqnToItems toName toItems famEqn = case famEqn of
+  HS.FamEqn {HS.feqn_tycon = lIdP, HS.feqn_rhs = rhs} ->
+    lIdPToItem toName lIdP : toItems rhs
 
 rdrNameToString :: RdrName.RdrName -> String
 rdrNameToString rdrName = case rdrName of
   RdrName.Unqual occName -> OccName.occNameString occName
-  -- RdrName.Qual moduleName occName -> HS.moduleNameString moduleName <> "." <> OccName.occNameString occName
   _ -> error $ Data.showS rdrName " -- unknown RdrName"
 
-lIdPToItem :: HS.LIdP GHC.Hs.GhcPs -> Item.Item
-lIdPToItem lIdP =
+lIdPToItem :: (String -> Name.Name) -> HS.LIdP GHC.Hs.GhcPs -> Item.Item
+lIdPToItem toName lIdP =
   Item.Item
-    { Item.name = Name.Other . rdrNameToString $ SrcLoc.unLoc lIdP,
+    { Item.name = toName . rdrNameToString $ SrcLoc.unLoc lIdP,
       Item.position = Position.fromLocatedAn lIdP
     }

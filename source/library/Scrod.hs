@@ -602,32 +602,32 @@ application request respond = do
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
                         H.code_ . H.toHtml $ case Item.name item of
-                          Name.Class x -> x
-                          Name.ClassInstance x -> x
-                          Name.ClosedTypeFamily x -> x
-                          Name.Constructor x -> x
-                          Name.Data x -> x
-                          Name.DataFamily x -> x
-                          Name.DataInstance x -> x
-                          Name.DefaultMethodSignature x -> x
-                          Name.Field x -> x
-                          Name.Fixity x -> x
-                          Name.ForeignImport x -> x
-                          Name.GADT x -> x
-                          Name.KindSignature x -> x
-                          Name.MethodSignature x -> x
-                          Name.Newtype x -> x
-                          Name.NewtypeInstance x -> x
-                          Name.OpenTypeFamily x -> x
-                          Name.PatternSignature x -> x
-                          Name.PatternSynonym x -> x
-                          Name.Role x -> x
-                          Name.Rule x -> x
-                          Name.TypeData x -> x
-                          Name.TypeInstance x -> x
-                          Name.TypeSignature x -> x
-                          Name.TypeSynonym x -> x
-                          Name.Variable x -> x
+                          Name.Class x -> x <> " (class)"
+                          Name.ClassInstance x -> x <> " (instance)"
+                          Name.ClosedTypeFamily x -> x <> " (closed type family)"
+                          Name.Constructor x -> x <> " (constructor)"
+                          Name.Data x -> x <> " (data type)"
+                          Name.DataFamily x -> x <> " (data family)"
+                          Name.DataInstance x -> x <> " (data instance)"
+                          Name.DefaultMethodSignature x -> x <> " (default method)"
+                          Name.Field x -> x <> " (record field)"
+                          Name.Fixity x -> x <> " (fixity)"
+                          Name.ForeignImport x -> x <> " (foreign import)"
+                          Name.GADT x -> x <> " (GADT)"
+                          Name.KindSignature x -> x <> " (kind signature)"
+                          Name.MethodSignature x -> x <> " (method signature)"
+                          Name.Newtype x -> x <> " (newtype)"
+                          Name.NewtypeInstance x -> x <> " (newtype instance)"
+                          Name.OpenTypeFamily x -> x <> " (open type family)"
+                          Name.PatternSignature x -> x <> " (pattern signature)"
+                          Name.PatternSynonym x -> x <> " (pattern synonym)"
+                          Name.Role x -> x <> " (role annotation)"
+                          Name.Rule x -> x <> " (rule pragma)"
+                          Name.TypeData x -> x <> " (type data)"
+                          Name.TypeInstance x -> x <> " (type instance)"
+                          Name.TypeSignature x -> x <> " (type signature)"
+                          Name.TypeSynonym x -> x <> " (type synonym)"
+                          Name.Variable x -> x <> " (variable)"
                         Haddock.docHToHtml
                           . Haddock.overIdentifier (curry Just)
                           . Haddock._doc

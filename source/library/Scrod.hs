@@ -69,7 +69,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
           let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
               items = lHsModuleToItems lHsModule
               lHsDocStrings = getLHsDocStrings lHsModule
-           in mergeItems $ associateDocStrings items lHsDocStrings
+           in associateDocStrings items lHsDocStrings
 
         p l c = Position.Position {Position.line = l, Position.column = c}
 
@@ -460,13 +460,6 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "discovers a language edition" $ do
       discoverExtensions "{-# language GHC2021 #-}" `Hspec.shouldBe` (Just Session.GHC2021, [])
 
-mergeItems :: (Monoid a) => [(Item.Item, a)] -> [(Item.Item, a)]
-mergeItems items = case items of
-  [] -> items
-  (i, a) : is ->
-    let (ts, fs) = List.partition ((==) (Item.name i) . Item.name . fst) is
-     in (i, a <> foldMap snd ts) : mergeItems fs
-
 discoverExtensions :: String -> (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
@@ -597,7 +590,7 @@ application request respond = do
                   Right lHsModule -> do
                     let items = lHsModuleToItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
-                        tuples = mergeItems $ associateDocStrings items lHsDocStrings
+                        tuples = associateDocStrings items lHsDocStrings
                     if null tuples
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do

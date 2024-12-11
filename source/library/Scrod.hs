@@ -69,7 +69,7 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
           let lHsModule = either (error . show) id $ parseLHsModule "<interactive>" string
               items = lHsModuleToItems lHsModule
               lHsDocStrings = getLHsDocStrings lHsModule
-           in mergeItems $ associateDocStrings items lHsDocStrings
+           in associateDocStrings items lHsDocStrings
 
         p l c = Position.Position {Position.line = l, Position.column = c}
 
@@ -82,7 +82,8 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "closed type family" $ do
       f "type family A where" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, [])]
 
-    -- TODO: Add items for closed type families: `type family A where B = C`.
+    Hspec.it "closed type family with instances" $ do
+      f "type family A where B = C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.DataInstance "B", Item.position = p 1 21}, [])]
 
     Hspec.it "data family" $ do
       f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataFamily "B", Item.position = p 1 13}, [])]
@@ -460,13 +461,6 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "discovers a language edition" $ do
       discoverExtensions "{-# language GHC2021 #-}" `Hspec.shouldBe` (Just Session.GHC2021, [])
 
-mergeItems :: (Monoid a) => [(Item.Item, a)] -> [(Item.Item, a)]
-mergeItems items = case items of
-  [] -> items
-  (i, a) : is ->
-    let (ts, fs) = List.partition ((==) (Item.name i) . Item.name . fst) is
-     in (i, a <> foldMap snd ts) : mergeItems fs
-
 discoverExtensions :: String -> (Maybe Session.Language, [Session.OnOff X.Extension])
 discoverExtensions = Unsafe.unsafePerformIO . discoverExtensionsIO
 
@@ -597,7 +591,7 @@ application request respond = do
                   Right lHsModule -> do
                     let items = lHsModuleToItems lHsModule
                         lHsDocStrings = getLHsDocStrings lHsModule
-                        tuples = mergeItems $ associateDocStrings items lHsDocStrings
+                        tuples = associateDocStrings items lHsDocStrings
                     if null tuples
                       then H.p_ "Nothing to see here."
                       else H.ul_ . Monad.forM_ tuples $ \(item, docStrings) -> H.li_ $ do
@@ -800,14 +794,22 @@ lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
       HS.FamilyDecl {HS.fdInfo = familyInfo, HS.fdLName = lIdP} ->
-        [ lIdPToItem
-            ( case familyInfo of
-                HS.DataFamily -> Name.DataFamily
-                HS.OpenTypeFamily -> Name.OpenTypeFamily
-                HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
-            )
-            lIdP
-        ]
+        lIdPToItem
+          ( case familyInfo of
+              HS.DataFamily -> Name.DataFamily
+              HS.OpenTypeFamily -> Name.OpenTypeFamily
+              HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
+          )
+          lIdP
+          : case familyInfo of
+            HS.DataFamily -> []
+            HS.OpenTypeFamily -> []
+            HS.ClosedTypeFamily mLTyFamInstEqns -> case mLTyFamInstEqns of
+              Nothing -> []
+              Just lTyFamInstEqns ->
+                concatMap
+                  (famEqnToItems Name.DataInstance (const []) . SrcLoc.unLoc)
+                  lTyFamInstEqns
     HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem Name.TypeSynonym lIdP]
     HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
       let dataDefnCons = HS.dd_cons hsDataDefn

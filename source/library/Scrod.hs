@@ -82,7 +82,8 @@ testSuite = Hspec.hspec . Hspec.parallel . Hspec.describe "Scrod" $ do
     Hspec.it "closed type family" $ do
       f "type family A where" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, [])]
 
-    -- TODO: Add items for closed type families: `type family A where B = C`.
+    Hspec.it "closed type family" $ do
+      f "type family A where B = C" `Hspec.shouldBe` [(Item.Item {Item.name = Name.ClosedTypeFamily "A", Item.position = p 1 13}, []), (Item.Item {Item.name = Name.DataInstance "B", Item.position = p 1 21}, [])]
 
     Hspec.it "data family" $ do
       f "data family B" `Hspec.shouldBe` [(Item.Item {Item.name = Name.DataFamily "B", Item.position = p 1 13}, [])]
@@ -793,14 +794,26 @@ lHsDeclToItems lHsDecl = case SrcLoc.unLoc lHsDecl of
   HS.TyClD _ tyClDecl -> case tyClDecl of
     HS.FamDecl {HS.tcdFam = familyDecl} -> case familyDecl of
       HS.FamilyDecl {HS.fdInfo = familyInfo, HS.fdLName = lIdP} ->
-        [ lIdPToItem
-            ( case familyInfo of
-                HS.DataFamily -> Name.DataFamily
-                HS.OpenTypeFamily -> Name.OpenTypeFamily
-                HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
-            )
-            lIdP
-        ]
+        lIdPToItem
+          ( case familyInfo of
+              HS.DataFamily -> Name.DataFamily
+              HS.OpenTypeFamily -> Name.OpenTypeFamily
+              HS.ClosedTypeFamily _ -> Name.ClosedTypeFamily
+          )
+          lIdP
+          : case familyInfo of
+            HS.DataFamily -> []
+            HS.OpenTypeFamily -> []
+            HS.ClosedTypeFamily mLTyFamInstEqns -> case mLTyFamInstEqns of
+              Nothing -> []
+              Just lTyFamInstEqns ->
+                concatMap
+                  ( famEqnToItems
+                      Name.DataInstance
+                      (const [])
+                      . SrcLoc.unLoc
+                  )
+                  lTyFamInstEqns
     HS.SynDecl {HS.tcdLName = lIdP} -> [lIdPToItem Name.TypeSynonym lIdP]
     HS.DataDecl {HS.tcdLName = lIdP, HS.tcdDataDefn = hsDataDefn} ->
       let dataDefnCons = HS.dd_cons hsDataDefn

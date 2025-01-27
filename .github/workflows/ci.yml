@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: haskell-actions/run-ormolu@v16
+      - uses: haskell-actions/run-ormolu@v17
 name: CI
 on:
   pull_request:

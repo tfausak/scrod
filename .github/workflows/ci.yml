@@ -69,7 +69,7 @@ jobs:
         with:
           context: docker
           labels: ${{ steps.meta.outputs.labels }}
-          push: true
+          push: ${{ github.ref == 'refs/heads/main' }}
           tags: ${{ steps.meta.outputs.tags }}
   gild:
     name: Gild

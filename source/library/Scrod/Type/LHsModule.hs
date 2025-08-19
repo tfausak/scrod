@@ -14,4 +14,4 @@ newtype LHsModule a = LHsModule
 
 -- | Provided for convenience.
 instance Show (LHsModule GHC.Hs.GhcPs) where
-  show = ($ "") . Data.showS . unwrap
+  show = flip (Data.showS . unwrap) ""

@@ -3,7 +3,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: mkdir artifact
       - id: haskell
         uses: haskell-actions/setup@v2
@@ -34,7 +34,7 @@ jobs:
     name: Cabal
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: cabal check
   deploy:
     if: ${{ github.ref == 'refs/heads/main' }}
@@ -47,7 +47,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/download-artifact@v5
         with:
           name: scrod-${{ github.sha }}
@@ -75,14 +75,14 @@ jobs:
     name: Gild
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: tfausak/cabal-gild-setup-action@v2
       - run: cabal-gild --input scrod.cabal --mode check
   hlint:
     name: HLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: haskell-actions/hlint-setup@v2
       - uses: haskell-actions/hlint-run@v2
         with:
@@ -91,7 +91,7 @@ jobs:
     name: Ormolu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: haskell-actions/run-ormolu@v17
 name: CI
 on:

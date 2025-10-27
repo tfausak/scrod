@@ -25,7 +25,7 @@ jobs:
       - run: cabal build --only-dependencies
       - run: cabal build
       - run: cp $( cabal list-bin scrod ) artifact
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: scrod-${{ github.sha }}
           path: artifact

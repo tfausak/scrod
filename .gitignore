@@ -1,0 +1,4 @@
+# https://git-scm.com/docs/gitignore
+/.zed/
+/cabal.project.*
+/dist-newstyle/

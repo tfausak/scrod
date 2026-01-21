@@ -1,0 +1,6 @@
+# https://github.com/ocharles/weeder
+root-instances = ["Eq", "Ord", "Show"]
+root-modules = []
+roots = ["^Main[.]main$"]
+type-class-roots = false
+unused-types = false

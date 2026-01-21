@@ -1,0 +1,2 @@
+-- https://cabal.readthedocs.io/en/stable/cabal-project-description-file.html
+packages: .

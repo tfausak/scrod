@@ -1,0 +1,16 @@
+# https://nix.dev/tutorials/first-steps/declarative-shell.html
+let
+  pkgs = import ./nixpkgs.nix;
+in
+pkgs.mkShell {
+  nativeBuildInputs = [
+    pkgs.cabal-install
+    pkgs.direnv
+    pkgs.haskell-language-server
+    pkgs.haskellPackages.cabal-gild
+    pkgs.haskellPackages.weeder
+    pkgs.hlint
+    pkgs.nixfmt-rfc-style
+    pkgs.ormolu
+  ];
+}

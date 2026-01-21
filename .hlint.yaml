@@ -8,3 +8,5 @@
 - group:
     enabled: true
     name: generalise
+- ignore:
+    name: Use tuple-section

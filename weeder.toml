@@ -1,6 +1,6 @@
 # https://github.com/ocharles/weeder
 root-instances = ["Eq", "Ord", "Show"]
 root-modules = []
-roots = ["^Main[.]main$"]
+roots = ["Scrod.Unstable.Main.defaultMain"]
 type-class-roots = false
 unused-types = false

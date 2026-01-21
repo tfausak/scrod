@@ -64,17 +64,19 @@ library
   -- cabal-gild: discover source/library
   exposed-modules:
     Scrod
+    Scrod.Unstable.Convert
     Scrod.Unstable.Exception.Uninitialized
     Scrod.Unstable.Extra.ArchOS
     Scrod.Unstable.Extra.DynFlags
     Scrod.Unstable.Extra.FileSettings
     Scrod.Unstable.Extra.GhcNameVersion
-    Scrod.Unstable.Extra.Maybe
+    Scrod.Unstable.Extra.Heck
     Scrod.Unstable.Extra.OnOff
     Scrod.Unstable.Extra.ParserOpts
     Scrod.Unstable.Extra.Platform
     Scrod.Unstable.Extra.PlatformMisc
     Scrod.Unstable.Extra.ToolSettings
+    Scrod.Unstable.Main
     Scrod.Unstable.Parse
     Scrod.Unstable.Spec
     Scrod.Unstable.Type.Column
@@ -98,3 +100,8 @@ test-suite scrod-test-suite
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   type: exitcode-stdio-1.0
+
+executable scrod
+  import: executable
+  hs-source-dirs: source/executable
+  main-is: Main.hs

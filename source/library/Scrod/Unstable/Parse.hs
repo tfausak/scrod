@@ -36,7 +36,7 @@ parse string = do
   let stringBuffer = StringBuffer.stringToStringBuffer string
   languageAndExtensions <- Bifunctor.first Left $ discoverExtensions stringBuffer
   let parserOpts = ParserOpts.fromExtensions $ uncurry resolveExtensions languageAndExtensions
-  let fastString = FastString.fsLit "<interactive>"
+  let fastString = FastString.fsLit interactiveFilePath
   let realSrcLoc = SrcLoc.mkRealSrcLoc fastString 1 1
   let pState = Lexer.initParserState parserOpts stringBuffer realSrcLoc
   case Lexer.unP Parser.parseModule pState of
@@ -62,7 +62,10 @@ discoverExtensionsIO stringBuffer = do
 
 discoverOptions :: StringBuffer.StringBuffer -> [SrcLoc.Located String]
 discoverOptions stringBuffer =
-  snd $ Header.getOptions ParserOpts.empty stringBuffer "<interactive>"
+  snd $ Header.getOptions ParserOpts.empty stringBuffer interactiveFilePath
+
+interactiveFilePath :: FilePath
+interactiveFilePath = "<interactive>"
 
 resolveExtensions ::
   Maybe Session.Language ->

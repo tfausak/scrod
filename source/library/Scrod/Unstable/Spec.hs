@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+
+-- {-# LANGUAGE ScopedTypeVariables #-}
 
 module Scrod.Unstable.Spec where
 
@@ -26,14 +27,8 @@ import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Warning as Warning
 
-spec :: forall m n. (Monad m, Monad n) => Test m n -> n ()
+spec :: (Monad m, Monad n) => Test m n -> n ()
 spec t = t.describe "extract" $ do
-  let f :: (Stack.HasCallStack) => [String] -> m Interface.Interface
-      f = expectRight t . Main.extract . unlines
-
-  let h :: [String] -> Haddock.DocH Void.Void Haddock.Identifier
-      h = Haddock._doc . Haddock.parseParas Nothing . unlines
-
   t.describe "unsupported" $ do
     t.describe "lhs" $ do
       t.it "bird" $ do
@@ -56,84 +51,84 @@ spec t = t.describe "extract" $ do
 
   t.describe "language" $ do
     t.it "has no language by default" $ do
-      interface <- f []
+      interface <- scrod t []
       assertEq t interface.language Nothing
 
     t.it "handles language pragma" $ do
-      interface <- f ["{-# language Haskell98 #-}"]
+      interface <- scrod t ["{-# language Haskell98 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "succeeds with Haskell2010" $ do
-      interface <- f ["{-# language Haskell2010 #-}"]
+      interface <- scrod t ["{-# language Haskell2010 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
     t.it "succeeds with GHC2021" $ do
-      interface <- f ["{-# language GHC2021 #-}"]
+      interface <- scrod t ["{-# language GHC2021 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "GHC2021"
 
     t.it "succeeds with GHC2024" $ do
-      interface <- f ["{-# language GHC2024 #-}"]
+      interface <- scrod t ["{-# language GHC2024 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "GHC2024"
 
     t.it "handles options_ghc pragma" $ do
-      interface <- f ["{-# options_ghc -XHaskell98 #-}"]
+      interface <- scrod t ["{-# options_ghc -XHaskell98 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "handles options pragma" $ do
-      interface <- f ["{-# options -XHaskell98 #-}"]
+      interface <- scrod t ["{-# options -XHaskell98 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "picks the last one in a pragma" $ do
-      interface <- f ["{-# language Haskell98, Haskell2010 #-}"]
+      interface <- scrod t ["{-# language Haskell98, Haskell2010 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
     t.it "picks the last pragma" $ do
-      interface <- f ["{-# language Haskell98 #-}", "{-# language Haskell2010 #-}"]
+      interface <- scrod t ["{-# language Haskell98 #-}", "{-# language Haskell2010 #-}"]
       assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
   t.describe "extensions" $ do
     t.it "has no extensions by default" $ do
-      interface <- f []
+      interface <- scrod t []
       assertEq t interface.extensions Map.empty
 
     t.it "handles language pragma" $ do
-      interface <- f ["{-# language Arrows #-}"]
+      interface <- scrod t ["{-# language Arrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles options_ghc pragma" $ do
-      interface <- f ["{-# options_ghc -XArrows #-}"]
+      interface <- scrod t ["{-# options_ghc -XArrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles options pragma" $ do
-      interface <- f ["{-# options -XArrows #-}"]
+      interface <- scrod t ["{-# options -XArrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles disabling an extension" $ do
-      interface <- f ["{-# language NoArrows #-}"]
+      interface <- scrod t ["{-# language NoArrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "picks the last one in a pragma" $ do
-      interface <- f ["{-# language Arrows, NoArrows #-}"]
+      interface <- scrod t ["{-# language Arrows, NoArrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "picks the last pragma" $ do
-      interface <- f ["{-# language Arrows #-}", "{-# language NoArrows #-}"]
+      interface <- scrod t ["{-# language Arrows #-}", "{-# language NoArrows #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "handles unnecessarily enabling an extension" $ do
-      interface <- f ["{-# language Haskell98, StarIsType #-}"]
+      interface <- scrod t ["{-# language Haskell98, StarIsType #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" True
 
     t.it "handles disabling an extension enabled by the language" $ do
-      interface <- f ["{-# language Haskell98, NoStarIsType #-}"]
+      interface <- scrod t ["{-# language Haskell98, NoStarIsType #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" False
 
     t.it "disables an extension listed before the language" $ do
-      interface <- f ["{-# language NoStarIsType, Haskell98 #-}"]
+      interface <- scrod t ["{-# language NoStarIsType, Haskell98 #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" False
 
     t.it "handles implied extensions" $ do
-      interface <- f ["{-# language PolyKinds #-}"]
+      interface <- scrod t ["{-# language PolyKinds #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $
         Map.fromList
           [ ("KindSignatures", True),
@@ -141,7 +136,7 @@ spec t = t.describe "extract" $ do
           ]
 
     t.it "supports Glasgow extensions" $ do
-      interface <- f ["{-# options_ghc -fglasgow-exts #-}"]
+      interface <- scrod t ["{-# options_ghc -fglasgow-exts #-}"]
       assertEq t (interface.extensions & Map.mapKeys (.value)) $
         Map.fromList
           [ ("ConstrainedClassMethods", True),
@@ -181,225 +176,221 @@ spec t = t.describe "extract" $ do
 
   t.describe "documentation" $ do
     t.it "has no documentation by default" $ do
-      interface <- f []
+      interface <- scrod t []
       assertEq t interface.documentation Nothing
 
     t.it "works with block comment before" $ do
-      interface <- f ["-- | x", "module M where"]
-      assertEq t interface.documentation . Just $ h [" x"]
+      interface <- scrod t ["-- | x", "module M where"]
+      assertEq t interface.documentation . Just $ haddock [" x"]
 
     t.it "works with inline comment before" $ do
-      interface <- f ["{- | x -} module M where"]
-      assertEq t interface.documentation . Just $ h [" x "]
+      interface <- scrod t ["{- | x -} module M where"]
+      assertEq t interface.documentation . Just $ haddock [" x "]
 
     t.it "works with block comment after" $ do
-      interface <- f ["module", "-- | x", "M where"]
-      assertEq t interface.documentation . Just $ h [" x"]
+      interface <- scrod t ["module", "-- | x", "M where"]
+      assertEq t interface.documentation . Just $ haddock [" x"]
 
     t.it "works with inline comment after" $ do
-      interface <- f ["module {- | x -} M where"]
-      assertEq t interface.documentation . Just $ h [" x "]
+      interface <- scrod t ["module {- | x -} M where"]
+      assertEq t interface.documentation . Just $ haddock [" x "]
 
     t.it "works with multiple lines" $ do
-      interface <- f ["-- | x", "-- y", "module M where"]
-      assertEq t interface.documentation . Just $ h [" x", " y"]
+      interface <- scrod t ["-- | x", "-- y", "module M where"]
+      assertEq t interface.documentation . Just $ haddock [" x", " y"]
 
     t.it "picks the first comment" $ do
-      interface <- f ["-- | x", "module", "-- | y", "M where"]
-      assertEq t interface.documentation . Just $ h [" x"]
+      interface <- scrod t ["-- | x", "module", "-- | y", "M where"]
+      assertEq t interface.documentation . Just $ haddock [" x"]
 
     t.describe "markup" $ do
       t.it "missing" $ do
-        interface <- f ["-- |", "module M where"]
+        interface <- scrod t ["-- |", "module M where"]
         assertEq t interface.documentation Nothing
 
       t.it "empty" $ do
-        interface <- f ["-- | ", "module M where"]
-        assertEq t interface.documentation . Just $ h []
+        interface <- scrod t ["-- | ", "module M where"]
+        assertEq t interface.documentation . Just $ haddock []
 
       t.it "string" $ do
-        interface <- f ["-- | x", "module M where"]
-        assertEq t interface.documentation . Just $ h [" x"]
+        interface <- scrod t ["-- | x", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" x"]
 
       t.describe "identifier" $ do
         t.it "apostrophes" $ do
-          interface <- f ["-- | 'x'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" 'x'"]
+          interface <- scrod t ["-- | 'x'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" 'x'"]
 
         t.it "grave apostrophe" $ do
-          interface <- f ["-- | `x'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" `x'"]
+          interface <- scrod t ["-- | `x'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" `x'"]
 
         t.it "apostrophe grave" $ do
-          interface <- f ["-- | 'x`", "module M where"]
-          assertEq t interface.documentation . Just $ h [" 'x`"]
+          interface <- scrod t ["-- | 'x`", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" 'x`"]
 
         t.it "graves" $ do
-          interface <- f ["-- | `x`", "module M where"]
-          assertEq t interface.documentation . Just $ h [" `x`"]
+          interface <- scrod t ["-- | `x`", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" `x`"]
 
         t.it "qualified" $ do
-          interface <- f ["-- | 'X.y'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" 'X.y'"]
+          interface <- scrod t ["-- | 'X.y'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" 'X.y'"]
 
         t.it "operator" $ do
-          interface <- f ["-- | '(%)'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" '(%)'"]
+          interface <- scrod t ["-- | '(%)'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" '(%)'"]
 
         t.it "qualified operator" $ do
-          interface <- f ["-- | '(X.%)'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" '(X.%)'"]
+          interface <- scrod t ["-- | '(X.%)'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" '(X.%)'"]
 
         t.it "value" $ do
-          interface <- f ["-- | v'X'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" v'X'"]
+          interface <- scrod t ["-- | v'X'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" v'X'"]
 
         t.it "type" $ do
-          interface <- f ["-- | t'X'", "module M where"]
-          assertEq t interface.documentation . Just $ h [" t'X'"]
+          interface <- scrod t ["-- | t'X'", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" t'X'"]
 
       t.describe "module" $ do
         t.it "without label" $ do
-          interface <- f ["-- | \"X\"", "module M where"]
-          assertEq t interface.documentation . Just $ h [" \"X\""]
+          interface <- scrod t ["-- | \"X\"", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" \"X\""]
 
         t.it "with label" $ do
-          interface <- f ["-- | [X](\"Y\")", "module M where"]
-          assertEq t interface.documentation . Just $ h [" [X](\"Y\")"]
+          interface <- scrod t ["-- | [X](\"Y\")", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" [X](\"Y\")"]
 
       t.it "emphasis" $ do
-        interface <- f ["-- | /x/", "module M where"]
-        assertEq t interface.documentation . Just $ h [" /x/"]
+        interface <- scrod t ["-- | /x/", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" /x/"]
 
       t.it "monospaced" $ do
         -- Note that the line can't be _only_ `@x@` because that would be a
         -- code block rather than some inline monospaced text.
-        interface <- f ["-- | x @y@", "module M where"]
-        assertEq t interface.documentation . Just $ h [" x @y@"]
+        interface <- scrod t ["-- | x @y@", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" x @y@"]
 
       t.it "bold" $ do
-        interface <- f ["-- | __x__", "module M where"]
-        assertEq t interface.documentation . Just $ h [" __x__"]
+        interface <- scrod t ["-- | __x__", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" __x__"]
 
       t.describe "unordered list" $ do
         t.it "asterisk" $ do
-          interface <- f ["-- | * x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" * x"]
+          interface <- scrod t ["-- | * x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" * x"]
 
         t.it "hyphen" $ do
-          interface <- f ["-- | - x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" - x"]
+          interface <- scrod t ["-- | - x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" - x"]
 
       t.describe "ordered list" $ do
         t.it "parentheses" $ do
-          interface <- f ["-- | (1) x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" (1) x"]
+          interface <- scrod t ["-- | (1) x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" (1) x"]
 
         t.it "period" $ do
-          interface <- f ["-- | 1. x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" 1. x"]
+          interface <- scrod t ["-- | 1. x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" 1. x"]
 
         t.it "custom number" $ do
-          interface <- f ["-- | 2. x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" 2. x"]
+          interface <- scrod t ["-- | 2. x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" 2. x"]
 
       t.it "definition list" $ do
-        interface <- f ["-- | [x]: y", "module M where"]
-        assertEq t interface.documentation . Just $ h [" [x]: y"]
+        interface <- scrod t ["-- | [x]: y", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" [x]: y"]
 
       t.it "code block" $ do
-        interface <- f ["-- | @x@", "module M where"]
-        assertEq t interface.documentation . Just $ h [" @x@"]
+        interface <- scrod t ["-- | @x@", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" @x@"]
 
       t.describe "hyperlink" $ do
         t.it "implicit" $ do
-          interface <- f ["-- | http://example", "module M where"]
-          assertEq t interface.documentation . Just $ h [" http://example"]
+          interface <- scrod t ["-- | http://example", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" http://example"]
 
         t.it "explicit" $ do
-          interface <- f ["-- | <http://example>", "module M where"]
-          assertEq t interface.documentation . Just $ h [" <http://example>"]
+          interface <- scrod t ["-- | <http://example>", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" <http://example>"]
 
         t.it "with label" $ do
-          interface <- f ["-- | [x](http://example)", "module M where"]
-          assertEq t interface.documentation . Just $ h [" [x](http://example)"]
+          interface <- scrod t ["-- | [x](http://example)", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" [x](http://example)"]
 
       t.it "pic" $ do
-        interface <- f ["-- | ![x](http://example)", "module M where"]
-        assertEq t interface.documentation . Just $ h [" ![x](http://example)"]
+        interface <- scrod t ["-- | ![x](http://example)", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" ![x](http://example)"]
 
       t.describe "math" $ do
         t.it "inline" $ do
-          interface <- f ["-- | \\(x\\)", "module M where"]
-          assertEq t interface.documentation . Just $ h [" \\(x\\)"]
+          interface <- scrod t ["-- | \\(x\\)", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" \\(x\\)"]
 
         t.it "display" $ do
-          interface <- f ["-- | \\[x\\]", "module M where"]
-          assertEq t interface.documentation . Just $ h [" \\[x\\]"]
+          interface <- scrod t ["-- | \\[x\\]", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" \\[x\\]"]
 
       t.it "a name" $ do
-        interface <- f ["-- | #x#", "module M where"]
-        assertEq t interface.documentation . Just $ h [" #x#"]
+        interface <- scrod t ["-- | #x#", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" #x#"]
 
       t.it "property" $ do
-        interface <- f ["-- | prop> x", "module M where"]
-        assertEq t interface.documentation . Just $ h [" prop> x"]
+        interface <- scrod t ["-- | prop> x", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" prop> x"]
 
       t.describe "examples" $ do
         t.it "one" $ do
-          interface <- f ["-- | >>> x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" >>> x"]
+          interface <- scrod t ["-- | >>> x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" >>> x"]
 
         t.it "two" $ do
-          interface <- f ["-- | >>> x", "-- >>> y", "module M where"]
-          assertEq t interface.documentation . Just $ h [" >>> x", " >>> y"]
+          interface <- scrod t ["-- | >>> x", "-- >>> y", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" >>> x", " >>> y"]
 
         t.describe "results" $ do
           t.it "one" $ do
-            interface <- f ["-- | >>> x", "-- y", "module M where"]
-            assertEq t interface.documentation . Just $ h [" >>> x", " y"]
+            interface <- scrod t ["-- | >>> x", "-- y", "module M where"]
+            assertEq t interface.documentation . Just $ haddock [" >>> x", " y"]
 
           t.it "two" $ do
-            interface <- f ["-- | >>> x", "-- y", "-- z", "module M where"]
-            assertEq t interface.documentation . Just $ h [" >>> x", " y", "z"]
+            interface <- scrod t ["-- | >>> x", "-- y", "-- z", "module M where"]
+            assertEq t interface.documentation . Just $ haddock [" >>> x", " y", "z"]
 
           t.it "blank line" $ do
-            interface <- f ["-- | >>> x", "-- <BLANKLINE>", "module M where"]
-            assertEq t interface.documentation . Just $ h [" >>> x", " <BLANKLINE>"]
+            interface <- scrod t ["-- | >>> x", "-- <BLANKLINE>", "module M where"]
+            assertEq t interface.documentation . Just $ haddock [" >>> x", " <BLANKLINE>"]
 
       t.describe "header" $ do
         t.it "one" $ do
-          interface <- f ["-- | = x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" = x"]
+          interface <- scrod t ["-- | = x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" = x"]
 
         t.it "two" $ do
-          interface <- f ["-- | == x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" == x"]
+          interface <- scrod t ["-- | == x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" == x"]
 
         t.it "three" $ do
-          interface <- f ["-- | === x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" === x"]
+          interface <- scrod t ["-- | === x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" === x"]
 
         t.it "four" $ do
-          interface <- f ["-- | ==== x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" ==== x"]
+          interface <- scrod t ["-- | ==== x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" ==== x"]
 
         t.it "five" $ do
-          interface <- f ["-- | ===== x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" ===== x"]
+          interface <- scrod t ["-- | ===== x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" ===== x"]
 
         t.it "six" $ do
-          interface <- f ["-- | ====== x", "module M where"]
-          assertEq t interface.documentation . Just $ h [" ====== x"]
+          interface <- scrod t ["-- | ====== x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" ====== x"]
 
       t.describe "table" $ do
-        let table :: (Stack.HasCallStack) => [String] -> m ()
-            table xs = do
-              interface <- f $ mconcat [["-- |"], fmap ("-- " <>) xs, ["module M where"]]
-              assertEq t interface.documentation . Just $ h xs
-
         t.it "works" $ do
           table
+            t
             [ "+---+---+",
               "| a | b |",
               "+---+---+"
@@ -407,6 +398,7 @@ spec t = t.describe "extract" $ do
 
         t.it "with header" $ do
           table
+            t
             [ "+---+---+",
               "| a | b |",
               "+===+===+",
@@ -416,6 +408,7 @@ spec t = t.describe "extract" $ do
 
         t.it "with colspan" $ do
           table
+            t
             [ "+---+---+",
               "| a | b |",
               "+---+---+",
@@ -425,6 +418,7 @@ spec t = t.describe "extract" $ do
 
         t.it "with rowspan" $ do
           table
+            t
             [ "+---+---+",
               "| a | b |",
               "+   +---+",
@@ -434,56 +428,67 @@ spec t = t.describe "extract" $ do
 
   t.describe "name" $ do
     t.it "has no module name by default" $ do
-      interface <- f []
+      interface <- scrod t []
       assertEq t interface.name Nothing
 
     t.it "gets a simple name" $ do
-      interface <- f ["module M where"]
+      interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.value.value)) $ Just "M"
 
     t.it "gets a complex name" $ do
-      interface <- f ["module M.N where"]
+      interface <- scrod t ["module M.N where"]
       assertEq t (interface.name <&> (.value.value)) $ Just "M.N"
 
     t.it "gets the line" $ do
-      interface <- f ["module M where"]
+      interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.location.line.value)) $ Just 1
 
     t.it "gets the column" $ do
-      interface <- f ["module M where"]
+      interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.location.column.value)) $ Just 8
 
   t.describe "warning" $ do
     t.it "has no warning by default" $ do
-      interface <- f []
+      interface <- scrod t []
       assertEq t interface.warning Nothing
 
     t.describe "category" $ do
       t.it "uses deprecations for warning" $ do
-        interface <- f ["module M {-# warning \"x\" #-} where"]
+        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
         assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
 
       t.it "uses deprecations for deprecated" $ do
-        interface <- f ["module M {-# deprecated \"x\" #-} where"]
+        interface <- scrod t ["module M {-# deprecated \"x\" #-} where"]
         assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
 
       t.it "works with x-custom" $ do
-        interface <- f ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
+        interface <- scrod t ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
         assertEq t (interface.warning <&> (.category.value)) $ Just "x-custom"
 
     t.describe "value" $ do
       t.it "works with a string" $ do
-        interface <- f ["module M {-# warning \"x\" #-} where"]
+        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
         assertEq t (interface.warning <&> (.value)) $ Just "x"
 
       t.it "works with an empty list" $ do
-        interface <- f ["module M {-# warning [] #-} where"]
+        interface <- scrod t ["module M {-# warning [] #-} where"]
         assertEq t (interface.warning <&> (.value)) $ Just ""
 
       t.it "works with a singleton list" $ do
-        interface <- f ["module M {-# warning [\"x\"] #-} where"]
+        interface <- scrod t ["module M {-# warning [\"x\"] #-} where"]
         assertEq t (interface.warning <&> (.value)) $ Just "x"
 
       t.it "works with a list" $ do
-        interface <- f ["module M {-# warning [\"x\", \"y\"] #-} where"]
+        interface <- scrod t ["module M {-# warning [\"x\", \"y\"] #-} where"]
         assertEq t (interface.warning <&> (.value)) $ Just "x\ny"
+
+scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
+scrod t = expectRight t . Main.extract . unlines
+
+haddock :: [String] -> Haddock.DocH Void.Void Haddock.Identifier
+haddock = Haddock._doc . Haddock.parseParas Nothing . unlines
+
+table :: (Stack.HasCallStack, Monad m) => Test m n -> [String] -> m ()
+table t xs = do
+  interface <- scrod t $ mconcat [["-- |"], fmap ("-- " <>) xs, ["module M where"]]
+  assertEq t interface.documentation . Just $ haddock xs

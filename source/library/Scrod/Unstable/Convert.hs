@@ -2,6 +2,7 @@ module Scrod.Unstable.Convert where
 
 import qualified Control.Exception as Exception
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Void as Void
@@ -79,24 +80,28 @@ extractModuleName lHsModule = do
 extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Haddock.DocH Void.Void Haddock.Identifier
-extractModuleDocumentation lHsModule =
-  case extractModuleDoc lHsModule of
-    Nothing -> Haddock.DocEmpty
-    Just doc -> doc
+extractModuleDocumentation =
+  Maybe.fromMaybe Haddock.DocEmpty
+    . extractModuleDoc
 
 extractModuleDoc ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe (Haddock.DocH Void.Void Haddock.Identifier)
-extractModuleDoc lHsModule = do
+extractModuleDoc =
+  fmap Haddock._doc
+    . extractModuleMetaDoc
+
+extractModuleMetaDoc ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe (Haddock.MetaDoc Void.Void Haddock.Identifier)
+extractModuleMetaDoc lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       xModulePs = Syntax.hsmodExt hsModule
   lHsDoc <- Hs.hsmodHaddockModHeader xModulePs
   let hsDoc = SrcLoc.unLoc lHsDoc
       hsDocString = Doc.hsDocString hsDoc
       rendered = DocString.renderHsDocString hsDocString
-      metaDoc :: Haddock.MetaDoc Void.Void Haddock.Identifier
-      metaDoc = Haddock.parseParas Nothing rendered
-  pure $ Haddock._doc metaDoc
+  pure $ Haddock.parseParas Nothing rendered
 
 extractModuleSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
@@ -113,16 +118,9 @@ extractModuleSince lHsModule =
 extractModuleMeta ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe Haddock.Meta
-extractModuleMeta lHsModule = do
-  let hsModule = SrcLoc.unLoc lHsModule
-      xModulePs = Syntax.hsmodExt hsModule
-  lHsDoc <- Hs.hsmodHaddockModHeader xModulePs
-  let hsDoc = SrcLoc.unLoc lHsDoc
-      hsDocString = Doc.hsDocString hsDoc
-      rendered = DocString.renderHsDocString hsDocString
-      metaDoc :: Haddock.MetaDoc Void.Void Haddock.Identifier
-      metaDoc = Haddock.parseParas Nothing rendered
-  pure $ Haddock._meta metaDoc
+extractModuleMeta =
+  fmap Haddock._meta
+    . extractModuleMetaDoc
 
 extractModuleWarning ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->

@@ -78,8 +78,16 @@ extractModuleName lHsModule = do
 
 extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Haddock.DocH Void.Void Haddock.Identifier
+extractModuleDocumentation lHsModule =
+  case extractModuleDoc lHsModule of
+    Nothing -> Haddock.DocEmpty
+    Just doc -> doc
+
+extractModuleDoc ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe (Haddock.DocH Void.Void Haddock.Identifier)
-extractModuleDocumentation lHsModule = do
+extractModuleDoc lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       xModulePs = Syntax.hsmodExt hsModule
   lHsDoc <- Hs.hsmodHaddockModHeader xModulePs

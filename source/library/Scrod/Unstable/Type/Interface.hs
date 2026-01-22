@@ -14,7 +14,7 @@ import qualified Scrod.Unstable.Type.Warning as Warning
 data Interface = MkInterface
   { language :: Maybe Language.Language,
     extensions :: Map.Map Extension.Extension Bool,
-    documentation :: Maybe (Haddock.DocH Void.Void Haddock.Identifier),
+    documentation :: Haddock.DocH Void.Void Haddock.Identifier,
     name :: Maybe (Located.Located ModuleName.ModuleName),
     since :: Since.Since,
     warning :: Maybe Warning.Warning

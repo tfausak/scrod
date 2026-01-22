@@ -50,9 +50,9 @@ convert input = case input of
       Interface.MkInterface
         { Interface.language = fmap Language.fromGhc language,
           Interface.extensions = extensionsToMap extensions,
-          Interface.moduleDocumentation = extractModuleDocumentation lHsModule,
-          Interface.moduleName = extractModuleName lHsModule,
-          Interface.moduleWarning = extractModuleWarning lHsModule
+          Interface.documentation = extractModuleDocumentation lHsModule,
+          Interface.name = extractModuleName lHsModule,
+          Interface.warning = extractModuleWarning lHsModule
         }
 
 extensionsToMap ::

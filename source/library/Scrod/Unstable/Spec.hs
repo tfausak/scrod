@@ -174,87 +174,87 @@ spec t = t.describe "extract" $ do
             ("UnliftedFFITypes", True)
           ]
 
-  t.describe "moduleDocumentation" $ do
+  t.describe "documentation" $ do
     t.it "has no documentation by default" $ do
       interface <- f []
-      assertEq t interface.moduleDocumentation Nothing
+      assertEq t interface.documentation Nothing
 
     t.it "works with block comment before" $ do
       interface <- f ["-- | x", "module M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+      assertEq t interface.documentation . Just $ h [" x"]
 
     t.it "works with inline comment before" $ do
       interface <- f ["{- | x -} module M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x "]
+      assertEq t interface.documentation . Just $ h [" x "]
 
     t.it "works with block comment after" $ do
       interface <- f ["module", "-- | x", "M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+      assertEq t interface.documentation . Just $ h [" x"]
 
     t.it "works with inline comment after" $ do
       interface <- f ["module {- | x -} M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x "]
+      assertEq t interface.documentation . Just $ h [" x "]
 
     t.it "works with multiple lines" $ do
       interface <- f ["-- | x", "-- y", "module M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x", " y"]
+      assertEq t interface.documentation . Just $ h [" x", " y"]
 
     t.it "picks the first comment" $ do
       interface <- f ["-- | x", "module", "-- | y", "M where"]
-      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+      assertEq t interface.documentation . Just $ h [" x"]
 
-  t.describe "moduleName" $ do
+  t.describe "name" $ do
     t.it "has no module name by default" $ do
       interface <- f []
-      assertEq t interface.moduleName Nothing
+      assertEq t interface.name Nothing
 
     t.it "gets a simple name" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.value.value) interface.moduleName) $ Just "M"
+      assertEq t (fmap (.value.value) interface.name) $ Just "M"
 
     t.it "gets a complex name" $ do
       interface <- f ["module M.N where"]
-      assertEq t (fmap (.value.value) interface.moduleName) $ Just "M.N"
+      assertEq t (fmap (.value.value) interface.name) $ Just "M.N"
 
     t.it "gets the line" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.location.line.value) interface.moduleName) $ Just 1
+      assertEq t (fmap (.location.line.value) interface.name) $ Just 1
 
     t.it "gets the column" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.location.column.value) interface.moduleName) $ Just 8
+      assertEq t (fmap (.location.column.value) interface.name) $ Just 8
 
-  t.describe "moduleWarning" $ do
+  t.describe "warning" $ do
     t.it "has no warning by default" $ do
       interface <- f []
-      assertEq t interface.moduleWarning Nothing
+      assertEq t interface.warning Nothing
 
     t.describe "category" $ do
       t.it "uses deprecations for warning" $ do
         interface <- f ["module M {-# warning \"x\" #-} where"]
-        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "deprecations"
+        assertEq t (fmap (.category.value) interface.warning) $ Just "deprecations"
 
       t.it "uses deprecations for deprecated" $ do
         interface <- f ["module M {-# deprecated \"x\" #-} where"]
-        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "deprecations"
+        assertEq t (fmap (.category.value) interface.warning) $ Just "deprecations"
 
       t.it "works with x-custom" $ do
         interface <- f ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
-        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "x-custom"
+        assertEq t (fmap (.category.value) interface.warning) $ Just "x-custom"
 
     t.describe "value" $ do
       t.it "works with a string" $ do
         interface <- f ["module M {-# warning \"x\" #-} where"]
-        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x"
+        assertEq t (fmap (.value) interface.warning) $ Just "x"
 
       t.it "works with an empty list" $ do
         interface <- f ["module M {-# warning [] #-} where"]
-        assertEq t (fmap (.value) interface.moduleWarning) $ Just ""
+        assertEq t (fmap (.value) interface.warning) $ Just ""
 
       t.it "works with a singleton list" $ do
         interface <- f ["module M {-# warning [\"x\"] #-} where"]
-        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x"
+        assertEq t (fmap (.value) interface.warning) $ Just "x"
 
       t.it "works with a list" $ do
         interface <- f ["module M {-# warning [\"x\", \"y\"] #-} where"]
-        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x\ny"
+        assertEq t (fmap (.value) interface.warning) $ Just "x\ny"

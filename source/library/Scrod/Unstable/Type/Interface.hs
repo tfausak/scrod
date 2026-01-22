@@ -13,8 +13,8 @@ import qualified Scrod.Unstable.Type.Warning as Warning
 data Interface = MkInterface
   { language :: Maybe Language.Language,
     extensions :: Map.Map Extension.Extension Bool,
-    moduleDocumentation :: Maybe (Haddock.DocH Void.Void Haddock.Identifier),
-    moduleName :: Maybe (Located.Located ModuleName.ModuleName),
-    moduleWarning :: Maybe Warning.Warning
+    documentation :: Maybe (Haddock.DocH Void.Void Haddock.Identifier),
+    name :: Maybe (Located.Located ModuleName.ModuleName),
+    warning :: Maybe Warning.Warning
   }
   deriving (Eq, Show)

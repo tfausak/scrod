@@ -29,6 +29,7 @@ common library
     containers ^>=0.7,
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,
+    haddock-library ^>=1.11,
     heck ^>=1.0.1,
     template-haskell ^>=2.22,
     text ^>=2.1.3,

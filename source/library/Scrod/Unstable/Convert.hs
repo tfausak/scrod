@@ -2,10 +2,15 @@ module Scrod.Unstable.Convert where
 
 import qualified Control.Exception as Exception
 import qualified Data.Map as Map
--- import qualified Data.Semigroup as Semigroup
 import qualified Data.Tuple as Tuple
+import qualified Data.Void as Void
+import qualified Documentation.Haddock.Parser as Haddock
+import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Driver.DynFlags as DynFlags
 import qualified GHC.Driver.Session as Session
+import qualified GHC.Hs as Hs
+import qualified GHC.Hs.Doc as Doc
+import qualified GHC.Hs.DocString as DocString
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
@@ -14,7 +19,7 @@ import qualified GHC.Types.Error as Error
 import qualified GHC.Types.SourceError as SourceError
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
-import qualified Language.Haskell.Syntax as Hs
+import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Unstable.Extra.OnOff as OnOff
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
@@ -39,6 +44,7 @@ convert input = case input of
       Interface.MkInterface
         { Interface.language = fmap Language.fromGhc language,
           Interface.extensions = extensionsToMap extensions,
+          Interface.moduleDocumentation = extractModuleDocumentation lHsModule,
           Interface.moduleName = extractModuleName lHsModule
         }
 
@@ -50,11 +56,23 @@ extensionsToMap =
     . fmap (Tuple.swap . fmap Extension.fromGhc . OnOff.onOff ((,) True) ((,) False))
 
 extractModuleName ::
-  SrcLoc.Located (Hs.HsModule Ghc.GhcPs) ->
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe (Located.Located ModuleName.ModuleName)
 extractModuleName lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
-  lModuleName <- Hs.hsmodName hsModule
+  lModuleName <- Syntax.hsmodName hsModule
   let srcSpan = Annotation.getLocA lModuleName
       moduleName = ModuleName.fromGhc $ SrcLoc.unLoc lModuleName
   Located.fromGhc $ SrcLoc.L srcSpan moduleName
+
+extractModuleDocumentation ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe (Haddock.DocH Void.Void Haddock.Identifier)
+extractModuleDocumentation lHsModule = do
+  let hsModule = SrcLoc.unLoc lHsModule
+      xModulePs = Syntax.hsmodExt hsModule
+  lHsDoc <- Hs.hsmodHaddockModHeader xModulePs
+  let hsDoc = SrcLoc.unLoc lHsDoc
+      hsDocString = Doc.hsDocString hsDoc
+      rendered = DocString.renderHsDocString hsDocString
+  pure . Haddock._doc $ Haddock.parseParas Nothing rendered

@@ -5,6 +5,9 @@ module Scrod.Unstable.Spec where
 
 import qualified Data.Either as Either
 import qualified Data.Map as Map
+import qualified Data.Void as Void
+import qualified Documentation.Haddock.Parser as Haddock
+import qualified Documentation.Haddock.Types as Haddock
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
@@ -21,14 +24,28 @@ spec :: (Monad m, Monad n) => Test m n -> n ()
 spec t = t.describe "extract" $ do
   let f = expectRight t . Main.extract . unlines
 
+  let h :: [String] -> Haddock.DocH Void.Void Haddock.Identifier
+      h = Haddock._doc . Haddock.parseParas Nothing . unlines
+
+  t.describe "unsupported" $ do
+    t.describe "lhs" $ do
+      t.it "bird" $ do
+        assertSatisfies t Either.isLeft $ Main.extract "> module M where"
+
+      t.it "tex" $ do
+        assertSatisfies t Either.isLeft $ Main.extract "\\begin{code}\nmodule M where\\end{code}"
+
+    t.it "cpp" $ do
+      assertSatisfies t Either.isLeft $ Main.extract "{-# language CPP #-}\n#line 1"
+
+    t.it "hsig" $ do
+      assertSatisfies t Either.isLeft $ Main.extract "signature S where"
+
   t.it "fails when there is a parse error" $ do
     assertSatisfies t Either.isLeft $ Main.extract "!"
 
   t.it "fails when there is an invalid language extension" $ do
     assertSatisfies t Either.isLeft $ Main.extract "{-# language x #-}"
-
-  t.it "succeeds when the input is empty" $ do
-    assertSatisfies t Either.isRight $ Main.extract ""
 
   t.describe "language" $ do
     t.it "has no language by default" $ do
@@ -104,6 +121,10 @@ spec t = t.describe "extract" $ do
       interface <- f ["{-# language Haskell98, NoStarIsType #-}"]
       assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "StarIsType" False
 
+    t.it "disables an extension listed before the language" $ do
+      interface <- f ["{-# language NoStarIsType, Haskell98 #-}"]
+      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "StarIsType" False
+
     t.it "handles implied extensions" $ do
       interface <- f ["{-# language PolyKinds #-}"]
       assertEq t (Map.mapKeys (.value) interface.extensions) $
@@ -151,14 +172,47 @@ spec t = t.describe "extract" $ do
             ("UnliftedFFITypes", True)
           ]
 
+  t.describe "moduleDocumentation" $ do
+    t.it "has no documentation by default" $ do
+      interface <- f []
+      assertEq t interface.moduleDocumentation Nothing
+
+    t.it "works with block comment before" $ do
+      interface <- f ["-- | x", "module M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+
+    t.it "works with inline comment before" $ do
+      interface <- f ["{- | x -} module M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x "]
+
+    t.it "works with block comment after" $ do
+      interface <- f ["module", "-- | x", "M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+
+    t.it "works with inline comment after" $ do
+      interface <- f ["module {- | x -} M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x "]
+
+    t.it "works with multiple lines" $ do
+      interface <- f ["-- | x", "-- y", "module M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x", " y"]
+
+    t.it "picks the first comment" $ do
+      interface <- f ["-- | x", "module", "-- | y", "M where"]
+      assertEq t interface.moduleDocumentation . Just $ h [" x"]
+
   t.describe "moduleName" $ do
     t.it "has no module name by default" $ do
       interface <- f []
       assertEq t interface.moduleName Nothing
 
-    t.it "gets the name" $ do
+    t.it "gets a simple name" $ do
       interface <- f ["module M where"]
       assertEq t (fmap (.value.value) interface.moduleName) $ Just "M"
+
+    t.it "gets a complex name" $ do
+      interface <- f ["module M.N where"]
+      assertEq t (fmap (.value.value) interface.moduleName) $ Just "M.N"
 
     t.it "gets the line" $ do
       interface <- f ["module M where"]

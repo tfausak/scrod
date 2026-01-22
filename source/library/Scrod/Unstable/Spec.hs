@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Scrod.Unstable.Spec where
 
@@ -10,6 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
+import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
@@ -24,9 +26,10 @@ import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Warning as Warning
 
-spec :: (Monad m, Monad n) => Test m n -> n ()
+spec :: forall m n. (Monad m, Monad n) => Test m n -> n ()
 spec t = t.describe "extract" $ do
-  let f = expectRight t . Main.extract . unlines
+  let f :: (Stack.HasCallStack) => [String] -> m Interface.Interface
+      f = expectRight t . Main.extract . unlines
 
   let h :: [String] -> Haddock.DocH Void.Void Haddock.Identifier
       h = Haddock._doc . Haddock.parseParas Nothing . unlines
@@ -204,6 +207,230 @@ spec t = t.describe "extract" $ do
     t.it "picks the first comment" $ do
       interface <- f ["-- | x", "module", "-- | y", "M where"]
       assertEq t interface.documentation . Just $ h [" x"]
+
+    t.describe "markup" $ do
+      t.it "missing" $ do
+        interface <- f ["-- |", "module M where"]
+        assertEq t interface.documentation Nothing
+
+      t.it "empty" $ do
+        interface <- f ["-- | ", "module M where"]
+        assertEq t interface.documentation . Just $ h []
+
+      t.it "string" $ do
+        interface <- f ["-- | x", "module M where"]
+        assertEq t interface.documentation . Just $ h [" x"]
+
+      t.describe "identifier" $ do
+        t.it "apostrophes" $ do
+          interface <- f ["-- | 'x'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" 'x'"]
+
+        t.it "grave apostrophe" $ do
+          interface <- f ["-- | `x'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" `x'"]
+
+        t.it "apostrophe grave" $ do
+          interface <- f ["-- | 'x`", "module M where"]
+          assertEq t interface.documentation . Just $ h [" 'x`"]
+
+        t.it "graves" $ do
+          interface <- f ["-- | `x`", "module M where"]
+          assertEq t interface.documentation . Just $ h [" `x`"]
+
+        t.it "qualified" $ do
+          interface <- f ["-- | 'X.y'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" 'X.y'"]
+
+        t.it "operator" $ do
+          interface <- f ["-- | '(%)'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" '(%)'"]
+
+        t.it "qualified operator" $ do
+          interface <- f ["-- | '(X.%)'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" '(X.%)'"]
+
+        t.it "value" $ do
+          interface <- f ["-- | v'X'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" v'X'"]
+
+        t.it "type" $ do
+          interface <- f ["-- | t'X'", "module M where"]
+          assertEq t interface.documentation . Just $ h [" t'X'"]
+
+      t.describe "module" $ do
+        t.it "without label" $ do
+          interface <- f ["-- | \"X\"", "module M where"]
+          assertEq t interface.documentation . Just $ h [" \"X\""]
+
+        t.it "with label" $ do
+          interface <- f ["-- | [X](\"Y\")", "module M where"]
+          assertEq t interface.documentation . Just $ h [" [X](\"Y\")"]
+
+      t.it "emphasis" $ do
+        interface <- f ["-- | /x/", "module M where"]
+        assertEq t interface.documentation . Just $ h [" /x/"]
+
+      t.it "monospaced" $ do
+        -- Note that the line can't be _only_ `@x@` because that would be a
+        -- code block rather than some inline monospaced text.
+        interface <- f ["-- | x @y@", "module M where"]
+        assertEq t interface.documentation . Just $ h [" x @y@"]
+
+      t.it "bold" $ do
+        interface <- f ["-- | __x__", "module M where"]
+        assertEq t interface.documentation . Just $ h [" __x__"]
+
+      t.describe "unordered list" $ do
+        t.it "asterisk" $ do
+          interface <- f ["-- | * x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" * x"]
+
+        t.it "hyphen" $ do
+          interface <- f ["-- | - x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" - x"]
+
+      t.describe "ordered list" $ do
+        t.it "parentheses" $ do
+          interface <- f ["-- | (1) x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" (1) x"]
+
+        t.it "period" $ do
+          interface <- f ["-- | 1. x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" 1. x"]
+
+        t.it "custom number" $ do
+          interface <- f ["-- | 2. x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" 2. x"]
+
+      t.it "definition list" $ do
+        interface <- f ["-- | [x]: y", "module M where"]
+        assertEq t interface.documentation . Just $ h [" [x]: y"]
+
+      t.it "code block" $ do
+        interface <- f ["-- | @x@", "module M where"]
+        assertEq t interface.documentation . Just $ h [" @x@"]
+
+      t.describe "hyperlink" $ do
+        t.it "implicit" $ do
+          interface <- f ["-- | http://example", "module M where"]
+          assertEq t interface.documentation . Just $ h [" http://example"]
+
+        t.it "explicit" $ do
+          interface <- f ["-- | <http://example>", "module M where"]
+          assertEq t interface.documentation . Just $ h [" <http://example>"]
+
+        t.it "with label" $ do
+          interface <- f ["-- | [x](http://example)", "module M where"]
+          assertEq t interface.documentation . Just $ h [" [x](http://example)"]
+
+      t.it "pic" $ do
+        interface <- f ["-- | ![x](http://example)", "module M where"]
+        assertEq t interface.documentation . Just $ h [" ![x](http://example)"]
+
+      t.describe "math" $ do
+        t.it "inline" $ do
+          interface <- f ["-- | \\(x\\)", "module M where"]
+          assertEq t interface.documentation . Just $ h [" \\(x\\)"]
+
+        t.it "display" $ do
+          interface <- f ["-- | \\[x\\]", "module M where"]
+          assertEq t interface.documentation . Just $ h [" \\[x\\]"]
+
+      t.it "a name" $ do
+        interface <- f ["-- | #x#", "module M where"]
+        assertEq t interface.documentation . Just $ h [" #x#"]
+
+      t.it "property" $ do
+        interface <- f ["-- | prop> x", "module M where"]
+        assertEq t interface.documentation . Just $ h [" prop> x"]
+
+      t.describe "examples" $ do
+        t.it "one" $ do
+          interface <- f ["-- | >>> x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" >>> x"]
+
+        t.it "two" $ do
+          interface <- f ["-- | >>> x", "-- >>> y", "module M where"]
+          assertEq t interface.documentation . Just $ h [" >>> x", " >>> y"]
+
+        t.describe "results" $ do
+          t.it "one" $ do
+            interface <- f ["-- | >>> x", "-- y", "module M where"]
+            assertEq t interface.documentation . Just $ h [" >>> x", " y"]
+
+          t.it "two" $ do
+            interface <- f ["-- | >>> x", "-- y", "-- z", "module M where"]
+            assertEq t interface.documentation . Just $ h [" >>> x", " y", "z"]
+
+          t.it "blank line" $ do
+            interface <- f ["-- | >>> x", "-- <BLANKLINE>", "module M where"]
+            assertEq t interface.documentation . Just $ h [" >>> x", " <BLANKLINE>"]
+
+      t.describe "header" $ do
+        t.it "one" $ do
+          interface <- f ["-- | = x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" = x"]
+
+        t.it "two" $ do
+          interface <- f ["-- | == x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" == x"]
+
+        t.it "three" $ do
+          interface <- f ["-- | === x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" === x"]
+
+        t.it "four" $ do
+          interface <- f ["-- | ==== x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" ==== x"]
+
+        t.it "five" $ do
+          interface <- f ["-- | ===== x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" ===== x"]
+
+        t.it "six" $ do
+          interface <- f ["-- | ====== x", "module M where"]
+          assertEq t interface.documentation . Just $ h [" ====== x"]
+
+      t.describe "table" $ do
+        let table :: (Stack.HasCallStack) => [String] -> m ()
+            table xs = do
+              interface <- f $ mconcat [["-- |"], fmap ("-- " <>) xs, ["module M where"]]
+              assertEq t interface.documentation . Just $ h xs
+
+        t.it "works" $ do
+          table
+            [ "+---+---+",
+              "| a | b |",
+              "+---+---+"
+            ]
+
+        t.it "with header" $ do
+          table
+            [ "+---+---+",
+              "| a | b |",
+              "+===+===+",
+              "| c | d |",
+              "+---+---+"
+            ]
+
+        t.it "with colspan" $ do
+          table
+            [ "+---+---+",
+              "| a | b |",
+              "+---+---+",
+              "| c     |",
+              "+---+---+"
+            ]
+
+        t.it "with rowspan" $ do
+          table
+            [ "+---+---+",
+              "| a | b |",
+              "+   +---+",
+              "|   |   |",
+              "+---+---+"
+            ]
 
   t.describe "name" $ do
     t.it "has no module name by default" $ do

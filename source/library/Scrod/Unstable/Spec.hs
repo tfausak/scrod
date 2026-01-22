@@ -25,6 +25,8 @@ import qualified Scrod.Unstable.Type.Line as Line
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
 spec :: (Monad m, Monad n) => Test m n -> n ()
@@ -302,9 +304,14 @@ spec t = t.describe "extract" $ do
         interface <- scrod t ["-- | [x]: y", "module M where"]
         assertEq t interface.documentation . Just $ haddock [" [x]: y"]
 
-      t.it "code block" $ do
-        interface <- scrod t ["-- | @x@", "module M where"]
-        assertEq t interface.documentation . Just $ haddock [" @x@"]
+      t.describe "code block" $ do
+        t.it "with inline formatting" $ do
+          interface <- scrod t ["-- | @x@", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" @x@"]
+
+        t.it "without inline formatting" $ do
+          interface <- scrod t ["-- | > x", "module M where"]
+          assertEq t interface.documentation . Just $ haddock [" > x"]
 
       t.describe "hyperlink" $ do
         t.it "implicit" $ do
@@ -446,6 +453,30 @@ spec t = t.describe "extract" $ do
     t.it "gets the column" $ do
       interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.location.column.value)) $ Just 8
+
+  t.describe "since" $ do
+    t.it "is empty by default" $ do
+      interface <- scrod t []
+      assertEq t interface.since Since.empty
+
+    t.describe "package" $ do
+      t.it "works" $ do
+        -- The code is in place to populate this field, but Haddock itself does
+        -- not handle it. So if we update Haddock and this test starts failing,
+        -- simply update the test.
+        --
+        -- > assertEq t (interface.since.package <&> (.value)) $ Just "p"
+        interface <- scrod t ["-- | @since p-0", "module M where"]
+        assertEq t interface.documentation . Just $ haddock [" @since p-0"]
+
+    t.describe "version" $ do
+      t.it "parses a simple version" $ do
+        interface <- scrod t ["-- | @since 0", "module M where"]
+        assertEq t (interface.since.version <&> (.value)) $ Just [0]
+
+      t.it "parses a complex version" $ do
+        interface <- scrod t ["-- | @since 1.2", "module M where"]
+        assertEq t (interface.since.version <&> (.value)) $ Just [1, 2]
 
   t.describe "warning" $ do
     t.it "has no warning by default" $ do

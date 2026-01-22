@@ -31,6 +31,9 @@ import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.PackageName as PackageName
+import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
 convert ::
@@ -52,6 +55,7 @@ convert input = case input of
           Interface.extensions = extensionsToMap extensions,
           Interface.documentation = extractModuleDocumentation lHsModule,
           Interface.name = extractModuleName lHsModule,
+          Interface.since = extractModuleSince lHsModule,
           Interface.warning = extractModuleWarning lHsModule
         }
 
@@ -82,7 +86,35 @@ extractModuleDocumentation lHsModule = do
   let hsDoc = SrcLoc.unLoc lHsDoc
       hsDocString = Doc.hsDocString hsDoc
       rendered = DocString.renderHsDocString hsDocString
-  pure . Haddock._doc $ Haddock.parseParas Nothing rendered
+      metaDoc :: Haddock.MetaDoc Void.Void Haddock.Identifier
+      metaDoc = Haddock.parseParas Nothing rendered
+  pure $ Haddock._doc metaDoc
+
+extractModuleSince ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Since.Since
+extractModuleSince lHsModule =
+  case extractModuleMeta lHsModule of
+    Nothing -> Since.empty
+    Just meta ->
+      Since.MkSince
+        { Since.package = fmap PackageName.fromString $ Haddock._package meta,
+          Since.version = fmap Version.fromHaddock $ Haddock._version meta
+        }
+
+extractModuleMeta ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe Haddock.Meta
+extractModuleMeta lHsModule = do
+  let hsModule = SrcLoc.unLoc lHsModule
+      xModulePs = Syntax.hsmodExt hsModule
+  lHsDoc <- Hs.hsmodHaddockModHeader xModulePs
+  let hsDoc = SrcLoc.unLoc lHsDoc
+      hsDocString = Doc.hsDocString hsDoc
+      rendered = DocString.renderHsDocString hsDocString
+      metaDoc :: Haddock.MetaDoc Void.Void Haddock.Identifier
+      metaDoc = Haddock.parseParas Nothing rendered
+  pure $ Haddock._meta metaDoc
 
 extractModuleWarning ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->

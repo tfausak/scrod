@@ -89,6 +89,9 @@ library
     Scrod.Unstable.Type.Located
     Scrod.Unstable.Type.Location
     Scrod.Unstable.Type.ModuleName
+    Scrod.Unstable.Type.PackageName
+    Scrod.Unstable.Type.Since
+    Scrod.Unstable.Type.Version
     Scrod.Unstable.Type.Warning
 
   hs-source-dirs: source/library

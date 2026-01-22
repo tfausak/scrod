@@ -4,6 +4,8 @@
 module Scrod.Unstable.Spec where
 
 import qualified Data.Either as Either
+import Data.Function ((&))
+import Data.Functor ((<&>))
 import qualified Data.Map as Map
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
@@ -56,35 +58,35 @@ spec t = t.describe "extract" $ do
 
     t.it "handles language pragma" $ do
       interface <- f ["{-# language Haskell98 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell98"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "succeeds with Haskell2010" $ do
       interface <- f ["{-# language Haskell2010 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell2010"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
     t.it "succeeds with GHC2021" $ do
       interface <- f ["{-# language GHC2021 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "GHC2021"
+      assertEq t (interface.language <&> (.value)) $ Just "GHC2021"
 
     t.it "succeeds with GHC2024" $ do
       interface <- f ["{-# language GHC2024 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "GHC2024"
+      assertEq t (interface.language <&> (.value)) $ Just "GHC2024"
 
     t.it "handles options_ghc pragma" $ do
       interface <- f ["{-# options_ghc -XHaskell98 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell98"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "handles options pragma" $ do
       interface <- f ["{-# options -XHaskell98 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell98"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell98"
 
     t.it "picks the last one in a pragma" $ do
       interface <- f ["{-# language Haskell98, Haskell2010 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell2010"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
     t.it "picks the last pragma" $ do
       interface <- f ["{-# language Haskell98 #-}", "{-# language Haskell2010 #-}"]
-      assertEq t (fmap (.value) interface.language) $ Just "Haskell2010"
+      assertEq t (interface.language <&> (.value)) $ Just "Haskell2010"
 
   t.describe "extensions" $ do
     t.it "has no extensions by default" $ do
@@ -93,43 +95,43 @@ spec t = t.describe "extract" $ do
 
     t.it "handles language pragma" $ do
       interface <- f ["{-# language Arrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" True
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles options_ghc pragma" $ do
       interface <- f ["{-# options_ghc -XArrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" True
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles options pragma" $ do
       interface <- f ["{-# options -XArrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" True
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" True
 
     t.it "handles disabling an extension" $ do
       interface <- f ["{-# language NoArrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" False
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "picks the last one in a pragma" $ do
       interface <- f ["{-# language Arrows, NoArrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" False
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "picks the last pragma" $ do
       interface <- f ["{-# language Arrows #-}", "{-# language NoArrows #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "Arrows" False
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "Arrows" False
 
     t.it "handles unnecessarily enabling an extension" $ do
       interface <- f ["{-# language Haskell98, StarIsType #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "StarIsType" True
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" True
 
     t.it "handles disabling an extension enabled by the language" $ do
       interface <- f ["{-# language Haskell98, NoStarIsType #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "StarIsType" False
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" False
 
     t.it "disables an extension listed before the language" $ do
       interface <- f ["{-# language NoStarIsType, Haskell98 #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $ Map.singleton "StarIsType" False
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "StarIsType" False
 
     t.it "handles implied extensions" $ do
       interface <- f ["{-# language PolyKinds #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $
         Map.fromList
           [ ("KindSignatures", True),
             ("PolyKinds", True)
@@ -137,7 +139,7 @@ spec t = t.describe "extract" $ do
 
     t.it "supports Glasgow extensions" $ do
       interface <- f ["{-# options_ghc -fglasgow-exts #-}"]
-      assertEq t (Map.mapKeys (.value) interface.extensions) $
+      assertEq t (interface.extensions & Map.mapKeys (.value)) $
         Map.fromList
           [ ("ConstrainedClassMethods", True),
             ("DeriveDataTypeable", True),
@@ -210,19 +212,19 @@ spec t = t.describe "extract" $ do
 
     t.it "gets a simple name" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.value.value) interface.name) $ Just "M"
+      assertEq t (interface.name <&> (.value.value)) $ Just "M"
 
     t.it "gets a complex name" $ do
       interface <- f ["module M.N where"]
-      assertEq t (fmap (.value.value) interface.name) $ Just "M.N"
+      assertEq t (interface.name <&> (.value.value)) $ Just "M.N"
 
     t.it "gets the line" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.location.line.value) interface.name) $ Just 1
+      assertEq t (interface.name <&> (.location.line.value)) $ Just 1
 
     t.it "gets the column" $ do
       interface <- f ["module M where"]
-      assertEq t (fmap (.location.column.value) interface.name) $ Just 8
+      assertEq t (interface.name <&> (.location.column.value)) $ Just 8
 
   t.describe "warning" $ do
     t.it "has no warning by default" $ do
@@ -232,29 +234,29 @@ spec t = t.describe "extract" $ do
     t.describe "category" $ do
       t.it "uses deprecations for warning" $ do
         interface <- f ["module M {-# warning \"x\" #-} where"]
-        assertEq t (fmap (.category.value) interface.warning) $ Just "deprecations"
+        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
 
       t.it "uses deprecations for deprecated" $ do
         interface <- f ["module M {-# deprecated \"x\" #-} where"]
-        assertEq t (fmap (.category.value) interface.warning) $ Just "deprecations"
+        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
 
       t.it "works with x-custom" $ do
         interface <- f ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
-        assertEq t (fmap (.category.value) interface.warning) $ Just "x-custom"
+        assertEq t (interface.warning <&> (.category.value)) $ Just "x-custom"
 
     t.describe "value" $ do
       t.it "works with a string" $ do
         interface <- f ["module M {-# warning \"x\" #-} where"]
-        assertEq t (fmap (.value) interface.warning) $ Just "x"
+        assertEq t (interface.warning <&> (.value)) $ Just "x"
 
       t.it "works with an empty list" $ do
         interface <- f ["module M {-# warning [] #-} where"]
-        assertEq t (fmap (.value) interface.warning) $ Just ""
+        assertEq t (interface.warning <&> (.value)) $ Just ""
 
       t.it "works with a singleton list" $ do
         interface <- f ["module M {-# warning [\"x\"] #-} where"]
-        assertEq t (fmap (.value) interface.warning) $ Just "x"
+        assertEq t (interface.warning <&> (.value)) $ Just "x"
 
       t.it "works with a list" $ do
         interface <- f ["module M {-# warning [\"x\", \"y\"] #-} where"]
-        assertEq t (fmap (.value) interface.warning) $ Just "x\ny"
+        assertEq t (interface.warning <&> (.value)) $ Just "x\ny"

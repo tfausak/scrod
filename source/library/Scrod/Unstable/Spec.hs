@@ -11,6 +11,7 @@ import qualified Documentation.Haddock.Types as Haddock
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
+import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
@@ -19,6 +20,7 @@ import qualified Scrod.Unstable.Type.Line as Line
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.Warning as Warning
 
 spec :: (Monad m, Monad n) => Test m n -> n ()
 spec t = t.describe "extract" $ do
@@ -221,3 +223,38 @@ spec t = t.describe "extract" $ do
     t.it "gets the column" $ do
       interface <- f ["module M where"]
       assertEq t (fmap (.location.column.value) interface.moduleName) $ Just 8
+
+  t.describe "moduleWarning" $ do
+    t.it "has no warning by default" $ do
+      interface <- f []
+      assertEq t interface.moduleWarning Nothing
+
+    t.describe "category" $ do
+      t.it "uses deprecations for warning" $ do
+        interface <- f ["module M {-# warning \"x\" #-} where"]
+        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "deprecations"
+
+      t.it "uses deprecations for deprecated" $ do
+        interface <- f ["module M {-# deprecated \"x\" #-} where"]
+        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "deprecations"
+
+      t.it "works with x-custom" $ do
+        interface <- f ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
+        assertEq t (fmap (.category.value) interface.moduleWarning) $ Just "x-custom"
+
+    t.describe "value" $ do
+      t.it "works with a string" $ do
+        interface <- f ["module M {-# warning \"x\" #-} where"]
+        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x"
+
+      t.it "works with an empty list" $ do
+        interface <- f ["module M {-# warning [] #-} where"]
+        assertEq t (fmap (.value) interface.moduleWarning) $ Just ""
+
+      t.it "works with a singleton list" $ do
+        interface <- f ["module M {-# warning [\"x\"] #-} where"]
+        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x"
+
+      t.it "works with a list" $ do
+        interface <- f ["module M {-# warning [\"x\", \"y\"] #-} where"]
+        assertEq t (fmap (.value) interface.moduleWarning) $ Just "x\ny"

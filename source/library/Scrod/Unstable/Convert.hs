@@ -2,10 +2,12 @@ module Scrod.Unstable.Convert where
 
 import qualified Control.Exception as Exception
 import qualified Data.Map as Map
+import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
+import qualified GHC.Data.FastString as FastString
 import qualified GHC.Driver.DynFlags as DynFlags
 import qualified GHC.Driver.Session as Session
 import qualified GHC.Hs as Hs
@@ -17,15 +19,19 @@ import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Parser.Errors.Types as Errors
 import qualified GHC.Types.Error as Error
 import qualified GHC.Types.SourceError as SourceError
+import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
+import qualified GHC.Unit.Module.Warnings as Warnings
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Unstable.Extra.OnOff as OnOff
+import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.Warning as Warning
 
 convert ::
   Either
@@ -45,7 +51,8 @@ convert input = case input of
         { Interface.language = fmap Language.fromGhc language,
           Interface.extensions = extensionsToMap extensions,
           Interface.moduleDocumentation = extractModuleDocumentation lHsModule,
-          Interface.moduleName = extractModuleName lHsModule
+          Interface.moduleName = extractModuleName lHsModule,
+          Interface.moduleWarning = extractModuleWarning lHsModule
         }
 
 extensionsToMap ::
@@ -76,3 +83,28 @@ extractModuleDocumentation lHsModule = do
       hsDocString = Doc.hsDocString hsDoc
       rendered = DocString.renderHsDocString hsDocString
   pure . Haddock._doc $ Haddock.parseParas Nothing rendered
+
+extractModuleWarning ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe Warning.Warning
+extractModuleWarning lHsModule = do
+  let hsModule = SrcLoc.unLoc lHsModule
+      xModulePs = Syntax.hsmodExt hsModule
+  lWarningTxt <- Hs.hsmodDeprecMessage xModulePs
+  let warningTxt = SrcLoc.unLoc lWarningTxt
+  pure $ warningTxtToWarning warningTxt
+
+warningTxtToWarning :: Warnings.WarningTxt Ghc.GhcPs -> Warning.Warning
+warningTxtToWarning warningTxt =
+  Warning.MkWarning
+    { Warning.category = Category.fromGhc $ Warnings.warningTxtCategory warningTxt,
+      Warning.value = Text.intercalate (Text.singleton '\n') . fmap extractMessage $ Warnings.warningTxtMessage warningTxt
+    }
+
+extractMessage :: SrcLoc.GenLocated l (Doc.WithHsDocIdentifiers SourceText.StringLiteral Ghc.GhcPs) -> Text.Text
+extractMessage =
+  Text.pack
+    . FastString.unpackFS
+    . SourceText.sl_fs
+    . Doc.hsDocString
+    . SrcLoc.unLoc

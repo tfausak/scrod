@@ -8,11 +8,13 @@ import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.Warning as Warning
 
 data Interface = MkInterface
   { language :: Maybe Language.Language,
     extensions :: Map.Map Extension.Extension Bool,
     moduleDocumentation :: Maybe (Haddock.DocH Void.Void Haddock.Identifier),
-    moduleName :: Maybe (Located.Located ModuleName.ModuleName)
+    moduleName :: Maybe (Located.Located ModuleName.ModuleName),
+    moduleWarning :: Maybe Warning.Warning
   }
   deriving (Eq, Show)

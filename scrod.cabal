@@ -1,7 +1,7 @@
 cabal-version: 3.0
 -- https://cabal.readthedocs.io/en/stable/cabal-package-description-file.html
 name: scrod
-version: 0.2026.1.21
+version: 0.2026.1.22
 synopsis: TODO
 description:
   TODO
@@ -80,6 +80,7 @@ library
     Scrod.Unstable.Main
     Scrod.Unstable.Parse
     Scrod.Unstable.Spec
+    Scrod.Unstable.Type.Category
     Scrod.Unstable.Type.Column
     Scrod.Unstable.Type.Extension
     Scrod.Unstable.Type.Interface
@@ -88,6 +89,7 @@ library
     Scrod.Unstable.Type.Located
     Scrod.Unstable.Type.Location
     Scrod.Unstable.Type.ModuleName
+    Scrod.Unstable.Type.Warning
 
   hs-source-dirs: source/library
 

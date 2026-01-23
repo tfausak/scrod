@@ -72,6 +72,7 @@ library
     Scrod.Unstable.Extra.FileSettings
     Scrod.Unstable.Extra.GhcNameVersion
     Scrod.Unstable.Extra.Heck
+    Scrod.Unstable.Extra.Natural
     Scrod.Unstable.Extra.OnOff
     Scrod.Unstable.Extra.ParserOpts
     Scrod.Unstable.Extra.Platform

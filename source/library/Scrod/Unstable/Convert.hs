@@ -112,7 +112,7 @@ extractModuleSince lHsModule =
     Just meta ->
       Since.MkSince
         { Since.package = fmap PackageName.fromString $ Haddock._package meta,
-          Since.version = fmap Version.fromHaddock $ Haddock._version meta
+          Since.version = Version.fromHaddock =<< Haddock._version meta
         }
 
 extractModuleMeta ::

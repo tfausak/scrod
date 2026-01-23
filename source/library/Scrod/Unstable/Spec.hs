@@ -1,7 +1,6 @@
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
-
--- {-# LANGUAGE ScopedTypeVariables #-}
 
 module Scrod.Unstable.Spec where
 

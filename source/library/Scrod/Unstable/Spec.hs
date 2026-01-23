@@ -10,20 +10,30 @@ import Data.Functor ((<&>))
 import qualified Data.Map as Map
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
-import qualified Scrod.Unstable.Convert as Convert
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Doc as Doc
+import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Extension as Extension
+import qualified Scrod.Unstable.Type.Header as Header
+import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
+import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
+import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Line as Line
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.Location as Location
+import qualified Scrod.Unstable.Type.ModLink as ModLink
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
+import qualified Scrod.Unstable.Type.Namespace as Namespace
+import qualified Scrod.Unstable.Type.Picture as Picture
 import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Table as Table
+import qualified Scrod.Unstable.Type.TableCell as TableCell
+import qualified Scrod.Unstable.Type.TableRow as TableRow
 import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -207,27 +217,27 @@ spec t = t.describe "extract" $ do
 
     t.it "works with block comment before" $ do
       interface <- scrod t ["-- | x", "module M where"]
-      assertEq t interface.documentation $ haddock [" x"]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x")
 
     t.it "works with inline comment before" $ do
       interface <- scrod t ["{- | x -} module M where"]
-      assertEq t interface.documentation $ haddock [" x "]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x ")
 
     t.it "works with block comment after" $ do
       interface <- scrod t ["module", "-- | x", "M where"]
-      assertEq t interface.documentation $ haddock [" x"]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x")
 
     t.it "works with inline comment after" $ do
       interface <- scrod t ["module {- | x -} M where"]
-      assertEq t interface.documentation $ haddock [" x "]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x ")
 
     t.it "works with multiple lines" $ do
       interface <- scrod t ["-- | x", "-- y", "module M where"]
-      assertEq t interface.documentation $ haddock [" x", " y"]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x\n y")
 
     t.it "picks the first comment" $ do
       interface <- scrod t ["-- | x", "module", "-- | y", "M where"]
-      assertEq t interface.documentation $ haddock [" x"]
+      assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x")
 
     t.describe "markup" $ do
       t.it "missing" $ do
@@ -236,226 +246,307 @@ spec t = t.describe "extract" $ do
 
       t.it "empty" $ do
         interface <- scrod t ["-- | ", "module M where"]
-        assertEq t interface.documentation $ haddock []
+        assertEq t interface.documentation Doc.Empty
 
       t.it "string" $ do
         interface <- scrod t ["-- | x", "module M where"]
-        assertEq t interface.documentation $ haddock [" x"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.String "x")
 
       t.describe "identifier" $ do
         t.it "apostrophes" $ do
           interface <- scrod t ["-- | 'x'", "module M where"]
-          assertEq t interface.documentation $ haddock [" 'x'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "x"})
 
         t.it "grave apostrophe" $ do
           interface <- scrod t ["-- | `x'", "module M where"]
-          assertEq t interface.documentation $ haddock [" `x'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "x"})
 
         t.it "apostrophe grave" $ do
           interface <- scrod t ["-- | 'x`", "module M where"]
-          assertEq t interface.documentation $ haddock [" 'x`"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "x"})
 
         t.it "graves" $ do
           interface <- scrod t ["-- | `x`", "module M where"]
-          assertEq t interface.documentation $ haddock [" `x`"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "x"})
 
         t.it "qualified" $ do
           interface <- scrod t ["-- | 'X.y'", "module M where"]
-          assertEq t interface.documentation $ haddock [" 'X.y'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "X.y"})
 
         t.it "operator" $ do
           interface <- scrod t ["-- | '(%)'", "module M where"]
-          assertEq t interface.documentation $ haddock [" '(%)'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "(%)"})
 
         t.it "qualified operator" $ do
           interface <- scrod t ["-- | '(X.%)'", "module M where"]
-          assertEq t interface.documentation $ haddock [" '(X.%)'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Nothing, Identifier.value = "(X.%)"})
 
         t.it "value" $ do
           interface <- scrod t ["-- | v'X'", "module M where"]
-          assertEq t interface.documentation $ haddock [" v'X'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Just Namespace.Value, Identifier.value = "X"})
 
         t.it "type" $ do
           interface <- scrod t ["-- | t'X'", "module M where"]
-          assertEq t interface.documentation $ haddock [" t'X'"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Identifier Identifier.MkIdentifier {Identifier.namespace = Just Namespace.Type, Identifier.value = "X"})
 
       t.describe "module" $ do
         t.it "without label" $ do
           interface <- scrod t ["-- | \"X\"", "module M where"]
-          assertEq t interface.documentation $ haddock [" \"X\""]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Module ModLink.MkModLink {ModLink.name = ModuleName.MkModuleName {ModuleName.value = "X"}, ModLink.label = Nothing})
 
         t.it "with label" $ do
           interface <- scrod t ["-- | [X](\"Y\")", "module M where"]
-          assertEq t interface.documentation $ haddock [" [X](\"Y\")"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Module ModLink.MkModLink {ModLink.name = ModuleName.MkModuleName {ModuleName.value = "Y"}, ModLink.label = Just (Doc.String "X")})
 
       t.it "emphasis" $ do
         interface <- scrod t ["-- | /x/", "module M where"]
-        assertEq t interface.documentation $ haddock [" /x/"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.Emphasis (Doc.String "x"))
 
       t.it "monospaced" $ do
         -- Note that the line can't be _only_ `@x@` because that would be a
         -- code block rather than some inline monospaced text.
         interface <- scrod t ["-- | x @y@", "module M where"]
-        assertEq t interface.documentation $ haddock [" x @y@"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.Append (Doc.String "x ") (Doc.Monospaced (Doc.String "y")))
 
       t.it "bold" $ do
         interface <- scrod t ["-- | __x__", "module M where"]
-        assertEq t interface.documentation $ haddock [" __x__"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.Bold (Doc.String "x"))
 
       t.describe "unordered list" $ do
         t.it "asterisk" $ do
           interface <- scrod t ["-- | * x", "module M where"]
-          assertEq t interface.documentation $ haddock [" * x"]
+          assertEq t interface.documentation $ Doc.UnorderedList [Doc.Paragraph (Doc.String "x")]
 
         t.it "hyphen" $ do
           interface <- scrod t ["-- | - x", "module M where"]
-          assertEq t interface.documentation $ haddock [" - x"]
+          assertEq t interface.documentation $ Doc.UnorderedList [Doc.Paragraph (Doc.String "x")]
 
       t.describe "ordered list" $ do
         t.it "parentheses" $ do
           interface <- scrod t ["-- | (1) x", "module M where"]
-          assertEq t interface.documentation $ haddock [" (1) x"]
+          assertEq t interface.documentation $ Doc.OrderedList [(1, Doc.Paragraph (Doc.String "x"))]
 
         t.it "period" $ do
           interface <- scrod t ["-- | 1. x", "module M where"]
-          assertEq t interface.documentation $ haddock [" 1. x"]
+          assertEq t interface.documentation $ Doc.OrderedList [(1, Doc.Paragraph (Doc.String "x"))]
 
         t.it "custom number" $ do
           interface <- scrod t ["-- | 2. x", "module M where"]
-          assertEq t interface.documentation $ haddock [" 2. x"]
+          assertEq t interface.documentation $ Doc.OrderedList [(2, Doc.Paragraph (Doc.String "x"))]
 
       t.it "definition list" $ do
         interface <- scrod t ["-- | [x]: y", "module M where"]
-        assertEq t interface.documentation $ haddock [" [x]: y"]
+        assertEq t interface.documentation $ Doc.DefList [(Doc.String "x", Doc.String "y")]
 
       t.describe "code block" $ do
         t.it "with inline formatting" $ do
           interface <- scrod t ["-- | @x@", "module M where"]
-          assertEq t interface.documentation $ haddock [" @x@"]
+          assertEq t interface.documentation $ Doc.CodeBlock (Doc.String "x")
 
         t.it "without inline formatting" $ do
           interface <- scrod t ["-- | > x", "module M where"]
-          assertEq t interface.documentation $ haddock [" > x"]
+          assertEq t interface.documentation $ Doc.CodeBlock (Doc.String "x")
 
       t.describe "hyperlink" $ do
         t.it "implicit" $ do
           interface <- scrod t ["-- | http://example", "module M where"]
-          assertEq t interface.documentation $ haddock [" http://example"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Hyperlink Hyperlink.MkHyperlink {Hyperlink.url = "http://example", Hyperlink.label = Nothing})
 
         t.it "explicit" $ do
           interface <- scrod t ["-- | <http://example>", "module M where"]
-          assertEq t interface.documentation $ haddock [" <http://example>"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Hyperlink Hyperlink.MkHyperlink {Hyperlink.url = "http://example", Hyperlink.label = Nothing})
 
         t.it "with label" $ do
           interface <- scrod t ["-- | [x](http://example)", "module M where"]
-          assertEq t interface.documentation $ haddock [" [x](http://example)"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.Hyperlink Hyperlink.MkHyperlink {Hyperlink.url = "http://example", Hyperlink.label = Just (Doc.String "x")})
 
       t.it "pic" $ do
         interface <- scrod t ["-- | ![x](http://example)", "module M where"]
-        assertEq t interface.documentation $ haddock [" ![x](http://example)"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.Pic Picture.MkPicture {Picture.uri = "http://example", Picture.title = Just "x"})
 
       t.describe "math" $ do
         t.it "inline" $ do
           interface <- scrod t ["-- | \\(x\\)", "module M where"]
-          assertEq t interface.documentation $ haddock [" \\(x\\)"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.MathInline "x")
 
         t.it "display" $ do
           interface <- scrod t ["-- | \\[x\\]", "module M where"]
-          assertEq t interface.documentation $ haddock [" \\[x\\]"]
+          assertEq t interface.documentation $ Doc.Paragraph (Doc.MathDisplay "x")
 
       t.it "a name" $ do
         interface <- scrod t ["-- | #x#", "module M where"]
-        assertEq t interface.documentation $ haddock [" #x#"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.AName "x")
 
       t.it "property" $ do
         interface <- scrod t ["-- | prop> x", "module M where"]
-        assertEq t interface.documentation $ haddock [" prop> x"]
+        assertEq t interface.documentation $ Doc.Property "x"
 
       t.describe "examples" $ do
         t.it "one" $ do
           interface <- scrod t ["-- | >>> x", "module M where"]
-          assertEq t interface.documentation $ haddock [" >>> x"]
+          assertEq t interface.documentation $ Doc.Examples [Example.MkExample {Example.expression = "x", Example.result = []}]
 
         t.it "two" $ do
           interface <- scrod t ["-- | >>> x", "-- >>> y", "module M where"]
-          assertEq t interface.documentation $ haddock [" >>> x", " >>> y"]
+          assertEq t interface.documentation $ Doc.Examples [Example.MkExample {Example.expression = "x", Example.result = []}, Example.MkExample {Example.expression = "y", Example.result = []}]
 
         t.describe "results" $ do
           t.it "one" $ do
             interface <- scrod t ["-- | >>> x", "-- y", "module M where"]
-            assertEq t interface.documentation $ haddock [" >>> x", " y"]
+            assertEq t interface.documentation $ Doc.Examples [Example.MkExample {Example.expression = "x", Example.result = ["y"]}]
 
           t.it "two" $ do
             interface <- scrod t ["-- | >>> x", "-- y", "-- z", "module M where"]
-            assertEq t interface.documentation $ haddock [" >>> x", " y", "z"]
+            assertEq t interface.documentation $ Doc.Examples [Example.MkExample {Example.expression = "x", Example.result = ["y", "z"]}]
 
           t.it "blank line" $ do
             interface <- scrod t ["-- | >>> x", "-- <BLANKLINE>", "module M where"]
-            assertEq t interface.documentation $ haddock [" >>> x", " <BLANKLINE>"]
+            assertEq t interface.documentation $ Doc.Examples [Example.MkExample {Example.expression = "x", Example.result = [""]}]
 
       t.describe "header" $ do
         t.it "one" $ do
           interface <- scrod t ["-- | = x", "module M where"]
-          assertEq t interface.documentation $ haddock [" = x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.One, Header.title = Doc.String "x"}
 
         t.it "two" $ do
           interface <- scrod t ["-- | == x", "module M where"]
-          assertEq t interface.documentation $ haddock [" == x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.Two, Header.title = Doc.String "x"}
 
         t.it "three" $ do
           interface <- scrod t ["-- | === x", "module M where"]
-          assertEq t interface.documentation $ haddock [" === x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.Three, Header.title = Doc.String "x"}
 
         t.it "four" $ do
           interface <- scrod t ["-- | ==== x", "module M where"]
-          assertEq t interface.documentation $ haddock [" ==== x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.Four, Header.title = Doc.String "x"}
 
         t.it "five" $ do
           interface <- scrod t ["-- | ===== x", "module M where"]
-          assertEq t interface.documentation $ haddock [" ===== x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.Five, Header.title = Doc.String "x"}
 
         t.it "six" $ do
           interface <- scrod t ["-- | ====== x", "module M where"]
-          assertEq t interface.documentation $ haddock [" ====== x"]
+          assertEq t interface.documentation $ Doc.Header Header.MkHeader {Header.level = Level.Six, Header.title = Doc.String "x"}
 
       t.describe "table" $ do
         t.it "works" $ do
-          table
-            t
-            [ "+---+---+",
-              "| a | b |",
-              "+---+---+"
-            ]
+          interface <-
+            scrod
+              t
+              [ "-- |",
+                "-- +---+---+",
+                "-- | a | b |",
+                "-- +---+---+",
+                "module M where"
+              ]
+          assertEq t interface.documentation $
+            Doc.Table
+              Table.MkTable
+                { Table.headerRows = [],
+                  Table.bodyRows =
+                    [ TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "a"},
+                              TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "b"}
+                            ]
+                        }
+                    ]
+                }
 
         t.it "with header" $ do
-          table
-            t
-            [ "+---+---+",
-              "| a | b |",
-              "+===+===+",
-              "| c | d |",
-              "+---+---+"
-            ]
+          interface <-
+            scrod
+              t
+              [ "-- |",
+                "-- +---+---+",
+                "-- | a | b |",
+                "-- +===+===+",
+                "-- | c | d |",
+                "-- +---+---+",
+                "module M where"
+              ]
+          assertEq t interface.documentation $
+            Doc.Table
+              Table.MkTable
+                { Table.headerRows =
+                    [ TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "a"},
+                              TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "b"}
+                            ]
+                        }
+                    ],
+                  Table.bodyRows =
+                    [ TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "c"},
+                              TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "d"}
+                            ]
+                        }
+                    ]
+                }
 
         t.it "with colspan" $ do
-          table
-            t
-            [ "+---+---+",
-              "| a | b |",
-              "+---+---+",
-              "| c     |",
-              "+---+---+"
-            ]
+          interface <-
+            scrod
+              t
+              [ "-- |",
+                "-- +---+---+",
+                "-- | a | b |",
+                "-- +---+---+",
+                "-- | c     |",
+                "-- +---+---+",
+                "module M where"
+              ]
+          assertEq t interface.documentation $
+            Doc.Table
+              Table.MkTable
+                { Table.headerRows = [],
+                  Table.bodyRows =
+                    [ TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "a"},
+                              TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "b"}
+                            ]
+                        },
+                      TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 2, TableCell.rowspan = 1, TableCell.contents = Doc.String "c"}
+                            ]
+                        }
+                    ]
+                }
 
         t.it "with rowspan" $ do
-          table
-            t
-            [ "+---+---+",
-              "| a | b |",
-              "+   +---+",
-              "|   |   |",
-              "+---+---+"
-            ]
+          interface <-
+            scrod
+              t
+              [ "-- |",
+                "-- +---+---+",
+                "-- | a | b |",
+                "-- +   +---+",
+                "-- |   |   |",
+                "-- +---+---+",
+                "module M where"
+              ]
+          assertEq t interface.documentation $
+            Doc.Table
+              Table.MkTable
+                { Table.headerRows = [],
+                  Table.bodyRows =
+                    [ TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 2, TableCell.contents = Doc.String "a\n\n"},
+                              TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.String "b"}
+                            ]
+                        },
+                      TableRow.MkRow
+                        { TableRow.cells =
+                            [ TableCell.MkCell {TableCell.colspan = 1, TableCell.rowspan = 1, TableCell.contents = Doc.Empty}
+                            ]
+                        }
+                    ]
+                }
 
   t.describe "name" $ do
     t.it "has no module name by default" $ do
@@ -491,7 +582,7 @@ spec t = t.describe "extract" $ do
         --
         -- > assertEq t (interface.since.package <&> (.value)) $ Just "p"
         interface <- scrod t ["-- | @since p-0", "module M where"]
-        assertEq t interface.documentation $ haddock [" @since p-0"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.String "@since p-0")
 
     t.describe "version" $ do
       t.it "parses a simple version" $ do
@@ -539,12 +630,3 @@ spec t = t.describe "extract" $ do
 
 scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
 scrod t = expectRight t . Main.extract . unlines
-
--- TODO: Remove this and update tests to use `Doc` constructors directly.
-haddock :: [String] -> Doc.Doc
-haddock = Convert.parseDoc . unlines
-
-table :: (Stack.HasCallStack, Monad m) => Test m n -> [String] -> m ()
-table t xs = do
-  interface <- scrod t $ mconcat [["-- |"], fmap ("-- " <>) xs, ["module M where"]]
-  assertEq t interface.documentation $ haddock xs

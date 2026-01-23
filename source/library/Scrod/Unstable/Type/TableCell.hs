@@ -1,5 +1,4 @@
--- TODO: Flatten module hierarchy.
-module Scrod.Unstable.Type.Table.Cell where
+module Scrod.Unstable.Type.TableCell where
 
 import qualified Numeric.Natural as Natural
 

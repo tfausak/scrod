@@ -101,8 +101,8 @@ library
     Scrod.Unstable.Type.Picture
     Scrod.Unstable.Type.Since
     Scrod.Unstable.Type.Table
-    Scrod.Unstable.Type.Table.Cell
-    Scrod.Unstable.Type.Table.Row
+    Scrod.Unstable.Type.TableCell
+    Scrod.Unstable.Type.TableRow
     Scrod.Unstable.Type.Version
     Scrod.Unstable.Type.Warning
 

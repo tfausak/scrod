@@ -43,8 +43,8 @@ import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Picture as Picture
 import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Table as Table
-import qualified Scrod.Unstable.Type.Table.Cell as Cell
-import qualified Scrod.Unstable.Type.Table.Row as Row
+import qualified Scrod.Unstable.Type.TableCell as TableCell
+import qualified Scrod.Unstable.Type.TableRow as TableRow
 import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -237,18 +237,18 @@ fromHaddock doc = case doc of
           Table.bodyRows = fmap convertTableRow (Haddock.tableBodyRows t)
         }
     where
-      convertTableRow :: Haddock.TableRow (Haddock.DocH Void.Void Identifier.Identifier) -> Row.Row Doc.Doc
+      convertTableRow :: Haddock.TableRow (Haddock.DocH Void.Void Identifier.Identifier) -> TableRow.Row Doc.Doc
       convertTableRow row =
-        Row.MkRow
-          { Row.cells = fmap convertTableCell (Haddock.tableRowCells row)
+        TableRow.MkRow
+          { TableRow.cells = fmap convertTableCell (Haddock.tableRowCells row)
           }
 
-      convertTableCell :: Haddock.TableCell (Haddock.DocH Void.Void Identifier.Identifier) -> Cell.Cell Doc.Doc
+      convertTableCell :: Haddock.TableCell (Haddock.DocH Void.Void Identifier.Identifier) -> TableCell.Cell Doc.Doc
       convertTableCell cell =
-        Cell.MkCell
-          { Cell.colspan = fromIntegral (Haddock.tableCellColspan cell),
-            Cell.rowspan = fromIntegral (Haddock.tableCellRowspan cell),
-            Cell.contents = fromHaddock (Haddock.tableCellContents cell)
+        TableCell.MkCell
+          { TableCell.colspan = fromIntegral (Haddock.tableCellColspan cell),
+            TableCell.rowspan = fromIntegral (Haddock.tableCellRowspan cell),
+            TableCell.contents = fromHaddock (Haddock.tableCellContents cell)
           }
 
 -- | Parse and convert documentation string to our Doc type.

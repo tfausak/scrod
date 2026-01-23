@@ -1,11 +1,10 @@
--- TODO: Flatten module hierarchy.
-module Scrod.Unstable.Type.Table.Row where
+module Scrod.Unstable.Type.TableRow where
 
-import qualified Scrod.Unstable.Type.Table.Cell as Cell
+import qualified Scrod.Unstable.Type.TableCell as TableCell
 
 -- | A table row containing cells.
 -- Mirrors 'Documentation.Haddock.Types.TableRow' from haddock-library.
 newtype Row a = MkRow
-  { cells :: [Cell.Cell a]
+  { cells :: [TableCell.Cell a]
   }
   deriving (Eq, Ord, Show)

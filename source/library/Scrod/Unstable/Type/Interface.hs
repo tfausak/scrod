@@ -14,7 +14,7 @@ data Interface = MkInterface
     extensions :: Map.Map Extension.Extension Bool,
     documentation :: Doc.Doc,
     name :: Maybe (Located.Located ModuleName.ModuleName),
-    since :: Since.Since,
+    since :: Maybe Since.Since,
     warning :: Maybe Warning.Warning
   }
   deriving (Eq, Ord, Show)

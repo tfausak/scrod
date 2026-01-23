@@ -17,7 +17,7 @@ import qualified Scrod.Unstable.Type.Table as Table
 --   - No 'DocIdentifierUnchecked' constructor (never used)
 --   - Uses 'Text' instead of 'String'
 data Doc
-  = Empty -- TODO: Remove?
+  = Empty
   | Append Doc Doc
   | String Text.Text
   | Paragraph Doc

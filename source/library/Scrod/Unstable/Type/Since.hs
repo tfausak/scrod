@@ -5,13 +5,6 @@ import qualified Scrod.Unstable.Type.Version as Version
 
 data Since = MkSince
   { package :: Maybe PackageName.PackageName,
-    version :: Maybe Version.Version -- TODO: Make this required.
+    version :: Version.Version
   }
   deriving (Eq, Ord, Show)
-
-empty :: Since
-empty =
-  MkSince
-    { package = Nothing,
-      version = Nothing
-    }

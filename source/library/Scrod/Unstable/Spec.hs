@@ -481,7 +481,7 @@ spec t = t.describe "extract" $ do
   t.describe "since" $ do
     t.it "is empty by default" $ do
       interface <- scrod t []
-      assertEq t interface.since Since.empty
+      assertEq t interface.since Nothing
 
     t.describe "package" $ do
       t.it "works" $ do
@@ -496,11 +496,11 @@ spec t = t.describe "extract" $ do
     t.describe "version" $ do
       t.it "parses a simple version" $ do
         interface <- scrod t ["-- | @since 0", "module M where"]
-        assertEq t (interface.since.version <&> (.value)) $ Just [0]
+        assertEq t (interface.since <&> (.version.value)) $ Just [0]
 
       t.it "parses a complex version" $ do
         interface <- scrod t ["-- | @since 1.2", "module M where"]
-        assertEq t (interface.since.version <&> (.value)) $ Just [1, 2]
+        assertEq t (interface.since <&> (.version.value)) $ Just [1, 2]
 
   t.describe "warning" $ do
     t.it "has no warning by default" $ do

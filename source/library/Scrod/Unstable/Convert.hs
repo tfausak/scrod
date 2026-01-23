@@ -110,15 +110,16 @@ extractRawDocString lHsModule = do
 
 extractModuleSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Since.Since
-extractModuleSince lHsModule =
-  case extractModuleMeta lHsModule of
-    Nothing -> Since.empty
-    Just meta ->
-      Since.MkSince
-        { Since.package = fmap PackageName.fromString $ Haddock._package meta,
-          Since.version = Version.fromHaddock =<< Haddock._version meta
-        }
+  Maybe Since.Since
+extractModuleSince lHsModule = do
+  meta <- extractModuleMeta lHsModule
+  haddockVersion <- Haddock._version meta
+  version <- Version.fromHaddock haddockVersion
+  pure
+    Since.MkSince
+      { Since.package = fmap PackageName.fromString $ Haddock._package meta,
+        Since.version = version
+      }
 
 extractModuleMeta ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->

@@ -16,6 +16,9 @@ import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
+import qualified Scrod.Unstable.Type.Export as Export
+import qualified Scrod.Unstable.Type.ExportName as ExportName
+import qualified Scrod.Unstable.Type.ExportNameKind as ExportNameKind
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Header as Header
 import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
@@ -31,6 +34,7 @@ import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 import qualified Scrod.Unstable.Type.Picture as Picture
 import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
 import qualified Scrod.Unstable.Type.TableRow as TableRow
@@ -568,6 +572,161 @@ spec t = t.describe "extract" $ do
     t.it "gets the column" $ do
       interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.location.column.value)) $ Just 8
+
+  t.describe "exports" $ do
+    t.it "has no exports by default" $ do
+      interface <- scrod t []
+      assertEq t interface.exports Nothing
+
+    t.it "has no exports without module declaration" $ do
+      interface <- scrod t ["x = 1"]
+      assertEq t interface.exports Nothing
+
+    t.it "has no exports without explicit list" $ do
+      interface <- scrod t ["module M where"]
+      assertEq t interface.exports Nothing
+
+    t.it "handles empty export list" $ do
+      interface <- scrod t ["module M () where"]
+      assertEq t interface.exports $ Just []
+
+    t.describe "var" $ do
+      t.it "exports a variable" $ do
+        interface <- scrod t ["module M (x) where"]
+        assertEq t interface.exports $
+          Just [Export.Var ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"} Nothing]
+
+      t.it "exports an operator" $ do
+        interface <- scrod t ["module M ((<>)) where"]
+        assertEq t interface.exports $
+          Just [Export.Var ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "<>"} Nothing]
+
+      t.it "exports multiple variables" $ do
+        interface <- scrod t ["module M (x, y) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Var ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"} Nothing,
+              Export.Var ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "y"} Nothing
+            ]
+
+    t.describe "thing" $ do
+      t.it "exports a type without subordinates" $ do
+        interface <- scrod t ["module M (T) where"]
+        assertEq t interface.exports $
+          Just [Export.Thing ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"} Nothing Nothing]
+
+      t.it "exports a type with wildcard" $ do
+        interface <- scrod t ["module M (T(..)) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Thing
+                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
+                (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
+                Nothing
+            ]
+
+      t.it "exports a type with explicit children" $ do
+        interface <- scrod t ["module M (T(A, B)) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Thing
+                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
+                ( Just
+                    Subordinates.MkSubordinates
+                      { Subordinates.wildcard = False,
+                        Subordinates.explicit =
+                          [ ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "A"},
+                            ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "B"}
+                          ]
+                      }
+                )
+                Nothing
+            ]
+
+      t.it "exports a type with wildcard and explicit children" $ do
+        interface <- scrod t ["{-# language PatternSynonyms #-}", "module M (T(.., P)) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Thing
+                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
+                ( Just
+                    Subordinates.MkSubordinates
+                      { Subordinates.wildcard = True,
+                        Subordinates.explicit =
+                          [ ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "P"}
+                          ]
+                      }
+                )
+                Nothing
+            ]
+
+    t.describe "module" $ do
+      t.it "re-exports a module" $ do
+        interface <- scrod t ["module M (module X) where"]
+        assertEq t interface.exports $
+          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "X"}]
+
+      t.it "re-exports a qualified module" $ do
+        interface <- scrod t ["module M (module Data.List) where"]
+        assertEq t interface.exports $
+          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "Data.List"}]
+
+    t.describe "namespace" $ do
+      t.it "exports with pattern namespace" $ do
+        interface <- scrod t ["{-# language PatternSynonyms #-}", "module M (pattern P) where"]
+        assertEq t interface.exports $
+          Just [Export.Var ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Pattern, ExportName.name = "P"} Nothing]
+
+      t.it "exports with type namespace" $ do
+        interface <- scrod t ["{-# language ExplicitNamespaces #-}", "module M (type T) where"]
+        assertEq t interface.exports $
+          Just [Export.Thing ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Type, ExportName.name = "T"} Nothing Nothing]
+
+    t.describe "documentation" $ do
+      t.it "handles section heading" $ do
+        interface <- scrod t ["module M ( -- * Section", ") where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Group Level.One (Doc.Paragraph (Doc.String "Section"))
+            ]
+
+      t.it "handles section heading level two" $ do
+        interface <- scrod t ["module M ( -- ** Section", ") where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Group Level.Two (Doc.Paragraph (Doc.String "Section"))
+            ]
+
+      t.it "handles inline doc" $ do
+        interface <- scrod t ["module M ( -- | Some doc", ") where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Doc (Doc.Paragraph (Doc.String "Some doc"))
+            ]
+
+      t.it "handles doc before export" $ do
+        interface <- scrod t ["module M ( -- | foo", " bar ) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Doc (Doc.Paragraph (Doc.String "foo")),
+              Export.Var ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "bar"} Nothing
+            ]
+
+      t.it "handles named doc reference" $ do
+        interface <- scrod t ["module M ( -- $chunkName", ") where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.DocNamed "chunkName"
+            ]
+
+      t.it "handles doc attached to export" $ do
+        interface <- scrod t ["module M ( x -- ^ y", ") where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Var
+                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
+                (Just (Doc.Paragraph (Doc.String "y")))
+            ]
 
   t.describe "since" $ do
     t.it "is empty by default" $ do

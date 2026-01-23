@@ -88,6 +88,9 @@ library
     Scrod.Unstable.Type.Column
     Scrod.Unstable.Type.Doc
     Scrod.Unstable.Type.Example
+    Scrod.Unstable.Type.Export
+    Scrod.Unstable.Type.ExportName
+    Scrod.Unstable.Type.ExportNameKind
     Scrod.Unstable.Type.Extension
     Scrod.Unstable.Type.Header
     Scrod.Unstable.Type.Hyperlink
@@ -104,6 +107,7 @@ library
     Scrod.Unstable.Type.PackageName
     Scrod.Unstable.Type.Picture
     Scrod.Unstable.Type.Since
+    Scrod.Unstable.Type.Subordinates
     Scrod.Unstable.Type.Table
     Scrod.Unstable.Type.TableCell
     Scrod.Unstable.Type.TableRow

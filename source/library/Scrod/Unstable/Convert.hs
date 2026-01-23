@@ -16,10 +16,12 @@ import qualified GHC.Hs as Hs
 import qualified GHC.Hs.Doc as HsDoc
 import qualified GHC.Hs.DocString as DocString
 import qualified GHC.Hs.Extension as Ghc
+import qualified GHC.Hs.ImpExp as ImpExp
 import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Parser.Errors.Types as Errors
 import qualified GHC.Types.Error as Error
+import qualified GHC.Types.Name.Reader as Reader
 import qualified GHC.Types.SourceError as SourceError
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
@@ -30,6 +32,9 @@ import qualified Scrod.Unstable.Extra.OnOff as OnOff
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
+import qualified Scrod.Unstable.Type.Export as Export
+import qualified Scrod.Unstable.Type.ExportName as ExportName
+import qualified Scrod.Unstable.Type.ExportNameKind as ExportNameKind
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Header as Header
 import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
@@ -44,6 +49,7 @@ import qualified Scrod.Unstable.Type.Namespace as Namespace
 import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Picture as Picture
 import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
 import qualified Scrod.Unstable.Type.TableRow as TableRow
@@ -69,6 +75,7 @@ convert input = case input of
           Interface.extensions = extensionsToMap extensions,
           Interface.documentation = extractModuleDocumentation lHsModule,
           Interface.name = extractModuleName lHsModule,
+          Interface.exports = extractModuleExports lHsModule,
           Interface.since = extractModuleSince lHsModule,
           Interface.warning = extractModuleWarning lHsModule
         }
@@ -144,6 +151,97 @@ extractModuleWarning lHsModule = do
   lWarningTxt <- Hs.hsmodDeprecMessage xModulePs
   let warningTxt = SrcLoc.unLoc lWarningTxt
   pure $ warningTxtToWarning warningTxt
+
+extractModuleExports ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe [Export.Export]
+extractModuleExports lHsModule = do
+  let hsModule = SrcLoc.unLoc lHsModule
+  lExports <- Syntax.hsmodExports hsModule
+  let exports = SrcLoc.unLoc lExports
+  pure $ fmap convertIE exports
+
+convertIE ::
+  SrcLoc.GenLocated l (Syntax.IE Ghc.GhcPs) ->
+  Export.Export
+convertIE lIe = case SrcLoc.unLoc lIe of
+  Syntax.IEVar _ lName mDoc ->
+    Export.Var (convertWrappedName lName) (fmap convertExportDoc mDoc)
+  Syntax.IEThingAbs _ lName mDoc ->
+    Export.Thing (convertWrappedName lName) Nothing (fmap convertExportDoc mDoc)
+  Syntax.IEThingAll _ lName mDoc ->
+    Export.Thing
+      (convertWrappedName lName)
+      (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
+      (fmap convertExportDoc mDoc)
+  Syntax.IEThingWith _ lName wildcard children mDoc ->
+    Export.Thing
+      (convertWrappedName lName)
+      ( Just
+          Subordinates.MkSubordinates
+            { Subordinates.wildcard = hasWildcard wildcard,
+              Subordinates.explicit = fmap convertWrappedName children
+            }
+      )
+      (fmap convertExportDoc mDoc)
+  Syntax.IEModuleContents _ lModName ->
+    Export.Module (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
+  Syntax.IEGroup _ level lDoc ->
+    Export.Group
+      (Maybe.fromMaybe Level.One (Level.fromIntegral level))
+      (convertLHsDoc lDoc)
+  Syntax.IEDoc _ lDoc ->
+    Export.Doc (convertLHsDoc lDoc)
+  Syntax.IEDocNamed _ name ->
+    Export.DocNamed (Text.pack name)
+
+hasWildcard :: ImpExp.IEWildcard -> Bool
+hasWildcard wildcard = case wildcard of
+  ImpExp.NoIEWildcard -> False
+  ImpExp.IEWildcard _ -> True
+
+convertWrappedName ::
+  SrcLoc.GenLocated l (ImpExp.IEWrappedName Ghc.GhcPs) ->
+  ExportName.ExportName
+convertWrappedName lWrapped = case SrcLoc.unLoc lWrapped of
+  ImpExp.IEName _ lId ->
+    ExportName.MkExportName
+      { ExportName.kind = Nothing,
+        ExportName.name = extractRdrName lId
+      }
+  ImpExp.IEPattern _ lId ->
+    ExportName.MkExportName
+      { ExportName.kind = Just ExportNameKind.Pattern,
+        ExportName.name = extractRdrName lId
+      }
+  ImpExp.IEType _ lId ->
+    ExportName.MkExportName
+      { ExportName.kind = Just ExportNameKind.Type,
+        ExportName.name = extractRdrName lId
+      }
+
+extractRdrName ::
+  SrcLoc.GenLocated l Reader.RdrName ->
+  Text.Text
+extractRdrName =
+  Text.pack
+    . Outputable.showSDocUnsafe
+    . Outputable.ppr
+    . SrcLoc.unLoc
+
+convertExportDoc ::
+  SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
+  Doc.Doc
+convertExportDoc lDoc =
+  let hsDoc = SrcLoc.unLoc lDoc
+      hsDocString = HsDoc.hsDocString hsDoc
+      rendered = DocString.renderHsDocString hsDocString
+   in parseDoc rendered
+
+convertLHsDoc ::
+  SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
+  Doc.Doc
+convertLHsDoc = convertExportDoc
 
 warningTxtToWarning :: Warnings.WarningTxt Ghc.GhcPs -> Warning.Warning
 warningTxtToWarning warningTxt =

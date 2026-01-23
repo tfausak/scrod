@@ -7,7 +7,7 @@ data Since = MkSince
   { package :: Maybe PackageName.PackageName,
     version :: Maybe Version.Version
   }
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 empty :: Since
 empty =

@@ -8,15 +8,14 @@ import qualified Data.Either as Either
 import Data.Function ((&))
 import Data.Functor ((<&>))
 import qualified Data.Map as Map
-import qualified Data.Void as Void
-import qualified Documentation.Haddock.Parser as Haddock
-import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
+import qualified Scrod.Unstable.Type.Doc as Doc
+import qualified Scrod.Unstable.Type.Doc.Convert as DocConvert
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
@@ -178,7 +177,7 @@ spec t = t.describe "extract" $ do
   t.describe "documentation" $ do
     t.it "has no documentation by default" $ do
       interface <- scrod t []
-      assertEq t interface.documentation Haddock.DocEmpty
+      assertEq t interface.documentation Doc.Empty
 
     t.it "works with block comment before" $ do
       interface <- scrod t ["-- | x", "module M where"]
@@ -207,7 +206,7 @@ spec t = t.describe "extract" $ do
     t.describe "markup" $ do
       t.it "missing" $ do
         interface <- scrod t ["-- |", "module M where"]
-        assertEq t interface.documentation Haddock.DocEmpty
+        assertEq t interface.documentation Doc.Empty
 
       t.it "empty" $ do
         interface <- scrod t ["-- | ", "module M where"]
@@ -515,8 +514,9 @@ spec t = t.describe "extract" $ do
 scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
 scrod t = expectRight t . Main.extract . unlines
 
-haddock :: [String] -> Haddock.DocH Void.Void Haddock.Identifier
-haddock = Haddock._doc . Haddock.parseParas Nothing . unlines
+-- TODO: Remove this and update tests to use `Doc` constructors directly.
+haddock :: [String] -> Doc.Doc
+haddock = DocConvert.parseDoc . unlines
 
 table :: (Stack.HasCallStack, Monad m) => Test m n -> [String] -> m ()
 table t xs = do

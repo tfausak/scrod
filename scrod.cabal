@@ -83,15 +83,27 @@ library
     Scrod.Unstable.Spec
     Scrod.Unstable.Type.Category
     Scrod.Unstable.Type.Column
+    Scrod.Unstable.Type.Doc
+    Scrod.Unstable.Type.Doc.Convert
+    Scrod.Unstable.Type.Example
     Scrod.Unstable.Type.Extension
+    Scrod.Unstable.Type.Header
+    Scrod.Unstable.Type.Hyperlink
+    Scrod.Unstable.Type.Identifier
     Scrod.Unstable.Type.Interface
     Scrod.Unstable.Type.Language
     Scrod.Unstable.Type.Line
     Scrod.Unstable.Type.Located
     Scrod.Unstable.Type.Location
+    Scrod.Unstable.Type.ModLink
     Scrod.Unstable.Type.ModuleName
+    Scrod.Unstable.Type.Namespace
     Scrod.Unstable.Type.PackageName
+    Scrod.Unstable.Type.Picture
     Scrod.Unstable.Type.Since
+    Scrod.Unstable.Type.Table
+    Scrod.Unstable.Type.Table.Cell
+    Scrod.Unstable.Type.Table.Row
     Scrod.Unstable.Type.Version
     Scrod.Unstable.Type.Warning
 

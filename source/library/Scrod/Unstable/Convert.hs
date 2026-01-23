@@ -2,17 +2,15 @@ module Scrod.Unstable.Convert where
 
 import qualified Control.Exception as Exception
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
-import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Driver.DynFlags as DynFlags
 import qualified GHC.Driver.Session as Session
 import qualified GHC.Hs as Hs
-import qualified GHC.Hs.Doc as Doc
+import qualified GHC.Hs.Doc as HsDoc
 import qualified GHC.Hs.DocString as DocString
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.LanguageExtensions.Type as GhcExtension
@@ -27,6 +25,8 @@ import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Unstable.Extra.OnOff as OnOff
 import qualified Scrod.Unstable.Type.Category as Category
+import qualified Scrod.Unstable.Type.Doc as Doc
+import qualified Scrod.Unstable.Type.Doc.Convert as DocConvert
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
@@ -79,29 +79,21 @@ extractModuleName lHsModule = do
 
 extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Haddock.DocH Void.Void Haddock.Identifier
+  Doc.Doc
 extractModuleDocumentation =
-  Maybe.fromMaybe Haddock.DocEmpty
-    . extractModuleDoc
+  maybe Doc.Empty DocConvert.parseDoc
+    . extractRawDocString
 
-extractModuleDoc ::
+extractRawDocString ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Maybe (Haddock.DocH Void.Void Haddock.Identifier)
-extractModuleDoc =
-  fmap Haddock._doc
-    . extractModuleMetaDoc
-
-extractModuleMetaDoc ::
-  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Maybe (Haddock.MetaDoc Void.Void Haddock.Identifier)
-extractModuleMetaDoc lHsModule = do
+  Maybe String
+extractRawDocString lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       xModulePs = Syntax.hsmodExt hsModule
   lHsDoc <- Hs.hsmodHaddockModHeader xModulePs
   let hsDoc = SrcLoc.unLoc lHsDoc
-      hsDocString = Doc.hsDocString hsDoc
-      rendered = DocString.renderHsDocString hsDocString
-  pure $ Haddock.parseParas Nothing rendered
+      hsDocString = HsDoc.hsDocString hsDoc
+  pure $ DocString.renderHsDocString hsDocString
 
 extractModuleSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
@@ -122,6 +114,13 @@ extractModuleMeta =
   fmap Haddock._meta
     . extractModuleMetaDoc
 
+extractModuleMetaDoc ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Maybe (Haddock.MetaDoc m Haddock.Identifier)
+extractModuleMetaDoc lHsModule = do
+  rendered <- extractRawDocString lHsModule
+  pure $ Haddock.parseParas Nothing rendered
+
 extractModuleWarning ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe Warning.Warning
@@ -139,10 +138,10 @@ warningTxtToWarning warningTxt =
       Warning.value = Text.intercalate (Text.singleton '\n') . fmap extractMessage $ Warnings.warningTxtMessage warningTxt
     }
 
-extractMessage :: SrcLoc.GenLocated l (Doc.WithHsDocIdentifiers SourceText.StringLiteral Ghc.GhcPs) -> Text.Text
+extractMessage :: SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers SourceText.StringLiteral Ghc.GhcPs) -> Text.Text
 extractMessage =
   Text.pack
     . FastString.unpackFS
     . SourceText.sl_fs
-    . Doc.hsDocString
+    . HsDoc.hsDocString
     . SrcLoc.unLoc

@@ -91,6 +91,7 @@ library
     Scrod.Unstable.Type.Identifier
     Scrod.Unstable.Type.Interface
     Scrod.Unstable.Type.Language
+    Scrod.Unstable.Type.Level
     Scrod.Unstable.Type.Line
     Scrod.Unstable.Type.Located
     Scrod.Unstable.Type.Location

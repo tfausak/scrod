@@ -3,6 +3,7 @@ module Scrod.Unstable.Convert where
 import qualified Control.Exception as Exception
 import qualified Data.Bifunctor as Bifunctor
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Void as Void
@@ -35,6 +36,7 @@ import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
 import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
+import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModLink as ModLink
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
@@ -227,7 +229,7 @@ fromHaddock doc = case doc of
   Haddock.DocHeader h ->
     Doc.Header
       Header.MkHeader
-        { Header.level = fromIntegral (Haddock.headerLevel h),
+        { Header.level = Maybe.fromMaybe Level.One (Level.fromIntegral (Haddock.headerLevel h)),
           Header.title = fromHaddock (Haddock.headerTitle h)
         }
   Haddock.DocTable t ->

@@ -16,5 +16,4 @@ fromString =
 fromGhc :: Flags.Language -> Language
 fromGhc =
   fromString
-    -- TODO: See `Scrod.Unstable.Type.Extension.fromGhc`.
     . show

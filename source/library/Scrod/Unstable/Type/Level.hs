@@ -1,7 +1,5 @@
 module Scrod.Unstable.Type.Level where
 
-import qualified Numeric.Natural as Natural
-
 -- | A header level from 1 to 6 inclusive.
 -- This type ensures only valid HTML header levels can be represented.
 data Level

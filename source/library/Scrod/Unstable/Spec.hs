@@ -174,6 +174,32 @@ spec t = t.describe "extract" $ do
             ("UnliftedFFITypes", True)
           ]
 
+    t.describe "special cases" $ do
+      t.it "cpp" $ do
+        interface <- scrod t ["{-# language CPP #-}"]
+        -- Ensuring we don't get "Cpp", which is the name of the constructor.
+        assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "CPP" True
+
+      t.it "recursive do" $ do
+        interface <- scrod t ["{-# language RecursiveDo #-}"]
+        -- Ensuring we don't get "DoRec", which is a deprecated alias.
+        assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "RecursiveDo" True
+
+      t.it "named field puns" $ do
+        interface <- scrod t ["{-# language NamedFieldPuns #-}"]
+        -- Ensuring we don't get "RecordPuns", which is a deprecated alias.
+        assertEq t (interface.extensions & Map.mapKeys (.value)) $ Map.singleton "NamedFieldPuns" True
+
+      t.it "rank n types" $ do
+        interface <- scrod t ["{-# language RankNTypes #-}"]
+        -- Ensuring we don't get "PolymorphicComponents" or "Rank2Types", which
+        -- are alternative names.
+        assertEq t (interface.extensions & Map.mapKeys (.value)) $
+          Map.fromList
+            [ ("ExplicitForAll", True),
+              ("RankNTypes", True)
+            ]
+
   t.describe "documentation" $ do
     t.it "has no documentation by default" $ do
       interface <- scrod t []

@@ -10,12 +10,12 @@ import Data.Functor ((<&>))
 import qualified Data.Map as Map
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
+import qualified Scrod.Unstable.Convert as Convert
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Doc as Doc
-import qualified Scrod.Unstable.Type.Doc.Convert as DocConvert
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Language as Language
@@ -516,7 +516,7 @@ scrod t = expectRight t . Main.extract . unlines
 
 -- TODO: Remove this and update tests to use `Doc` constructors directly.
 haddock :: [String] -> Doc.Doc
-haddock = DocConvert.parseDoc . unlines
+haddock = Convert.parseDoc . unlines
 
 table :: (Stack.HasCallStack, Monad m) => Test m n -> [String] -> m ()
 table t xs = do

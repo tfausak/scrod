@@ -84,7 +84,6 @@ library
     Scrod.Unstable.Type.Category
     Scrod.Unstable.Type.Column
     Scrod.Unstable.Type.Doc
-    Scrod.Unstable.Type.Doc.Convert
     Scrod.Unstable.Type.Example
     Scrod.Unstable.Type.Extension
     Scrod.Unstable.Type.Header

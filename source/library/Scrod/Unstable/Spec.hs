@@ -1,4 +1,3 @@
-{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -O0 #-}
@@ -12,6 +11,7 @@ import qualified Data.Map as Map
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column
@@ -593,11 +593,11 @@ spec t = describe t "extract" $ do
     describe t "version" $ do
       it t "parses a simple version" $ do
         interface <- scrod t ["-- | @since 0", "module M where"]
-        assertEq t (interface.since <&> (.version.value)) $ Just [0]
+        assertEq t (interface.since <&> (.version.value)) . Just $ NonEmpty.fromList [0]
 
       it t "parses a complex version" $ do
         interface <- scrod t ["-- | @since 1.2", "module M where"]
-        assertEq t (interface.since <&> (.version.value)) $ Just [1, 2]
+        assertEq t (interface.since <&> (.version.value)) . Just $ NonEmpty.fromList [1, 2]
 
   describe t "name" $ do
     it t "has no module name by default" $ do
@@ -877,7 +877,7 @@ spec t = describe t "extract" $ do
                 (Just (Doc.Paragraph (Doc.String "y")))
             ]
 
-  describe t "HsDecl" $ do
+  describe t "items" $ do
     let itemAt l c =
           Located.MkLocated
             { Located.location =

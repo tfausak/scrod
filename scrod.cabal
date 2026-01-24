@@ -1,7 +1,7 @@
 cabal-version: 3.0
 -- https://cabal.readthedocs.io/en/stable/cabal-package-description-file.html
 name: scrod
-version: 0.2026.1.23
+version: 0.2026.1.24
 synopsis: TODO
 description:
   TODO

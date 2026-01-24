@@ -5,6 +5,7 @@ in
 pkgs.mkShell {
   nativeBuildInputs = [
     pkgs.cabal-install
+    pkgs.curl
     pkgs.direnv
     pkgs.haskell-language-server
     pkgs.haskellPackages.cabal-gild
@@ -12,5 +13,6 @@ pkgs.mkShell {
     pkgs.hlint
     pkgs.nixfmt-rfc-style
     pkgs.ormolu
+    pkgs.vim
   ];
 }

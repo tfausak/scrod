@@ -40,7 +40,9 @@ import qualified Scrod.Unstable.Type.Header as Header
 import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
 import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
+import qualified Scrod.Unstable.Type.Item as Item
 import qualified Scrod.Unstable.Type.Language as Language
+import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModLink as ModLink
@@ -78,7 +80,7 @@ convert input = case input of
           Interface.name = extractModuleName lHsModule,
           Interface.warning = extractModuleWarning lHsModule,
           Interface.exports = extractModuleExports lHsModule,
-          Interface.items = [] -- TODO
+          Interface.items = extractItems lHsModule
         }
 
 extensionsToMap ::
@@ -161,6 +163,26 @@ extractModuleExports lHsModule = do
   lExports <- Syntax.hsmodExports hsModule
   let exports = SrcLoc.unLoc lExports
   pure $ fmap convertIE exports
+
+extractItems ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  [Located.Located Item.Item]
+extractItems lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+      decls = Syntax.hsmodDecls hsModule
+   in Maybe.mapMaybe convertDecl decls
+
+convertDecl ::
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertDecl lDecl = do
+  let srcSpan = Annotation.getLocA lDecl
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
 
 convertIE ::
   SrcLoc.GenLocated l (Syntax.IE Ghc.GhcPs) ->

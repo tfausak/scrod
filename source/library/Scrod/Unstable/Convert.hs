@@ -74,10 +74,10 @@ convert input = case input of
         { Interface.language = fmap Language.fromGhc language,
           Interface.extensions = extensionsToMap extensions,
           Interface.documentation = extractModuleDocumentation lHsModule,
-          Interface.name = extractModuleName lHsModule,
-          Interface.exports = extractModuleExports lHsModule,
           Interface.since = extractModuleSince lHsModule,
-          Interface.warning = extractModuleWarning lHsModule
+          Interface.name = extractModuleName lHsModule,
+          Interface.warning = extractModuleWarning lHsModule,
+          Interface.exports = extractModuleExports lHsModule
         }
 
 extensionsToMap ::

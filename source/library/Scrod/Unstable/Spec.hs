@@ -552,6 +552,30 @@ spec t = t.describe "extract" $ do
                     ]
                 }
 
+  t.describe "since" $ do
+    t.it "is empty by default" $ do
+      interface <- scrod t []
+      assertEq t interface.since Nothing
+
+    t.describe "package" $ do
+      t.it "works" $ do
+        -- The code is in place to populate this field, but Haddock itself does
+        -- not handle it. So if we update Haddock and this test starts failing,
+        -- simply update the test.
+        --
+        -- > assertEq t (interface.since.package <&> (.value)) $ Just "p"
+        interface <- scrod t ["-- | @since p-0", "module M where"]
+        assertEq t interface.documentation $ Doc.Paragraph (Doc.String "@since p-0")
+
+    t.describe "version" $ do
+      t.it "parses a simple version" $ do
+        interface <- scrod t ["-- | @since 0", "module M where"]
+        assertEq t (interface.since <&> (.version.value)) $ Just [0]
+
+      t.it "parses a complex version" $ do
+        interface <- scrod t ["-- | @since 1.2", "module M where"]
+        assertEq t (interface.since <&> (.version.value)) $ Just [1, 2]
+
   t.describe "name" $ do
     t.it "has no module name by default" $ do
       interface <- scrod t []
@@ -572,6 +596,41 @@ spec t = t.describe "extract" $ do
     t.it "gets the column" $ do
       interface <- scrod t ["module M where"]
       assertEq t (interface.name <&> (.location.column.value)) $ Just 8
+
+  t.describe "warning" $ do
+    t.it "has no warning by default" $ do
+      interface <- scrod t []
+      assertEq t interface.warning Nothing
+
+    t.describe "category" $ do
+      t.it "uses deprecations for warning" $ do
+        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
+        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
+
+      t.it "uses deprecations for deprecated" $ do
+        interface <- scrod t ["module M {-# deprecated \"x\" #-} where"]
+        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
+
+      t.it "works with x-custom" $ do
+        interface <- scrod t ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
+        assertEq t (interface.warning <&> (.category.value)) $ Just "x-custom"
+
+    t.describe "value" $ do
+      t.it "works with a string" $ do
+        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
+        assertEq t (interface.warning <&> (.value)) $ Just "x"
+
+      t.it "works with an empty list" $ do
+        interface <- scrod t ["module M {-# warning [] #-} where"]
+        assertEq t (interface.warning <&> (.value)) $ Just ""
+
+      t.it "works with a singleton list" $ do
+        interface <- scrod t ["module M {-# warning [\"x\"] #-} where"]
+        assertEq t (interface.warning <&> (.value)) $ Just "x"
+
+      t.it "works with a list" $ do
+        interface <- scrod t ["module M {-# warning [\"x\", \"y\"] #-} where"]
+        assertEq t (interface.warning <&> (.value)) $ Just "x\ny"
 
   t.describe "exports" $ do
     t.it "has no exports by default" $ do
@@ -727,65 +786,6 @@ spec t = t.describe "extract" $ do
                 ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
                 (Just (Doc.Paragraph (Doc.String "y")))
             ]
-
-  t.describe "since" $ do
-    t.it "is empty by default" $ do
-      interface <- scrod t []
-      assertEq t interface.since Nothing
-
-    t.describe "package" $ do
-      t.it "works" $ do
-        -- The code is in place to populate this field, but Haddock itself does
-        -- not handle it. So if we update Haddock and this test starts failing,
-        -- simply update the test.
-        --
-        -- > assertEq t (interface.since.package <&> (.value)) $ Just "p"
-        interface <- scrod t ["-- | @since p-0", "module M where"]
-        assertEq t interface.documentation $ Doc.Paragraph (Doc.String "@since p-0")
-
-    t.describe "version" $ do
-      t.it "parses a simple version" $ do
-        interface <- scrod t ["-- | @since 0", "module M where"]
-        assertEq t (interface.since <&> (.version.value)) $ Just [0]
-
-      t.it "parses a complex version" $ do
-        interface <- scrod t ["-- | @since 1.2", "module M where"]
-        assertEq t (interface.since <&> (.version.value)) $ Just [1, 2]
-
-  t.describe "warning" $ do
-    t.it "has no warning by default" $ do
-      interface <- scrod t []
-      assertEq t interface.warning Nothing
-
-    t.describe "category" $ do
-      t.it "uses deprecations for warning" $ do
-        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
-        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
-
-      t.it "uses deprecations for deprecated" $ do
-        interface <- scrod t ["module M {-# deprecated \"x\" #-} where"]
-        assertEq t (interface.warning <&> (.category.value)) $ Just "deprecations"
-
-      t.it "works with x-custom" $ do
-        interface <- scrod t ["module M {-# warning in \"x-custom\" \"y\" #-} where"]
-        assertEq t (interface.warning <&> (.category.value)) $ Just "x-custom"
-
-    t.describe "value" $ do
-      t.it "works with a string" $ do
-        interface <- scrod t ["module M {-# warning \"x\" #-} where"]
-        assertEq t (interface.warning <&> (.value)) $ Just "x"
-
-      t.it "works with an empty list" $ do
-        interface <- scrod t ["module M {-# warning [] #-} where"]
-        assertEq t (interface.warning <&> (.value)) $ Just ""
-
-      t.it "works with a singleton list" $ do
-        interface <- scrod t ["module M {-# warning [\"x\"] #-} where"]
-        assertEq t (interface.warning <&> (.value)) $ Just "x"
-
-      t.it "works with a list" $ do
-        interface <- scrod t ["module M {-# warning [\"x\", \"y\"] #-} where"]
-        assertEq t (interface.warning <&> (.value)) $ Just "x\ny"
 
 scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
 scrod t = expectRight t . Main.extract . unlines

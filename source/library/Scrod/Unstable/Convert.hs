@@ -77,7 +77,8 @@ convert input = case input of
           Interface.since = extractModuleSince lHsModule,
           Interface.name = extractModuleName lHsModule,
           Interface.warning = extractModuleWarning lHsModule,
-          Interface.exports = extractModuleExports lHsModule
+          Interface.exports = extractModuleExports lHsModule,
+          Interface.items = [] -- TODO
         }
 
 extensionsToMap ::

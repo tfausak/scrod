@@ -96,6 +96,7 @@ library
     Scrod.Unstable.Type.Hyperlink
     Scrod.Unstable.Type.Identifier
     Scrod.Unstable.Type.Interface
+    Scrod.Unstable.Type.Item
     Scrod.Unstable.Type.Language
     Scrod.Unstable.Type.Level
     Scrod.Unstable.Type.Line

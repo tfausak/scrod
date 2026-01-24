@@ -165,16 +165,17 @@ convertIE ::
   SrcLoc.GenLocated l (Syntax.IE Ghc.GhcPs) ->
   Export.Export
 convertIE lIe = case SrcLoc.unLoc lIe of
-  Syntax.IEVar _ lName mDoc ->
-    Export.Var (convertWrappedName lName) (fmap convertExportDoc mDoc)
-  Syntax.IEThingAbs _ lName mDoc ->
-    Export.Thing (convertWrappedName lName) Nothing (fmap convertExportDoc mDoc)
-  Syntax.IEThingAll _ lName mDoc ->
+  Syntax.IEVar mLWarning lName mDoc ->
+    Export.Var (convertWrappedName lName) (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+  Syntax.IEThingAbs (mLWarning, _) lName mDoc ->
+    Export.Thing (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+  Syntax.IEThingAll (mLWarning, _) lName mDoc ->
     Export.Thing
       (convertWrappedName lName)
       (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
+      (convertExportWarning mLWarning)
       (fmap convertExportDoc mDoc)
-  Syntax.IEThingWith _ lName wildcard children mDoc ->
+  Syntax.IEThingWith (mLWarning, _) lName wildcard children mDoc ->
     Export.Thing
       (convertWrappedName lName)
       ( Just
@@ -183,6 +184,7 @@ convertIE lIe = case SrcLoc.unLoc lIe of
               Subordinates.explicit = fmap convertWrappedName children
             }
       )
+      (convertExportWarning mLWarning)
       (fmap convertExportDoc mDoc)
   Syntax.IEModuleContents _ lModName ->
     Export.Module (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
@@ -199,6 +201,11 @@ hasWildcard :: ImpExp.IEWildcard -> Bool
 hasWildcard wildcard = case wildcard of
   ImpExp.NoIEWildcard -> False
   ImpExp.IEWildcard _ -> True
+
+convertExportWarning ::
+  Maybe (SrcLoc.GenLocated l (Warnings.WarningTxt Ghc.GhcPs)) ->
+  Maybe Warning.Warning
+convertExportWarning = fmap (warningTxtToWarning . SrcLoc.unLoc)
 
 convertWrappedName ::
   SrcLoc.GenLocated l (ImpExp.IEWrappedName Ghc.GhcPs) ->

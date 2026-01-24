@@ -186,8 +186,8 @@ convertIE lIe = case SrcLoc.unLoc lIe of
       )
       (convertExportWarning mLWarning)
       (fmap convertExportDoc mDoc)
-  Syntax.IEModuleContents _ lModName ->
-    Export.Module (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
+  Syntax.IEModuleContents (mLWarning, _) lModName ->
+    Export.Module (ModuleName.fromGhc $ SrcLoc.unLoc lModName) (convertExportWarning mLWarning)
   Syntax.IEGroup _ level lDoc ->
     Export.Group
       (Maybe.fromMaybe Level.One (Level.fromIntegral level))

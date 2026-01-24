@@ -726,12 +726,12 @@ spec t = t.describe "extract" $ do
       t.it "re-exports a module" $ do
         interface <- scrod t ["module M (module X) where"]
         assertEq t interface.exports $
-          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "X"}]
+          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "X"} Nothing]
 
       t.it "re-exports a qualified module" $ do
         interface <- scrod t ["module M (module Data.List) where"]
         assertEq t interface.exports $
-          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "Data.List"}]
+          Just [Export.Module ModuleName.MkModuleName {ModuleName.value = "Data.List"} Nothing]
 
     t.describe "namespace" $ do
       t.it "exports with pattern namespace" $ do
@@ -795,6 +795,15 @@ spec t = t.describe "extract" $ do
                 ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
                 (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "x-custom"}, Warning.value = "wrn"})
                 Nothing
+            ]
+
+      t.it "attaches warning to module re-export" $ do
+        interface <- scrod t ["module M ({-# WARNING \"wrn\" #-} module X) where"]
+        assertEq t interface.exports $
+          Just
+            [ Export.Module
+                ModuleName.MkModuleName {ModuleName.value = "X"}
+                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "wrn"})
             ]
 
     t.describe "documentation" $ do

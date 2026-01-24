@@ -19,7 +19,8 @@ data Export
     -- With optional warning: @{-# WARNING "msg" #-} Foo(..)@
     Thing ExportName.ExportName (Maybe Subordinates.Subordinates) (Maybe Warning.Warning) (Maybe Doc.Doc)
   | -- | Module re-export: @module Data.List@
-    Module ModuleName.ModuleName
+    -- With optional warning: @{-# WARNING "msg" #-} module Data.List@
+    Module ModuleName.ModuleName (Maybe Warning.Warning)
   | -- | Section heading: @-- * Section@
     Group Level.Level Doc.Doc
   | -- | Inline documentation: @-- | Some doc@

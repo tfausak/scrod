@@ -7,11 +7,11 @@ module Scrod.Unstable.Spec where
 import qualified Data.Either as Either
 import Data.Function ((&))
 import Data.Functor ((<&>))
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
-import qualified Data.List.NonEmpty as NonEmpty
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Column as Column

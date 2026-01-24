@@ -11,3 +11,11 @@ data Cell a = MkCell
     contents :: a
   }
   deriving (Eq, Ord, Show)
+
+empty :: a -> Cell a
+empty x =
+  MkCell
+    { colspan = 1,
+      rowspan = 1,
+      contents = x
+    }

@@ -9,3 +9,10 @@ data Table a = MkTable
     bodyRows :: [TableRow.Row a]
   }
   deriving (Eq, Ord, Show)
+
+empty :: Table a
+empty =
+  MkTable
+    { headerRows = [],
+      bodyRows = []
+    }

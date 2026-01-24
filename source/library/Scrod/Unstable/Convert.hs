@@ -170,13 +170,37 @@ extractItems ::
 extractItems lHsModule =
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
-   in Maybe.mapMaybe convertDecl decls
+   in concatMap convertDecl decls
 
 convertDecl ::
   Syntax.LHsDecl Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertDecl lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.RuleD _ ruleDecls -> convertRuleDecls ruleDecls
+  _ -> Maybe.maybeToList $ convertDeclSimple lDecl
+
+convertDeclSimple ::
+  Syntax.LHsDecl Ghc.GhcPs ->
   Maybe (Located.Located Item.Item)
-convertDecl lDecl = do
+convertDeclSimple lDecl = do
   let srcSpan = Annotation.getLocA lDecl
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
+
+convertRuleDecls ::
+  Syntax.RuleDecls Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertRuleDecls (Syntax.HsRules _ rules) = Maybe.mapMaybe convertRuleDecl rules
+
+convertRuleDecl ::
+  Syntax.LRuleDecl Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertRuleDecl lRuleDecl = do
+  let srcSpan = Annotation.getLocA lRuleDecl
   location <- Location.fromSrcSpan srcSpan
   pure
     Located.MkLocated

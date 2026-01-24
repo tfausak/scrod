@@ -1777,27 +1777,27 @@ spec t = describe t "extract" $ do
       describe t "HsRules" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# RULES \"a\" forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11]
 
         it t "phase" $ do
           interface <- scrod t ["{-# RULES \"b\" [2] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11]
 
         it t "before phase" $ do
           interface <- scrod t ["{-# RULES \"b\" [~2] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11]
 
         it t "disabled" $ do
           interface <- scrod t ["{-# RULES \"c\" [~] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11]
 
         it t "signature" $ do
           interface <- scrod t ["{-# RULES \"d\" forall (x :: Int) . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11]
 
         it t "semicolon" $ do
           interface <- scrod t ["{-# RULES \"e\" forall x . id x = x; \"f\" forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 11, itemAt 1 36]
 
     describe t "SpliceD" $ do
       describe t "SpliceDecl" $ do

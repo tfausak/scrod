@@ -42,9 +42,9 @@ import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Item as Item
 import qualified Scrod.Unstable.Type.Language as Language
-import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Located as Located
+import qualified Scrod.Unstable.Type.Location as Location
 import qualified Scrod.Unstable.Type.ModLink as ModLink
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Namespace as Namespace

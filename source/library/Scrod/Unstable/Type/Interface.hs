@@ -4,12 +4,12 @@ import qualified Data.Map as Map
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Export as Export
 import qualified Scrod.Unstable.Type.Extension as Extension
+import qualified Scrod.Unstable.Type.Item as Item
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Warning as Warning
-import qualified Scrod.Unstable.Type.Item as Item
 
 data Interface = MkInterface
   { language :: Maybe Language.Language,

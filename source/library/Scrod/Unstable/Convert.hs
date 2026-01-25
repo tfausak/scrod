@@ -216,17 +216,17 @@ convertIE ::
   Export.Export
 convertIE lIe = case SrcLoc.unLoc lIe of
   Syntax.IEVar mLWarning lName mDoc ->
-    Export.Var (convertWrappedName lName) (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+    Export.Identifier (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
   Syntax.IEThingAbs (mLWarning, _) lName mDoc ->
-    Export.Thing (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+    Export.Identifier (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
   Syntax.IEThingAll (mLWarning, _) lName mDoc ->
-    Export.Thing
+    Export.Identifier
       (convertWrappedName lName)
       (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
       (convertExportWarning mLWarning)
       (fmap convertExportDoc mDoc)
   Syntax.IEThingWith (mLWarning, _) lName wildcard children mDoc ->
-    Export.Thing
+    Export.Identifier
       (convertWrappedName lName)
       ( Just
           Subordinates.MkSubordinates
@@ -237,7 +237,14 @@ convertIE lIe = case SrcLoc.unLoc lIe of
       (convertExportWarning mLWarning)
       (fmap convertExportDoc mDoc)
   Syntax.IEModuleContents (mLWarning, _) lModName ->
-    Export.Module (ModuleName.fromGhc $ SrcLoc.unLoc lModName) (convertExportWarning mLWarning)
+    Export.Identifier
+      ExportName.MkExportName
+        { ExportName.kind = Just ExportNameKind.Module,
+          ExportName.name = ModuleName.value (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
+        }
+      Nothing
+      (convertExportWarning mLWarning)
+      Nothing
   Syntax.IEGroup _ level lDoc ->
     Export.Group
       (Maybe.fromMaybe Level.One (Level.fromIntegral level))

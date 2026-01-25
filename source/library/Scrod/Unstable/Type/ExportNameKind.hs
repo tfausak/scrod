@@ -8,4 +8,6 @@ data ExportNameKind
     Pattern
   | -- | @type (:+:)@
     Type
+  | -- | @module Data.List@
+    Module
   deriving (Eq, Ord, Show)

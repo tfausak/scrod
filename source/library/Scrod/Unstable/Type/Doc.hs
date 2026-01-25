@@ -23,7 +23,6 @@ data Doc
   | Paragraph Doc
   | Identifier Identifier.Identifier
   | Module (ModLink.ModLink Doc)
-  | Warning Doc
   | Emphasis Doc
   | Monospaced Doc
   | Bold Doc

@@ -347,7 +347,7 @@ fromHaddock doc = case doc of
         { ModLink.name = ModuleName.fromString (Haddock.modLinkName ml),
           ModLink.label = fmap fromHaddock (Haddock.modLinkLabel ml)
         }
-  Haddock.DocWarning d -> Doc.Warning (fromHaddock d)
+  Haddock.DocWarning _ -> Doc.Empty -- `DocWarning` is never found in markup.
   Haddock.DocEmphasis d -> Doc.Emphasis (fromHaddock d)
   Haddock.DocMonospaced d -> Doc.Monospaced (fromHaddock d)
   Haddock.DocBold d -> Doc.Bold (fromHaddock d)

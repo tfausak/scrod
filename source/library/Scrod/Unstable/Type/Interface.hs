@@ -9,10 +9,12 @@ import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
 data Interface = MkInterface
-  { language :: Maybe Language.Language,
+  { version :: Version.Version,
+    language :: Maybe Language.Language,
     extensions :: Map.Map Extension.Extension Bool,
     documentation :: Doc.Doc,
     since :: Maybe Since.Since,

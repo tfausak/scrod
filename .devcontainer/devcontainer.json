@@ -1,7 +1,0 @@
-// https://containers.dev/implementors/json_reference/
-{
-  "dockerComposeFile": "compose.yaml",
-  "onCreateCommand": "nix-env --file /workspace/nixpkgs.nix --install --attr direnv",
-  "service": "devcontainer",
-  "workspaceFolder": "/workspace",
-}

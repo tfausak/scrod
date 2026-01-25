@@ -1,7 +1,7 @@
-cabal-version: 3.0
+cabal-version: 3.12
 -- https://cabal.readthedocs.io/en/stable/cabal-package-description-file.html
 name: scrod
-version: 0.2026.1.24
+version: 0.2026.1.25
 synopsis: TODO
 description:
   TODO
@@ -65,6 +65,7 @@ common executable
 
 library
   import: library
+  autogen-modules: PackageInfo_scrod
   -- cabal-gild: discover source/library
   exposed-modules:
     Scrod
@@ -116,6 +117,7 @@ library
     Scrod.Unstable.Type.Warning
 
   hs-source-dirs: source/library
+  other-modules: PackageInfo_scrod
 
 test-suite scrod-test-suite
   import: executable

@@ -7,6 +7,7 @@ pkgs.mkShell {
     pkgs.cabal-install
     pkgs.curl
     pkgs.direnv
+    pkgs.git
     pkgs.haskell-language-server
     pkgs.haskellPackages.cabal-gild
     pkgs.haskellPackages.weeder

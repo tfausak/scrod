@@ -28,6 +28,7 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Unit.Module.Warnings as Warnings
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
+import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Unstable.Extra.OnOff as OnOff
 import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Doc as Doc
@@ -70,10 +71,12 @@ convert input = case input of
     Left $ Exception.displayException sourceError
   Left (Right messages) ->
     Left . Outputable.showSDocUnsafe $ Outputable.ppr messages
-  Right ((language, extensions), lHsModule) ->
-    Right
+  Right ((language, extensions), lHsModule) -> do
+    version <- maybe (Left "invalid version") pure $ Version.fromBase PackageInfo.version
+    pure
       Interface.MkInterface
-        { Interface.language = fmap Language.fromGhc language,
+        { Interface.version = version,
+          Interface.language = fmap Language.fromGhc language,
           Interface.extensions = extensionsToMap extensions,
           Interface.documentation = extractModuleDocumentation lHsModule,
           Interface.since = extractModuleSince lHsModule,

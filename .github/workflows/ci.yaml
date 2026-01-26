@@ -7,66 +7,77 @@ on:
     branches:
       - main
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
+  meta:
+    name: Meta
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - id: name
+        run: "echo name=$( grep ^name: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+      - id: version
+        run: "echo version=$( grep ^version: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+      version: ${{ steps.version.outputs.version }}
+  gild:
+    name: Gild
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v30
+      - run: nix-shell --run 'cabal-gild --input ${{ needs.meta.outputs.name }}.cabal --mode check'
+  build:
+    name: Build
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v30
       - run: mkdir artifact
-      - uses: haskell/ghcup-setup@v1
-        with:
-          ghc: "9.10"
-          cabal: latest
-      - run: ghc-pkg list
-      - run: cabal sdist --output-dir artifact
-      - run: cabal configure --enable-documentation --enable-tests --flags=pedantic --haddock-for-hackage --jobs
+      - run: nix-shell --run 'ghc-pkg list'
+      - run: nix-shell --run 'cabal sdist --output-dir artifact'
+      - run: nix-shell --run 'cabal configure --enable-documentation --enable-tests --flags=pedantic --haddock-for-hackage --jobs'
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
-      - run: cabal update
-      - run: cabal freeze
+      - run: nix-shell --run 'cabal update'
+      - run: nix-shell --run 'cabal freeze'
       - run: cat cabal.project.freeze
       - run: cp cabal.project.freeze artifact
-      - run: cabal outdated --v2-freeze-file
+      - run: nix-shell --run 'cabal outdated --v2-freeze-file'
       - uses: actions/cache@v5
         with:
-          key: ${{ matrix.os }}-${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ hashFiles('cabal.project.freeze') }}
           path: ~/.local/state/cabal
-          restore-keys: ${{ matrix.os }}-
-      - run: cabal build --only-download
-      - run: cabal build --only-dependencies
-      - run: cabal build
-      - run: cp dist-newstyle/scrod-*-docs.tar.gz artifact
-      - run: cp $( cabal list-bin scrod ) artifact
+      - run: nix-shell --run 'cabal build --only-download'
+      - run: nix-shell --run 'cabal build --only-dependencies'
+      - run: nix-shell --run 'cabal build'
+      - run: cp dist-newstyle/${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz artifact
+      - run: cp $( nix-shell --run 'cabal list-bin scrod' ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
-          name: scrod-${{ github.sha }}-${{ matrix.os }}
+          name: scrod-${{ github.sha }}
           path: artifact.tar
-      - run: cabal run -- scrod-test-suite
-    strategy:
-      matrix:
-        include:
-          - os: macos
-          - os: ubuntu
-          - os: windows
+      - run: nix-shell --run 'cabal run -- scrod-test-suite'
   cabal:
     name: Cabal
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: cabal check
+      - uses: cachix/install-nix-action@v30
+      - run: nix-shell --run 'cabal check'
   hlint:
     name: HLint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: haskell-actions/hlint-setup@v2
-      - uses: haskell-actions/hlint-run@v2
-        with:
-          fail-on: status
+      - uses: cachix/install-nix-action@v30
+      - run: nix-shell --run 'hlint .'
   ormolu:
     name: Ormolu
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: haskell-actions/run-ormolu@v17
+      - uses: cachix/install-nix-action@v30
+      - run: nix-shell --run 'ormolu --mode check $(git ls-files "*.hs")'

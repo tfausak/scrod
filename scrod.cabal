@@ -110,7 +110,6 @@ library
     Scrod.Unstable.Type.PackageName
     Scrod.Unstable.Type.Picture
     Scrod.Unstable.Type.Section
-    Scrod.Unstable.Type.Session
     Scrod.Unstable.Type.Since
     Scrod.Unstable.Type.Subordinates
     Scrod.Unstable.Type.Table

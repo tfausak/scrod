@@ -268,8 +268,11 @@ convertIE lIe = case SrcLoc.unLoc lIe of
   Syntax.IEGroup _ level lDoc ->
     Export.Group
       Section.MkSection
-        { Section.level = Maybe.fromMaybe Level.One (Level.fromIntegral level),
-          Section.title = convertLHsDoc lDoc
+        { Section.header =
+            Header.MkHeader
+              { Header.level = Maybe.fromMaybe Level.One (Level.fromIntegral level),
+                Header.title = convertLHsDoc lDoc
+              }
         }
   Syntax.IEDoc _ lDoc ->
     Export.Doc (convertLHsDoc lDoc)

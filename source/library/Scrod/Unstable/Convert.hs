@@ -54,6 +54,7 @@ import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Picture as Picture
 import qualified Scrod.Unstable.Type.Section as Section
 import qualified Scrod.Unstable.Type.Since as Since
+import qualified Scrod.Unstable.Type.SubordinateIdentifier as SubordinateIdentifier
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
@@ -248,7 +249,7 @@ convertIE lIe = case SrcLoc.unLoc lIe of
             Just
               Subordinates.MkSubordinates
                 { Subordinates.wildcard = hasWildcard wildcard,
-                  Subordinates.explicit = fmap convertWrappedName children
+                  Subordinates.explicit = fmap convertSubordinateIdentifier children
                 },
           ExportIdentifier.warning = convertExportWarning mLWarning,
           ExportIdentifier.doc = fmap convertExportDoc mDoc
@@ -308,6 +309,16 @@ convertWrappedName lWrapped = case SrcLoc.unLoc lWrapped of
       { ExportName.kind = Just ExportNameKind.Type,
         ExportName.name = extractRdrName lId
       }
+
+convertSubordinateIdentifier ::
+  SrcLoc.GenLocated l (ImpExp.IEWrappedName Ghc.GhcPs) ->
+  SubordinateIdentifier.SubordinateIdentifier
+convertSubordinateIdentifier lWrapped =
+  SubordinateIdentifier.MkSubordinateIdentifier
+    { SubordinateIdentifier.name = convertWrappedName lWrapped,
+      SubordinateIdentifier.warning = Nothing,
+      SubordinateIdentifier.doc = Nothing
+    }
 
 extractRdrName ::
   SrcLoc.GenLocated l Reader.RdrName ->

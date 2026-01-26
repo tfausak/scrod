@@ -111,6 +111,7 @@ library
     Scrod.Unstable.Type.Picture
     Scrod.Unstable.Type.Section
     Scrod.Unstable.Type.Since
+    Scrod.Unstable.Type.SubordinateIdentifier
     Scrod.Unstable.Type.Subordinates
     Scrod.Unstable.Type.Table
     Scrod.Unstable.Type.TableCell

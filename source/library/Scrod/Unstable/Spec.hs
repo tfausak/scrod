@@ -702,14 +702,14 @@ spec t = describe t "extract" $ do
         Just [Export.Identifier exportIdentifier] <- pure interface.exports
         Just subordinates <- pure exportIdentifier.subordinates
         assertEq t subordinates.wildcard False
-        assertEq t (subordinates.explicit <&> (.name)) ["A", "B"]
+        assertEq t (subordinates.explicit <&> (.name.name)) ["A", "B"]
 
       it t "exports a type with wildcard and explicit children" $ do
         interface <- scrod t ["{-# language PatternSynonyms #-}", "module M (T(.., P)) where"]
         Just [Export.Identifier exportIdentifier] <- pure interface.exports
         Just subordinates <- pure exportIdentifier.subordinates
         assertEq t subordinates.wildcard True
-        assertEq t (subordinates.explicit <&> (.name)) ["P"]
+        assertEq t (subordinates.explicit <&> (.name.name)) ["P"]
 
     describe t "module" $ do
       it t "re-exports a module" $ do

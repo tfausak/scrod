@@ -34,6 +34,7 @@ import qualified Scrod.Unstable.Type.Category as Category
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Export as Export
+import qualified Scrod.Unstable.Type.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Unstable.Type.ExportName as ExportName
 import qualified Scrod.Unstable.Type.ExportNameKind as ExportNameKind
 import qualified Scrod.Unstable.Type.Extension as Extension
@@ -216,35 +217,54 @@ convertIE ::
   Export.Export
 convertIE lIe = case SrcLoc.unLoc lIe of
   Syntax.IEVar mLWarning lName mDoc ->
-    Export.Identifier (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+    Export.Identifier
+      ExportIdentifier.MkExportIdentifier
+        { ExportIdentifier.name = convertWrappedName lName,
+          ExportIdentifier.subordinates = Nothing,
+          ExportIdentifier.warning = convertExportWarning mLWarning,
+          ExportIdentifier.doc = fmap convertExportDoc mDoc
+        }
   Syntax.IEThingAbs (mLWarning, _) lName mDoc ->
-    Export.Identifier (convertWrappedName lName) Nothing (convertExportWarning mLWarning) (fmap convertExportDoc mDoc)
+    Export.Identifier
+      ExportIdentifier.MkExportIdentifier
+        { ExportIdentifier.name = convertWrappedName lName,
+          ExportIdentifier.subordinates = Nothing,
+          ExportIdentifier.warning = convertExportWarning mLWarning,
+          ExportIdentifier.doc = fmap convertExportDoc mDoc
+        }
   Syntax.IEThingAll (mLWarning, _) lName mDoc ->
     Export.Identifier
-      (convertWrappedName lName)
-      (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
-      (convertExportWarning mLWarning)
-      (fmap convertExportDoc mDoc)
+      ExportIdentifier.MkExportIdentifier
+        { ExportIdentifier.name = convertWrappedName lName,
+          ExportIdentifier.subordinates = Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []},
+          ExportIdentifier.warning = convertExportWarning mLWarning,
+          ExportIdentifier.doc = fmap convertExportDoc mDoc
+        }
   Syntax.IEThingWith (mLWarning, _) lName wildcard children mDoc ->
     Export.Identifier
-      (convertWrappedName lName)
-      ( Just
-          Subordinates.MkSubordinates
-            { Subordinates.wildcard = hasWildcard wildcard,
-              Subordinates.explicit = fmap convertWrappedName children
-            }
-      )
-      (convertExportWarning mLWarning)
-      (fmap convertExportDoc mDoc)
+      ExportIdentifier.MkExportIdentifier
+        { ExportIdentifier.name = convertWrappedName lName,
+          ExportIdentifier.subordinates =
+            Just
+              Subordinates.MkSubordinates
+                { Subordinates.wildcard = hasWildcard wildcard,
+                  Subordinates.explicit = fmap convertWrappedName children
+                },
+          ExportIdentifier.warning = convertExportWarning mLWarning,
+          ExportIdentifier.doc = fmap convertExportDoc mDoc
+        }
   Syntax.IEModuleContents (mLWarning, _) lModName ->
     Export.Identifier
-      ExportName.MkExportName
-        { ExportName.kind = Just ExportNameKind.Module,
-          ExportName.name = ModuleName.value (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
+      ExportIdentifier.MkExportIdentifier
+        { ExportIdentifier.name =
+            ExportName.MkExportName
+              { ExportName.kind = Just ExportNameKind.Module,
+                ExportName.name = ModuleName.value (ModuleName.fromGhc $ SrcLoc.unLoc lModName)
+              },
+          ExportIdentifier.subordinates = Nothing,
+          ExportIdentifier.warning = convertExportWarning mLWarning,
+          ExportIdentifier.doc = Nothing
         }
-      Nothing
-      (convertExportWarning mLWarning)
-      Nothing
   Syntax.IEGroup _ level lDoc ->
     Export.Group
       Section.MkSection

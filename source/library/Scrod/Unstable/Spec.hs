@@ -18,6 +18,7 @@ import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Export as Export
+import qualified Scrod.Unstable.Type.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Unstable.Type.ExportName as ExportName
 import qualified Scrod.Unstable.Type.ExportNameKind as ExportNameKind
 import qualified Scrod.Unstable.Type.Extension as Extension
@@ -665,216 +666,159 @@ spec t = describe t "extract" $ do
       interface <- scrod t ["module M () where"]
       assertEq t interface.exports $ Just []
 
-    -- TODO: Clean up tests from here on down.
     describe t "var" $ do
       it t "exports a variable" $ do
         interface <- scrod t ["module M (x) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "x"
 
       it t "exports an operator" $ do
         interface <- scrod t ["module M ((<>)) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "<>"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "<>"
 
       it t "exports multiple variables" $ do
         interface <- scrod t ["module M (x, y) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"} Nothing Nothing Nothing,
-              Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "y"} Nothing Nothing Nothing
-            ]
+        Just [Export.Identifier x, Export.Identifier y] <- pure interface.exports
+        assertEq t x.name.name "x"
+        assertEq t y.name.name "y"
 
     describe t "thing" $ do
       it t "exports a type without subordinates" $ do
         interface <- scrod t ["module M (T) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "T"
+        assertEq t exportIdentifier.subordinates Nothing
 
       it t "exports a type with wildcard" $ do
         interface <- scrod t ["module M (T(..)) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
-                (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
-                Nothing
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just subordinates <- pure exportIdentifier.subordinates
+        assertEq t subordinates.wildcard True
+        assertEq t subordinates.explicit []
 
       it t "exports a type with explicit children" $ do
         interface <- scrod t ["module M (T(A, B)) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
-                ( Just
-                    Subordinates.MkSubordinates
-                      { Subordinates.wildcard = False,
-                        Subordinates.explicit =
-                          [ ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "A"},
-                            ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "B"}
-                          ]
-                      }
-                )
-                Nothing
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just subordinates <- pure exportIdentifier.subordinates
+        assertEq t subordinates.wildcard False
+        assertEq t (subordinates.explicit <&> (.name)) ["A", "B"]
 
       it t "exports a type with wildcard and explicit children" $ do
         interface <- scrod t ["{-# language PatternSynonyms #-}", "module M (T(.., P)) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
-                ( Just
-                    Subordinates.MkSubordinates
-                      { Subordinates.wildcard = True,
-                        Subordinates.explicit =
-                          [ ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "P"}
-                          ]
-                      }
-                )
-                Nothing
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just subordinates <- pure exportIdentifier.subordinates
+        assertEq t subordinates.wildcard True
+        assertEq t (subordinates.explicit <&> (.name)) ["P"]
 
     describe t "module" $ do
       it t "re-exports a module" $ do
         interface <- scrod t ["module M (module X) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Module, ExportName.name = "X"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "X"
+        assertEq t exportIdentifier.name.kind $ Just ExportNameKind.Module
 
       it t "re-exports a qualified module" $ do
         interface <- scrod t ["module M (module Data.List) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Module, ExportName.name = "Data.List"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "Data.List"
+        assertEq t exportIdentifier.name.kind $ Just ExportNameKind.Module
 
     describe t "namespace" $ do
       it t "exports with pattern namespace" $ do
         interface <- scrod t ["{-# language PatternSynonyms #-}", "module M (pattern P) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Pattern, ExportName.name = "P"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "P"
+        assertEq t exportIdentifier.name.kind $ Just ExportNameKind.Pattern
 
       it t "exports with type namespace" $ do
         interface <- scrod t ["module M (type T) where"]
-        assertEq t interface.exports $
-          Just [Export.Identifier ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Type, ExportName.name = "T"} Nothing Nothing Nothing]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "T"
+        assertEq t exportIdentifier.name.kind $ Just ExportNameKind.Type
 
     describe t "warning" $ do
       it t "attaches warning to var" $ do
         interface <- scrod t ["module M ({-# WARNING \"wrn\" #-} x) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
-                Nothing
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "wrn"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.category.value "deprecations"
+        assertEq t warning.value "wrn"
 
       it t "attaches warning to thing" $ do
         interface <- scrod t ["module M ({-# WARNING \"wrn\" #-} T) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
-                Nothing
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "wrn"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.category.value "deprecations"
+        assertEq t warning.value "wrn"
 
       it t "attaches warning to thing with subordinates" $ do
         interface <- scrod t ["module M ({-# WARNING \"wrn\" #-} T(..)) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "T"}
-                (Just Subordinates.MkSubordinates {Subordinates.wildcard = True, Subordinates.explicit = []})
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "wrn"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.value "wrn"
 
       it t "attaches deprecated to var" $ do
         interface <- scrod t ["module M ({-# DEPRECATED \"dep\" #-} x) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
-                Nothing
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "dep"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.category.value "deprecations"
+        assertEq t warning.value "dep"
 
       it t "attaches warning with custom category" $ do
         interface <- scrod t ["module M ({-# WARNING in \"x-custom\" \"wrn\" #-} x) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
-                Nothing
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "x-custom"}, Warning.value = "wrn"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.category.value "x-custom"
+        assertEq t warning.value "wrn"
 
       it t "attaches warning to module re-export" $ do
         interface <- scrod t ["module M ({-# WARNING \"wrn\" #-} module X) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Just ExportNameKind.Module, ExportName.name = "X"}
-                Nothing
-                (Just Warning.MkWarning {Warning.category = Category.MkCategory {Category.value = "deprecations"}, Warning.value = "wrn"})
-                Nothing
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        Just warning <- pure exportIdentifier.warning
+        assertEq t warning.value "wrn"
 
     describe t "documentation" $ do
       it t "handles section heading" $ do
         interface <- scrod t ["module M ( -- * Section", ") where"]
         assertEq t interface.exports $
           Just
-            [ Export.Group Section.MkSection {Section.level = Level.One, Section.title = Doc.Paragraph (Doc.String "Section")}
+            [ Export.Group
+                Section.MkSection
+                  { Section.level = Level.One,
+                    Section.title = Doc.Paragraph (Doc.String "Section")
+                  }
             ]
 
       it t "handles section heading level two" $ do
         interface <- scrod t ["module M ( -- ** Section", ") where"]
         assertEq t interface.exports $
           Just
-            [ Export.Group Section.MkSection {Section.level = Level.Two, Section.title = Doc.Paragraph (Doc.String "Section")}
+            [ Export.Group
+                Section.MkSection
+                  { Section.level = Level.Two,
+                    Section.title = Doc.Paragraph (Doc.String "Section")
+                  }
             ]
 
       it t "handles inline doc" $ do
         interface <- scrod t ["module M ( -- | Some doc", ") where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Doc (Doc.Paragraph (Doc.String "Some doc"))
-            ]
+        assertEq t interface.exports $ Just [Export.Doc . Doc.Paragraph $ Doc.String "Some doc"]
 
       it t "handles doc before export" $ do
         interface <- scrod t ["module M ( -- | foo", " bar ) where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Doc (Doc.Paragraph (Doc.String "foo")),
-              Export.Identifier ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "bar"} Nothing Nothing Nothing
-            ]
+        Just [Export.Doc _, Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "bar"
 
       it t "handles named doc reference" $ do
         interface <- scrod t ["module M ( -- $chunkName", ") where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.DocNamed "chunkName"
-            ]
+        assertEq t interface.exports $ Just [Export.DocNamed "chunkName"]
 
       it t "handles doc attached to export" $ do
         interface <- scrod t ["module M ( x -- ^ y", ") where"]
-        assertEq t interface.exports $
-          Just
-            [ Export.Identifier
-                ExportName.MkExportName {ExportName.kind = Nothing, ExportName.name = "x"}
-                Nothing
-                Nothing
-                (Just (Doc.Paragraph (Doc.String "y")))
-            ]
+        Just [Export.Identifier exportIdentifier] <- pure interface.exports
+        assertEq t exportIdentifier.name.name "x"
+        assertEq t exportIdentifier.doc . Just . Doc.Paragraph $ Doc.String "y"
 
   describe t "items" $ do
     let itemAt l c =

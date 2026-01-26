@@ -90,6 +90,7 @@ library
     Scrod.Unstable.Type.Doc
     Scrod.Unstable.Type.Example
     Scrod.Unstable.Type.Export
+    Scrod.Unstable.Type.ExportIdentifier
     Scrod.Unstable.Type.ExportName
     Scrod.Unstable.Type.ExportNameKind
     Scrod.Unstable.Type.Extension

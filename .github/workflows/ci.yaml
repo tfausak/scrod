@@ -26,9 +26,8 @@ jobs:
       - run: nix-shell --run 'cabal outdated --v2-freeze-file'
       - uses: actions/cache@v5
         with:
-          key: ubuntu-${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ hashFiles('cabal.project.freeze') }}
           path: ~/.local/state/cabal
-          restore-keys: ubuntu-
       - run: nix-shell --run 'cabal build --only-download'
       - run: nix-shell --run 'cabal build --only-dependencies'
       - run: nix-shell --run 'cabal build'
@@ -37,7 +36,7 @@ jobs:
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
-          name: scrod-${{ github.sha }}-ubuntu
+          name: scrod-${{ github.sha }}
           path: artifact.tar
       - run: nix-shell --run 'cabal run -- scrod-test-suite'
   cabal:

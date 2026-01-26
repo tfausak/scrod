@@ -56,7 +56,6 @@ import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
-import qualified Scrod.Unstable.Type.TableRow as TableRow
 import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -405,11 +404,8 @@ fromHaddock doc = case doc of
           Table.bodyRows = fmap convertTableRow (Haddock.tableBodyRows t)
         }
     where
-      convertTableRow :: Haddock.TableRow (Haddock.DocH Void.Void Identifier.Identifier) -> TableRow.Row Doc.Doc
-      convertTableRow row =
-        TableRow.MkRow
-          { TableRow.cells = fmap convertTableCell (Haddock.tableRowCells row)
-          }
+      convertTableRow :: Haddock.TableRow (Haddock.DocH Void.Void Identifier.Identifier) -> [TableCell.Cell Doc.Doc]
+      convertTableRow row = fmap convertTableCell (Haddock.tableRowCells row)
 
       convertTableCell :: Haddock.TableCell (Haddock.DocH Void.Void Identifier.Identifier) -> TableCell.Cell Doc.Doc
       convertTableCell cell =

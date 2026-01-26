@@ -113,7 +113,6 @@ library
     Scrod.Unstable.Type.Subordinates
     Scrod.Unstable.Type.Table
     Scrod.Unstable.Type.TableCell
-    Scrod.Unstable.Type.TableRow
     Scrod.Unstable.Type.Version
     Scrod.Unstable.Type.Warning
 

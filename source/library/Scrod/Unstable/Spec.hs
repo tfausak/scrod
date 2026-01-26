@@ -40,7 +40,6 @@ import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
-import qualified Scrod.Unstable.Type.TableRow as TableRow
 import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -488,10 +487,9 @@ spec t = describe t "extract" $ do
             Doc.Table
               Table.empty
                 { Table.bodyRows =
-                    [ TableRow.MkRow
-                        [ TableCell.empty $ Doc.String "a",
-                          TableCell.empty $ Doc.String "b"
-                        ]
+                    [ [ TableCell.empty $ Doc.String "a",
+                        TableCell.empty $ Doc.String "b"
+                      ]
                     ]
                 }
 
@@ -511,16 +509,14 @@ spec t = describe t "extract" $ do
             Doc.Table
               Table.empty
                 { Table.headerRows =
-                    [ TableRow.MkRow
-                        [ TableCell.empty $ Doc.String "a",
-                          TableCell.empty $ Doc.String "b"
-                        ]
+                    [ [ TableCell.empty $ Doc.String "a",
+                        TableCell.empty $ Doc.String "b"
+                      ]
                     ],
                   Table.bodyRows =
-                    [ TableRow.MkRow
-                        [ TableCell.empty $ Doc.String "c",
-                          TableCell.empty $ Doc.String "d"
-                        ]
+                    [ [ TableCell.empty $ Doc.String "c",
+                        TableCell.empty $ Doc.String "d"
+                      ]
                     ]
                 }
 
@@ -540,13 +536,11 @@ spec t = describe t "extract" $ do
             Doc.Table
               Table.empty
                 { Table.bodyRows =
-                    [ TableRow.MkRow
-                        [ TableCell.empty $ Doc.String "a",
-                          TableCell.empty $ Doc.String "b"
-                        ],
-                      TableRow.MkRow
-                        [ (TableCell.empty $ Doc.String "c") {TableCell.colspan = 2}
-                        ]
+                    [ [ TableCell.empty $ Doc.String "a",
+                        TableCell.empty $ Doc.String "b"
+                      ],
+                      [ (TableCell.empty $ Doc.String "c") {TableCell.colspan = 2}
+                      ]
                     ]
                 }
 
@@ -566,13 +560,11 @@ spec t = describe t "extract" $ do
             Doc.Table
               Table.empty
                 { Table.bodyRows =
-                    [ TableRow.MkRow
-                        [ (TableCell.empty $ Doc.String "a\n\n") {TableCell.rowspan = 2},
-                          TableCell.empty $ Doc.String "b"
-                        ],
-                      TableRow.MkRow
-                        [ TableCell.empty $ Doc.String "c"
-                        ]
+                    [ [ (TableCell.empty $ Doc.String "a\n\n") {TableCell.rowspan = 2},
+                        TableCell.empty $ Doc.String "b"
+                      ],
+                      [ TableCell.empty $ Doc.String "c"
+                      ]
                     ]
                 }
 

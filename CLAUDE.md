@@ -83,6 +83,26 @@ cabal check                                  # Validate package metadata
 echo "module Foo where" | cabal run -- scrod
 ```
 
+## Git Workflow
+
+### Avoiding Force Push
+
+**IMPORTANT**: AI agents should **NEVER** use force push (`git push --force` or `git push -f`).
+
+Instead, follow this approach:
+- Make regular commits with clear, descriptive messages
+- Push commits normally using `git push` or `git push -u origin <branch-name>`
+- If you need to make changes after a commit, create a new commit rather than amending
+
+**Why avoid force push:**
+- Preserves complete commit history for debugging and review
+- Prevents accidentally overwriting others' work
+- Safer for collaborative environments
+- Allows easier rollback if issues arise
+- Maintains git history integrity
+
+**Exception**: Only use force push if explicitly requested by the user and you understand the risks.
+
 ## Code Style and Conventions
 
 ### Import Style

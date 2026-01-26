@@ -785,8 +785,11 @@ spec t = describe t "extract" $ do
           Just
             [ Export.Group
                 Section.MkSection
-                  { Section.level = Level.One,
-                    Section.title = Doc.Paragraph (Doc.String "Section")
+                  { Section.header =
+                      Header.MkHeader
+                        { Header.level = Level.One,
+                          Header.title = Doc.Paragraph (Doc.String "Section")
+                        }
                   }
             ]
 
@@ -796,8 +799,11 @@ spec t = describe t "extract" $ do
           Just
             [ Export.Group
                 Section.MkSection
-                  { Section.level = Level.Two,
-                    Section.title = Doc.Paragraph (Doc.String "Section")
+                  { Section.header =
+                      Header.MkHeader
+                        { Header.level = Level.Two,
+                          Header.title = Doc.Paragraph (Doc.String "Section")
+                        }
                   }
             ]
 

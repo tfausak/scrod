@@ -19,9 +19,17 @@ jobs:
     outputs:
       name: ${{ steps.name.outputs.name }}
       version: ${{ steps.version.outputs.version }}
+  gild:
+    name: Gild
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v30
+      - run: nix-shell --run 'cabal-gild --input ${{ needs.meta.outputs.name }}.cabal --mode check'
   build:
     name: Build
-    needs: [meta]
+    needs: meta
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

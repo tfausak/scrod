@@ -37,7 +37,7 @@ jobs:
       - run: mkdir artifact
       - run: nix-shell --run 'ghc-pkg list'
       - run: nix-shell --run 'cabal sdist --output-dir artifact'
-      - run: nix-shell --run 'cabal configure --enable-documentation --enable-tests --flags=pedantic --haddock-for-hackage --jobs'
+      - run: nix-shell --run 'cabal configure --enable-documentation --enable-tests --flags=pedantic --ghc-options=-fwrite-ide-info --haddock-for-hackage --jobs'
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: nix-shell --run 'cabal update'
@@ -60,6 +60,11 @@ jobs:
           name: scrod-${{ github.sha }}
           path: artifact.tar
       - run: nix-shell --run 'cabal run -- scrod-test-suite'
+      - run: find dist-newstyle -name '*.hie' | tar --create --file hie.tar -T -
+      - uses: actions/upload-artifact@v6
+        with:
+          name: hie-${{ github.sha }}
+          path: hie.tar
   cabal:
     name: Cabal
     runs-on: ubuntu-latest
@@ -81,3 +86,15 @@ jobs:
       - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v30
       - run: nix-shell --run 'ormolu --mode check $(git ls-files "*.hs")'
+  weeder:
+    name: Weeder
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/install-nix-action@v30
+      - uses: actions/download-artifact@v6
+        with:
+          name: hie-${{ github.sha }}
+      - run: tar --extract --file hie.tar --verbose
+      - run: nix-shell --run weeder

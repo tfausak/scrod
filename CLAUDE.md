@@ -63,7 +63,8 @@ cabal build --flags=pedantic   # Build with -Werror (CI mode)
 ### Testing
 
 ```bash
-cabal run -- scrod-test-suite  # Run test suite
+cabal test                                                      # Run test suite
+cabal test --test-show-details=direct --test-option=--hide-successes  # Hide passing tests
 ```
 
 ### Code Quality

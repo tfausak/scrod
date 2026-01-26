@@ -5,14 +5,14 @@ import qualified Numeric.Natural as Natural
 -- | A table cell with colspan, rowspan, and contents.
 -- Mirrors 'Documentation.Haddock.Types.TableCell' from haddock-library,
 -- but uses 'Natural' instead of 'Int' for colspan and rowspan.
-data Cell a = MkCell
+data Cell doc = MkCell
   { colspan :: Natural.Natural,
     rowspan :: Natural.Natural,
-    contents :: a
+    contents :: doc
   }
   deriving (Eq, Ord, Show)
 
-empty :: a -> Cell a
+empty :: doc -> Cell doc
 empty x =
   MkCell
     { colspan = 1,

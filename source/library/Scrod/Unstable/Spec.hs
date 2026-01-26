@@ -35,6 +35,7 @@ import qualified Scrod.Unstable.Type.ModLink as ModLink
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 import qualified Scrod.Unstable.Type.Picture as Picture
+import qualified Scrod.Unstable.Type.Section as Section
 import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
@@ -840,14 +841,14 @@ spec t = describe t "extract" $ do
         interface <- scrod t ["module M ( -- * Section", ") where"]
         assertEq t interface.exports $
           Just
-            [ Export.Group Level.One (Doc.Paragraph (Doc.String "Section"))
+            [ Export.Group Section.MkSection {Section.level = Level.One, Section.title = Doc.Paragraph (Doc.String "Section")}
             ]
 
       it t "handles section heading level two" $ do
         interface <- scrod t ["module M ( -- ** Section", ") where"]
         assertEq t interface.exports $
           Just
-            [ Export.Group Level.Two (Doc.Paragraph (Doc.String "Section"))
+            [ Export.Group Section.MkSection {Section.level = Level.Two, Section.title = Doc.Paragraph (Doc.String "Section")}
             ]
 
       it t "handles inline doc" $ do

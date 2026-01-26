@@ -51,6 +51,7 @@ import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Picture as Picture
+import qualified Scrod.Unstable.Type.Section as Section
 import qualified Scrod.Unstable.Type.Since as Since
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Table as Table
@@ -247,8 +248,10 @@ convertIE lIe = case SrcLoc.unLoc lIe of
       Nothing
   Syntax.IEGroup _ level lDoc ->
     Export.Group
-      (Maybe.fromMaybe Level.One (Level.fromIntegral level))
-      (convertLHsDoc lDoc)
+      Section.MkSection
+        { Section.level = Maybe.fromMaybe Level.One (Level.fromIntegral level),
+          Section.title = convertLHsDoc lDoc
+        }
   Syntax.IEDoc _ lDoc ->
     Export.Doc (convertLHsDoc lDoc)
   Syntax.IEDocNamed _ name ->

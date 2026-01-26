@@ -3,7 +3,7 @@ module Scrod.Unstable.Type.Export where
 import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ExportName as ExportName
-import qualified Scrod.Unstable.Type.Level as Level
+import qualified Scrod.Unstable.Type.Section as Section
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -17,7 +17,7 @@ data Export
     -- With optional warning: @{-# WARNING "msg" #-} foo@
     Identifier ExportName.ExportName (Maybe Subordinates.Subordinates) (Maybe Warning.Warning) (Maybe Doc.Doc)
   | -- | Section heading: @-- * Section@
-    Group Level.Level Doc.Doc
+    Group Section.Section
   | -- | Inline documentation: @-- | Some doc@
     Doc Doc.Doc
   | -- | Named doc reference: @-- $chunkName@

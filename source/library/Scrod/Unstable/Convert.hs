@@ -180,6 +180,7 @@ convertDecl ::
   Syntax.LHsDecl Ghc.GhcPs ->
   [Located.Located Item.Item]
 convertDecl lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.TyClD _ tyClDecl -> convertTyClDecl lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDecls ruleDecls
   _ -> Maybe.maybeToList $ convertDeclSimple lDecl
 
@@ -205,6 +206,41 @@ convertRuleDecl ::
   Maybe (Located.Located Item.Item)
 convertRuleDecl lRuleDecl = do
   let srcSpan = Annotation.getLocA lRuleDecl
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
+
+convertTyClDecl ::
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.TyClDecl Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertTyClDecl lDecl tyClDecl = case tyClDecl of
+  Syntax.DataDecl _ _ _ _ dataDefn ->
+    Maybe.maybeToList (convertDeclSimple lDecl)
+      <> convertDataDefn dataDefn
+  _ -> Maybe.maybeToList $ convertDeclSimple lDecl
+
+convertDataDefn ::
+  Syntax.HsDataDefn Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertDataDefn dataDefn =
+  Maybe.mapMaybe convertConDecl $ dataDefnConsList (Syntax.dd_cons dataDefn)
+
+dataDefnConsList ::
+  Syntax.DataDefnCons a ->
+  [a]
+dataDefnConsList ddc = case ddc of
+  Syntax.NewTypeCon con -> [con]
+  Syntax.DataTypeCons _ cons -> cons
+
+convertConDecl ::
+  Syntax.LConDecl Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertConDecl lConDecl = do
+  let srcSpan = Annotation.getLocA lConDecl
   location <- Location.fromSrcSpan srcSpan
   pure
     Located.MkLocated

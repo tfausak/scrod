@@ -910,9 +910,25 @@ spec t = describe t "extract" $ do
           interface <- scrod t ["data A"]
           assertEq t interface.items [itemAt 1 1]
 
+        it t "data with doc before" $ do
+          interface <- scrod t ["-- | data doc", "data T = T"]
+          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 2 10]
+
+        it t "data with doc after" $ do
+          interface <- scrod t ["data T = T", "-- ^ data doc"]
+          assertEq t interface.items [itemWithDoc 1 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 1 10]
+
         it t "data with constructor" $ do
           interface <- scrod t ["data B = B"]
           assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+
+        it t "constructor with doc before" $ do
+          interface <- scrod t ["data T", "  = -- | constructor doc", "    C"]
+          assertEq t interface.items [itemAt 1 1, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "constructor doc")]
+
+        it t "constructor with doc after" $ do
+          interface <- scrod t ["data T = C -- ^ constructor doc"]
+          assertEq t interface.items [itemAt 1 1, itemWithDoc 1 10 (Doc.Paragraph $ Doc.String "constructor doc")]
 
         it t "data with multiple constructors" $ do
           interface <- scrod t ["data C = C1 | C2 | C3"]
@@ -925,6 +941,14 @@ spec t = describe t "extract" $ do
         it t "data with record" $ do
           interface <- scrod t ["data E = E { eInt :: Int, eBool :: Bool }"]
           assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 1 27]
+
+        it t "field with doc before" $ do
+          interface <- scrod t ["data T = T", "  { -- | field doc", "    f :: Int", "  }"]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "field doc")]
+
+        it t "field with doc after" $ do
+          interface <- scrod t ["data T = T { f :: Int -- ^ field doc", "  }"]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 1 14 (Doc.Paragraph $ Doc.String "field doc")]
 
         it t "data with deriving" $ do
           interface <- scrod t ["data F = F deriving Show"]
@@ -1021,31 +1045,6 @@ spec t = describe t "extract" $ do
         it t "type data" $ do
           interface <- scrod t ["type data TBool = TTrue | TFalse"]
           assertEq t interface.items [itemAt 1 1, itemAt 1 19, itemAt 1 27]
-
-        describe t "documentation" $ do
-          it t "data type with doc before" $ do
-            interface <- scrod t ["-- | data doc", "data T = T"]
-            assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 2 10]
-
-          it t "data type with doc after" $ do
-            interface <- scrod t ["data T = T", "-- ^ data doc"]
-            assertEq t interface.items [itemWithDoc 1 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 1 10]
-
-          it t "constructor with doc before" $ do
-            interface <- scrod t ["data T", "  = -- | constructor doc", "    C"]
-            assertEq t interface.items [itemAt 1 1, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "constructor doc")]
-
-          it t "constructor with doc after" $ do
-            interface <- scrod t ["data T = C -- ^ constructor doc"]
-            assertEq t interface.items [itemAt 1 1, itemWithDoc 1 10 (Doc.Paragraph $ Doc.String "constructor doc")]
-
-          it t "field with doc before" $ do
-            interface <- scrod t ["data T = T", "  { -- | field doc", "    f :: Int", "  }"]
-            assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "field doc")]
-
-          it t "field with doc after" $ do
-            interface <- scrod t ["data T = T { f :: Int -- ^ field doc", "  }"]
-            assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 1 14 (Doc.Paragraph $ Doc.String "field doc")]
 
       describe t "ClassDecl" $ do
         it t "basic" $ do
@@ -1320,11 +1319,11 @@ spec t = describe t "extract" $ do
 
           it t "with documentation before" $ do
             interface <- scrod t ["-- | d", "x = 1"]
-            assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "d")]
+            assertEq t interface.items [itemWithDoc 2 1 . Doc.Paragraph $ Doc.String "d"]
 
           it t "with documentation after" $ do
             interface <- scrod t ["x = 1", "-- ^ d"]
-            assertEq t interface.items [itemWithDoc 1 1 (Doc.Paragraph $ Doc.String "d")]
+            assertEq t interface.items [itemWithDoc 1 1 . Doc.Paragraph $ Doc.String "d"]
 
         it t "tuple" $ do
           interface <- scrod t ["(a, b) = (1, 2)"]

@@ -1,4 +1,5 @@
 # https://git-scm.com/docs/gitignore
+/.direnv/
 /.zed/
 /cabal.project.*
 /dist-newstyle/

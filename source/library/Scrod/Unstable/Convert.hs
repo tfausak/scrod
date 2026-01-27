@@ -227,7 +227,40 @@ convertDataDefn ::
   Syntax.HsDataDefn Ghc.GhcPs ->
   [Located.Located Item.Item]
 convertDataDefn dataDefn =
-  concatMap convertConDecl $ dataDefnConsList (Syntax.dd_cons dataDefn)
+  concatMap convertConDecl (dataDefnConsList (Syntax.dd_cons dataDefn))
+    <> convertDerivingClauses (Syntax.dd_derivs dataDefn)
+
+convertDerivingClauses ::
+  Syntax.HsDeriving Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertDerivingClauses = concatMap convertDerivingClause
+
+convertDerivingClause ::
+  Syntax.LHsDerivingClause Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertDerivingClause lClause =
+  let clause = SrcLoc.unLoc lClause
+      derivClauseTys = SrcLoc.unLoc $ Syntax.deriv_clause_tys clause
+   in convertDerivClauseTys derivClauseTys
+
+convertDerivClauseTys ::
+  Syntax.DerivClauseTys Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertDerivClauseTys dct = case dct of
+  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList $ convertDerivedType lSigTy
+  Syntax.DctMulti _ lSigTys -> Maybe.mapMaybe convertDerivedType lSigTys
+
+convertDerivedType ::
+  Syntax.LHsSigType Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertDerivedType lSigTy = do
+  let srcSpan = Annotation.getLocA lSigTy
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->

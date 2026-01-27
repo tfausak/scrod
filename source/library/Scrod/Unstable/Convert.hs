@@ -108,7 +108,7 @@ extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Doc.Doc
 extractModuleDocumentation =
-  maybe Doc.Empty parseDoc
+  maybe mempty parseDoc
     . extractRawDocString
 
 extractRawDocString ::
@@ -194,7 +194,7 @@ associateDocs decls =
 associateNextDocs ::
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocs = go Doc.Empty
+associateNextDocs = go mempty
   where
     go :: Doc.Doc -> [Syntax.LHsDecl Ghc.GhcPs] -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
     go _ [] = []
@@ -205,9 +205,9 @@ associateNextDocs = go Doc.Empty
          in go newDoc rest
       Syntax.DocD _ (Hs.DocCommentPrev _) ->
         -- Skip DocCommentPrev in this pass, but keep the declaration
-        (Doc.Empty, lDecl) : go Doc.Empty rest
+        (Doc.Empty, lDecl) : go mempty rest
       _ ->
-        (pendingDoc, lDecl) : go Doc.Empty rest
+        (pendingDoc, lDecl) : go mempty rest
 
 -- | Associate DocCommentPrev with the preceding declaration.
 associatePrevDocs ::
@@ -263,7 +263,7 @@ convertTyClDeclWithDoc doc lDecl tyClDecl = case tyClDecl of
 convertDeclSimple ::
   Syntax.LHsDecl Ghc.GhcPs ->
   Maybe (Located.Located Item.Item)
-convertDeclSimple = convertDeclWithDoc Doc.Empty
+convertDeclSimple = convertDeclWithDoc mempty
 
 convertDeclWithDoc ::
   Doc.Doc ->
@@ -292,7 +292,7 @@ convertRuleDecl lRuleDecl = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = Doc.Empty}
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 convertClassSigs ::
@@ -316,7 +316,7 @@ convertIdP lIdP = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = Doc.Empty}
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 convertFamilyDecls ::
@@ -333,7 +333,7 @@ convertFamilyDecl lFamilyDecl = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = Doc.Empty}
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 convertDataDefn ::
@@ -372,7 +372,7 @@ convertDerivedType lSigTy = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = Doc.Empty}
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 dataDefnConsList ::
@@ -404,9 +404,9 @@ extractConDeclDoc ::
   Doc.Doc
 extractConDeclDoc conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_doc = mDoc} ->
-    maybe Doc.Empty convertLHsDoc mDoc
+    maybe mempty convertLHsDoc mDoc
   Syntax.ConDeclGADT {Syntax.con_doc = mDoc} ->
-    maybe Doc.Empty convertLHsDoc mDoc
+    maybe mempty convertLHsDoc mDoc
 
 extractFieldsFromConDecl ::
   Syntax.ConDecl Ghc.GhcPs ->
@@ -444,7 +444,7 @@ extractFieldItemsFromConDeclField ::
 extractFieldItemsFromConDeclField lField =
   let field = SrcLoc.unLoc lField
       fieldNames = Syntax.cd_fld_names field
-      fieldDoc = maybe Doc.Empty convertLHsDoc (Syntax.cd_fld_doc field)
+      fieldDoc = maybe mempty convertLHsDoc (Syntax.cd_fld_doc field)
    in Maybe.mapMaybe (extractFieldItem fieldDoc) fieldNames
 
 extractFieldItem ::
@@ -615,7 +615,7 @@ convertIdentifier ns str =
 -- | Convert from Haddock's parsed doc to our simplified Doc type.
 fromHaddock :: Haddock.DocH Void.Void Identifier.Identifier -> Doc.Doc
 fromHaddock doc = case doc of
-  Haddock.DocEmpty -> Doc.Empty
+  Haddock.DocEmpty -> mempty
   Haddock.DocAppend a b -> Doc.Append (fromHaddock a) (fromHaddock b)
   Haddock.DocString s -> Doc.String (Text.pack s)
   Haddock.DocParagraph d -> Doc.Paragraph (fromHaddock d)
@@ -627,7 +627,7 @@ fromHaddock doc = case doc of
         { ModLink.name = ModuleName.fromString (Haddock.modLinkName ml),
           ModLink.label = fmap fromHaddock (Haddock.modLinkLabel ml)
         }
-  Haddock.DocWarning _ -> Doc.Empty -- `DocWarning` is never found in markup.
+  Haddock.DocWarning _ -> mempty -- `DocWarning` is never found in markup.
   Haddock.DocEmphasis d -> Doc.Emphasis (fromHaddock d)
   Haddock.DocMonospaced d -> Doc.Monospaced (fromHaddock d)
   Haddock.DocBold d -> Doc.Bold (fromHaddock d)

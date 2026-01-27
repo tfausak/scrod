@@ -42,9 +42,10 @@ data Doc
   deriving (Eq, Ord, Show)
 
 instance Semigroup Doc where
-  Empty <> d = d
-  d <> Empty = d
-  d1 <> d2 = Append d1 d2
+  x <> y = case (x, y) of
+    (Empty, _) -> y
+    (_, Empty) -> x
+    _ -> Append x y
 
 instance Monoid Doc where
   mempty = Empty

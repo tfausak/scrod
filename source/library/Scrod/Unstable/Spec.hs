@@ -1313,7 +1313,7 @@ spec t = describe t "extract" $ do
           assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "func doc")]
 
       describe t "PatBind" $ do
-        describe t "simple " $ do
+        describe t "simple" $ do
           it t "without documentation" $ do
             interface <- scrod t ["x = 1"]
             assertEq t interface.items [itemAt 1 1]

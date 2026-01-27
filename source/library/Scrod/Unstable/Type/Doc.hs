@@ -40,3 +40,12 @@ data Doc
   | Header (Header.Header Doc)
   | Table (Table.Table Doc)
   deriving (Eq, Ord, Show)
+
+instance Semigroup Doc where
+  x <> y = case (x, y) of
+    (Empty, _) -> y
+    (_, Empty) -> x
+    _ -> Append x y
+
+instance Monoid Doc where
+  mempty = Empty

@@ -108,7 +108,7 @@ extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Doc.Doc
 extractModuleDocumentation =
-  maybe Doc.Empty parseDoc
+  maybe mempty parseDoc
     . extractRawDocString
 
 extractRawDocString ::
@@ -174,26 +174,108 @@ extractItems ::
 extractItems lHsModule =
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
-   in concatMap convertDecl decls
+      declsWithDocs = associateDocs decls
+   in concatMap (uncurry convertDeclWithDocMaybe) declsWithDocs
 
-convertDecl ::
+-- | Associate documentation comments with their target declarations.
+-- DocCommentNext applies to the next non-doc declaration.
+-- DocCommentPrev applies to the previous non-doc declaration.
+associateDocs ::
+  [Syntax.LHsDecl Ghc.GhcPs] ->
+  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+associateDocs decls =
+  let -- First pass: handle DocCommentNext (forward)
+      withNextDocs = associateNextDocs decls
+      -- Second pass: handle DocCommentPrev (backward)
+      withAllDocs = associatePrevDocs withNextDocs
+   in withAllDocs
+
+-- | Associate DocCommentNext with the following declaration.
+associateNextDocs ::
+  [Syntax.LHsDecl Ghc.GhcPs] ->
+  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+associateNextDocs = go mempty
+  where
+    go :: Doc.Doc -> [Syntax.LHsDecl Ghc.GhcPs] -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+    go _ [] = []
+    go pendingDoc (lDecl : rest) = case SrcLoc.unLoc lDecl of
+      Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
+        -- Combine with any existing pending doc
+        let newDoc = pendingDoc <> convertLHsDoc lDoc
+         in go newDoc rest
+      Syntax.DocD _ (Hs.DocCommentPrev _) ->
+        -- Skip DocCommentPrev in this pass, but keep the declaration
+        (Doc.Empty, lDecl) : go mempty rest
+      _ ->
+        (pendingDoc, lDecl) : go mempty rest
+
+-- | Associate DocCommentPrev with the preceding declaration.
+associatePrevDocs ::
+  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] ->
+  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+associatePrevDocs = reverse . go . reverse
+  where
+    go :: [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+    go [] = []
+    go ((doc, lDecl) : rest) = case SrcLoc.unLoc lDecl of
+      Syntax.DocD _ (Hs.DocCommentPrev lDoc) ->
+        -- Apply to the next item in the reversed list (which is the previous item originally)
+        let prevDoc = convertLHsDoc lDoc
+         in applyPrevDoc prevDoc (go rest)
+      _ ->
+        (doc, lDecl) : go rest
+
+    applyPrevDoc :: Doc.Doc -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+    applyPrevDoc _ [] = []
+    applyPrevDoc prevDoc ((existingDoc, lDecl) : rest) = case SrcLoc.unLoc lDecl of
+      -- Skip over other doc declarations
+      Syntax.DocD {} -> (existingDoc, lDecl) : applyPrevDoc prevDoc rest
+      -- Apply to first non-doc declaration
+      _ -> (existingDoc <> prevDoc, lDecl) : rest
+
+-- | Convert a declaration with documentation.
+convertDeclWithDocMaybe ::
+  Doc.Doc ->
   Syntax.LHsDecl Ghc.GhcPs ->
   [Located.Located Item.Item]
-convertDecl lDecl = case SrcLoc.unLoc lDecl of
-  Syntax.TyClD _ tyClDecl -> convertTyClDecl lDecl tyClDecl
+convertDeclWithDocMaybe doc lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDoc doc lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDecls ruleDecls
-  _ -> Maybe.maybeToList $ convertDeclSimple lDecl
+  Syntax.DocD {} -> Maybe.maybeToList $ convertDeclSimple lDecl
+  _ -> Maybe.maybeToList $ convertDeclWithDoc doc lDecl
+
+-- | Convert a type/class declaration with documentation.
+convertTyClDeclWithDoc ::
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.TyClDecl Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertTyClDeclWithDoc doc lDecl tyClDecl = case tyClDecl of
+  Syntax.DataDecl _ _ _ _ dataDefn ->
+    Maybe.maybeToList (convertDeclWithDoc doc lDecl)
+      <> convertDataDefn dataDefn
+  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} ->
+    Maybe.maybeToList (convertDeclWithDoc doc lDecl)
+      <> convertClassSigs sigs
+      <> convertFamilyDecls ats
+  _ -> Maybe.maybeToList $ convertDeclWithDoc doc lDecl
 
 convertDeclSimple ::
   Syntax.LHsDecl Ghc.GhcPs ->
   Maybe (Located.Located Item.Item)
-convertDeclSimple lDecl = do
+convertDeclSimple = convertDeclWithDoc mempty
+
+convertDeclWithDoc ::
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertDeclWithDoc doc lDecl = do
   let srcSpan = Annotation.getLocA lDecl
   location <- Location.fromSrcSpan srcSpan
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = doc}
       }
 
 convertRuleDecls ::
@@ -210,22 +292,8 @@ convertRuleDecl lRuleDecl = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
-
-convertTyClDecl ::
-  Syntax.LHsDecl Ghc.GhcPs ->
-  Syntax.TyClDecl Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertTyClDecl lDecl tyClDecl = case tyClDecl of
-  Syntax.DataDecl _ _ _ _ dataDefn ->
-    Maybe.maybeToList (convertDeclSimple lDecl)
-      <> convertDataDefn dataDefn
-  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} ->
-    Maybe.maybeToList (convertDeclSimple lDecl)
-      <> convertClassSigs sigs
-      <> convertFamilyDecls ats
-  _ -> Maybe.maybeToList $ convertDeclSimple lDecl
 
 convertClassSigs ::
   [Syntax.LSig Ghc.GhcPs] ->
@@ -248,7 +316,7 @@ convertIdP lIdP = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 convertFamilyDecls ::
@@ -265,7 +333,7 @@ convertFamilyDecl lFamilyDecl = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 convertDataDefn ::
@@ -304,7 +372,7 @@ convertDerivedType lSigTy = do
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = mempty}
       }
 
 dataDefnConsList ::
@@ -318,16 +386,27 @@ convertConDecl ::
   Syntax.LConDecl Ghc.GhcPs ->
   [Located.Located Item.Item]
 convertConDecl lConDecl =
-  let constructorItem = do
+  let conDecl = SrcLoc.unLoc lConDecl
+      conDoc = extractConDeclDoc conDecl
+      constructorItem = do
         let srcSpan = Annotation.getLocA lConDecl
         location <- Location.fromSrcSpan srcSpan
         pure
           Located.MkLocated
             { Located.location = location,
-              Located.value = Item.MkItem
+              Located.value = Item.MkItem {Item.documentation = conDoc}
             }
-      fieldItems = extractFieldsFromConDecl $ SrcLoc.unLoc lConDecl
+      fieldItems = extractFieldsFromConDecl conDecl
    in Maybe.maybeToList constructorItem <> fieldItems
+
+extractConDeclDoc ::
+  Syntax.ConDecl Ghc.GhcPs ->
+  Doc.Doc
+extractConDeclDoc conDecl = case conDecl of
+  Syntax.ConDeclH98 {Syntax.con_doc = mDoc} ->
+    maybe mempty convertLHsDoc mDoc
+  Syntax.ConDeclGADT {Syntax.con_doc = mDoc} ->
+    maybe mempty convertLHsDoc mDoc
 
 extractFieldsFromConDecl ::
   Syntax.ConDecl Ghc.GhcPs ->
@@ -365,18 +444,20 @@ extractFieldItemsFromConDeclField ::
 extractFieldItemsFromConDeclField lField =
   let field = SrcLoc.unLoc lField
       fieldNames = Syntax.cd_fld_names field
-   in Maybe.mapMaybe extractFieldItem fieldNames
+      fieldDoc = maybe mempty convertLHsDoc (Syntax.cd_fld_doc field)
+   in Maybe.mapMaybe (extractFieldItem fieldDoc) fieldNames
 
 extractFieldItem ::
+  Doc.Doc ->
   Syntax.LFieldOcc Ghc.GhcPs ->
   Maybe (Located.Located Item.Item)
-extractFieldItem lFieldOcc = do
+extractFieldItem doc lFieldOcc = do
   let srcSpan = Annotation.getLocA lFieldOcc
   location <- Location.fromSrcSpan srcSpan
   pure
     Located.MkLocated
       { Located.location = location,
-        Located.value = Item.MkItem
+        Located.value = Item.MkItem {Item.documentation = doc}
       }
 
 convertIE ::
@@ -534,7 +615,7 @@ convertIdentifier ns str =
 -- | Convert from Haddock's parsed doc to our simplified Doc type.
 fromHaddock :: Haddock.DocH Void.Void Identifier.Identifier -> Doc.Doc
 fromHaddock doc = case doc of
-  Haddock.DocEmpty -> Doc.Empty
+  Haddock.DocEmpty -> mempty
   Haddock.DocAppend a b -> Doc.Append (fromHaddock a) (fromHaddock b)
   Haddock.DocString s -> Doc.String (Text.pack s)
   Haddock.DocParagraph d -> Doc.Paragraph (fromHaddock d)
@@ -546,7 +627,7 @@ fromHaddock doc = case doc of
         { ModLink.name = ModuleName.fromString (Haddock.modLinkName ml),
           ModLink.label = fmap fromHaddock (Haddock.modLinkLabel ml)
         }
-  Haddock.DocWarning _ -> Doc.Empty -- `DocWarning` is never found in markup.
+  Haddock.DocWarning _ -> mempty -- `DocWarning` is never found in markup.
   Haddock.DocEmphasis d -> Doc.Emphasis (fromHaddock d)
   Haddock.DocMonospaced d -> Doc.Monospaced (fromHaddock d)
   Haddock.DocBold d -> Doc.Bold (fromHaddock d)

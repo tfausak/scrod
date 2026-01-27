@@ -201,7 +201,7 @@ associateNextDocs = go Doc.Empty
     go pendingDoc (lDecl : rest) = case SrcLoc.unLoc lDecl of
       Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
         -- Combine with any existing pending doc
-        let newDoc = appendDocs pendingDoc (convertLHsDoc lDoc)
+        let newDoc = pendingDoc <> convertLHsDoc lDoc
          in go newDoc rest
       Syntax.DocD _ (Hs.DocCommentPrev _) ->
         -- Skip DocCommentPrev in this pass, but keep the declaration
@@ -231,13 +231,7 @@ associatePrevDocs = reverse . go . reverse
       -- Skip over other doc declarations
       Syntax.DocD {} -> (existingDoc, lDecl) : applyPrevDoc prevDoc rest
       -- Apply to first non-doc declaration
-      _ -> (appendDocs existingDoc prevDoc, lDecl) : rest
-
--- | Combine two documentation values.
-appendDocs :: Doc.Doc -> Doc.Doc -> Doc.Doc
-appendDocs Doc.Empty d = d
-appendDocs d Doc.Empty = d
-appendDocs d1 d2 = Doc.Append d1 d2
+      _ -> (existingDoc <> prevDoc, lDecl) : rest
 
 -- | Convert a declaration with documentation.
 convertDeclWithDocMaybe ::

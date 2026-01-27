@@ -919,7 +919,7 @@ spec t = describe t "extract" $ do
 
         it t "data with record" $ do
           interface <- scrod t ["data E = E { eInt :: Int, eBool :: Bool }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 1 27]
 
         it t "data with deriving" $ do
           interface <- scrod t ["data F = F deriving Show"]
@@ -967,7 +967,7 @@ spec t = describe t "extract" $ do
 
         it t "data with GADT record" $ do
           interface <- scrod t ["data Q a where Q :: { qVal :: Int } -> Q Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 16]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 16, itemAt 1 23]
 
         it t "data with strictness" $ do
           interface <- scrod t ["data R = R !Int"]
@@ -991,7 +991,7 @@ spec t = describe t "extract" $ do
 
         it t "newtype with record" $ do
           interface <- scrod t ["newtype W = W { unW :: Int }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 17]
 
         it t "data with context" $ do
           interface <- scrod t ["data Eq a => X a = X a"]
@@ -1293,7 +1293,7 @@ spec t = describe t "extract" $ do
 
         it t "record" $ do
           interface <- scrod t ["data T = C { f :: Int }", "C { f = x } = C 1"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 2 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 2 1]
 
         it t "as pattern" $ do
           interface <- scrod t ["all@(x:xs) = [1, 2, 3]"]

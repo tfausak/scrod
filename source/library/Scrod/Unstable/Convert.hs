@@ -227,7 +227,7 @@ convertDataDefn ::
   Syntax.HsDataDefn Ghc.GhcPs ->
   [Located.Located Item.Item]
 convertDataDefn dataDefn =
-  Maybe.mapMaybe convertConDecl $ dataDefnConsList (Syntax.dd_cons dataDefn)
+  concatMap convertConDecl $ dataDefnConsList (Syntax.dd_cons dataDefn)
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->
@@ -238,9 +238,62 @@ dataDefnConsList ddc = case ddc of
 
 convertConDecl ::
   Syntax.LConDecl Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertConDecl lConDecl =
+  let constructorItem = do
+        let srcSpan = Annotation.getLocA lConDecl
+        location <- Location.fromSrcSpan srcSpan
+        pure
+          Located.MkLocated
+            { Located.location = location,
+              Located.value = Item.MkItem
+            }
+      fieldItems = extractFieldsFromConDecl $ SrcLoc.unLoc lConDecl
+   in Maybe.maybeToList constructorItem <> fieldItems
+
+extractFieldsFromConDecl ::
+  Syntax.ConDecl Ghc.GhcPs ->
+  [Located.Located Item.Item]
+extractFieldsFromConDecl conDecl = case conDecl of
+  Syntax.ConDeclH98 {Syntax.con_args = args} ->
+    extractFieldsFromH98Details args
+  Syntax.ConDeclGADT {Syntax.con_g_args = gArgs} ->
+    extractFieldsFromGADTDetails gArgs
+
+extractFieldsFromH98Details ::
+  Syntax.HsConDeclH98Details Ghc.GhcPs ->
+  [Located.Located Item.Item]
+extractFieldsFromH98Details details = case details of
+  Syntax.RecCon lFieldsRec ->
+    extractFieldItems $ SrcLoc.unLoc lFieldsRec
+  _ -> []
+
+extractFieldsFromGADTDetails ::
+  Syntax.HsConDeclGADTDetails Ghc.GhcPs ->
+  [Located.Located Item.Item]
+extractFieldsFromGADTDetails details = case details of
+  Syntax.RecConGADT _ lFieldsRec ->
+    extractFieldItems $ SrcLoc.unLoc lFieldsRec
+  _ -> []
+
+extractFieldItems ::
+  [Syntax.LConDeclField Ghc.GhcPs] ->
+  [Located.Located Item.Item]
+extractFieldItems = concatMap extractFieldItemsFromConDeclField
+
+extractFieldItemsFromConDeclField ::
+  Syntax.LConDeclField Ghc.GhcPs ->
+  [Located.Located Item.Item]
+extractFieldItemsFromConDeclField lField =
+  let field = SrcLoc.unLoc lField
+      fieldNames = Syntax.cd_fld_names field
+   in Maybe.mapMaybe extractFieldItem fieldNames
+
+extractFieldItem ::
+  Syntax.LFieldOcc Ghc.GhcPs ->
   Maybe (Located.Located Item.Item)
-convertConDecl lConDecl = do
-  let srcSpan = Annotation.getLocA lConDecl
+extractFieldItem lFieldOcc = do
+  let srcSpan = Annotation.getLocA lFieldOcc
   location <- Location.fromSrcSpan srcSpan
   pure
     Located.MkLocated

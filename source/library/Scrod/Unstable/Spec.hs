@@ -923,27 +923,27 @@ spec t = describe t "extract" $ do
 
         it t "data with deriving" $ do
           interface <- scrod t ["data F = F deriving Show"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 21]
 
         it t "data with deriving multiple" $ do
           interface <- scrod t ["data G = G deriving (Show, Eq)"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 22, itemAt 1 28]
 
         it t "data with deriving strategies" $ do
           interface <- scrod t ["data H = H deriving stock Show"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 27]
 
         it t "data with deriving via" $ do
           interface <- scrod t ["newtype I = I Int deriving Show via Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 28]
 
         it t "data with deriving anyclass" $ do
           interface <- scrod t ["data J = J deriving anyclass C"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 30]
 
         it t "data with deriving newtype" $ do
           interface <- scrod t ["newtype K = K Int deriving newtype Num"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 36]
 
         it t "data with type params" $ do
           interface <- scrod t ["data L a = L a"]
@@ -1011,7 +1011,7 @@ spec t = describe t "extract" $ do
 
         it t "data with multiple deriving clauses" $ do
           interface <- scrod t ["data AA = AA deriving Show deriving Eq"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 11]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 11, itemAt 1 23, itemAt 1 37]
 
         it t "type data" $ do
           interface <- scrod t ["type data TBool = TTrue | TFalse"]

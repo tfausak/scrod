@@ -1024,15 +1024,15 @@ spec t = describe t "extract" $ do
 
         it t "with method" $ do
           interface <- scrod t ["class Cls a where method :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with default method" $ do
           interface <- scrod t ["class Cls a where", " method :: a -> a", " method = id"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "with multiple methods" $ do
           interface <- scrod t ["class Cls a where", " m1 :: a", " m2 :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
 
         it t "with superclass" $ do
           interface <- scrod t ["class Eq a => Cls a"]
@@ -1052,23 +1052,23 @@ spec t = describe t "extract" $ do
 
         it t "with associated type" $ do
           interface <- scrod t ["class Cls a where type T a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated type with kind sig" $ do
           interface <- scrod t ["class Cls a where type T a :: Type -> Type"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated type default" $ do
           interface <- scrod t ["class Cls a where", " type T a", " type T a = Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "with associated data" $ do
           interface <- scrod t ["class Cls a where data D a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated data with kind sig" $ do
           interface <- scrod t ["class Cls a where data D a :: Type"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with quantified constraint" $ do
           interface <- scrod t ["class (forall x. Eq (f x)) => Cls f"]
@@ -1076,11 +1076,11 @@ spec t = describe t "extract" $ do
 
         it t "with default signature" $ do
           interface <- scrod t ["class Cls a where", " method :: a -> a", " default method :: Show a => a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
 
         it t "with minimal pragma" $ do
           interface <- scrod t ["class Cls a where", " m1 :: a", " m2 :: a", " {-# MINIMAL m1 | m2 #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
 
         it t "with kind sig" $ do
           interface <- scrod t ["class Cls (a :: Type)"]
@@ -1414,15 +1414,15 @@ spec t = describe t "extract" $ do
       describe t "ClassOpSig" $ do
         it t "basic" $ do
           interface <- scrod t ["class C a where op :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 17]
 
         it t "default" $ do
           interface <- scrod t ["class C a where", " op :: a -> a", " default op :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
 
         it t "multiple" $ do
           interface <- scrod t ["class C a where op1, op2 :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 1 17, itemAt 1 22]
 
       describe t "FixSig" $ do
         it t "infixl" $ do
@@ -1523,23 +1523,23 @@ spec t = describe t "extract" $ do
       describe t "MinimalSig" $ do
         it t "single" $ do
           interface <- scrod t ["class C a where", " m :: a", " {-# MINIMAL m #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "or" $ do
           interface <- scrod t ["class C a where", " m1, m2 :: a", " {-# MINIMAL m1 | m2 #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
 
         it t "and" $ do
           interface <- scrod t ["class C a where", " m1, m2 :: a", " {-# MINIMAL m1, m2 #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
 
         it t "nested" $ do
           interface <- scrod t ["class C a where", " m1, m2, m3 :: a", " {-# MINIMAL (m1, m2) | m3 #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6, itemAt 2 10]
 
         it t "empty" $ do
           interface <- scrod t ["class C a where", " m :: a", " m = undefined", " {-# MINIMAL #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
 
       describe t "SCCFunSig" $ do
         it t "basic" $ do

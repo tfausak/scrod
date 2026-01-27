@@ -221,7 +221,52 @@ convertTyClDecl lDecl tyClDecl = case tyClDecl of
   Syntax.DataDecl _ _ _ _ dataDefn ->
     Maybe.maybeToList (convertDeclSimple lDecl)
       <> convertDataDefn dataDefn
+  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} ->
+    Maybe.maybeToList (convertDeclSimple lDecl)
+      <> convertClassSigs sigs
+      <> convertFamilyDecls ats
   _ -> Maybe.maybeToList $ convertDeclSimple lDecl
+
+convertClassSigs ::
+  [Syntax.LSig Ghc.GhcPs] ->
+  [Located.Located Item.Item]
+convertClassSigs = concatMap convertClassSig
+
+convertClassSig ::
+  Syntax.LSig Ghc.GhcPs ->
+  [Located.Located Item.Item]
+convertClassSig lSig = case SrcLoc.unLoc lSig of
+  Syntax.ClassOpSig _ _ names _ -> Maybe.mapMaybe convertIdP names
+  _ -> []
+
+convertIdP ::
+  Syntax.LIdP Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertIdP lIdP = do
+  let srcSpan = Annotation.getLocA lIdP
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
+
+convertFamilyDecls ::
+  [Syntax.LFamilyDecl Ghc.GhcPs] ->
+  [Located.Located Item.Item]
+convertFamilyDecls = Maybe.mapMaybe convertFamilyDecl
+
+convertFamilyDecl ::
+  Syntax.LFamilyDecl Ghc.GhcPs ->
+  Maybe (Located.Located Item.Item)
+convertFamilyDecl lFamilyDecl = do
+  let srcSpan = Annotation.getLocA lFamilyDecl
+  location <- Location.fromSrcSpan srcSpan
+  pure
+    Located.MkLocated
+      { Located.location = location,
+        Located.value = Item.MkItem
+      }
 
 convertDataDefn ::
   Syntax.HsDataDefn Ghc.GhcPs ->

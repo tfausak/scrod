@@ -129,7 +129,6 @@ test-suite scrod-test-suite
   build-depends:
     tasty ^>=1.5.3,
     tasty-hunit ^>=0.10.2,
-    transformers ^>=0.6.1,
 
   hs-source-dirs: source/test-suite
   main-is: Main.hs

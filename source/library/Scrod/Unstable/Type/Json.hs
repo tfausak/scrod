@@ -217,7 +217,10 @@ toBuilder json = case json of
 
 sDecimal :: Decimal.Decimal -> Builder.Builder
 sDecimal (Decimal.MkDecimal coef expo) =
-  Builder.integerDec coef <> Builder.char7 'e' <> Builder.integerDec expo
+  Builder.integerDec coef
+    <> if expo == 0
+      then mempty
+      else Builder.char7 'e' <> Builder.integerDec expo
 
 sString :: Text.Text -> Builder.Builder
 sString t =

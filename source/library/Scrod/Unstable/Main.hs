@@ -17,6 +17,7 @@ defaultMain = do
       Exit.exitFailure
     Right interface -> do
       LazyByteString.putStr . Json.render $ Interface.toJson interface
+      putStrLn ""
 
 extract :: String -> Either String Interface.Interface
 extract = Convert.convert . Parse.parse

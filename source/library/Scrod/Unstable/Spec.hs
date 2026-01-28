@@ -11,6 +11,7 @@ import Data.Functor ((<&>))
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Encoding
 import qualified GHC.Stack as Stack
 import Heck (Test, assertEq, describe, it)
 import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
@@ -2224,59 +2225,59 @@ jsonSpec :: (MonadFail m, Monad n) => Test m n -> n ()
 jsonSpec t = describe t "json" $ do
   describe t "parse" $ do
     it t "parses null" $ do
-      result <- expectRight t . Json.parse $ Text.pack "null"
+      result <- expectRight t $ Json.parse "null"
       assertEq t result Json.Null
 
     it t "parses true" $ do
-      result <- expectRight t . Json.parse $ Text.pack "true"
+      result <- expectRight t $ Json.parse "true"
       assertEq t result $ Json.Boolean True
 
     it t "parses false" $ do
-      result <- expectRight t . Json.parse $ Text.pack "false"
+      result <- expectRight t $ Json.parse "false"
       assertEq t result $ Json.Boolean False
 
     it t "parses integer" $ do
-      result <- expectRight t . Json.parse $ Text.pack "123"
+      result <- expectRight t $ Json.parse "123"
       assertEq t result . Json.Number $ Decimal.MkDecimal 123 0
 
     it t "parses negative integer" $ do
-      result <- expectRight t . Json.parse $ Text.pack "-42"
+      result <- expectRight t $ Json.parse "-42"
       assertEq t result . Json.Number $ Decimal.MkDecimal (-42) 0
 
     it t "parses decimal" $ do
-      result <- expectRight t . Json.parse $ Text.pack "1.23"
+      result <- expectRight t $ Json.parse "1.23"
       assertEq t result . Json.Number $ Decimal.MkDecimal 123 (-2)
 
     it t "parses scientific notation" $ do
-      result <- expectRight t . Json.parse $ Text.pack "1e10"
+      result <- expectRight t $ Json.parse "1e10"
       assertEq t result . Json.Number $ Decimal.MkDecimal 1 10
 
     it t "parses scientific with decimal" $ do
-      result <- expectRight t . Json.parse $ Text.pack "1.5e2"
+      result <- expectRight t $ Json.parse "1.5e2"
       assertEq t result . Json.Number $ Decimal.MkDecimal 15 1
 
     it t "parses string" $ do
-      result <- expectRight t . Json.parse $ Text.pack "\"hello\""
-      assertEq t result . Json.String $ Text.pack "hello"
+      result <- expectRight t $ Json.parse "\"hello\""
+      assertEq t result $ Json.String "hello"
 
     it t "parses string with escapes" $ do
-      result <- expectRight t . Json.parse $ Text.pack "\"a\\nb\""
-      assertEq t result . Json.String $ Text.pack "a\nb"
+      result <- expectRight t $ Json.parse "\"a\\nb\""
+      assertEq t result $ Json.String "a\nb"
 
     it t "parses string with unicode escape" $ do
-      result <- expectRight t . Json.parse $ Text.pack "\"\\u0041\""
-      assertEq t result . Json.String $ Text.pack "A"
+      result <- expectRight t $ Json.parse "\"\\u0041\""
+      assertEq t result $ Json.String "A"
 
     it t "parses empty array" $ do
-      result <- expectRight t . Json.parse $ Text.pack "[]"
+      result <- expectRight t $ Json.parse "[]"
       assertEq t result $ Json.Array []
 
     it t "parses empty object" $ do
-      result <- expectRight t . Json.parse $ Text.pack "{}"
+      result <- expectRight t $ Json.parse "{}"
       assertEq t result $ Json.Object Map.empty
 
     it t "parses array with values" $ do
-      result <- expectRight t . Json.parse $ Text.pack "[1, 2, 3]"
+      result <- expectRight t $ Json.parse "[1, 2, 3]"
       assertEq t result $
         Json.Array
           [ Json.Number $ Decimal.MkDecimal 1 0,
@@ -2285,67 +2286,65 @@ jsonSpec t = describe t "json" $ do
           ]
 
     it t "parses object with values" $ do
-      result <- expectRight t . Json.parse $ Text.pack "{\"a\": 1}"
+      result <- expectRight t $ Json.parse "{\"a\": 1}"
       assertEq t result . Json.Object $
-        Map.singleton (Text.pack "a") (Json.Number $ Decimal.MkDecimal 1 0)
+        Map.singleton "a" (Json.Number $ Decimal.MkDecimal 1 0)
 
     it t "parses nested structures" $ do
-      result <- expectRight t . Json.parse $ Text.pack "{\"arr\": [1, {\"nested\": true}]}"
+      result <- expectRight t $ Json.parse "{\"arr\": [1, {\"nested\": true}]}"
       assertEq t result . Json.Object $
         Map.singleton
-          (Text.pack "arr")
+          "arr"
           ( Json.Array
               [ Json.Number $ Decimal.MkDecimal 1 0,
-                Json.Object $ Map.singleton (Text.pack "nested") (Json.Boolean True)
+                Json.Object $ Map.singleton "nested" (Json.Boolean True)
               ]
           )
 
     it t "handles whitespace" $ do
-      result <- expectRight t . Json.parse $ Text.pack "  { \"a\" : 1 }  "
+      result <- expectRight t $ Json.parse "  { \"a\" : 1 }  "
       assertEq t result . Json.Object $
-        Map.singleton (Text.pack "a") (Json.Number $ Decimal.MkDecimal 1 0)
+        Map.singleton "a" (Json.Number $ Decimal.MkDecimal 1 0)
 
     it t "fails on invalid json" $ do
-      assertSatisfies t Either.isLeft . Json.parse $ Text.pack "invalid"
+      assertSatisfies t Either.isLeft $ Json.parse "invalid"
 
     it t "fails on trailing content" $ do
-      assertSatisfies t Either.isLeft . Json.parse $ Text.pack "null extra"
+      assertSatisfies t Either.isLeft $ Json.parse "null extra"
 
   describe t "render" $ do
     it t "renders null" $ do
-      assertEq t (Json.render Json.Null) $ LazyByteString.pack [110, 117, 108, 108]
+      assertEq t (Json.render Json.Null) "null"
 
     it t "renders true" $ do
-      assertEq t (Json.render $ Json.Boolean True) $ LazyByteString.pack [116, 114, 117, 101]
+      assertEq t (Json.render $ Json.Boolean True) "true"
 
     it t "renders false" $ do
-      assertEq t (Json.render $ Json.Boolean False) $ LazyByteString.pack [102, 97, 108, 115, 101]
+      assertEq t (Json.render $ Json.Boolean False) "false"
 
     it t "renders number" $ do
-      assertEq t (Json.render . Json.Number $ Decimal.MkDecimal 123 0) $
-        LazyByteString.pack [49, 50, 51, 101, 48]
+      assertEq t (Json.render . Json.Number $ Decimal.MkDecimal 123 0) "123"
 
     it t "renders string" $ do
-      assertEq t (Json.render . Json.String $ Text.pack "hello") $
-        LazyByteString.pack [34, 104, 101, 108, 108, 111, 34]
+      assertEq t (Json.render $ Json.String "hello") "\"hello\""
 
     it t "renders string with escapes" $ do
-      let rendered = Json.render . Json.String $ Text.pack "a\nb"
-      assertEq t rendered $ LazyByteString.pack [34, 97, 92, 110, 98, 34]
+      let rendered = Json.render $ Json.String "a\nb"
+      assertEq t rendered "\"a\\nb\""
 
     it t "renders empty array" $ do
-      assertEq t (Json.render $ Json.Array []) $ LazyByteString.pack [91, 93]
+      assertEq t (Json.render $ Json.Array []) "[]"
 
     it t "renders array" $ do
       let rendered = Json.render $ Json.Array [Json.Null, Json.Boolean True]
-      assertEq t rendered $ LazyByteString.pack [91, 110, 117, 108, 108, 44, 116, 114, 117, 101, 93]
+      assertEq t rendered "[null,true]"
 
     it t "renders empty object" $ do
-      assertEq t (Json.render $ Json.Object Map.empty) $ LazyByteString.pack [123, 125]
+      assertEq t (Json.render $ Json.Object Map.empty) "{}"
 
     it t "renders object" $ do
-      let rendered = Json.render . Json.Object $ Map.singleton (Text.pack "a") Json.Null
-      assertEq t rendered $ LazyByteString.pack [123, 34, 97, 34, 58, 110, 117, 108, 108, 125]
+      let rendered = Json.render . Json.Object $ Map.singleton "a" Json.Null
+      assertEq t rendered "{\"a\":null}"
 
   describe t "roundtrip" $ do
     it t "null roundtrips" $ do
@@ -2367,7 +2366,7 @@ jsonSpec t = describe t "json" $ do
       assertEq t result original
 
     it t "string roundtrips" $ do
-      let original = Json.String $ Text.pack "hello world"
+      let original = Json.String "hello world"
       let rendered = Json.render original
       result <- expectRight t . Json.parse $ decodeUtf8 rendered
       assertEq t result original
@@ -2382,8 +2381,8 @@ jsonSpec t = describe t "json" $ do
       let original =
             Json.Object $
               Map.fromList
-                [ (Text.pack "name", Json.String $ Text.pack "test"),
-                  (Text.pack "count", Json.Number $ Decimal.MkDecimal 42 0)
+                [ ("name", Json.String "test"),
+                  ("count", Json.Number $ Decimal.MkDecimal 42 0)
                 ]
       let rendered = Json.render original
       result <- expectRight t . Json.parse $ decodeUtf8 rendered
@@ -2393,10 +2392,10 @@ jsonSpec t = describe t "json" $ do
       let original =
             Json.Object $
               Map.singleton
-                (Text.pack "data")
+                "data"
                 ( Json.Array
-                    [ Json.Object $ Map.singleton (Text.pack "id") (Json.Number $ Decimal.MkDecimal 1 0),
-                      Json.Object $ Map.singleton (Text.pack "id") (Json.Number $ Decimal.MkDecimal 2 0)
+                    [ Json.Object $ Map.singleton "id" (Json.Number $ Decimal.MkDecimal 1 0),
+                      Json.Object $ Map.singleton "id" (Json.Number $ Decimal.MkDecimal 2 0)
                     ]
                 )
       let rendered = Json.render original
@@ -2404,4 +2403,4 @@ jsonSpec t = describe t "json" $ do
       assertEq t result original
 
 decodeUtf8 :: LazyByteString.ByteString -> Text.Text
-decodeUtf8 = Text.pack . fmap (toEnum . fromIntegral) . LazyByteString.unpack
+decodeUtf8 = Encoding.decodeUtf8Lenient . LazyByteString.toStrict

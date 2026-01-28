@@ -278,7 +278,7 @@ tagged t contents =
 
 -- | Create a JSON object from a list of key-value pairs.
 object :: [(Text.Text, Json)] -> Json
-object = Object . Map.fromList
+object = fromMap . Map.fromList
 
 -- | Convert a Natural to a JSON Number.
 fromNatural :: Natural.Natural -> Json
@@ -286,7 +286,7 @@ fromNatural n = Number $ Decimal.MkDecimal (toInteger n) 0
 
 -- | Convert an Int to a JSON Number.
 fromInt :: Int -> Json
-fromInt n = Number $ Decimal.MkDecimal (toInteger n) 0
+fromInt = integerToJson . toInteger
 
 -- | Convert an Integer to a JSON Number.
 integerToJson :: Integer -> Json

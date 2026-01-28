@@ -1,7 +1,9 @@
 module Scrod.Unstable.Convert where
 
 import qualified Control.Exception as Exception
+import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.Bifunctor as Bifunctor
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
@@ -31,6 +33,7 @@ import qualified Language.Haskell.Syntax as Syntax
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Unstable.Extra.OnOff as OnOff
 import qualified Scrod.Unstable.Type.Category as Category
+import qualified Scrod.Unstable.Type.ConversionState as ConversionState
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Export as Export
@@ -43,6 +46,8 @@ import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
 import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Item as Item
+import qualified Scrod.Unstable.Type.ItemKey as ItemKey
+import qualified Scrod.Unstable.Type.ItemName as ItemName
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Located as Located
@@ -59,6 +64,56 @@ import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
 import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
+
+-- | Monad for item conversion with auto-incrementing keys.
+type ConvertM a = State.State ConversionState.ConversionState a
+
+-- | Allocate a new unique key.
+allocateKey :: ConvertM ItemKey.ItemKey
+allocateKey = State.state ConversionState.allocateKey
+
+-- | Run the conversion monad and extract the result.
+runConvert :: ConvertM a -> a
+runConvert = flip State.evalState ConversionState.initialState
+
+-- | Create an Item from a source span with the given properties.
+-- This is the common helper used by all item creation functions.
+mkItemM ::
+  SrcLoc.SrcSpan ->
+  Maybe ItemKey.ItemKey ->
+  Maybe ItemName.ItemName ->
+  Doc.Doc ->
+  ConvertM (Maybe (Located.Located Item.Item))
+mkItemM srcSpan parentKey itemName doc =
+  fmap (fmap fst) $ mkItemWithKeyM srcSpan parentKey itemName doc
+
+-- | Create an Item and return both the item and its allocated key.
+-- Useful when the key is needed for creating child items.
+mkItemWithKeyM ::
+  SrcLoc.SrcSpan ->
+  Maybe ItemKey.ItemKey ->
+  Maybe ItemName.ItemName ->
+  Doc.Doc ->
+  ConvertM (Maybe (Located.Located Item.Item, ItemKey.ItemKey))
+mkItemWithKeyM srcSpan parentKey itemName doc =
+  case Location.fromSrcSpan srcSpan of
+    Nothing -> pure Nothing
+    Just location -> do
+      key <- allocateKey
+      pure $
+        Just
+          ( Located.MkLocated
+              { Located.location = location,
+                Located.value =
+                  Item.MkItem
+                    { Item.key = key,
+                      Item.parentKey = parentKey,
+                      Item.name = itemName,
+                      Item.documentation = doc
+                    }
+              },
+            key
+          )
 
 convert ::
   Either
@@ -171,11 +226,16 @@ extractModuleExports lHsModule = do
 extractItems ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   [Located.Located Item.Item]
-extractItems lHsModule =
+extractItems lHsModule = runConvert $ extractItemsM lHsModule
+
+extractItemsM ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  ConvertM [Located.Located Item.Item]
+extractItemsM lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
       declsWithDocs = associateDocs decls
-   in concatMap (uncurry convertDeclWithDocMaybe) declsWithDocs
+  fmap concat $ traverse (uncurry convertDeclWithDocMaybeM) declsWithDocs
 
 -- | Associate documentation comments with their target declarations.
 -- DocCommentNext applies to the next non-doc declaration.
@@ -233,147 +293,138 @@ associatePrevDocs = reverse . go . reverse
       -- Apply to first non-doc declaration
       _ -> (existingDoc <> prevDoc, lDecl) : rest
 
--- | Convert a declaration with documentation.
-convertDeclWithDocMaybe ::
+-- | Convert a declaration with documentation (monadic version).
+convertDeclWithDocMaybeM ::
   Doc.Doc ->
   Syntax.LHsDecl Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertDeclWithDocMaybe doc lDecl = case SrcLoc.unLoc lDecl of
-  Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDoc doc lDecl tyClDecl
-  Syntax.RuleD _ ruleDecls -> convertRuleDecls ruleDecls
-  Syntax.DocD {} -> Maybe.maybeToList $ convertDeclSimple lDecl
-  _ -> Maybe.maybeToList $ convertDeclWithDoc doc lDecl
+  ConvertM [Located.Located Item.Item]
+convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc lDecl tyClDecl
+  Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
+  Syntax.DocD {} -> fmap Maybe.maybeToList $ convertDeclSimpleM lDecl
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractDeclName lDecl) lDecl
 
 -- | Convert a type/class declaration with documentation.
-convertTyClDeclWithDoc ::
+convertTyClDeclWithDocM ::
   Doc.Doc ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Syntax.TyClDecl Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertTyClDeclWithDoc doc lDecl tyClDecl = case tyClDecl of
-  Syntax.DataDecl _ _ _ _ dataDefn ->
-    Maybe.maybeToList (convertDeclWithDoc doc lDecl)
-      <> convertDataDefn dataDefn
-  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} ->
-    Maybe.maybeToList (convertDeclWithDoc doc lDecl)
-      <> convertClassSigs sigs
-      <> convertFamilyDecls ats
-  _ -> Maybe.maybeToList $ convertDeclWithDoc doc lDecl
+  ConvertM [Located.Located Item.Item]
+convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
+  Syntax.DataDecl _ _ _ _ dataDefn -> do
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
+    let parentKey = fmap (Item.key . Located.value) parentItem
+    childItems <- convertDataDefnM parentKey dataDefn
+    pure $ Maybe.maybeToList parentItem <> childItems
+  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} -> do
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
+    let parentKey = fmap (Item.key . Located.value) parentItem
+    methodItems <- convertClassSigsM parentKey sigs
+    familyItems <- convertFamilyDeclsM parentKey ats
+    pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
 
-convertDeclSimple ::
+convertDeclSimpleM ::
   Syntax.LHsDecl Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertDeclSimple = convertDeclWithDoc mempty
+  ConvertM (Maybe (Located.Located Item.Item))
+convertDeclSimpleM = convertDeclWithDocM Nothing mempty Nothing
 
-convertDeclWithDoc ::
+convertDeclWithDocM ::
+  Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe ItemName.ItemName ->
   Syntax.LHsDecl Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertDeclWithDoc doc lDecl = do
-  let srcSpan = Annotation.getLocA lDecl
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = doc}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+convertDeclWithDocM parentKey doc itemName lDecl =
+  mkItemM (Annotation.getLocA lDecl) parentKey itemName doc
 
-convertRuleDecls ::
+convertRuleDeclsM ::
   Syntax.RuleDecls Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertRuleDecls (Syntax.HsRules _ rules) = Maybe.mapMaybe convertRuleDecl rules
+  ConvertM [Located.Located Item.Item]
+convertRuleDeclsM (Syntax.HsRules _ rules) = fmap Maybe.catMaybes $ traverse convertRuleDeclM rules
 
-convertRuleDecl ::
+convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertRuleDecl lRuleDecl = do
-  let srcSpan = Annotation.getLocA lRuleDecl
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = mempty}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+convertRuleDeclM lRuleDecl =
+  mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing mempty
 
-convertClassSigs ::
+convertClassSigsM ::
+  Maybe ItemKey.ItemKey ->
   [Syntax.LSig Ghc.GhcPs] ->
-  [Located.Located Item.Item]
-convertClassSigs = concatMap convertClassSig
+  ConvertM [Located.Located Item.Item]
+convertClassSigsM parentKey = fmap concat . traverse (convertClassSigM parentKey)
 
-convertClassSig ::
+convertClassSigM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LSig Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertClassSig lSig = case SrcLoc.unLoc lSig of
-  Syntax.ClassOpSig _ _ names _ -> Maybe.mapMaybe convertIdP names
-  _ -> []
+  ConvertM [Located.Located Item.Item]
+convertClassSigM parentKey lSig = case SrcLoc.unLoc lSig of
+  Syntax.ClassOpSig _ _ names _ -> fmap Maybe.catMaybes $ traverse (convertIdPM parentKey) names
+  _ -> pure []
 
-convertIdP ::
+convertIdPM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LIdP Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertIdP lIdP = do
-  let srcSpan = Annotation.getLocA lIdP
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = mempty}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+convertIdPM parentKey lIdP =
+  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) mempty
 
-convertFamilyDecls ::
+convertFamilyDeclsM ::
+  Maybe ItemKey.ItemKey ->
   [Syntax.LFamilyDecl Ghc.GhcPs] ->
-  [Located.Located Item.Item]
-convertFamilyDecls = Maybe.mapMaybe convertFamilyDecl
+  ConvertM [Located.Located Item.Item]
+convertFamilyDeclsM parentKey = fmap Maybe.catMaybes . traverse (convertFamilyDeclM parentKey)
 
-convertFamilyDecl ::
+convertFamilyDeclM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LFamilyDecl Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertFamilyDecl lFamilyDecl = do
-  let srcSpan = Annotation.getLocA lFamilyDecl
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = mempty}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+convertFamilyDeclM parentKey lFamilyDecl =
+  mkItemM
+    (Annotation.getLocA lFamilyDecl)
+    parentKey
+    (Just $ extractFamilyDeclName (SrcLoc.unLoc lFamilyDecl))
+    mempty
 
-convertDataDefn ::
+convertDataDefnM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.HsDataDefn Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertDataDefn dataDefn =
-  concatMap convertConDecl (dataDefnConsList (Syntax.dd_cons dataDefn))
-    <> convertDerivingClauses (Syntax.dd_derivs dataDefn)
+  ConvertM [Located.Located Item.Item]
+convertDataDefnM parentKey dataDefn = do
+  conItems <- fmap concat $ traverse (convertConDeclM parentKey) (dataDefnConsList (Syntax.dd_cons dataDefn))
+  derivItems <- convertDerivingClausesM parentKey (Syntax.dd_derivs dataDefn)
+  pure $ conItems <> derivItems
 
-convertDerivingClauses ::
+convertDerivingClausesM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.HsDeriving Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertDerivingClauses = concatMap convertDerivingClause
+  ConvertM [Located.Located Item.Item]
+convertDerivingClausesM parentKey = fmap concat . traverse (convertDerivingClauseM parentKey)
 
-convertDerivingClause ::
+convertDerivingClauseM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LHsDerivingClause Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertDerivingClause lClause =
+  ConvertM [Located.Located Item.Item]
+convertDerivingClauseM parentKey lClause = do
   let clause = SrcLoc.unLoc lClause
       derivClauseTys = SrcLoc.unLoc $ Syntax.deriv_clause_tys clause
-   in convertDerivClauseTys derivClauseTys
+  convertDerivClauseTysM parentKey derivClauseTys
 
-convertDerivClauseTys ::
+convertDerivClauseTysM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.DerivClauseTys Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertDerivClauseTys dct = case dct of
-  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList $ convertDerivedType lSigTy
-  Syntax.DctMulti _ lSigTys -> Maybe.mapMaybe convertDerivedType lSigTys
+  ConvertM [Located.Located Item.Item]
+convertDerivClauseTysM parentKey dct = case dct of
+  Syntax.DctSingle _ lSigTy -> fmap Maybe.maybeToList $ convertDerivedTypeM parentKey lSigTy
+  Syntax.DctMulti _ lSigTys -> fmap Maybe.catMaybes $ traverse (convertDerivedTypeM parentKey) lSigTys
 
-convertDerivedType ::
+convertDerivedTypeM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LHsSigType Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-convertDerivedType lSigTy = do
-  let srcSpan = Annotation.getLocA lSigTy
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = mempty}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+convertDerivedTypeM parentKey lSigTy =
+  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing mempty
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->
@@ -382,22 +433,24 @@ dataDefnConsList ddc = case ddc of
   Syntax.NewTypeCon con -> [con]
   Syntax.DataTypeCons _ cons -> cons
 
-convertConDecl ::
+convertConDeclM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LConDecl Ghc.GhcPs ->
-  [Located.Located Item.Item]
-convertConDecl lConDecl =
+  ConvertM [Located.Located Item.Item]
+convertConDeclM parentKey lConDecl = do
   let conDecl = SrcLoc.unLoc lConDecl
       conDoc = extractConDeclDoc conDecl
-      constructorItem = do
-        let srcSpan = Annotation.getLocA lConDecl
-        location <- Location.fromSrcSpan srcSpan
-        pure
-          Located.MkLocated
-            { Located.location = location,
-              Located.value = Item.MkItem {Item.documentation = conDoc}
-            }
-      fieldItems = extractFieldsFromConDecl conDecl
-   in Maybe.maybeToList constructorItem <> fieldItems
+  result <-
+    mkItemWithKeyM
+      (Annotation.getLocA lConDecl)
+      parentKey
+      (Just $ extractConDeclName conDecl)
+      conDoc
+  case result of
+    Nothing -> pure []
+    Just (constructorItem, key) -> do
+      fieldItems <- extractFieldsFromConDeclM (Just key) conDecl
+      pure $ [constructorItem] <> fieldItems
 
 extractConDeclDoc ::
   Syntax.ConDecl Ghc.GhcPs ->
@@ -408,57 +461,124 @@ extractConDeclDoc conDecl = case conDecl of
   Syntax.ConDeclGADT {Syntax.con_doc = mDoc} ->
     maybe mempty convertLHsDoc mDoc
 
-extractFieldsFromConDecl ::
+extractFieldsFromConDeclM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.ConDecl Ghc.GhcPs ->
-  [Located.Located Item.Item]
-extractFieldsFromConDecl conDecl = case conDecl of
+  ConvertM [Located.Located Item.Item]
+extractFieldsFromConDeclM parentKey conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_args = args} ->
-    extractFieldsFromH98Details args
+    extractFieldsFromH98DetailsM parentKey args
   Syntax.ConDeclGADT {Syntax.con_g_args = gArgs} ->
-    extractFieldsFromGADTDetails gArgs
+    extractFieldsFromGADTDetailsM parentKey gArgs
 
-extractFieldsFromH98Details ::
+extractFieldsFromH98DetailsM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.HsConDeclH98Details Ghc.GhcPs ->
-  [Located.Located Item.Item]
-extractFieldsFromH98Details details = case details of
+  ConvertM [Located.Located Item.Item]
+extractFieldsFromH98DetailsM parentKey details = case details of
   Syntax.RecCon lFieldsRec ->
-    extractFieldItems $ SrcLoc.unLoc lFieldsRec
-  _ -> []
+    extractFieldItemsM parentKey $ SrcLoc.unLoc lFieldsRec
+  _ -> pure []
 
-extractFieldsFromGADTDetails ::
+extractFieldsFromGADTDetailsM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.HsConDeclGADTDetails Ghc.GhcPs ->
-  [Located.Located Item.Item]
-extractFieldsFromGADTDetails details = case details of
+  ConvertM [Located.Located Item.Item]
+extractFieldsFromGADTDetailsM parentKey details = case details of
   Syntax.RecConGADT _ lFieldsRec ->
-    extractFieldItems $ SrcLoc.unLoc lFieldsRec
-  _ -> []
+    extractFieldItemsM parentKey $ SrcLoc.unLoc lFieldsRec
+  _ -> pure []
 
-extractFieldItems ::
+extractFieldItemsM ::
+  Maybe ItemKey.ItemKey ->
   [Syntax.LConDeclField Ghc.GhcPs] ->
-  [Located.Located Item.Item]
-extractFieldItems = concatMap extractFieldItemsFromConDeclField
+  ConvertM [Located.Located Item.Item]
+extractFieldItemsM parentKey = fmap concat . traverse (extractFieldItemsFromConDeclFieldM parentKey)
 
-extractFieldItemsFromConDeclField ::
+extractFieldItemsFromConDeclFieldM ::
+  Maybe ItemKey.ItemKey ->
   Syntax.LConDeclField Ghc.GhcPs ->
-  [Located.Located Item.Item]
-extractFieldItemsFromConDeclField lField =
+  ConvertM [Located.Located Item.Item]
+extractFieldItemsFromConDeclFieldM parentKey lField = do
   let field = SrcLoc.unLoc lField
       fieldNames = Syntax.cd_fld_names field
       fieldDoc = maybe mempty convertLHsDoc (Syntax.cd_fld_doc field)
-   in Maybe.mapMaybe (extractFieldItem fieldDoc) fieldNames
+  fmap Maybe.catMaybes $ traverse (extractFieldItemM parentKey fieldDoc) fieldNames
 
-extractFieldItem ::
+extractFieldItemM ::
+  Maybe ItemKey.ItemKey ->
   Doc.Doc ->
   Syntax.LFieldOcc Ghc.GhcPs ->
-  Maybe (Located.Located Item.Item)
-extractFieldItem doc lFieldOcc = do
-  let srcSpan = Annotation.getLocA lFieldOcc
-  location <- Location.fromSrcSpan srcSpan
-  pure
-    Located.MkLocated
-      { Located.location = location,
-        Located.value = Item.MkItem {Item.documentation = doc}
-      }
+  ConvertM (Maybe (Located.Located Item.Item))
+extractFieldItemM parentKey doc lFieldOcc =
+  mkItemM
+    (Annotation.getLocA lFieldOcc)
+    parentKey
+    (Just $ extractFieldOccName lFieldOcc)
+    doc
+
+-- | Extract name from a top-level declaration.
+extractDeclName :: Syntax.LHsDecl Ghc.GhcPs -> Maybe ItemName.ItemName
+extractDeclName lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.TyClD _ tyClDecl -> extractTyClDeclName tyClDecl
+  Syntax.ValD _ bind -> extractBindName bind
+  Syntax.SigD _ sig -> extractSigName sig
+  Syntax.InstD _ inst -> extractInstDeclName inst
+  _ -> Nothing
+
+-- | Extract name from a type/class declaration.
+extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName
+extractTyClDeclName tyClDecl = case tyClDecl of
+  Syntax.FamDecl _ famDecl -> Just $ extractFamilyDeclName famDecl
+  Syntax.SynDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
+  Syntax.DataDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
+  Syntax.ClassDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
+
+-- | Extract name from a family declaration.
+extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName
+extractFamilyDeclName famDecl = extractIdPName $ Syntax.fdLName famDecl
+
+-- | Extract name from a binding.
+extractBindName :: Syntax.HsBindLR Ghc.GhcPs Ghc.GhcPs -> Maybe ItemName.ItemName
+extractBindName bind = case bind of
+  Syntax.FunBind {Syntax.fun_id = lId} -> Just $ extractIdPName lId
+  Syntax.PatBind {} -> Nothing
+  Syntax.VarBind {} -> Nothing
+  Syntax.PatSynBind _ patSyn -> Just $ extractPatSynName patSyn
+
+-- | Extract name from a pattern synonym binding.
+extractPatSynName :: Syntax.PatSynBind Ghc.GhcPs Ghc.GhcPs -> ItemName.ItemName
+extractPatSynName patSyn = extractIdPName $ Syntax.psb_id patSyn
+
+-- | Extract name from a signature.
+extractSigName :: Syntax.Sig Ghc.GhcPs -> Maybe ItemName.ItemName
+extractSigName sig = case sig of
+  Syntax.TypeSig _ (lName : _) _ -> Just $ extractIdPName lName
+  Syntax.PatSynSig _ (lName : _) _ -> Just $ extractIdPName lName
+  Syntax.ClassOpSig _ _ (lName : _) _ -> Just $ extractIdPName lName
+  _ -> Nothing
+
+-- | Extract name from an instance declaration (returns Nothing for now).
+extractInstDeclName :: Syntax.InstDecl Ghc.GhcPs -> Maybe ItemName.ItemName
+extractInstDeclName _ = Nothing
+
+-- | Extract name from a constructor declaration.
+extractConDeclName :: Syntax.ConDecl Ghc.GhcPs -> ItemName.ItemName
+extractConDeclName conDecl = case conDecl of
+  Syntax.ConDeclH98 {Syntax.con_name = lName} -> extractIdPName lName
+  Syntax.ConDeclGADT {Syntax.con_names = lNames} ->
+    -- NonEmpty list, take the first one
+    extractIdPName $ NonEmpty.head lNames
+
+-- | Extract name from an identifier.
+extractIdPName :: Syntax.LIdP Ghc.GhcPs -> ItemName.ItemName
+extractIdPName = ItemName.MkItemName . extractRdrName
+
+-- | Extract name from a field occurrence.
+extractFieldOccName :: Syntax.LFieldOcc Ghc.GhcPs -> ItemName.ItemName
+extractFieldOccName lFieldOcc =
+  let fieldOcc = SrcLoc.unLoc lFieldOcc
+   in ItemName.MkItemName . extractRdrName $ Syntax.foLabel fieldOcc
 
 convertIE ::
   SrcLoc.GenLocated l (Syntax.IE Ghc.GhcPs) ->

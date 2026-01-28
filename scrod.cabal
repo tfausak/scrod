@@ -33,6 +33,7 @@ common library
     heck ^>=1.0.1,
     template-haskell ^>=2.22,
     text ^>=2.1.3,
+    transformers ^>=0.6.1,
 
   default-language: Haskell2010
   ghc-options:
@@ -87,6 +88,7 @@ library
     Scrod.Unstable.Spec
     Scrod.Unstable.Type.Category
     Scrod.Unstable.Type.Column
+    Scrod.Unstable.Type.ConversionState
     Scrod.Unstable.Type.Doc
     Scrod.Unstable.Type.Example
     Scrod.Unstable.Type.Export
@@ -99,6 +101,8 @@ library
     Scrod.Unstable.Type.Identifier
     Scrod.Unstable.Type.Interface
     Scrod.Unstable.Type.Item
+    Scrod.Unstable.Type.ItemKey
+    Scrod.Unstable.Type.ItemName
     Scrod.Unstable.Type.Language
     Scrod.Unstable.Type.Level
     Scrod.Unstable.Type.Line
@@ -125,7 +129,6 @@ test-suite scrod-test-suite
   build-depends:
     tasty ^>=1.5.3,
     tasty-hunit ^>=0.10.2,
-    transformers ^>=0.6.1,
 
   hs-source-dirs: source/test-suite
   main-is: Main.hs

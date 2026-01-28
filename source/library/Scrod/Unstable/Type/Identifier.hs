@@ -1,6 +1,7 @@
 module Scrod.Unstable.Type.Identifier where
 
 import qualified Data.Text as Text
+import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 
 -- | An identifier reference in documentation.
@@ -11,3 +12,10 @@ data Identifier = MkIdentifier
     value :: Text.Text
   }
   deriving (Eq, Ord, Show)
+
+toJson :: Identifier -> Json.Json
+toJson (MkIdentifier ns v) =
+  Json.object
+    [ (Text.pack "namespace", maybe Json.Null Namespace.toJson ns),
+      (Text.pack "value", Json.fromText v)
+    ]

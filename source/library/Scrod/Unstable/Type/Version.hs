@@ -6,6 +6,7 @@ import qualified Data.Version as Version
 import qualified Documentation.Haddock.Types as Haddock
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Extra.Natural as Natural
+import qualified Scrod.Unstable.Type.Json as Json
 
 newtype Version = MkVersion
   { value :: NonEmpty.NonEmpty Natural.Natural
@@ -22,3 +23,6 @@ fromBase :: Version.Version -> Maybe Version
 fromBase =
   fromHaddock
     . Version.versionBranch
+
+toJson :: Version -> Json.Json
+toJson (MkVersion ns) = Json.fromList . fmap Json.fromNatural $ NonEmpty.toList ns

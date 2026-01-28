@@ -8,6 +8,18 @@ module Scrod.Unstable.Type.Json
     -- * Rendering
     toBuilder,
     render,
+
+    -- * Construction helpers
+    tag,
+    tagged,
+    object,
+    fromNatural,
+    fromInt,
+    integerToJson,
+    fromText,
+    fromBool,
+    fromList,
+    fromMap,
   )
 where
 
@@ -19,7 +31,8 @@ import Data.Functor (($>))
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Text as Text
-import qualified Numeric as Numeric
+import qualified Numeric
+import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Type.Decimal as Decimal
 import qualified Text.Parsec as Parsec
 
@@ -245,3 +258,52 @@ sObject m =
 
 sPair :: (Text.Text, Json) -> Builder.Builder
 sPair (key, value) = sString key <> Builder.char7 ':' <> toBuilder value
+
+-- * Construction helpers
+
+-- | Create a tagged object for sum types without contents.
+-- Example: @tag "Value"@ produces @{"tag": "Value"}@
+tag :: Text.Text -> Json
+tag t = Object $ Map.singleton (Text.pack "tag") (String t)
+
+-- | Create a tagged object with contents.
+-- Example: @tagged "Some" (Number 42)@ produces @{"tag": "Some", "contents": 42}@
+tagged :: Text.Text -> Json -> Json
+tagged t contents =
+  Object $
+    Map.fromList
+      [ (Text.pack "tag", String t),
+        (Text.pack "contents", contents)
+      ]
+
+-- | Create a JSON object from a list of key-value pairs.
+object :: [(Text.Text, Json)] -> Json
+object = Object . Map.fromList
+
+-- | Convert a Natural to a JSON Number.
+fromNatural :: Natural.Natural -> Json
+fromNatural n = Number $ Decimal.MkDecimal (toInteger n) 0
+
+-- | Convert an Int to a JSON Number.
+fromInt :: Int -> Json
+fromInt n = Number $ Decimal.MkDecimal (toInteger n) 0
+
+-- | Convert an Integer to a JSON Number.
+integerToJson :: Integer -> Json
+integerToJson n = Number $ Decimal.MkDecimal n 0
+
+-- | Convert Text to a JSON String.
+fromText :: Text.Text -> Json
+fromText = String
+
+-- | Convert Bool to a JSON Boolean.
+fromBool :: Bool -> Json
+fromBool = Boolean
+
+-- | Convert a list to a JSON Array.
+fromList :: [Json] -> Json
+fromList = Array
+
+-- | Convert a Map to a JSON Object.
+fromMap :: Map.Map Text.Text Json -> Json
+fromMap = Object

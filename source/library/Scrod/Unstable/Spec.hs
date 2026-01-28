@@ -1859,21 +1859,339 @@ spec t = describe t "extract" $ do
           assertItemsEq t interface.items [itemAt 1 1, itemAt 2 1]
 
     describe t "keys" $ do
-      it t "assigns sequential keys to items" $ do
-        interface <- scrod t ["data T = A | B"]
-        assertEq t (interface.items <&> (.value.key.value)) [1, 2, 3]
+      describe t "uniqueness and monotonicity" $ do
+        it t "assigns sequential keys starting at 1" $ do
+          interface <- scrod t ["data T = A | B"]
+          assertEq t (interface.items <&> (.value.key.value)) [1, 2, 3]
 
-      it t "assigns parent keys to record fields" $ do
-        interface <- scrod t ["data T = C { f :: Int }"]
-        [dataItem, conItem, fieldItem] <- pure interface.items
-        assertEq t dataItem.value.parentKey Nothing
-        assertEq t conItem.value.parentKey $ Just dataItem.value.key
-        assertEq t fieldItem.value.parentKey $ Just conItem.value.key
+        it t "assigns sequential keys to multiple top-level declarations" $ do
+          interface <- scrod t ["data A = A", "data B = B", "data C = C"]
+          assertEq t (interface.items <&> (.value.key.value)) [1, 2, 3, 4, 5, 6]
 
-      it t "extracts item names" $ do
-        interface <- scrod t ["data MyType = MyCon { myField :: Int }"]
-        let names = fmap (fmap (.value) . (.value.name)) interface.items
-        assertEq t names [Just "MyType", Just "MyCon", Just "myField"]
+        it t "assigns unique keys even with nested items" $ do
+          interface <- scrod t ["data T = C { f :: Int, g :: Bool }"]
+          let keys = interface.items <&> (.value.key.value)
+          assertEq t keys [1, 2, 3, 4]
+
+        it t "assigns unique keys for class with methods" $ do
+          interface <- scrod t ["class C a where", " m1 :: a", " m2 :: a -> a"]
+          let keys = interface.items <&> (.value.key.value)
+          assertEq t keys [1, 2, 3]
+
+      describe t "parent-child relationships" $ do
+        describe t "data type -> constructor" $ do
+          it t "constructor has data type as parent" $ do
+            interface <- scrod t ["data T = C"]
+            [dataItem, conItem] <- pure interface.items
+            assertEq t dataItem.value.parentKey Nothing
+            assertEq t conItem.value.parentKey $ Just dataItem.value.key
+
+          it t "multiple constructors have same parent" $ do
+            interface <- scrod t ["data T = A | B | C"]
+            [dataItem, conA, conB, conC] <- pure interface.items
+            assertEq t conA.value.parentKey $ Just dataItem.value.key
+            assertEq t conB.value.parentKey $ Just dataItem.value.key
+            assertEq t conC.value.parentKey $ Just dataItem.value.key
+
+          it t "newtype constructor has newtype as parent" $ do
+            interface <- scrod t ["newtype T = T Int"]
+            [newtypeItem, conItem] <- pure interface.items
+            assertEq t newtypeItem.value.parentKey Nothing
+            assertEq t conItem.value.parentKey $ Just newtypeItem.value.key
+
+          it t "GADT constructors have data type as parent" $ do
+            interface <- scrod t ["data T a where", " C1 :: T Int", " C2 :: T Bool"]
+            [dataItem, con1, con2] <- pure interface.items
+            assertEq t con1.value.parentKey $ Just dataItem.value.key
+            assertEq t con2.value.parentKey $ Just dataItem.value.key
+
+        describe t "constructor -> record field" $ do
+          it t "record field has constructor as parent" $ do
+            interface <- scrod t ["data T = C { f :: Int }"]
+            [dataItem, conItem, fieldItem] <- pure interface.items
+            assertEq t dataItem.value.parentKey Nothing
+            assertEq t conItem.value.parentKey $ Just dataItem.value.key
+            assertEq t fieldItem.value.parentKey $ Just conItem.value.key
+
+          it t "multiple fields have same constructor as parent" $ do
+            interface <- scrod t ["data T = C { f :: Int, g :: Bool }"]
+            [_, conItem, field1, field2] <- pure interface.items
+            assertEq t field1.value.parentKey $ Just conItem.value.key
+            assertEq t field2.value.parentKey $ Just conItem.value.key
+
+          it t "GADT record fields have constructor as parent" $ do
+            interface <- scrod t ["data T a where C :: { f :: Int } -> T Int"]
+            [_, conItem, fieldItem] <- pure interface.items
+            assertEq t fieldItem.value.parentKey $ Just conItem.value.key
+
+        describe t "class -> method" $ do
+          it t "method has class as parent" $ do
+            interface <- scrod t ["class C a where m :: a -> a"]
+            [classItem, methodItem] <- pure interface.items
+            assertEq t classItem.value.parentKey Nothing
+            assertEq t methodItem.value.parentKey $ Just classItem.value.key
+
+          it t "multiple methods have same class as parent" $ do
+            interface <- scrod t ["class C a where", " m1 :: a", " m2 :: a -> a"]
+            [classItem, method1, method2] <- pure interface.items
+            assertEq t method1.value.parentKey $ Just classItem.value.key
+            assertEq t method2.value.parentKey $ Just classItem.value.key
+
+          it t "default signature has class as parent" $ do
+            interface <- scrod t ["class C a where", " m :: a -> a", " default m :: a -> a"]
+            [classItem, methodItem, defaultSigItem] <- pure interface.items
+            assertEq t methodItem.value.parentKey $ Just classItem.value.key
+            assertEq t defaultSigItem.value.parentKey $ Just classItem.value.key
+
+        describe t "class -> associated type" $ do
+          it t "associated type family has class as parent" $ do
+            interface <- scrod t ["class C a where type T a"]
+            [classItem, atItem] <- pure interface.items
+            assertEq t classItem.value.parentKey Nothing
+            assertEq t atItem.value.parentKey $ Just classItem.value.key
+
+          it t "associated data family has class as parent" $ do
+            interface <- scrod t ["class C a where data D a"]
+            [classItem, adItem] <- pure interface.items
+            assertEq t adItem.value.parentKey $ Just classItem.value.key
+
+          it t "multiple associated types have same class as parent" $ do
+            interface <- scrod t ["class C a where", " type T a", " type U a"]
+            [classItem, at1, at2] <- pure interface.items
+            assertEq t at1.value.parentKey $ Just classItem.value.key
+            assertEq t at2.value.parentKey $ Just classItem.value.key
+
+        describe t "data type -> derived instance" $ do
+          it t "single derived instance has data type as parent" $ do
+            interface <- scrod t ["data T = T deriving Show"]
+            [dataItem, _, derivItem] <- pure interface.items
+            assertEq t derivItem.value.parentKey $ Just dataItem.value.key
+
+          it t "multiple derived instances have data type as parent" $ do
+            interface <- scrod t ["data T = T deriving (Show, Eq)"]
+            [dataItem, _, deriv1, deriv2] <- pure interface.items
+            assertEq t deriv1.value.parentKey $ Just dataItem.value.key
+            assertEq t deriv2.value.parentKey $ Just dataItem.value.key
+
+          it t "multiple deriving clauses have data type as parent" $ do
+            interface <- scrod t ["data T = T deriving Show deriving Eq"]
+            [dataItem, _, deriv1, deriv2] <- pure interface.items
+            assertEq t deriv1.value.parentKey $ Just dataItem.value.key
+            assertEq t deriv2.value.parentKey $ Just dataItem.value.key
+
+          it t "deriving via has data type as parent" $ do
+            interface <- scrod t ["newtype T = T Int deriving Show via Int"]
+            [dataItem, _, derivItem] <- pure interface.items
+            assertEq t derivItem.value.parentKey $ Just dataItem.value.key
+
+          it t "deriving stock has data type as parent" $ do
+            interface <- scrod t ["data T = T deriving stock Show"]
+            [dataItem, _, derivItem] <- pure interface.items
+            assertEq t derivItem.value.parentKey $ Just dataItem.value.key
+
+          it t "deriving newtype has data type as parent" $ do
+            interface <- scrod t ["newtype T = T Int deriving newtype Num"]
+            [dataItem, _, derivItem] <- pure interface.items
+            assertEq t derivItem.value.parentKey $ Just dataItem.value.key
+
+          it t "deriving anyclass has data type as parent" $ do
+            interface <- scrod t ["data T = T deriving anyclass C"]
+            [dataItem, _, derivItem] <- pure interface.items
+            assertEq t derivItem.value.parentKey $ Just dataItem.value.key
+
+    describe t "names" $ do
+      describe t "data declarations" $ do
+        it t "extracts data type name" $ do
+          interface <- scrod t ["data MyData = C"]
+          [dataItem, _] <- pure interface.items
+          assertEq t (fmap (.value) dataItem.value.name) $ Just "MyData"
+
+        it t "extracts newtype name" $ do
+          interface <- scrod t ["newtype MyNewtype = N Int"]
+          [newtypeItem, _] <- pure interface.items
+          assertEq t (fmap (.value) newtypeItem.value.name) $ Just "MyNewtype"
+
+        it t "extracts type operator name" $ do
+          interface <- scrod t ["data a :+: b = L a | R b"]
+          [dataItem, _, _] <- pure interface.items
+          assertEq t (fmap (.value) dataItem.value.name) $ Just ":+:"
+
+        it t "extracts type data name" $ do
+          interface <- scrod t ["type data TBool = TTrue | TFalse"]
+          [dataItem, _, _] <- pure interface.items
+          assertEq t (fmap (.value) dataItem.value.name) $ Just "TBool"
+
+      describe t "constructor names" $ do
+        it t "extracts constructor name" $ do
+          interface <- scrod t ["data T = MyCon"]
+          [_, conItem] <- pure interface.items
+          assertEq t (fmap (.value) conItem.value.name) $ Just "MyCon"
+
+        it t "extracts multiple constructor names" $ do
+          interface <- scrod t ["data T = A | B | C"]
+          [_, conA, conB, conC] <- pure interface.items
+          assertEq t (fmap (.value) conA.value.name) $ Just "A"
+          assertEq t (fmap (.value) conB.value.name) $ Just "B"
+          assertEq t (fmap (.value) conC.value.name) $ Just "C"
+
+        it t "extracts GADT constructor name" $ do
+          interface <- scrod t ["data T where MyCon :: T"]
+          [_, conItem] <- pure interface.items
+          assertEq t (fmap (.value) conItem.value.name) $ Just "MyCon"
+
+        it t "extracts infix constructor name" $ do
+          interface <- scrod t ["data a :+: b = L a | R b"]
+          [_, conL, conR] <- pure interface.items
+          assertEq t (fmap (.value) conL.value.name) $ Just "L"
+          assertEq t (fmap (.value) conR.value.name) $ Just "R"
+
+      describe t "record field names" $ do
+        it t "extracts record field name" $ do
+          interface <- scrod t ["data T = C { myField :: Int }"]
+          [_, _, fieldItem] <- pure interface.items
+          assertEq t (fmap (.value) fieldItem.value.name) $ Just "myField"
+
+        it t "extracts multiple record field names" $ do
+          interface <- scrod t ["data T = C { f1 :: Int, f2 :: Bool }"]
+          [_, _, field1, field2] <- pure interface.items
+          assertEq t (fmap (.value) field1.value.name) $ Just "f1"
+          assertEq t (fmap (.value) field2.value.name) $ Just "f2"
+
+        it t "extracts GADT record field name" $ do
+          interface <- scrod t ["data T where C :: { gField :: Int } -> T"]
+          [_, _, fieldItem] <- pure interface.items
+          assertEq t (fmap (.value) fieldItem.value.name) $ Just "gField"
+
+      describe t "class and method names" $ do
+        it t "extracts class name" $ do
+          interface <- scrod t ["class MyClass a"]
+          [classItem] <- pure interface.items
+          assertEq t (fmap (.value) classItem.value.name) $ Just "MyClass"
+
+        it t "extracts method name" $ do
+          interface <- scrod t ["class C a where myMethod :: a"]
+          [_, methodItem] <- pure interface.items
+          assertEq t (fmap (.value) methodItem.value.name) $ Just "myMethod"
+
+        it t "extracts multiple method names" $ do
+          interface <- scrod t ["class C a where", " m1 :: a", " m2 :: a"]
+          [_, method1, method2] <- pure interface.items
+          assertEq t (fmap (.value) method1.value.name) $ Just "m1"
+          assertEq t (fmap (.value) method2.value.name) $ Just "m2"
+
+        it t "extracts operator method name" $ do
+          interface <- scrod t ["class C a where (++) :: a -> a -> a"]
+          [_, methodItem] <- pure interface.items
+          assertEq t (fmap (.value) methodItem.value.name) $ Just "++"
+
+      describe t "associated type names" $ do
+        it t "extracts associated type family name" $ do
+          interface <- scrod t ["class C a where type MyType a"]
+          [_, atItem] <- pure interface.items
+          assertEq t (fmap (.value) atItem.value.name) $ Just "MyType"
+
+        it t "extracts associated data family name" $ do
+          interface <- scrod t ["class C a where data MyData a"]
+          [_, adItem] <- pure interface.items
+          assertEq t (fmap (.value) adItem.value.name) $ Just "MyData"
+
+      describe t "type synonyms" $ do
+        it t "extracts type synonym name" $ do
+          interface <- scrod t ["type MySynonym = Int"]
+          [synItem] <- pure interface.items
+          assertEq t (fmap (.value) synItem.value.name) $ Just "MySynonym"
+
+        it t "extracts type operator synonym name" $ do
+          interface <- scrod t ["type a ++ b = Either a b"]
+          [synItem] <- pure interface.items
+          assertEq t (fmap (.value) synItem.value.name) $ Just "++"
+
+      describe t "type families" $ do
+        it t "extracts type family name" $ do
+          interface <- scrod t ["type family MyFamily a"]
+          [famItem] <- pure interface.items
+          assertEq t (fmap (.value) famItem.value.name) $ Just "MyFamily"
+
+        it t "extracts data family name" $ do
+          interface <- scrod t ["data family MyDataFam a"]
+          [famItem] <- pure interface.items
+          assertEq t (fmap (.value) famItem.value.name) $ Just "MyDataFam"
+
+        it t "extracts closed type family name" $ do
+          interface <- scrod t ["type family Closed a where Closed Int = Bool"]
+          [famItem] <- pure interface.items
+          assertEq t (fmap (.value) famItem.value.name) $ Just "Closed"
+
+      describe t "function bindings" $ do
+        it t "extracts function name" $ do
+          interface <- scrod t ["myFunc x = x"]
+          [funcItem] <- pure interface.items
+          assertEq t (fmap (.value) funcItem.value.name) $ Just "myFunc"
+
+        it t "extracts operator function name" $ do
+          interface <- scrod t ["x +++ y = x + y"]
+          [funcItem] <- pure interface.items
+          assertEq t (fmap (.value) funcItem.value.name) $ Just "+++"
+
+        it t "extracts infix function name" $ do
+          interface <- scrod t ["x `plus` y = x + y"]
+          [funcItem] <- pure interface.items
+          assertEq t (fmap (.value) funcItem.value.name) $ Just "plus"
+
+      describe t "pattern bindings" $ do
+        it t "has no name for tuple pattern" $ do
+          interface <- scrod t ["(a, b) = (1, 2)"]
+          [patItem] <- pure interface.items
+          assertEq t patItem.value.name Nothing
+
+        it t "has no name for wildcard pattern" $ do
+          interface <- scrod t ["_ = undefined"]
+          [patItem] <- pure interface.items
+          assertEq t patItem.value.name Nothing
+
+      describe t "type signatures" $ do
+        it t "extracts type signature name" $ do
+          interface <- scrod t ["mySig :: Int"]
+          [sigItem] <- pure interface.items
+          assertEq t (fmap (.value) sigItem.value.name) $ Just "mySig"
+
+        it t "extracts first name from multiple names" $ do
+          interface <- scrod t ["f, g :: Int"]
+          [sigItem] <- pure interface.items
+          assertEq t (fmap (.value) sigItem.value.name) $ Just "f"
+
+      describe t "pattern synonyms" $ do
+        it t "extracts pattern synonym name from signature" $ do
+          interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern MyPat :: Int -> Maybe Int"]
+          [patItem] <- pure interface.items
+          assertEq t (fmap (.value) patItem.value.name) $ Just "MyPat"
+
+        it t "extracts pattern synonym name from binding" $ do
+          interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern P x = Just x"]
+          [patItem] <- pure interface.items
+          assertEq t (fmap (.value) patItem.value.name) $ Just "P"
+
+        it t "extracts infix pattern synonym name" $ do
+          interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern x :+: y = (x, y)"]
+          [patItem] <- pure interface.items
+          assertEq t (fmap (.value) patItem.value.name) $ Just ":+:"
+
+      describe t "derived instances" $ do
+        it t "has no name for derived instance" $ do
+          interface <- scrod t ["data T = T deriving Show"]
+          [_, _, derivItem] <- pure interface.items
+          assertEq t derivItem.value.name Nothing
+
+      describe t "instances" $ do
+        it t "has no name for instance declaration" $ do
+          interface <- scrod t ["instance Show T where"]
+          [instItem] <- pure interface.items
+          assertEq t instItem.value.name Nothing
+
+        it t "has no name for standalone deriving" $ do
+          interface <- scrod t ["data A = A", "deriving instance Show A"]
+          [_, _, derivItem] <- pure interface.items
+          assertEq t derivItem.value.name Nothing
 
 scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
 scrod t = expectRight t . Main.extract . unlines

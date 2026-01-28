@@ -1,5 +1,7 @@
 module Scrod.Unstable.Type.Header where
 
+import qualified Data.Text as Text
+import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Level as Level
 
 -- | A section header with a level and title.
@@ -9,3 +11,10 @@ data Header doc = MkHeader
     title :: doc
   }
   deriving (Eq, Ord, Show)
+
+toJson :: (doc -> Json.Json) -> Header doc -> Json.Json
+toJson f (MkHeader l t) =
+  Json.object
+    [ (Text.pack "level", Level.toJson l),
+      (Text.pack "title", f t)
+    ]

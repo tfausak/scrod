@@ -7,6 +7,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified GHC.Driver.Session as Session
 import qualified GHC.LanguageExtensions.Type as Ghc
+import qualified Scrod.Unstable.Type.Json as Json
 
 newtype Extension = MkExtension
   { value :: Text.Text
@@ -36,3 +37,6 @@ extensionNameExceptions =
       )
     . Map.fromListWith (<>)
     $ fmap (\x -> (Session.flagSpecFlag x, [Session.flagSpecName x])) Session.xFlags
+
+toJson :: Extension -> Json.Json
+toJson (MkExtension t) = Json.fromText t

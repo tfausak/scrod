@@ -9,7 +9,9 @@ main :: IO ()
 main = Tasty.defaultMain testTree
 
 testTree :: Tasty.TestTree
-testTree = Tasty.testGroup "scrod" . Writer.execWriter $ Scrod.spec heck
+testTree = Tasty.testGroup "scrod" . Writer.execWriter $ do
+  Scrod.spec heck
+  Scrod.jsonSpec heck
 
 heck :: Heck.Test IO (Writer.Writer [Tasty.TestTree])
 heck =

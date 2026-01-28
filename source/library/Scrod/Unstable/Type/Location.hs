@@ -2,8 +2,10 @@
 
 module Scrod.Unstable.Type.Location where
 
+import qualified Data.Text as Text
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Scrod.Unstable.Type.Column as Column
+import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Line as Line
 
 data Location = MkLocation
@@ -26,3 +28,10 @@ fromSrcLoc srcLoc = case srcLoc of
 
 fromSrcSpan :: SrcLoc.SrcSpan -> Maybe Location
 fromSrcSpan = fromSrcLoc . SrcLoc.srcSpanStart
+
+toJson :: Location -> Json.Json
+toJson (MkLocation l c) =
+  Json.object
+    [ (Text.pack "line", Line.toJson l),
+      (Text.pack "column", Column.toJson c)
+    ]

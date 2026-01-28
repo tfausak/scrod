@@ -1,7 +1,9 @@
 module Scrod.Unstable.Type.ExportIdentifier where
 
+import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ExportName as ExportName
+import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -17,3 +19,12 @@ data ExportIdentifier = MkExportIdentifier
     doc :: Maybe Doc.Doc
   }
   deriving (Eq, Ord, Show)
+
+toJson :: ExportIdentifier -> Json.Json
+toJson (MkExportIdentifier n s w d) =
+  Json.object
+    [ (Text.pack "name", ExportName.toJson n),
+      (Text.pack "subordinates", maybe Json.Null Subordinates.toJson s),
+      (Text.pack "warning", maybe Json.Null Warning.toJson w),
+      (Text.pack "doc", maybe Json.Null Doc.toJson d)
+    ]

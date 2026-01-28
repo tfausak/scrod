@@ -27,6 +27,7 @@ import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
 import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Item as Item
+import qualified Scrod.Unstable.Type.ItemKey as ItemKey
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Level as Level
 import qualified Scrod.Unstable.Type.Line as Line
@@ -827,7 +828,24 @@ spec t = describe t "extract" $ do
         assertEq t exportIdentifier.doc . Just . Doc.Paragraph $ Doc.String "y"
 
   describe t "items" $ do
-    let itemAt l c = itemWithDoc l c Doc.Empty
+    -- Strip key/parentKey/name from items for comparison (since keys are auto-generated)
+    let stripKeys =
+          fmap
+            ( \located ->
+                let item = Located.value located
+                 in located
+                      { Located.value =
+                          item
+                            { Item.key = ItemKey.MkItemKey 0,
+                              Item.parentKey = Nothing,
+                              Item.name = Nothing
+                            }
+                      }
+            ) ::
+            [Located.Located Item.Item] -> [Located.Located Item.Item]
+        assertItemsEq actual expected = assertEq t (stripKeys actual) (stripKeys expected)
+        -- Create a dummy item for matching
+        itemAt l c = itemWithDoc l c Doc.Empty
         itemWithDoc l c doc =
           Located.MkLocated
             { Located.location =
@@ -835,1019 +853,1025 @@ spec t = describe t "extract" $ do
                   { Location.line = Line.MkLine l,
                     Location.column = Column.MkColumn c
                   },
-              Located.value = Item.MkItem {Item.documentation = doc}
+              Located.value =
+                Item.MkItem
+                  { Item.key = ItemKey.MkItemKey 0,
+                    Item.parentKey = Nothing,
+                    Item.name = Nothing,
+                    Item.documentation = doc
+                  }
             }
 
     describe t "TyClD" $ do
       describe t "FamDecl" $ do
         it t "type family open" $ do
           interface <- scrod t ["type family F a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family open multiple params" $ do
           interface <- scrod t ["type family F a b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family closed" $ do
           interface <- scrod t ["type family G a where", " G Int = Bool", " G a = Char"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family closed empty" $ do
           interface <- scrod t ["type family H a where {}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family with kind sig" $ do
           interface <- scrod t ["type family I a :: Type"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family with result kind variable" $ do
           interface <- scrod t ["type family I2 a = (r :: Type)"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family with injectivity" $ do
           interface <- scrod t ["type family J a = r | r -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "data family" $ do
           interface <- scrod t ["data family D a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "data family with kind sig" $ do
           interface <- scrod t ["data family E a :: Type"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type family with doc before" $ do
           interface <- scrod t ["-- | type family doc", "type family F a"]
-          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "type family doc")]
+          assertItemsEq interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "type family doc")]
 
       describe t "SynDecl" $ do
         it t "basic" $ do
           interface <- scrod t ["type S = Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with params" $ do
           interface <- scrod t ["type T a = [a]"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiple params" $ do
           interface <- scrod t ["type U a b = Either a b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with kind annotation" $ do
           interface <- scrod t ["type V (a :: Type) = Maybe a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with forall" $ do
           interface <- scrod t ["type R = forall a. a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "type operator" $ do
           interface <- scrod t ["type a + b = Either a b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "DataDecl" $ do
         it t "data basic" $ do
           interface <- scrod t ["data A"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "data with doc before" $ do
           interface <- scrod t ["-- | data doc", "data T = T"]
-          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 2 10]
+          assertItemsEq interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 2 10]
 
         it t "data with doc after" $ do
           interface <- scrod t ["data T = T", "-- ^ data doc"]
-          assertEq t interface.items [itemWithDoc 1 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 1 10]
+          assertItemsEq interface.items [itemWithDoc 1 1 (Doc.Paragraph $ Doc.String "data doc"), itemAt 1 10]
 
         it t "data with constructor" $ do
           interface <- scrod t ["data B = B"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "constructor with doc before" $ do
           interface <- scrod t ["data T", "  = -- | constructor doc", "    C"]
-          assertEq t interface.items [itemAt 1 1, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "constructor doc")]
+          assertItemsEq interface.items [itemAt 1 1, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "constructor doc")]
 
         it t "constructor with doc after" $ do
           interface <- scrod t ["data T = C -- ^ constructor doc"]
-          assertEq t interface.items [itemAt 1 1, itemWithDoc 1 10 (Doc.Paragraph $ Doc.String "constructor doc")]
+          assertItemsEq interface.items [itemAt 1 1, itemWithDoc 1 10 (Doc.Paragraph $ Doc.String "constructor doc")]
 
         it t "data with multiple constructors" $ do
           interface <- scrod t ["data C = C1 | C2 | C3"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 15, itemAt 1 20]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 15, itemAt 1 20]
 
         it t "data with fields" $ do
           interface <- scrod t ["data D = D Int Bool"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with record" $ do
           interface <- scrod t ["data E = E { eInt :: Int, eBool :: Bool }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 1 27]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 1 27]
 
         it t "field with doc before" $ do
           interface <- scrod t ["data T = T", "  { -- | field doc", "    f :: Int", "  }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "field doc")]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 3 5 (Doc.Paragraph $ Doc.String "field doc")]
 
         it t "field with doc after" $ do
           interface <- scrod t ["data T = T { f :: Int -- ^ field doc", "  }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 1 14 (Doc.Paragraph $ Doc.String "field doc")]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemWithDoc 1 14 (Doc.Paragraph $ Doc.String "field doc")]
 
         it t "data with deriving" $ do
           interface <- scrod t ["data F = F deriving Show"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 21]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 21]
 
         it t "data with deriving multiple" $ do
           interface <- scrod t ["data G = G deriving (Show, Eq)"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 22, itemAt 1 28]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 22, itemAt 1 28]
 
         it t "data with deriving strategies" $ do
           interface <- scrod t ["data H = H deriving stock Show"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 27]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 27]
 
         it t "data with deriving via" $ do
           interface <- scrod t ["newtype I = I Int deriving Show via Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 28]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 28]
 
         it t "data with deriving anyclass" $ do
           interface <- scrod t ["data J = J deriving anyclass C"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 30]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 30]
 
         it t "data with deriving newtype" $ do
           interface <- scrod t ["newtype K = K Int deriving newtype Num"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 36]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 36]
 
         it t "data with type params" $ do
           interface <- scrod t ["data L a = L a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 12]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 12]
 
         it t "data with phantom type" $ do
           interface <- scrod t ["data M a = M"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 12]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 12]
 
         it t "data with kind sig" $ do
           interface <- scrod t ["data N (a :: Type) = N"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 22]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 22]
 
         it t "data with existential" $ do
           interface <- scrod t ["data O = forall a . Show a => O a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with GADT" $ do
           interface <- scrod t ["data P a where", " P1 :: P Int", " P2 :: P Bool"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
 
         it t "data with GADT record" $ do
           interface <- scrod t ["data Q a where Q :: { qVal :: Int } -> Q Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 16, itemAt 1 23]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 16, itemAt 1 23]
 
         it t "data with strictness" $ do
           interface <- scrod t ["data R = R !Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with laziness" $ do
           interface <- scrod t ["data S = S ~Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with unpack" $ do
           interface <- scrod t ["data T = T {-# UNPACK #-} !Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with nounpack" $ do
           interface <- scrod t ["data U = U {-# NOUNPACK #-} !Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "newtype basic" $ do
           interface <- scrod t ["newtype V = V Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13]
 
         it t "newtype with record" $ do
           interface <- scrod t ["newtype W = W { unW :: Int }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 17]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13, itemAt 1 17]
 
         it t "data with context" $ do
           interface <- scrod t ["data Eq a => X a = X a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 20]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 20]
 
         it t "data with forall" $ do
           interface <- scrod t ["data Y = forall a . Y a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10]
 
         it t "data with linear field" $ do
           interface <- scrod t ["data Z a b = Z (a %1 -> b)"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 14]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 14]
 
         it t "data with type operator name" $ do
           interface <- scrod t ["data a :+: b = L a | R b"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 16, itemAt 1 22]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 16, itemAt 1 22]
 
         it t "data with multiple deriving clauses" $ do
           interface <- scrod t ["data AA = AA deriving Show deriving Eq"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 11, itemAt 1 23, itemAt 1 37]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 11, itemAt 1 23, itemAt 1 37]
 
         it t "type data" $ do
           interface <- scrod t ["type data TBool = TTrue | TFalse"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19, itemAt 1 27]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19, itemAt 1 27]
 
       describe t "ClassDecl" $ do
         it t "basic" $ do
           interface <- scrod t ["class Cls a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with method" $ do
           interface <- scrod t ["class Cls a where method :: a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with default method" $ do
           interface <- scrod t ["class Cls a where", " method :: a -> a", " method = id"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "with multiple methods" $ do
           interface <- scrod t ["class Cls a where", " m1 :: a", " m2 :: a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
 
         it t "with superclass" $ do
           interface <- scrod t ["class Eq a => Cls a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiple superclasses" $ do
           interface <- scrod t ["class (Eq a, Ord a) => Cls a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with fundeps" $ do
           interface <- scrod t ["class Cls a b | a -> b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with fundeps multiple" $ do
           interface <- scrod t ["class Cls a b c | a -> b, b -> c"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with associated type" $ do
           interface <- scrod t ["class Cls a where type T a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated type with kind sig" $ do
           interface <- scrod t ["class Cls a where type T a :: Type -> Type"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated type default" $ do
           interface <- scrod t ["class Cls a where", " type T a", " type T a = Int"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "with associated data" $ do
           interface <- scrod t ["class Cls a where data D a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with associated data with kind sig" $ do
           interface <- scrod t ["class Cls a where data D a :: Type"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 19]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 19]
 
         it t "with quantified constraint" $ do
           interface <- scrod t ["class (forall x. Eq (f x)) => Cls f"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with default signature" $ do
           interface <- scrod t ["class Cls a where", " method :: a -> a", " default method :: Show a => a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
 
         it t "with minimal pragma" $ do
           interface <- scrod t ["class Cls a where", " m1 :: a", " m2 :: a", " {-# MINIMAL m1 | m2 #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 2]
 
         it t "with kind sig" $ do
           interface <- scrod t ["class Cls (a :: Type)"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "no params" $ do
           interface <- scrod t ["class Cls"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "multi-param" $ do
           interface <- scrod t ["class Cls a b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with doc before" $ do
           interface <- scrod t ["-- | class doc", "class C a"]
-          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "class doc")]
+          assertItemsEq interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "class doc")]
 
     describe t "InstD" $ do
       describe t "ClsInstD" $ do
         it t "no params" $ do
           interface <- scrod t ["instance Cls where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "basic" $ do
           interface <- scrod t ["instance Cls Int where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "multi params" $ do
           interface <- scrod t ["instance Cls Int Bool where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with method" $ do
           interface <- scrod t ["instance Cls Int where method = id"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type application" $ do
           interface <- scrod t ["instance Cls [a] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with context" $ do
           interface <- scrod t ["instance Eq a => Cls [a] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiple contexts" $ do
           interface <- scrod t ["instance (Eq a, Ord a) => Cls [a] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "overlapping" $ do
           interface <- scrod t ["instance {-# OVERLAPPING #-} Cls [Int] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "overlappable" $ do
           interface <- scrod t ["instance {-# OVERLAPPABLE #-} Cls [a] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "overlaps" $ do
           interface <- scrod t ["instance {-# OVERLAPS #-} Cls [Int] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "incoherent" $ do
           interface <- scrod t ["instance {-# INCOHERENT #-} Cls [Int] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with explicit forall" $ do
           interface <- scrod t ["instance forall a. Cls [a] where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type application" $ do
           interface <- scrod t ["instance Cls @Type Int where"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "DataFamInstD" $ do
         it t "basic" $ do
           interface <- scrod t ["data family D a", "data instance D Int = DInt"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with constructor" $ do
           interface <- scrod t ["data family D a", "data instance D Bool = DBool Bool"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with multiple constructors" $ do
           interface <- scrod t ["data family D a", "data instance D Char = DC1 | DC2 Char"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with record" $ do
           interface <- scrod t ["data family D a", "data instance D () = DUnit { dUnit :: () }"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "newtype instance" $ do
           interface <- scrod t ["data family D a", "newtype instance D Float = DFloat Float"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with GADT" $ do
           interface <- scrod t ["data family D a", "data instance D (Maybe a) where DMaybe :: a -> D (Maybe a)"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with forall" $ do
           interface <- scrod t ["data family D a", "data instance forall a . D [a] = DList [a]"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with deriving" $ do
           interface <- scrod t ["data family D a", "data instance D Word = DWord Word deriving Show"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
       describe t "TyFamInstD" $ do
         it t "basic" $ do
           interface <- scrod t ["type family F a", "type instance F Int = Bool"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with type var" $ do
           interface <- scrod t ["type family F a", "type instance F [a] = a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with nested" $ do
           interface <- scrod t ["type family F a", "type instance F (Maybe a) = Either () a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with forall" $ do
           interface <- scrod t ["type family F a", "type instance forall a. F [a] = a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
     describe t "DerivD" $ do
       describe t "DerivDecl" $ do
         it t "basic" $ do
           interface <- scrod t ["data A = A", "deriving instance Show A"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 2 1]
 
         it t "with context" $ do
           interface <- scrod t ["data B a = B a", "deriving instance Show a => Show (B a)"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 12, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 12, itemAt 2 1]
 
         it t "stock" $ do
           interface <- scrod t ["data C = C", "deriving stock instance Show C"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 2 1]
 
         it t "newtype" $ do
           interface <- scrod t ["newtype D = D Int", "deriving newtype instance Num D"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13, itemAt 2 1]
 
         it t "anyclass" $ do
           interface <- scrod t ["class Cls a", "data E = E", "deriving anyclass instance Cls E"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1, itemAt 2 10, itemAt 3 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1, itemAt 2 10, itemAt 3 1]
 
         it t "via" $ do
           interface <- scrod t ["newtype F = F Int", "deriving via Int instance Show F"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 13, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 13, itemAt 2 1]
 
     describe t "ValD" $ do
       describe t "FunBind" $ do
         it t "basic" $ do
           interface <- scrod t ["f x = x"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiple args" $ do
           interface <- scrod t ["f x y z = x"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with pattern matching" $ do
           interface <- scrod t ["f [] = 0", "f (x:xs) = 1 + f xs"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with guards" $ do
           interface <- scrod t ["f x | x > 0 = 1 | otherwise = 0"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with where" $ do
           interface <- scrod t ["f x = y where y = x + 1"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with let" $ do
           interface <- scrod t ["f x = let y = x + 1 in y"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "operator" $ do
           interface <- scrod t ["x +++ y = x + y"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "operator prefix" $ do
           interface <- scrod t ["(+++) x y = x + y"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "infix" $ do
           interface <- scrod t [" x `plus` y = x + y "]
-          assertEq t interface.items [itemAt 1 2]
+          assertItemsEq interface.items [itemAt 1 2]
 
         it t "with view pattern" $ do
           interface <- scrod t ["f (show -> s) = s"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with pattern guard" $ do
           interface <- scrod t ["f x | Just y <- g x = y | otherwise = x"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type abstraction" $ do
           interface <- scrod t ["f @a (x :: a) = x"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with doc before" $ do
           interface <- scrod t ["-- | func doc", "f x = x"]
-          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "func doc")]
+          assertItemsEq interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "func doc")]
 
       describe t "PatBind" $ do
         describe t "simple" $ do
           it t "without documentation" $ do
             interface <- scrod t ["x = 1"]
-            assertEq t interface.items [itemAt 1 1]
+            assertItemsEq interface.items [itemAt 1 1]
 
           it t "with documentation before" $ do
             interface <- scrod t ["-- | d", "x = 1"]
-            assertEq t interface.items [itemWithDoc 2 1 . Doc.Paragraph $ Doc.String "d"]
+            assertItemsEq interface.items [itemWithDoc 2 1 . Doc.Paragraph $ Doc.String "d"]
 
           it t "with documentation after" $ do
             interface <- scrod t ["x = 1", "-- ^ d"]
-            assertEq t interface.items [itemWithDoc 1 1 . Doc.Paragraph $ Doc.String "d"]
+            assertItemsEq interface.items [itemWithDoc 1 1 . Doc.Paragraph $ Doc.String "d"]
 
         it t "tuple" $ do
           interface <- scrod t ["(a, b) = (1, 2)"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "list" $ do
           interface <- scrod t ["[x, y] = [1, 2]"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "cons" $ do
           interface <- scrod t ["(h:t) = [1, 2, 3]"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "record" $ do
           interface <- scrod t ["data T = C { f :: Int }", "C { f = x } = C 1"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 10, itemAt 1 14, itemAt 2 1]
 
         it t "as pattern" $ do
           interface <- scrod t ["all@(x:xs) = [1, 2, 3]"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "wildcard" $ do
           interface <- scrod t ["_ = undefined"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "lazy" $ do
           interface <- scrod t ["~(a, b) = undefined"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "bang" $ do
           interface <- scrod t ["!x = 1"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type signature" $ do
           interface <- scrod t ["(x :: Int) = 1"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with view pattern" $ do
           interface <- scrod t ["(reverse -> xs) = [1,2,3]"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "PatSynBind" $ do
         it t "unidirectional" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern P x = Just x"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "bidirectional implicit" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern Q x = (x, x)"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "bidirectional explicit" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern R x <- Just x where R x = Just x"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "view pattern" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern S x <- (show -> x)"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "record" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern T { tField } = Just tField"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "prefix" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern P x = Just x"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "infix" $ do
           interface <- scrod t ["{-# language PatternSynonyms #-} pattern x :+: y = (x, y)"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
     describe t "SigD" $ do
       describe t "TypeSig" $ do
         it t "basic" $ do
           interface <- scrod t ["f :: Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with args" $ do
           interface <- scrod t ["f :: Int -> Bool"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with implicit forall" $ do
           interface <- scrod t ["f :: a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with explicit forall visible" $ do
           interface <- scrod t ["f :: forall a . a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with explicit forall invisible" $ do
           interface <- scrod t ["f :: forall {a} . a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with context" $ do
           interface <- scrod t ["f :: Eq a => a -> Bool"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiple names" $ do
           interface <- scrod t ["f, g :: Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with kind sig" $ do
           interface <- scrod t ["f :: forall (a :: Type) . a -> a"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with linear arrow" $ do
           interface <- scrod t ["f :: a %1 -> b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with multiplicity poly" $ do
           interface <- scrod t ["f :: a %m -> b"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with visible forall" $ do
           interface <- scrod t ["{-# LANGUAGE RequiredTypeArguments #-} f :: forall a -> a -> a"]
-          assertEq t interface.items [itemAt 1 40]
+          assertItemsEq interface.items [itemAt 1 40]
 
         it t "with doc before" $ do
           interface <- scrod t ["-- | sig doc", "f :: Int -> Int"]
-          assertEq t interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "sig doc")]
+          assertItemsEq interface.items [itemWithDoc 2 1 (Doc.Paragraph $ Doc.String "sig doc")]
 
       describe t "PatSynSig" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern P :: Int -> Maybe Int"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "with forall provided" $ do
           interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern Q :: forall a . a -> Maybe a"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "with forall required" $ do
           interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern R :: forall a . Show a => a -> Maybe a"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "bidirectional" $ do
           interface <- scrod t ["{-# LANGUAGE PatternSynonyms #-} pattern S :: forall a . () => (Eq a) => a -> Maybe a"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
       describe t "ClassOpSig" $ do
         it t "basic" $ do
           interface <- scrod t ["class C a where op :: a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 17]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 17]
 
         it t "default" $ do
           interface <- scrod t ["class C a where", " op :: a -> a", " default op :: a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 3 10]
 
         it t "multiple" $ do
           interface <- scrod t ["class C a where op1, op2 :: a -> a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 1 17, itemAt 1 22]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 1 17, itemAt 1 22]
 
       describe t "FixSig" $ do
         it t "infixl" $ do
           interface <- scrod t ["infixl 6 +++"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "infixr" $ do
           interface <- scrod t ["infixr 5 +++"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "infix" $ do
           interface <- scrod t ["infix 4 +++"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "non-operator" $ do
           interface <- scrod t [" infix 5 `T` "]
-          assertEq t interface.items [itemAt 1 2]
+          assertItemsEq interface.items [itemAt 1 2]
 
         it t "multiple" $ do
           interface <- scrod t ["infixl 6 #, %"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "precedence 0" $ do
           interface <- scrod t ["infixl 0 +++"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "precedence 9" $ do
           interface <- scrod t ["infixr 9 +++"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "InlineSig" $ do
         it t "inline" $ do
           interface <- scrod t ["{-# INLINE f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "inline operator" $ do
           interface <- scrod t ["{-# INLINE (+++) #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "conlike" $ do
           interface <- scrod t ["{-# INLINE CONLIKE f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "noinline" $ do
           interface <- scrod t ["{-# NOINLINE f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "inlinable" $ do
           interface <- scrod t ["{-# INLINABLE f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "inline phase" $ do
           interface <- scrod t ["{-# INLINE [2] f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "inline before phase" $ do
           interface <- scrod t ["{-# INLINE [~2] f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "opaque" $ do
           interface <- scrod t ["{-# OPAQUE f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "SpecSig" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# SPECIALIZE f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "uk" $ do
           interface <- scrod t ["{-# SPECIALISE f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with inline" $ do
           interface <- scrod t ["{-# SPECIALIZE INLINE f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with noinline" $ do
           interface <- scrod t ["{-# SPECIALIZE NOINLINE f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with phase" $ do
           interface <- scrod t ["{-# SPECIALIZE [1] f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with before phase" $ do
           interface <- scrod t ["{-# SPECIALIZE [~1] f :: Int -> Int #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "SpecInstSig" $ do
         it t "basic" $ do
           interface <- scrod t ["instance Cls [a] where {-# SPECIALIZE instance Cls [Int] #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with context" $ do
           interface <- scrod t ["{-# SPECIALIZE instance Eq a => Cls [a] #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "MinimalSig" $ do
         it t "single" $ do
           interface <- scrod t ["class C a where", " m :: a", " {-# MINIMAL m #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2]
 
         it t "or" $ do
           interface <- scrod t ["class C a where", " m1, m2 :: a", " {-# MINIMAL m1 | m2 #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
 
         it t "and" $ do
           interface <- scrod t ["class C a where", " m1, m2 :: a", " {-# MINIMAL m1, m2 #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6]
 
         it t "nested" $ do
           interface <- scrod t ["class C a where", " m1, m2, m3 :: a", " {-# MINIMAL (m1, m2) | m3 #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6, itemAt 2 10]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2, itemAt 2 6, itemAt 2 10]
 
         it t "empty" $ do
           interface <- scrod t ["class C a where", " m :: a", " m = undefined", " {-# MINIMAL #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 2]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 2]
 
       describe t "SCCFunSig" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# SCC f #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with string" $ do
           interface <- scrod t ["{-# SCC f \"cost-centre-name\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "CompleteMatchSig" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# COMPLETE P #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "multiple" $ do
           interface <- scrod t ["{-# COMPLETE P, Q #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type" $ do
           interface <- scrod t ["{-# COMPLETE P :: Maybe #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "with type multiple" $ do
           interface <- scrod t ["{-# COMPLETE P, Q :: Either #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "KindSigD" $ do
       describe t "StandaloneKindSig" $ do
         it t "basic" $ do
           interface <- scrod t ["type T :: Type", "data T"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with arrow" $ do
           interface <- scrod t ["type T :: Type -> Type", "data T a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with constraint" $ do
           interface <- scrod t ["type C :: Type -> Constraint", "class C a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "with poly kind" $ do
           interface <- scrod t ["type T :: forall k . k -> Type", "data T a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "for type family" $ do
           interface <- scrod t ["type F :: Type -> Type", "type family F a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "for type synonym" $ do
           interface <- scrod t ["type S :: Type -> Type", "type S a = [a]"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "for data family" $ do
           interface <- scrod t ["type D :: Type -> Type", "data family D a"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
     describe t "DefD" $ do
       describe t "DefaultDecl" $ do
         it t "empty" $ do
           interface <- scrod t ["default ()"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "basic" $ do
           interface <- scrod t ["default (Int)"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "multiple" $ do
           interface <- scrod t ["default (Int, Double)"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "ForD" $ do
       describe t "ForeignImport" $ do
         it t "ccall" $ do
           interface <- scrod t ["foreign import ccall \"math.h sin\" c_sin :: Double -> Double"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "ccall safe" $ do
           interface <- scrod t ["foreign import ccall safe \"sleep\" c_sleep :: Int -> IO Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "ccall unsafe" $ do
           interface <- scrod t ["foreign import ccall unsafe \"getchar\" c_getchar :: IO Char"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "capi" $ do
           interface <- scrod t ["{-# LANGUAGE CApiFFI #-} foreign import capi \"stdio.h getchar\" c_getchar :: IO Char"]
-          assertEq t interface.items [itemAt 1 26]
+          assertItemsEq interface.items [itemAt 1 26]
 
         it t "stdcall (Windows)" $ do
           interface <- scrod t ["foreign import stdcall \"windows.h MessageBoxA\" c_msgbox :: Ptr () -> CString -> CString -> Int -> IO Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "prim" $ do
           interface <- scrod t ["{-# LANGUAGE GHCForeignImportPrim, MagicHash #-} foreign import prim \"stg_foo\" foo# :: Int# -> Int#"]
-          assertEq t interface.items [itemAt 1 50]
+          assertItemsEq interface.items [itemAt 1 50]
 
         it t "wrapper" $ do
           interface <- scrod t ["foreign import ccall \"wrapper\" mkCallback :: (Int -> IO Int) -> IO (FunPtr (Int -> IO Int))"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "dynamic" $ do
           interface <- scrod t ["foreign import ccall \"dynamic\" callFunPtr :: FunPtr (Int -> IO Int) -> Int -> IO Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "without string" $ do
           interface <- scrod t ["foreign import ccall sin :: Double -> Double"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "ForeignExport" $ do
         it t "ccall" $ do
           interface <- scrod t ["foreign export ccall foo :: Int -> Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "ccall with name" $ do
           interface <- scrod t ["foreign export ccall \"hs_foo\" foo :: Int -> Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "stdcall (Windows)" $ do
           interface <- scrod t ["foreign export stdcall foo :: Int -> IO Int"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "WarningD" $ do
       describe t "Warnings" $ do
         it t "one" $ do
           interface <- scrod t ["{-# WARNING x \"y\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "two" $ do
           interface <- scrod t ["{-# WARNING x, y \"z\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "empty list" $ do
           interface <- scrod t ["{-# WARNING x [] #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "singleton list" $ do
           interface <- scrod t ["{-# WARNING x [\"y\"] #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "list" $ do
           interface <- scrod t ["{-# WARNING x [\"y\", \"z\"] #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "deprecated" $ do
           interface <- scrod t ["{-# DEPRECATED x \"y\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "category" $ do
           interface <- scrod t ["{-# WARNING in \"x-foo\" bar \"qux\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "explicit data" $ do
           interface <- scrod t ["{-# WARNING data Foo \"bar\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "explicit type" $ do
           interface <- scrod t ["{-# WARNING type Foo \"bar\" #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "instance" $ do
           interface <- scrod t ["instance {-# WARNING \"x\" #-} Cls Typ"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "deriving" $ do
           interface <- scrod t ["deriving instance {-# WARNING \"x\" #-} Cls Typ"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "AnnD" $ do
       describe t "HsAnnotation" $ do
         it t "value" $ do
           interface <- scrod t ["x = 0", "{-# ANN x () #-}"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "type" $ do
           interface <- scrod t ["{-# ANN type T () #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "module" $ do
           interface <- scrod t ["{-# ANN module () #-}"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "RuleD" $ do
       describe t "HsRules" $ do
         it t "basic" $ do
           interface <- scrod t ["{-# RULES \"a\" forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11]
+          assertItemsEq interface.items [itemAt 1 11]
 
         it t "phase" $ do
           interface <- scrod t ["{-# RULES \"b\" [2] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11]
+          assertItemsEq interface.items [itemAt 1 11]
 
         it t "before phase" $ do
           interface <- scrod t ["{-# RULES \"b\" [~2] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11]
+          assertItemsEq interface.items [itemAt 1 11]
 
         it t "disabled" $ do
           interface <- scrod t ["{-# RULES \"c\" [~] forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11]
+          assertItemsEq interface.items [itemAt 1 11]
 
         it t "signature" $ do
           interface <- scrod t ["{-# RULES \"d\" forall (x :: Int) . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11]
+          assertItemsEq interface.items [itemAt 1 11]
 
         it t "semicolon" $ do
           interface <- scrod t ["{-# RULES \"e\" forall x . id x = x; \"f\" forall x . id x = x #-}"]
-          assertEq t interface.items [itemAt 1 11, itemAt 1 36]
+          assertItemsEq interface.items [itemAt 1 11, itemAt 1 36]
 
     describe t "SpliceD" $ do
       describe t "SpliceDecl" $ do
         it t "untyped" $ do
           interface <- scrod t ["{-# LANGUAGE TemplateHaskell #-} $(pure [])"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
         it t "typed" $ do
           interface <- scrod t ["{-# LANGUAGE TemplateHaskell #-} $$(pure [])"]
-          assertEq t interface.items [itemAt 1 34]
+          assertItemsEq interface.items [itemAt 1 34]
 
     describe t "DocD" $ do
       describe t "DocCommentNamed" $ do
         it t "works" $ do
           interface <- scrod t ["-- $foo", "-- bar"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
       describe t "DocGroup" $ do
         it t "one" $ do
           interface <- scrod t ["-- * one"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
         it t "six" $ do
           interface <- scrod t ["-- ****** six"]
-          assertEq t interface.items [itemAt 1 1]
+          assertItemsEq interface.items [itemAt 1 1]
 
     describe t "RoleAnnotD" $ do
       describe t "RoleAnnotDecl" $ do
         it t "none" $ do
           interface <- scrod t ["data A", "type role A"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "nominal" $ do
           interface <- scrod t ["data B z", "type role B nominal"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "representational" $ do
           interface <- scrod t ["data C y", "type role C representational"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "phantom" $ do
           interface <- scrod t ["data D x", "type role D phantom"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "inferred" $ do
           interface <- scrod t ["data E w", "type role E _"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
         it t "two" $ do
           interface <- scrod t ["data F u v", "type role F _ _"]
-          assertEq t interface.items [itemAt 1 1, itemAt 2 1]
+          assertItemsEq interface.items [itemAt 1 1, itemAt 2 1]
 
 scrod :: (Stack.HasCallStack, Applicative m) => Test m n -> [String] -> m Interface.Interface
 scrod t = expectRight t . Main.extract . unlines

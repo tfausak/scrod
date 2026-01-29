@@ -1,8 +1,8 @@
 import qualified Control.Monad.Trans.Writer.CPS as Writer
 import qualified Data.List as List
 import qualified Heck
-import qualified Scrod.Unstable.JsonSpec as JsonSpec
-import qualified Scrod.Unstable.Spec as Scrod
+import qualified JsonSpec
+import qualified Spec
 import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.HUnit as Unit
 
@@ -12,7 +12,7 @@ main = do
   testGroups <- JsonSpec.discoverTests "test-data"
   -- Build the test tree
   let jsonTestTree = Writer.execWriter $ JsonSpec.buildJsonSpec heck testGroups
-  let specTestTree = Writer.execWriter $ Scrod.spec heck
+  let specTestTree = Writer.execWriter $ Spec.spec heck
   let testTree = Tasty.testGroup "scrod" $ specTestTree <> jsonTestTree
   Tasty.defaultMain testTree
 

@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -O0 #-}
 
-module Scrod.Unstable.Spec where
+module Spec where
 
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
@@ -9,7 +9,7 @@ import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import Heck (Test, assertEq, describe, it)
-import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
+import HeckHelpers (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Type.Decimal as Decimal
 import qualified Scrod.Unstable.Type.Json as Json
 

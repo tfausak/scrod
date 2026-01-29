@@ -1,0 +1,6 @@
+{
+  "input": ["data family MyDataFam a"],
+  "assertions": {
+    "/items/0/value/name": "MyDataFam"
+  }
+}

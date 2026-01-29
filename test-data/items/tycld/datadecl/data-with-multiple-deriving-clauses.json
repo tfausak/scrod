@@ -1,0 +1,13 @@
+{
+  "input": ["data AA = AA deriving Show deriving Eq"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 11,
+    "/items/2/location/line": 1,
+    "/items/2/location/column": 23,
+    "/items/3/location/line": 1,
+    "/items/3/location/column": 37
+  }
+}

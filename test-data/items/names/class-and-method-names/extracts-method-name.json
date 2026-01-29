@@ -1,0 +1,6 @@
+{
+  "input": ["class C a where myMethod :: a"],
+  "assertions": {
+    "/items/1/value/name": "myMethod"
+  }
+}

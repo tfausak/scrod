@@ -1,0 +1,6 @@
+{
+  "input": ["data MyData = C"],
+  "assertions": {
+    "/items/0/value/name": "MyData"
+  }
+}

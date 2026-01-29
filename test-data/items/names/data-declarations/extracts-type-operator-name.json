@@ -1,0 +1,6 @@
+{
+  "input": ["data a :+: b = L a | R b"],
+  "assertions": {
+    "/items/0/value/name": ":+:"
+  }
+}

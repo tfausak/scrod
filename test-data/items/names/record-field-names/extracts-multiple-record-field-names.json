@@ -1,0 +1,7 @@
+{
+  "input": ["data T = C { f1 :: Int, f2 :: Bool }"],
+  "assertions": {
+    "/items/2/value/name": "f1",
+    "/items/3/value/name": "f2"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["type family G a where", " G Int = Bool", " G a = Char"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

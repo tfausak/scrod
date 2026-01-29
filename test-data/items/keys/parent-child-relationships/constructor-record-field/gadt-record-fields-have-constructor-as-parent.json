@@ -1,0 +1,6 @@
+{
+  "input": ["data T a where C :: { f :: Int } -> T Int"],
+  "assertions": {
+    "/items/2/value/parentKey": 2
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["class C a where", " m1 :: a", " m2 :: a -> a"],
+  "assertions": {
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/parentKey": 1
+  }
+}

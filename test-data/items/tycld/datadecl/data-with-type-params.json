@@ -1,0 +1,9 @@
+{
+  "input": ["data L a = L a"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 12
+  }
+}

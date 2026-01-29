@@ -1,0 +1,7 @@
+{
+  "input": ["{-# language PatternSynonyms #-}", "module M (T(.., P)) where"],
+  "assertions": {
+    "/exports/0/contents/subordinates/wildcard": true,
+    "/exports/0/contents/subordinates/explicit/0/name": "P"
+  }
+}

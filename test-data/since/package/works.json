@@ -1,0 +1,6 @@
+{
+  "input": ["-- | @since p-0", "module M where"],
+  "assertions": {
+    "/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "@since p-0"}}
+  }
+}

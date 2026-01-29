@@ -1,0 +1,7 @@
+{
+  "input": [" infix 5 `T` "],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 2
+  }
+}

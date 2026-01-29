@@ -1,0 +1,11 @@
+{
+  "input": ["data H = H deriving stock Show"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 10,
+    "/items/2/location/line": 1,
+    "/items/2/location/column": 27
+  }
+}

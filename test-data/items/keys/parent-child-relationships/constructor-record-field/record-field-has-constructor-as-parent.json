@@ -1,0 +1,8 @@
+{
+  "input": ["data T = C { f :: Int }"],
+  "assertions": {
+    "/items/0/value/parentKey": null,
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/parentKey": 2
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "input": ["{-# RULES \"e\" forall x . id x = x; \"f\" forall x . id x = x #-}"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 11,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 36
+  }
+}

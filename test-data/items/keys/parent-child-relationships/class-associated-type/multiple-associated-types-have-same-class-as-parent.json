@@ -1,0 +1,7 @@
+{
+  "input": ["class C a where", " type T a", " type U a"],
+  "assertions": {
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/parentKey": 1
+  }
+}

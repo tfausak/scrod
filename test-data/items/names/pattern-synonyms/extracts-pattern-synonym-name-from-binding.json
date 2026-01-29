@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE PatternSynonyms #-} pattern P x = Just x"],
+  "assertions": {
+    "/items/0/value/name": "P"
+  }
+}

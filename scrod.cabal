@@ -15,6 +15,9 @@ extra-doc-files:
   CHANGELOG.md
   README.md
 
+extra-source-files:
+  test-data/**/*.json
+
 source-repository head
   location: https://github.com/tfausak/scrod
   type: git
@@ -28,6 +31,8 @@ common library
     base ^>=4.20,
     bytestring ^>=0.12,
     containers ^>=0.7,
+    directory ^>=1.3,
+    filepath ^>=1.5,
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,
     haddock-library ^>=1.11,
@@ -85,6 +90,7 @@ library
     Scrod.Unstable.Extra.Platform
     Scrod.Unstable.Extra.PlatformMisc
     Scrod.Unstable.Extra.ToolSettings
+    Scrod.Unstable.JsonSpec
     Scrod.Unstable.Main
     Scrod.Unstable.Parse
     Scrod.Unstable.Spec
@@ -117,6 +123,7 @@ library
     Scrod.Unstable.Type.Namespace
     Scrod.Unstable.Type.PackageName
     Scrod.Unstable.Type.Picture
+    Scrod.Unstable.Type.Pointer
     Scrod.Unstable.Type.Section
     Scrod.Unstable.Type.Since
     Scrod.Unstable.Type.Subordinates

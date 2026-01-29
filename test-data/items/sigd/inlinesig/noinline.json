@@ -1,0 +1,7 @@
+{
+  "input": ["{-# NOINLINE f #-}"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

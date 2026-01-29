@@ -1,0 +1,6 @@
+{
+  "input": ["module M.N where"],
+  "assertions": {
+    "/name/value": "M.N"
+  }
+}

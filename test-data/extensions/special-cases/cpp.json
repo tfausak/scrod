@@ -1,0 +1,6 @@
+{
+  "input": ["{-# language CPP #-}", "module M where"],
+  "assertions": {
+    "/extensions": [{"enabled": true, "extension": "CPP"}]
+  }
+}

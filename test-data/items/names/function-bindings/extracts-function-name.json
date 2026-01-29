@@ -1,0 +1,6 @@
+{
+  "input": ["myFunc x = x"],
+  "assertions": {
+    "/items/0/value/name": "myFunc"
+  }
+}

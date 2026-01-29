@@ -1,0 +1,7 @@
+{
+  "input": ["{-# language PatternSynonyms #-} pattern T { tField } = Just tField"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 34
+  }
+}

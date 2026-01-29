@@ -1,0 +1,6 @@
+{
+  "input": ["-- | v'X'", "module M where"],
+  "assertions": {
+    "/documentation/contents/contents/namespace": {"tag": "Value"}
+  }
+}

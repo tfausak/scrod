@@ -1,0 +1,6 @@
+{
+  "input": ["module M {-# warning in \"x-custom\" \"y\" #-} where"],
+  "assertions": {
+    "/warning/category": "x-custom"
+  }
+}

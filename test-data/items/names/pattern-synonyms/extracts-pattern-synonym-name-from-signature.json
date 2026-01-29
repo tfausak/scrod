@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE PatternSynonyms #-} pattern MyPat :: Int -> Maybe Int"],
+  "assertions": {
+    "/items/0/value/name": "MyPat"
+  }
+}

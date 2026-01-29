@@ -1,0 +1,40 @@
+{
+  "input": ["{-# options_ghc -fglasgow-exts #-}", "module M where"],
+  "assertions": {
+    "/extensions": [
+      {"enabled": true, "extension": "ConstrainedClassMethods"},
+      {"enabled": true, "extension": "DeriveDataTypeable"},
+      {"enabled": true, "extension": "DeriveFoldable"},
+      {"enabled": true, "extension": "DeriveFunctor"},
+      {"enabled": true, "extension": "DeriveGeneric"},
+      {"enabled": true, "extension": "DeriveTraversable"},
+      {"enabled": true, "extension": "EmptyDataDecls"},
+      {"enabled": true, "extension": "ExistentialQuantification"},
+      {"enabled": true, "extension": "ExplicitForAll"},
+      {"enabled": true, "extension": "ExplicitNamespaces"},
+      {"enabled": true, "extension": "FlexibleContexts"},
+      {"enabled": true, "extension": "FlexibleInstances"},
+      {"enabled": true, "extension": "ForeignFunctionInterface"},
+      {"enabled": true, "extension": "FunctionalDependencies"},
+      {"enabled": true, "extension": "GeneralizedNewtypeDeriving"},
+      {"enabled": true, "extension": "ImplicitParams"},
+      {"enabled": true, "extension": "KindSignatures"},
+      {"enabled": true, "extension": "LiberalTypeSynonyms"},
+      {"enabled": true, "extension": "MagicHash"},
+      {"enabled": true, "extension": "MultiParamTypeClasses"},
+      {"enabled": true, "extension": "ParallelListComp"},
+      {"enabled": true, "extension": "PatternGuards"},
+      {"enabled": true, "extension": "PostfixOperators"},
+      {"enabled": true, "extension": "RankNTypes"},
+      {"enabled": true, "extension": "RecursiveDo"},
+      {"enabled": true, "extension": "ScopedTypeVariables"},
+      {"enabled": true, "extension": "StandaloneDeriving"},
+      {"enabled": true, "extension": "TypeOperators"},
+      {"enabled": true, "extension": "TypeSynonymInstances"},
+      {"enabled": true, "extension": "UnboxedSums"},
+      {"enabled": true, "extension": "UnboxedTuples"},
+      {"enabled": true, "extension": "UnicodeSyntax"},
+      {"enabled": true, "extension": "UnliftedFFITypes"}
+    ]
+  }
+}

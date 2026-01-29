@@ -1,0 +1,6 @@
+{
+  "input": ["type MySynonym = Int"],
+  "assertions": {
+    "/items/0/value/name": "MySynonym"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["(x :: Int) = 1"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

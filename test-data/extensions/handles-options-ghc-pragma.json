@@ -1,0 +1,6 @@
+{
+  "input": ["{-# options_ghc -XArrows #-}", "module M where"],
+  "assertions": {
+    "/extensions": [{"enabled": true, "extension": "Arrows"}]
+  }
+}

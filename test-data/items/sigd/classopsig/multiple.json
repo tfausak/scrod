@@ -1,0 +1,11 @@
+{
+  "input": ["class C a where op1, op2 :: a -> a"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 17,
+    "/items/2/location/line": 1,
+    "/items/2/location/column": 22
+  }
+}

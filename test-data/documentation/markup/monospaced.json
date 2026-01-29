@@ -1,0 +1,6 @@
+{
+  "input": ["-- | x @y@", "module M where"],
+  "assertions": {
+    "/documentation": {"tag": "Paragraph", "contents": {"tag": "Append", "contents": [{"tag": "String", "contents": "x "}, {"tag": "Monospaced", "contents": {"tag": "String", "contents": "y"}}]}}
+  }
+}

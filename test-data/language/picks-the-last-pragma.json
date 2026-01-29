@@ -1,0 +1,6 @@
+{
+  "input": ["{-# language Haskell98 #-}", "{-# language Haskell2010 #-}", "module M where"],
+  "assertions": {
+    "/language": "Haskell2010"
+  }
+}

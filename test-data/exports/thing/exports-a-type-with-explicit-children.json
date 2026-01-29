@@ -1,0 +1,8 @@
+{
+  "input": ["module M (T(A, B)) where"],
+  "assertions": {
+    "/exports/0/contents/subordinates/wildcard": false,
+    "/exports/0/contents/subordinates/explicit/0/name": "A",
+    "/exports/0/contents/subordinates/explicit/1/name": "B"
+  }
+}

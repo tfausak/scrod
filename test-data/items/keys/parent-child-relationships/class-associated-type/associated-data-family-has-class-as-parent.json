@@ -1,0 +1,6 @@
+{
+  "input": ["class C a where data D a"],
+  "assertions": {
+    "/items/1/value/parentKey": 1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["type family Closed a where Closed Int = Bool"],
+  "assertions": {
+    "/items/0/value/name": "Closed"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["data A = A", "deriving instance Show A"],
+  "assertions": {
+    "/items/2/value/name": null
+  }
+}

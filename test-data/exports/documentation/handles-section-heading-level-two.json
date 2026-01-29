@@ -1,0 +1,8 @@
+{
+  "input": ["module M ( -- ** Section", ") where"],
+  "assertions": {
+    "/exports/0/tag": "Group",
+    "/exports/0/contents/level": {"tag": "Two"},
+    "/exports/0/contents/title": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "Section"}}
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "input": ["class C a where", " m1, m2, m3 :: a", " {-# MINIMAL (m1, m2) | m3 #-}"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 2,
+    "/items/1/location/column": 2,
+    "/items/2/location/line": 2,
+    "/items/2/location/column": 6,
+    "/items/3/location/line": 2,
+    "/items/3/location/column": 10
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["{-# language PatternSynonyms #-}", "module M (pattern P) where"],
+  "assertions": {
+    "/exports/0/contents/name/name": "P",
+    "/exports/0/contents/name/kind": {"tag": "Pattern"}
+  }
+}

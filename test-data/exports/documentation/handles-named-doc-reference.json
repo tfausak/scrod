@@ -1,0 +1,7 @@
+{
+  "input": ["module M ( -- $chunkName", ") where"],
+  "assertions": {
+    "/exports/0/tag": "DocNamed",
+    "/exports/0/contents": "chunkName"
+  }
+}

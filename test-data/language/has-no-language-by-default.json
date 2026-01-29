@@ -1,0 +1,6 @@
+{
+  "input": ["module M where"],
+  "assertions": {
+    "/language": null
+  }
+}

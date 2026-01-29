@@ -1,0 +1,6 @@
+{
+  "input": ["data T = T deriving stock Show"],
+  "assertions": {
+    "/items/2/value/parentKey": 1
+  }
+}

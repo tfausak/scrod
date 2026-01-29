@@ -1,0 +1,11 @@
+{
+  "input": ["data B a = B a", "deriving instance Show a => Show (B a)"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 12,
+    "/items/2/location/line": 2,
+    "/items/2/location/column": 1
+  }
+}

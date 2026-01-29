@@ -1,0 +1,6 @@
+{
+  "input": ["class C a where (++) :: a -> a -> a"],
+  "assertions": {
+    "/items/1/value/name": "++"
+  }
+}

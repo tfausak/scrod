@@ -1,0 +1,7 @@
+{
+  "input": ["foreign import ccall safe \"sleep\" c_sleep :: Int -> IO Int"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

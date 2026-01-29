@@ -1,11 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -O0 #-}
 
-module Scrod.Unstable.Spec
-  ( spec,
-    jsonSpec,
-  )
-where
+module Scrod.Unstable.Spec where
 
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
@@ -17,23 +13,8 @@ import Scrod.Unstable.Extra.Heck (assertSatisfies, expectRight)
 import qualified Scrod.Unstable.Type.Decimal as Decimal
 import qualified Scrod.Unstable.Type.Json as Json
 
--- | All extract tests have been moved to JSON files in test-data/
-spec :: (Monad n) => Test m n -> n ()
-spec t = describe t "extract" $ do
-  -- invalid tests moved to test-data/invalid/
-  -- unsupported tests moved to test-data/unsupported/
-  -- language tests moved to test-data/language/
-  -- extensions tests moved to test-data/extensions/
-  -- documentation tests moved to test-data/documentation/
-  -- since tests moved to test-data/since/
-  -- name tests moved to test-data/name/
-  -- warning tests moved to test-data/warning/
-  -- exports tests moved to test-data/exports/
-  -- items tests moved to test-data/items/
-  pure ()
-
-jsonSpec :: (MonadFail m, Monad n) => Test m n -> n ()
-jsonSpec t = describe t "json" $ do
+spec :: (Monad m, Monad n) => Test m n -> n ()
+spec t = describe t "json" $ do
   describe t "parse" $ do
     it t "parses null" $ do
       result <- expectRight t $ Json.parse "null"

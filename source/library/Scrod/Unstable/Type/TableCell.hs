@@ -14,14 +14,6 @@ data Cell doc = MkCell
   }
   deriving (Eq, Ord, Show)
 
-empty :: doc -> Cell doc
-empty x =
-  MkCell
-    { colspan = 1,
-      rowspan = 1,
-      contents = x
-    }
-
 toJson :: (doc -> Json.Json) -> Cell doc -> Json.Json
 toJson f (MkCell c r d) =
   Json.object

@@ -12,13 +12,6 @@ data Table doc = MkTable
   }
   deriving (Eq, Ord, Show)
 
-empty :: Table a
-empty =
-  MkTable
-    { headerRows = [],
-      bodyRows = []
-    }
-
 toJson :: (doc -> Json.Json) -> Table doc -> Json.Json
 toJson f (MkTable h b) =
   Json.object

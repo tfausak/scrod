@@ -13,8 +13,7 @@ main = do
   -- Build the test tree
   let jsonTestTree = Writer.execWriter $ JsonSpec.buildJsonSpec heck testGroups
   let specTestTree = Writer.execWriter $ Scrod.spec heck
-  let jsonSpecTestTree = Writer.execWriter $ Scrod.jsonSpec heck
-  let testTree = Tasty.testGroup "scrod" $ specTestTree <> jsonSpecTestTree <> jsonTestTree
+  let testTree = Tasty.testGroup "scrod" $ specTestTree <> jsonTestTree
   Tasty.defaultMain testTree
 
 heck :: Heck.Test IO (Writer.Writer [Tasty.TestTree])

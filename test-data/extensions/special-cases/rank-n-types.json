@@ -1,0 +1,9 @@
+{
+  "input": ["{-# language RankNTypes #-}", "module M where"],
+  "assertions": {
+    "/extensions": [
+      {"enabled": true, "extension": "ExplicitForAll"},
+      {"enabled": true, "extension": "RankNTypes"}
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["-- | @since 1.2", "module M where"],
+  "assertions": {
+    "/since/version": [1, 2]
+  }
+}

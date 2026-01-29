@@ -1,0 +1,6 @@
+{
+  "input": ["mySig :: Int"],
+  "assertions": {
+    "/items/0/value/name": "mySig"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["data T a where", " C1 :: T Int", " C2 :: T Bool"],
+  "assertions": {
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/parentKey": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "input": ["data C = C1 | C2 | C3"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 10,
+    "/items/2/location/line": 1,
+    "/items/2/location/column": 15,
+    "/items/3/location/line": 1,
+    "/items/3/location/column": 20
+  }
+}

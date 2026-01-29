@@ -1,0 +1,6 @@
+{
+  "input": ["module M {-# warning [] #-} where"],
+  "assertions": {
+    "/warning/value": ""
+  }
+}

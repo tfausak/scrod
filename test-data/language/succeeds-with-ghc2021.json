@@ -1,0 +1,6 @@
+{
+  "input": ["{-# language GHC2021 #-}", "module M where"],
+  "assertions": {
+    "/language": "GHC2021"
+  }
+}

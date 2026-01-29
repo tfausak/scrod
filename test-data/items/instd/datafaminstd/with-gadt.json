@@ -1,0 +1,9 @@
+{
+  "input": ["data family D a", "data instance D (Maybe a) where DMaybe :: a -> D (Maybe a)"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 2,
+    "/items/1/location/column": 1
+  }
+}

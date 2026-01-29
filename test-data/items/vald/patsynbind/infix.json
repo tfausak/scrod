@@ -1,0 +1,7 @@
+{
+  "input": ["{-# language PatternSynonyms #-} pattern x :+: y = (x, y)"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 34
+  }
+}

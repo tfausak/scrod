@@ -1,0 +1,6 @@
+{
+  "input": ["instance Show T where"],
+  "assertions": {
+    "/items/0/value/name": null
+  }
+}

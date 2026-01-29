@@ -1,0 +1,7 @@
+{
+  "input": ["{-# SCC f \"cost-centre-name\" #-}"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

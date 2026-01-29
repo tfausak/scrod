@@ -1,0 +1,6 @@
+{
+  "input": ["class MyClass a"],
+  "assertions": {
+    "/items/0/value/name": "MyClass"
+  }
+}

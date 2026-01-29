@@ -1,0 +1,6 @@
+{
+  "input": ["-- | >>> x", "-- <BLANKLINE>", "module M where"],
+  "assertions": {
+    "/documentation/contents/0/result": [""]
+  }
+}

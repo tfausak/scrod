@@ -1,0 +1,6 @@
+{
+  "input": ["-- | \"X\"", "module M where"],
+  "assertions": {
+    "/documentation/contents/contents/name": "X"
+  }
+}

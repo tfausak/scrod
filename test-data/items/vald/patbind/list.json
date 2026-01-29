@@ -1,0 +1,7 @@
+{
+  "input": ["[x, y] = [1, 2]"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

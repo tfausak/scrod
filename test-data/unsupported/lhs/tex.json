@@ -1,0 +1,4 @@
+{
+  "input": ["\\begin{code}", "module M where\\end{code}"],
+  "error": true
+}

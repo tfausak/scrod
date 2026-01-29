@@ -11,6 +11,7 @@ pkgs.mkShell {
     pkgs.haskellPackages.cabal-gild
     pkgs.haskellPackages.weeder
     pkgs.hlint
+    pkgs.jq
     pkgs.nixfmt-rfc-style
     pkgs.ormolu
     pkgs.vim

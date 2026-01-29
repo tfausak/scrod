@@ -1,0 +1,7 @@
+{
+  "input": ["module M (module X) where"],
+  "assertions": {
+    "/exports/0/contents/name/name": "X",
+    "/exports/0/contents/name/kind": {"tag": "Module"}
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "input": ["data T", "  = -- | constructor doc", "    C"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 3,
+    "/items/1/location/column": 5,
+    "/items/1/value/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "constructor doc"}}
+  }
+}

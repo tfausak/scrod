@@ -1,0 +1,8 @@
+{
+  "input": ["-- | sig doc", "f :: Int -> Int"],
+  "assertions": {
+    "/items/0/location/line": 2,
+    "/items/0/location/column": 1,
+    "/items/0/value/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "sig doc"}}
+  }
+}

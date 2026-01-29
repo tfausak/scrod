@@ -1,0 +1,6 @@
+{
+  "input": ["newtype T = T Int deriving Show via Int"],
+  "assertions": {
+    "/items/2/value/parentKey": 1
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["_ = undefined"],
+  "assertions": {
+    "/items/0/value/name": null
+  }
+}

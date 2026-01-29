@@ -1,0 +1,7 @@
+{
+  "input": ["module M (x) where"],
+  "assertions": {
+    "/exports/0/tag": "Identifier",
+    "/exports/0/contents/name/name": "x"
+  }
+}

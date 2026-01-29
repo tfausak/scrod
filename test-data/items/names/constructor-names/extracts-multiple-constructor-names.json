@@ -1,0 +1,8 @@
+{
+  "input": ["data T = A | B | C"],
+  "assertions": {
+    "/items/1/value/name": "A",
+    "/items/2/value/name": "B",
+    "/items/3/value/name": "C"
+  }
+}

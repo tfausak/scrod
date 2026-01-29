@@ -1,0 +1,6 @@
+{
+  "input": ["-- | http://example", "module M where"],
+  "assertions": {
+    "/documentation/contents/contents/url": "http://example"
+  }
+}

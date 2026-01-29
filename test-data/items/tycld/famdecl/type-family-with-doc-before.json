@@ -1,0 +1,8 @@
+{
+  "input": ["-- | type family doc", "type family F a"],
+  "assertions": {
+    "/items/0/location/line": 2,
+    "/items/0/location/column": 1,
+    "/items/0/value/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "type family doc"}}
+  }
+}

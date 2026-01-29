@@ -1,0 +1,7 @@
+{
+  "input": ["module M (module Data.List) where"],
+  "assertions": {
+    "/exports/0/contents/name/name": "Data.List",
+    "/exports/0/contents/name/kind": {"tag": "Module"}
+  }
+}

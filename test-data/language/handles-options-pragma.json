@@ -1,0 +1,6 @@
+{
+  "input": ["{-# options -XHaskell98 #-}", "module M where"],
+  "assertions": {
+    "/language": "Haskell98"
+  }
+}

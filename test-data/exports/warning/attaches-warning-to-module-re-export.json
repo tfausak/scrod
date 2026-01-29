@@ -1,0 +1,6 @@
+{
+  "input": ["module M ({-# WARNING \"wrn\" #-} module X) where"],
+  "assertions": {
+    "/exports/0/contents/warning/value": "wrn"
+  }
+}

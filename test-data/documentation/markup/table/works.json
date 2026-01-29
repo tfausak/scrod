@@ -1,0 +1,15 @@
+{
+  "input": ["-- |", "-- +---+---+", "-- | a | b |", "-- +---+---+", "module M where"],
+  "assertions": {
+    "/documentation": {
+      "tag": "Table",
+      "contents": {
+        "headerRows": [],
+        "bodyRows": [[
+          {"colspan": 1, "rowspan": 1, "contents": {"tag": "String", "contents": "a"}},
+          {"colspan": 1, "rowspan": 1, "contents": {"tag": "String", "contents": "b"}}
+        ]]
+      }
+    }
+  }
+}

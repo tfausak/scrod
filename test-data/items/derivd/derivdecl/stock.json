@@ -1,0 +1,11 @@
+{
+  "input": ["data C = C", "deriving stock instance Show C"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 10,
+    "/items/2/location/line": 2,
+    "/items/2/location/column": 1
+  }
+}

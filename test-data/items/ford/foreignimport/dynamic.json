@@ -1,0 +1,7 @@
+{
+  "input": ["foreign import ccall \"dynamic\" callFunPtr :: FunPtr (Int -> IO Int) -> Int -> IO Int"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "input": ["data Z a b = Z (a %1 -> b)"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 14
+  }
+}

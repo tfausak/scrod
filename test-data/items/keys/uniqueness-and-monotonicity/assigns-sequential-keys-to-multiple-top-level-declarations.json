@@ -1,0 +1,11 @@
+{
+  "input": ["data A = A", "data B = B", "data C = C"],
+  "assertions": {
+    "/items/0/value/key": 1,
+    "/items/1/value/key": 2,
+    "/items/2/value/key": 3,
+    "/items/3/value/key": 4,
+    "/items/4/value/key": 5,
+    "/items/5/value/key": 6
+  }
+}

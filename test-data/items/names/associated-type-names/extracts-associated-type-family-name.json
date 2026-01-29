@@ -1,0 +1,6 @@
+{
+  "input": ["class C a where type MyType a"],
+  "assertions": {
+    "/items/1/value/name": "MyType"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["data T where C :: { gField :: Int } -> T"],
+  "assertions": {
+    "/items/2/value/name": "gField"
+  }
+}

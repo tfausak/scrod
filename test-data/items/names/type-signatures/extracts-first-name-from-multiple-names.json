@@ -1,0 +1,6 @@
+{
+  "input": ["f, g :: Int"],
+  "assertions": {
+    "/items/0/value/name": "f"
+  }
+}

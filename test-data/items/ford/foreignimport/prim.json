@@ -1,0 +1,7 @@
+{
+  "input": ["{-# LANGUAGE GHCForeignImportPrim, MagicHash #-} foreign import prim \"stg_foo\" foo# :: Int# -> Int#"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 50
+  }
+}

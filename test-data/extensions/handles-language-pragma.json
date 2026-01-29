@@ -1,0 +1,6 @@
+{
+  "input": ["{-# language Arrows #-}", "module M where"],
+  "assertions": {
+    "/extensions": [{"enabled": true, "extension": "Arrows"}]
+  }
+}

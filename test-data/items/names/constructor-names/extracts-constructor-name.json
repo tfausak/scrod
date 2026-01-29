@@ -1,0 +1,6 @@
+{
+  "input": ["data T = MyCon"],
+  "assertions": {
+    "/items/1/value/name": "MyCon"
+  }
+}

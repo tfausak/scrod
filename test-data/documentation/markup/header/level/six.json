@@ -1,0 +1,6 @@
+{
+  "input": ["-- | ====== x", "module M where"],
+  "assertions": {
+    "/documentation/contents/level": {"tag": "Six"}
+  }
+}

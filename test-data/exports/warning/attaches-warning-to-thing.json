@@ -1,0 +1,7 @@
+{
+  "input": ["module M ({-# WARNING \"wrn\" #-} T) where"],
+  "assertions": {
+    "/exports/0/contents/warning/category": "deprecations",
+    "/exports/0/contents/warning/value": "wrn"
+  }
+}

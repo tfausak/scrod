@@ -1,0 +1,7 @@
+{
+  "input": ["{-# LANGUAGE PatternSynonyms #-} pattern R :: forall a . Show a => a -> Maybe a"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 34
+  }
+}

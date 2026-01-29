@@ -1,0 +1,8 @@
+{
+  "input": ["x = 1", "-- ^ d"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/0/value/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "d"}}
+  }
+}

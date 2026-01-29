@@ -1,0 +1,6 @@
+{
+  "input": ["{-# language Haskell98, StarIsType #-}", "module M where"],
+  "assertions": {
+    "/extensions": [{"enabled": true, "extension": "StarIsType"}]
+  }
+}

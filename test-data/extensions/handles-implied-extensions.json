@@ -1,0 +1,9 @@
+{
+  "input": ["{-# language PolyKinds #-}", "module M where"],
+  "assertions": {
+    "/extensions": [
+      {"enabled": true, "extension": "KindSignatures"},
+      {"enabled": true, "extension": "PolyKinds"}
+    ]
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "input": ["class C a where", " m1 :: a", " m2 :: a"],
+  "assertions": {
+    "/items/1/value/name": "m1",
+    "/items/2/value/name": "m2"
+  }
+}

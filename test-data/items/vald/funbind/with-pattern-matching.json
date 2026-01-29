@@ -1,0 +1,7 @@
+{
+  "input": ["f [] = 0", "f (x:xs) = 1 + f xs"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1
+  }
+}

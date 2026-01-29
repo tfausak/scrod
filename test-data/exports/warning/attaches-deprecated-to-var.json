@@ -1,0 +1,7 @@
+{
+  "input": ["module M ({-# DEPRECATED \"dep\" #-} x) where"],
+  "assertions": {
+    "/exports/0/contents/warning/category": "deprecations",
+    "/exports/0/contents/warning/value": "dep"
+  }
+}

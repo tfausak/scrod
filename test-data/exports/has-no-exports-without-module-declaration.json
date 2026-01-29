@@ -1,0 +1,6 @@
+{
+  "input": ["x = 1"],
+  "assertions": {
+    "/exports": null
+  }
+}

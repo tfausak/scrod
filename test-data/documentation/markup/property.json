@@ -1,0 +1,6 @@
+{
+  "input": ["-- | prop> x", "module M where"],
+  "assertions": {
+    "/documentation": {"tag": "Property", "contents": "x"}
+  }
+}

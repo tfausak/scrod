@@ -1,0 +1,7 @@
+{
+  "input": ["module M ( -- | Some doc", ") where"],
+  "assertions": {
+    "/exports/0/tag": "Doc",
+    "/exports/0/contents": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "Some doc"}}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["newtype MyNewtype = N Int"],
+  "assertions": {
+    "/items/0/value/name": "MyNewtype"
+  }
+}

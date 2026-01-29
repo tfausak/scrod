@@ -1,0 +1,6 @@
+{
+  "input": ["-- | > x", "module M where"],
+  "assertions": {
+    "/documentation": {"tag": "CodeBlock", "contents": {"tag": "String", "contents": "x"}}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["x +++ y = x + y"],
+  "assertions": {
+    "/items/0/value/name": "+++"
+  }
+}

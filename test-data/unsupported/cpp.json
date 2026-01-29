@@ -1,0 +1,4 @@
+{
+  "input": ["{-# language CPP #-}", "#line 1"],
+  "error": true
+}

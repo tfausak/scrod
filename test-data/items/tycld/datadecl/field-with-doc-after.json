@@ -1,0 +1,12 @@
+{
+  "input": ["data T = T { f :: Int -- ^ field doc", "  }"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 1,
+    "/items/1/location/column": 10,
+    "/items/2/location/line": 1,
+    "/items/2/location/column": 14,
+    "/items/2/value/documentation": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "field doc"}}
+  }
+}

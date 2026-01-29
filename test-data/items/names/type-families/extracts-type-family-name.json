@@ -1,0 +1,6 @@
+{
+  "input": ["type family MyFamily a"],
+  "assertions": {
+    "/items/0/value/name": "MyFamily"
+  }
+}

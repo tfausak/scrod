@@ -1,0 +1,6 @@
+{
+  "input": ["-- | __x__", "module M where"],
+  "assertions": {
+    "/documentation": {"tag": "Paragraph", "contents": {"tag": "Bold", "contents": {"tag": "String", "contents": "x"}}}
+  }
+}

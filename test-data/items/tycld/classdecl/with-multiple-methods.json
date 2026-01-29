@@ -1,0 +1,11 @@
+{
+  "input": ["class Cls a where", " m1 :: a", " m2 :: a -> a"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/1/location/line": 2,
+    "/items/1/location/column": 2,
+    "/items/2/location/line": 3,
+    "/items/2/location/column": 2
+  }
+}

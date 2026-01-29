@@ -1,0 +1,6 @@
+{
+  "input": ["(a, b) = (1, 2)"],
+  "assertions": {
+    "/items/0/value/name": null
+  }
+}

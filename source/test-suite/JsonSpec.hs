@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Unstable.JsonSpec
+module JsonSpec
   ( -- * Test building
     buildJsonSpec,
 
@@ -19,7 +19,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified GHC.Stack as Stack
 import Heck (Test, describe, it)
-import qualified Scrod.Unstable.Extra.Heck as Heck
+import qualified HeckHelpers
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Json as Json
@@ -111,9 +111,9 @@ runTestCase t (filePath, tc) =
   it t (filePathToTestName filePath) $ do
     let inputStr = Text.unpack $ input tc
     if expectError tc
-      then Heck.assertSatisfies t Either.isLeft $ Main.extract inputStr
+      then HeckHelpers.assertSatisfies t Either.isLeft $ Main.extract inputStr
       else do
-        interface <- Heck.expectRight t $ Main.extract inputStr
+        interface <- HeckHelpers.expectRight t $ Main.extract inputStr
         let actualJson = Interface.toJson interface
         mapM_ (checkAssertion t actualJson) $ Map.toList (assertions tc)
 
@@ -126,7 +126,7 @@ checkAssertion ::
   m ()
 checkAssertion t actualJson (ptr, expected) = do
   let actual = Pointer.evaluate ptr actualJson
-  Heck.assertSatisfies t (\a -> a == Just expected) actual
+  HeckHelpers.assertSatisfies t (\a -> a == Just expected) actual
 
 -- | Convert a file path to a test name.
 -- "has-no-language-by-default.json" -> "has no language by default"

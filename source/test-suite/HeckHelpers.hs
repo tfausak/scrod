@@ -1,4 +1,4 @@
-module Scrod.Unstable.Extra.Heck where
+module HeckHelpers where
 
 import qualified GHC.Stack as Stack
 import qualified Heck

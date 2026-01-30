@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Identifier where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
-import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 
 -- | An identifier reference in documentation.
@@ -14,10 +15,25 @@ data Identifier = MkIdentifier
   { namespace :: Maybe Namespace.Namespace,
     value :: Text.Text
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Identifier where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: Aeson.Value -> Either String Identifier
+fromJson = \case
+  Aeson.Object obj -> do
+    nsJson <- JsonHelpers.lookupField obj "namespace"
+    ns <- case nsJson of
+      Aeson.Null -> Right Nothing
+      _ -> fmap Just (Namespace.fromJson nsJson)
+    valJson <- JsonHelpers.lookupField obj "value"
+    val <- case valJson of
+      Aeson.String t -> Right t
+      _ -> Left "value must be a string"
+    Right $ MkIdentifier {namespace = ns, value = val}
+  _ -> Left "Identifier must be an object"
 
-instance Aeson.ToJSON Identifier where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: Identifier -> Aeson.Value
+toJson (MkIdentifier ns val) =
+  Aeson.object
+    [ "namespace" Aeson..= maybe Aeson.Null Namespace.toJson ns,
+      "value" Aeson..= val
+    ]

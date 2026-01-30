@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.ItemName where
 
@@ -9,4 +9,11 @@ newtype ItemName = MkItemName
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
+
+fromJson :: Aeson.Value -> Either String ItemName
+fromJson = \case
+  Aeson.String txt -> Right (MkItemName txt)
+  _ -> Left "ItemName must be a string"
+
+toJson :: ItemName -> Aeson.Value
+toJson (MkItemName txt) = Aeson.String txt

@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Namespace where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
-import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
+import qualified Data.Text as Text
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 
 -- | The namespace qualification for an identifier.
 -- Mirrors 'Documentation.Haddock.Types.Namespace' from haddock-library,
@@ -14,10 +15,25 @@ data Namespace
     Value
   | -- | t'identifier' syntax
     Type
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Namespace where
-  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+fromJson :: Aeson.Value -> Either String Namespace
+fromJson = \case
+  Aeson.Object obj -> do
+    tagJson <- JsonHelpers.lookupField obj "tag"
+    tag <- case tagJson of
+      Aeson.String t -> Right t
+      _ -> Left "tag must be a string"
+    case tag of
+      "Value" -> Right Value
+      "Type" -> Right Type
+      _ -> Left $ "unknown Namespace tag: " <> Text.unpack tag
+  _ -> Left "Namespace must be an object"
 
-instance Aeson.ToJSON Namespace where
-  toJSON = Aeson.genericToJSON JsonOptions.sumOptions
+toJson :: Namespace -> Aeson.Value
+toJson ns = Aeson.object ["tag" Aeson..= tag]
+  where
+    tag :: Text.Text
+    tag = case ns of
+      Value -> "Value"
+      Type -> "Type"

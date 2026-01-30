@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.Category where
 
@@ -11,7 +11,6 @@ newtype Category = MkCategory
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Category
 fromString =
@@ -21,3 +20,11 @@ fromString =
 fromGhc :: Warnings.WarningCategory -> Category
 fromGhc (Warnings.WarningCategory fastString) =
   fromString $ FastString.unpackFS fastString
+
+fromJson :: Aeson.Value -> Either String Category
+fromJson = \case
+  Aeson.String txt -> Right (MkCategory txt)
+  _ -> Left "Category must be a string"
+
+toJson :: Category -> Aeson.Value
+toJson (MkCategory txt) = Aeson.String txt

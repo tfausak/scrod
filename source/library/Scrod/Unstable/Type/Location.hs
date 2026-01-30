@@ -1,25 +1,37 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Location where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Scrod.Unstable.Type.Column as Column
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 import qualified Scrod.Unstable.Type.Line as Line
 
 data Location = MkLocation
   { line :: Line.Line,
     column :: Column.Column
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Location where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: Aeson.Value -> Either String Location
+fromJson = \case
+  Aeson.Object obj -> do
+    lineJson <- JsonHelpers.lookupField obj "line"
+    l <- Line.fromJson lineJson
+    columnJson <- JsonHelpers.lookupField obj "column"
+    c <- Column.fromJson columnJson
+    Right $ MkLocation {line = l, column = c}
+  _ -> Left "Location must be an object"
 
-instance Aeson.ToJSON Location where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: Location -> Aeson.Value
+toJson (MkLocation l c) =
+  Aeson.object
+    [ "line" Aeson..= Line.toJson l,
+      "column" Aeson..= Column.toJson c
+    ]
 
 fromSrcLoc :: SrcLoc.SrcLoc -> Maybe Location
 fromSrcLoc srcLoc = case srcLoc of

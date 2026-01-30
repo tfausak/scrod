@@ -1,10 +1,13 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Scrod.Unstable.Type.TableCell where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
+import qualified Data.Scientific as Scientific
 import qualified Numeric.Natural as Natural
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 
 -- | A table cell with colspan, rowspan, and contents.
 -- Mirrors 'Documentation.Haddock.Types.TableCell' from haddock-library,
@@ -14,10 +17,32 @@ data Cell doc = MkCell
     rowspan :: Natural.Natural,
     contents :: doc
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance (Aeson.FromJSON doc) => Aeson.FromJSON (Cell doc) where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Cell doc)
+fromJson fromJsonDoc = \case
+  Aeson.Object obj -> do
+    colspanJson <- JsonHelpers.lookupField obj "colspan"
+    cs <- fromJsonNatural "colspan" colspanJson
+    rowspanJson <- JsonHelpers.lookupField obj "rowspan"
+    rs <- fromJsonNatural "rowspan" rowspanJson
+    contentsJson <- JsonHelpers.lookupField obj "contents"
+    c <- fromJsonDoc contentsJson
+    Right $ MkCell {colspan = cs, rowspan = rs, contents = c}
+  _ -> Left "Cell must be an object"
+  where
+    fromJsonNatural :: String -> Aeson.Value -> Either String Natural.Natural
+    fromJsonNatural fieldName = \case
+      Aeson.Number n -> case Scientific.floatingOrInteger n of
+        Right i | i >= 0 -> Right (fromInteger i)
+        Right i -> Left $ fieldName <> " must be non-negative, got: " <> show i
+        Left (_ :: Double) -> Left $ fieldName <> " must be an integer"
+      _ -> Left $ fieldName <> " must be a number"
 
-instance (Aeson.ToJSON doc) => Aeson.ToJSON (Cell doc) where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: (doc -> Aeson.Value) -> Cell doc -> Aeson.Value
+toJson toJsonDoc (MkCell cs rs c) =
+  Aeson.object
+    [ "colspan" Aeson..= Aeson.Number (Scientific.scientific (fromIntegral cs) 0),
+      "rowspan" Aeson..= Aeson.Number (Scientific.scientific (fromIntegral rs) 0),
+      "contents" Aeson..= toJsonDoc c
+    ]

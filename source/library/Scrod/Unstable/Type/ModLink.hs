@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.ModLink where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 
 -- | A link to a module with an optional label.
@@ -13,10 +14,23 @@ data ModLink doc = MkModLink
   { name :: ModuleName.ModuleName,
     label :: Maybe doc
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance (Aeson.FromJSON doc) => Aeson.FromJSON (ModLink doc) where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (ModLink doc)
+fromJson fromJsonDoc = \case
+  Aeson.Object obj -> do
+    nameJson <- JsonHelpers.lookupField obj "name"
+    n <- ModuleName.fromJson nameJson
+    labelJson <- JsonHelpers.lookupField obj "label"
+    lbl <- case labelJson of
+      Aeson.Null -> Right Nothing
+      _ -> fmap Just (fromJsonDoc labelJson)
+    Right $ MkModLink {name = n, label = lbl}
+  _ -> Left "ModLink must be an object"
 
-instance (Aeson.ToJSON doc) => Aeson.ToJSON (ModLink doc) where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: (doc -> Aeson.Value) -> ModLink doc -> Aeson.Value
+toJson toJsonDoc (MkModLink n lbl) =
+  Aeson.object
+    [ "name" Aeson..= ModuleName.toJson n,
+      "label" Aeson..= maybe Aeson.Null toJsonDoc lbl
+    ]

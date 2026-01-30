@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.PackageName where
 
@@ -9,9 +9,16 @@ newtype PackageName = MkPackageName
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> PackageName
 fromString =
   MkPackageName
     . Text.pack
+
+fromJson :: Aeson.Value -> Either String PackageName
+fromJson = \case
+  Aeson.String txt -> Right (MkPackageName txt)
+  _ -> Left "PackageName must be a string"
+
+toJson :: PackageName -> Aeson.Value
+toJson (MkPackageName txt) = Aeson.String txt

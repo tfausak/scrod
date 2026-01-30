@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Header where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Level as Level
 
@@ -15,6 +16,6 @@ data Header doc = MkHeader
 toJson :: (doc -> Json.Json) -> Header doc -> Json.Json
 toJson f (MkHeader l t) =
   Json.object
-    [ (Text.pack "level", Level.toJson l),
-      (Text.pack "title", f t)
+    [ ("level", Level.toJson l),
+      ("title", f t)
     ]

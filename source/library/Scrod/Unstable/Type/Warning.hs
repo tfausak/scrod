@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Warning where
 
 import qualified Data.Text as Text
@@ -13,6 +15,6 @@ data Warning = MkWarning
 toJson :: Warning -> Json.Json
 toJson (MkWarning c v) =
   Json.object
-    [ (Text.pack "category", Category.toJson c),
-      (Text.pack "value", Json.fromText v)
+    [ ("category", Category.toJson c),
+      ("value", Json.fromText v)
     ]

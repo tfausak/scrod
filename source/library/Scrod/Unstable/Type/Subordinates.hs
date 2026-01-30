@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Subordinates where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.ExportName as ExportName
 import qualified Scrod.Unstable.Type.Json as Json
 
@@ -17,6 +18,6 @@ data Subordinates = MkSubordinates
 toJson :: Subordinates -> Json.Json
 toJson (MkSubordinates w e) =
   Json.object
-    [ (Text.pack "wildcard", Json.fromBool w),
-      (Text.pack "explicit", Json.fromList $ fmap ExportName.toJson e)
+    [ ("wildcard", Json.fromBool w),
+      ("explicit", Json.fromList $ fmap ExportName.toJson e)
     ]

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Export where
 
 import qualified Data.Text as Text
@@ -21,7 +23,7 @@ data Export
 
 toJson :: Export -> Json.Json
 toJson export = case export of
-  Identifier i -> Json.tagged (Text.pack "Identifier") $ ExportIdentifier.toJson i
-  Group s -> Json.tagged (Text.pack "Group") $ Section.toJson s
-  Doc d -> Json.tagged (Text.pack "Doc") $ Doc.toJson d
-  DocNamed t -> Json.tagged (Text.pack "DocNamed") $ Json.fromText t
+  Identifier i -> Json.tagged "Identifier" $ ExportIdentifier.toJson i
+  Group s -> Json.tagged "Group" $ Section.toJson s
+  Doc d -> Json.tagged "Doc" $ Doc.toJson d
+  DocNamed t -> Json.tagged "DocNamed" $ Json.fromText t

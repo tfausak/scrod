@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Hyperlink where
 
 import qualified Data.Text as Text
@@ -15,6 +17,6 @@ data Hyperlink doc = MkHyperlink
 toJson :: (doc -> Json.Json) -> Hyperlink doc -> Json.Json
 toJson f (MkHyperlink u l) =
   Json.object
-    [ (Text.pack "url", Json.fromText u),
-      (Text.pack "label", maybe Json.Null f l)
+    [ ("url", Json.fromText u),
+      ("label", maybe Json.Null f l)
     ]

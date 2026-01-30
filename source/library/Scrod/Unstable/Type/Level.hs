@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Level where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Json as Json
 
 -- | A header level from 1 to 6 inclusive.
@@ -28,9 +29,9 @@ fromIntegral n = case n of
 
 toJson :: Level -> Json.Json
 toJson level = case level of
-  One -> Json.tag (Text.pack "One")
-  Two -> Json.tag (Text.pack "Two")
-  Three -> Json.tag (Text.pack "Three")
-  Four -> Json.tag (Text.pack "Four")
-  Five -> Json.tag (Text.pack "Five")
-  Six -> Json.tag (Text.pack "Six")
+  One -> Json.tag "One"
+  Two -> Json.tag "Two"
+  Three -> Json.tag "Three"
+  Four -> Json.tag "Four"
+  Five -> Json.tag "Five"
+  Six -> Json.tag "Six"

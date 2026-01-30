@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.ExportName where
 
 import qualified Data.Text as Text
@@ -15,6 +17,6 @@ data ExportName = MkExportName
 toJson :: ExportName -> Json.Json
 toJson (MkExportName k n) =
   Json.object
-    [ (Text.pack "kind", maybe Json.Null ExportNameKind.toJson k),
-      (Text.pack "name", Json.fromText n)
+    [ ("kind", maybe Json.Null ExportNameKind.toJson k),
+      ("name", Json.fromText n)
     ]

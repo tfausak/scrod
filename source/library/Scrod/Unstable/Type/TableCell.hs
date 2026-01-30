@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.TableCell where
 
-import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Type.Json as Json
 
@@ -17,7 +18,7 @@ data Cell doc = MkCell
 toJson :: (doc -> Json.Json) -> Cell doc -> Json.Json
 toJson f (MkCell c r d) =
   Json.object
-    [ (Text.pack "colspan", Json.fromNatural c),
-      (Text.pack "rowspan", Json.fromNatural r),
-      (Text.pack "contents", f d)
+    [ ("colspan", Json.fromNatural c),
+      ("rowspan", Json.fromNatural r),
+      ("contents", f d)
     ]

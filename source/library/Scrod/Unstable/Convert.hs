@@ -175,7 +175,7 @@ extractModuleDocumentation ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Doc.Doc
 extractModuleDocumentation =
-  maybe mempty parseDoc
+  maybe Doc.Empty parseDoc
     . extractRawDocString
 
 extractRawDocString ::
@@ -288,7 +288,7 @@ mergeItemsByName items =
             [] -> error "mergeItemGroup: sorted empty"
             (firstItem : _) ->
               let -- Concatenate all documentation in source order
-                  combinedDoc = mconcat $ fmap (Item.documentation . Located.value) sorted
+                  combinedDoc = foldr (Doc.append . Item.documentation . Located.value) Doc.Empty sorted
                   -- Use earliest location, first item's key and parentKey
                   mergedItem =
                     (Located.value firstItem)
@@ -393,20 +393,20 @@ associateDocs decls =
 associateNextDocs ::
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocs = go mempty
+associateNextDocs = go Doc.Empty
   where
     go :: Doc.Doc -> [Syntax.LHsDecl Ghc.GhcPs] -> [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
     go _ [] = []
     go pendingDoc (lDecl : rest) = case SrcLoc.unLoc lDecl of
       Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
         -- Combine with any existing pending doc
-        let newDoc = pendingDoc <> convertLHsDoc lDoc
+        let newDoc = Doc.append pendingDoc (convertLHsDoc lDoc)
          in go newDoc rest
       Syntax.DocD _ (Hs.DocCommentPrev _) ->
         -- Skip DocCommentPrev in this pass, but keep the declaration
-        (Doc.Empty, lDecl) : go mempty rest
+        (Doc.Empty, lDecl) : go Doc.Empty rest
       _ ->
-        (pendingDoc, lDecl) : go mempty rest
+        (pendingDoc, lDecl) : go Doc.Empty rest
 
 -- | Associate DocCommentPrev with the preceding declaration.
 associatePrevDocs ::
@@ -430,7 +430,7 @@ associatePrevDocs = reverse . go . reverse
       -- Skip over other doc declarations
       Syntax.DocD {} -> (existingDoc, lDecl) : applyPrevDoc prevDoc rest
       -- Apply to first non-doc declaration
-      _ -> (existingDoc <> prevDoc, lDecl) : rest
+      _ -> (Doc.append existingDoc prevDoc, lDecl) : rest
 
 -- | Convert a declaration with documentation (monadic version).
 convertDeclWithDocMaybeM ::
@@ -490,7 +490,7 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
 convertDeclSimpleM ::
   Syntax.LHsDecl Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertDeclSimpleM = convertDeclWithDocM Nothing mempty Nothing
+convertDeclSimpleM = convertDeclWithDocM Nothing Doc.Empty Nothing
 
 convertDeclWithDocM ::
   Maybe ItemKey.ItemKey ->
@@ -510,7 +510,7 @@ convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
-  mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing mempty
+  mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty
 
 convertClassSigsM ::
   Maybe ItemKey.ItemKey ->
@@ -531,7 +531,7 @@ convertIdPM ::
   Syntax.LIdP Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertIdPM parentKey lIdP =
-  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) mempty
+  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) Doc.Empty
 
 convertFamilyDeclsM ::
   Maybe ItemKey.ItemKey ->
@@ -548,7 +548,7 @@ convertFamilyDeclM parentKey lFamilyDecl =
     (Annotation.getLocA lFamilyDecl)
     parentKey
     (Just $ extractFamilyDeclName (SrcLoc.unLoc lFamilyDecl))
-    mempty
+    Doc.Empty
 
 convertDataDefnM ::
   Maybe ItemKey.ItemKey ->
@@ -587,7 +587,7 @@ convertDerivedTypeM ::
   Syntax.LHsSigType Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertDerivedTypeM parentKey lSigTy =
-  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing mempty
+  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing Doc.Empty
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->
@@ -620,9 +620,9 @@ extractConDeclDoc ::
   Doc.Doc
 extractConDeclDoc conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_doc = mDoc} ->
-    maybe mempty convertLHsDoc mDoc
+    maybe Doc.Empty convertLHsDoc mDoc
   Syntax.ConDeclGADT {Syntax.con_doc = mDoc} ->
-    maybe mempty convertLHsDoc mDoc
+    maybe Doc.Empty convertLHsDoc mDoc
 
 extractFieldsFromConDeclM ::
   Maybe ItemKey.ItemKey ->
@@ -665,7 +665,7 @@ extractFieldItemsFromConDeclFieldM ::
 extractFieldItemsFromConDeclFieldM parentKey lField = do
   let field = SrcLoc.unLoc lField
       fieldNames = Syntax.cd_fld_names field
-      fieldDoc = maybe mempty convertLHsDoc (Syntax.cd_fld_doc field)
+      fieldDoc = maybe Doc.Empty convertLHsDoc (Syntax.cd_fld_doc field)
   fmap Maybe.catMaybes $ traverse (extractFieldItemM parentKey fieldDoc) fieldNames
 
 extractFieldItemM ::
@@ -903,7 +903,7 @@ convertIdentifier ns str =
 -- | Convert from Haddock's parsed doc to our simplified Doc type.
 fromHaddock :: Haddock.DocH Void.Void Identifier.Identifier -> Doc.Doc
 fromHaddock doc = case doc of
-  Haddock.DocEmpty -> mempty
+  Haddock.DocEmpty -> Doc.Empty
   Haddock.DocAppend a b -> Doc.Append (fromHaddock a) (fromHaddock b)
   Haddock.DocString s -> Doc.String (Text.pack s)
   Haddock.DocParagraph d -> Doc.Paragraph (fromHaddock d)
@@ -915,7 +915,7 @@ fromHaddock doc = case doc of
         { ModLink.name = ModuleName.fromString (Haddock.modLinkName ml),
           ModLink.label = fmap fromHaddock (Haddock.modLinkLabel ml)
         }
-  Haddock.DocWarning _ -> mempty -- `DocWarning` is never found in markup.
+  Haddock.DocWarning _ -> Doc.Empty -- `DocWarning` is never found in markup.
   Haddock.DocEmphasis d -> Doc.Emphasis (fromHaddock d)
   Haddock.DocMonospaced d -> Doc.Monospaced (fromHaddock d)
   Haddock.DocBold d -> Doc.Bold (fromHaddock d)

@@ -6,6 +6,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Options.Applicative as Options
 import qualified Scrod.Unstable.Convert as Convert
+import qualified Scrod.Unstable.Extra.Http as Http
 import qualified Scrod.Unstable.Parse as Parse
 import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.HtmlInterface as HtmlInterface
@@ -17,7 +18,9 @@ import qualified System.IO as IO
 
 data Options = MkOptions
   { optInputFormat :: InputFormat.InputFormat,
-    optOutputFormat :: OutputFormat.OutputFormat
+    optOutputFormat :: OutputFormat.OutputFormat,
+    optUrl :: Maybe Text.Text,
+    optExtensions :: [String]
   }
   deriving (Eq, Ord, Show)
 
@@ -51,8 +54,28 @@ outputFormatOption =
       "html" -> Right OutputFormat.Html
       _ -> Left $ "Invalid output format: " <> s <> ". Expected 'json' or 'html'."
 
+urlOption :: Options.Parser (Maybe Text.Text)
+urlOption =
+  Options.optional . Options.strOption $
+    Options.long "url"
+      <> Options.short 'u'
+      <> Options.metavar "URL"
+      <> Options.help "Fetch Haskell source from URL"
+
+extensionOption :: Options.Parser [String]
+extensionOption =
+  Options.many . Options.strOption $
+    Options.short 'X'
+      <> Options.metavar "EXTENSION"
+      <> Options.help "Enable GHC extension (e.g., OverloadedStrings)"
+
 optionsParser :: Options.Parser Options
-optionsParser = MkOptions <$> inputFormatOption <*> outputFormatOption
+optionsParser =
+  MkOptions
+    <$> inputFormatOption
+    <*> outputFormatOption
+    <*> urlOption
+    <*> extensionOption
 
 parserInfo :: Options.ParserInfo Options
 parserInfo =
@@ -64,19 +87,26 @@ parserInfo =
 defaultMain :: IO ()
 defaultMain = do
   opts <- Options.execParser parserInfo
-  contents <- getContents
-  case parseInput (optInputFormat opts) contents of
+  contentsResult <- case optUrl opts of
+    Nothing -> Right <$> getContents
+    Just url -> Http.fetch url
+  case contentsResult of
     Left err -> do
       IO.hPutStrLn IO.stderr err
       Exit.exitFailure
-    Right interface -> do
-      let output = renderOutput (optOutputFormat opts) interface
-      LazyByteString.putStr output
-      putStrLn ""
+    Right contents ->
+      case parseInput (optInputFormat opts) (optExtensions opts) contents of
+        Left err -> do
+          IO.hPutStrLn IO.stderr err
+          Exit.exitFailure
+        Right interface -> do
+          let output = renderOutput (optOutputFormat opts) interface
+          LazyByteString.putStr output
+          putStrLn ""
 
-parseInput :: InputFormat.InputFormat -> String -> Either String Interface.Interface
-parseInput format contents = case format of
-  InputFormat.Haskell -> extract contents
+parseInput :: InputFormat.InputFormat -> [String] -> String -> Either String Interface.Interface
+parseInput format extensions contents = case format of
+  InputFormat.Haskell -> extract extensions contents
   InputFormat.Json -> parseJson contents
 
 parseJson :: String -> Either String Interface.Interface
@@ -90,5 +120,5 @@ renderOutput format interface = case format of
   OutputFormat.Json -> Aeson.encode interface
   OutputFormat.Html -> Html.render $ HtmlInterface.toHtml interface
 
-extract :: String -> Either String Interface.Interface
-extract = Convert.convert . Parse.parse
+extract :: [String] -> String -> Either String Interface.Interface
+extract extensions = Convert.convert extensions . Parse.parse

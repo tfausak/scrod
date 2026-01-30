@@ -17,7 +17,3 @@ type Html = Lucid.Html ()
 -- | Render HTML to a lazy ByteString.
 render :: Html -> LazyByteString.ByteString
 render = Lucid.renderBS
-
--- | Re-export Lucid's renderBS for convenience.
-renderBS :: Html -> LazyByteString.ByteString
-renderBS = Lucid.renderBS

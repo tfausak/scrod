@@ -19,7 +19,7 @@ import qualified Scrod.Unstable.Type.Pointer as Pointer
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified Test.Tasty as Tasty
-import qualified Test.Tasty.HUnit as Unit
+import Test.Tasty.HUnit (testCase, (@?=))
 
 -- | A single test case loaded from a JSON file.
 data TestCase = MkTestCase
@@ -70,11 +70,11 @@ parseAssertion (key, value) = case Pointer.parse $ Text.unpack key of
 -- | Convert a test case to a Tasty test.
 testCaseToTest :: FilePath -> TestCase -> Tasty.TestTree
 testCaseToTest filePath tc =
-  Unit.testCase (filePathToTestName filePath) $
+  testCase (filePathToTestName filePath) $
     if expectError tc
-      then Either.isLeft (Main.extract inputStr) Unit.@?= True
+      then Either.isLeft (Main.extract inputStr) @?= True
       else do
-        interface <- expectRight $ Main.extract inputStr
+        Right interface <- pure $ Main.extract inputStr
         let actualJson = Interface.toJson interface
         mapM_ (checkAssertion actualJson) $ Map.toList (assertions tc)
   where
@@ -84,13 +84,7 @@ testCaseToTest filePath tc =
 checkAssertion :: Json.Json -> (Pointer.Pointer, Json.Json) -> IO ()
 checkAssertion actualJson (ptr, expected) = do
   let actual = Pointer.evaluate ptr actualJson
-  actual Unit.@?= Just expected
-
--- | Unwrap a Right value or fail the test.
-expectRight :: (Show a) => Either a b -> IO b
-expectRight e = case e of
-  Left x -> Unit.assertFailure $ "expected Right but got Left " <> show x
-  Right r -> pure r
+  actual @?= Just expected
 
 -- | Convert a file path to a test name.
 -- "has-no-language-by-default.json" -> "has no language by default"

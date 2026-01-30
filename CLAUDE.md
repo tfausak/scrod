@@ -20,14 +20,12 @@ scrod/
 │   ├── library/                    # Core library code
 │   │   └── Scrod/
 │   │       ├── Scrod.hs           # Public re-export module
-│   │       └── Unstable/
-│   │           ├── Main.hs        # CLI entry point
-│   │           ├── Parse.hs       # GHC parsing logic
-│   │           ├── Convert.hs     # AST conversion
-│   │           ├── Spec.hs        # Test specifications
-│   │           ├── Type/          # Data type definitions (25+ modules)
-│   │           ├── Extra/         # GHC-related utilities
-│   │           └── Exception/     # Exception types
+│   │       ├── Main.hs            # CLI entry point
+│   │       ├── Parse.hs           # GHC parsing logic
+│   │       ├── Convert.hs         # AST conversion
+│   │       ├── Type/              # Data type definitions (35+ modules)
+│   │       ├── Extra/             # GHC-related utilities
+│   │       └── Exception/         # Exception types
 │   ├── executable/
 │   │   └── Main.hs                # CLI executable wrapper
 │   └── test-suite/
@@ -124,7 +122,7 @@ All imports must be qualified with explicit module aliases:
 
 ```haskell
 import qualified Data.Map as Map
-import qualified Scrod.Unstable.Type.Interface as Interface
+import qualified Scrod.Type.Interface as Interface
 ```
 
 ### Data Types
@@ -147,9 +145,9 @@ data Interface = MkInterface
 ### Module Naming
 
 - Public API: `Scrod` (re-exports stable interface)
-- Unstable API: `Scrod.Unstable.*` prefix indicates API may change
-- Types: `Scrod.Unstable.Type.<TypeName>`
-- Utilities: `Scrod.Unstable.Extra.<Name>`
+- Types: `Scrod.Type.<TypeName>`
+- Utilities: `Scrod.Extra.<Name>`
+- Exceptions: `Scrod.Exception.<Name>`
 
 ### Conversion Functions
 
@@ -176,13 +174,12 @@ The project uses `-Weverything` with selective suppressions. Key enabled warning
 
 | Module | Purpose |
 |--------|---------|
-| `Scrod.Unstable.Main` | Entry point; `extract :: String -> Either String Interface` |
-| `Scrod.Unstable.Parse` | Uses GHC to parse Haskell source |
-| `Scrod.Unstable.Convert` | Converts GHC AST to Scrod types |
-| `Scrod.Unstable.Type.Interface` | Top-level module representation |
-| `Scrod.Unstable.Type.Doc` | Simplified Haddock documentation AST |
-| `Scrod.Unstable.Type.Export` | Export list types |
-| `Scrod.Unstable.Spec` | Comprehensive test suite (1800+ tests) |
+| `Scrod.Main` | Entry point; `extract :: String -> Either String Interface` |
+| `Scrod.Parse` | Uses GHC to parse Haskell source |
+| `Scrod.Convert` | Converts GHC AST to Scrod types |
+| `Scrod.Type.Interface` | Top-level module representation |
+| `Scrod.Type.Doc` | Simplified Haddock documentation AST |
+| `Scrod.Type.Export` | Export list types |
 
 ## Testing Approach
 
@@ -194,7 +191,7 @@ describe "feature" $ do
     assertSatisfies "description" actual predicate
 ```
 
-Tests are organized hierarchically by feature in `Scrod.Unstable.Spec`.
+Tests are organized hierarchically by feature in the test suite.
 
 ## CI Pipeline
 
@@ -238,8 +235,8 @@ Uses date-based versioning following Package Versioning Policy (PVP):
 
 ## Adding New Features
 
-1. Create type definitions in `Scrod.Unstable.Type.*`
-2. Add conversion logic in `Scrod.Unstable.Convert`
-3. Write tests in `Scrod.Unstable.Spec`
+1. Create type definitions in `Scrod.Type.*`
+2. Add conversion logic in `Scrod.Convert`
+3. Write tests in test suite
 4. Expose in library if needed (update `scrod.cabal`)
 5. Run full CI checks locally before committing

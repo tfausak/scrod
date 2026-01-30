@@ -1,5 +1,6 @@
 module Scrod.Unstable.Main where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Options.Applicative as Options
 import qualified Scrod.Unstable.Convert as Convert
@@ -7,7 +8,6 @@ import qualified Scrod.Unstable.Parse as Parse
 import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.HtmlInterface as HtmlInterface
 import qualified Scrod.Unstable.Type.Interface as Interface
-import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.OutputFormat as OutputFormat
 import qualified System.Exit as Exit
 import qualified System.IO as IO
@@ -57,7 +57,7 @@ defaultMain = do
 
 renderOutput :: OutputFormat.OutputFormat -> Interface.Interface -> LazyByteString.ByteString
 renderOutput format interface = case format of
-  OutputFormat.Json -> Json.render $ Interface.toJson interface
+  OutputFormat.Json -> Aeson.encode interface
   OutputFormat.Html -> Html.render $ HtmlInterface.toHtml interface
 
 extract :: String -> Either String Interface.Interface

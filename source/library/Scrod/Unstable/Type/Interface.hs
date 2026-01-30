@@ -2,12 +2,12 @@
 
 module Scrod.Unstable.Type.Interface where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Map as Map
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Export as Export
 import qualified Scrod.Unstable.Type.Extension as Extension
 import qualified Scrod.Unstable.Type.Item as Item
-import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Language as Language
 import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
@@ -28,27 +28,27 @@ data Interface = MkInterface
   }
   deriving (Eq, Ord, Show)
 
-toJson :: Interface -> Json.Json
-toJson (MkInterface ver lang exts doc s n w e i) =
-  Json.object
-    [ ("version", Version.toJson ver),
-      ("language", maybe Json.Null Language.toJson lang),
-      ("extensions", extensionsToJson exts),
-      ("documentation", Doc.toJson doc),
-      ("since", maybe Json.Null Since.toJson s),
-      ("name", maybe Json.Null (Located.toJson ModuleName.toJson) n),
-      ("warning", maybe Json.Null Warning.toJson w),
-      ("exports", maybe Json.Null (Json.fromList . fmap Export.toJson) e),
-      ("items", Json.fromList $ fmap (Located.toJson Item.toJson) i)
-    ]
-  where
-    extensionsToJson =
-      Json.fromList
-        . fmap
-          ( \(ext, enabled) ->
-              Json.object
-                [ ("extension", Extension.toJson ext),
-                  ("enabled", Json.fromBool enabled)
-                ]
-          )
-        . Map.toList
+instance Aeson.ToJSON Interface where
+  toJSON (MkInterface ver lang exts doc s n w e i) =
+    Aeson.object
+      [ "version" Aeson..= ver,
+        "language" Aeson..= lang,
+        "extensions" Aeson..= extensionsToJson exts,
+        "documentation" Aeson..= doc,
+        "since" Aeson..= s,
+        "name" Aeson..= n,
+        "warning" Aeson..= w,
+        "exports" Aeson..= e,
+        "items" Aeson..= i
+      ]
+
+extensionsToJson :: Map.Map Extension.Extension Bool -> [Aeson.Value]
+extensionsToJson =
+  fmap
+    ( \(ext, enabled) ->
+        Aeson.object
+          [ "extension" Aeson..= ext,
+            "enabled" Aeson..= enabled
+          ]
+    )
+    . Map.toList

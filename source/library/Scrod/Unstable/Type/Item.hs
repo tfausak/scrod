@@ -1,11 +1,12 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Item where
 
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ItemKey as ItemKey
 import qualified Scrod.Unstable.Type.ItemName as ItemName
-import qualified Scrod.Unstable.Type.Json as Json
 
 data Item = MkItem
   { key :: ItemKey.ItemKey,
@@ -13,13 +14,7 @@ data Item = MkItem
     name :: Maybe ItemName.ItemName,
     documentation :: Doc.Doc
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Item -> Json.Json
-toJson (MkItem k pk n d) =
-  Json.object
-    [ ("key", ItemKey.toJson k),
-      ("parentKey", maybe Json.Null ItemKey.toJson pk),
-      ("name", maybe Json.Null ItemName.toJson n),
-      ("documentation", Doc.toJson d)
-    ]
+instance Aeson.ToJSON Item where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

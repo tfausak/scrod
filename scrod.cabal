@@ -116,6 +116,7 @@ library
     Scrod.Unstable.Type.ItemKey
     Scrod.Unstable.Type.ItemName
     Scrod.Unstable.Type.Json
+    Scrod.Unstable.Type.JsonOptions
     Scrod.Unstable.Type.Language
     Scrod.Unstable.Type.Level
     Scrod.Unstable.Type.Line

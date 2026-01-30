@@ -1,8 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Namespace where
 
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
 
 -- | The namespace qualification for an identifier.
 -- Mirrors 'Documentation.Haddock.Types.Namespace' from haddock-library,
@@ -12,9 +14,7 @@ data Namespace
     Value
   | -- | t'identifier' syntax
     Type
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Namespace -> Json.Json
-toJson ns = case ns of
-  Value -> Json.tag "Value"
-  Type -> Json.tag "Type"
+instance Aeson.ToJSON Namespace where
+  toJSON = Aeson.genericToJSON JsonOptions.sumOptions

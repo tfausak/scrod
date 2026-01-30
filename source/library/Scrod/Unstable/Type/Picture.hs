@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Picture where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified GHC.Generics as Generics
 
 -- | A picture/image reference.
 -- Mirrors 'Documentation.Haddock.Types.Picture' from haddock-library,
@@ -12,11 +13,7 @@ data Picture = MkPicture
   { uri :: Text.Text,
     title :: Maybe Text.Text
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Picture -> Json.Json
-toJson (MkPicture u t) =
-  Json.object
-    [ ("uri", Json.fromText u),
-      ("title", maybe Json.Null Json.fromText t)
-    ]
+instance Aeson.ToJSON Picture where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

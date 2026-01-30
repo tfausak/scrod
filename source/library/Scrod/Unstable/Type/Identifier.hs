@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Identifier where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Namespace as Namespace
 
 -- | An identifier reference in documentation.
@@ -13,11 +14,7 @@ data Identifier = MkIdentifier
   { namespace :: Maybe Namespace.Namespace,
     value :: Text.Text
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Identifier -> Json.Json
-toJson (MkIdentifier ns v) =
-  Json.object
-    [ ("namespace", maybe Json.Null Namespace.toJson ns),
-      ("value", Json.fromText v)
-    ]
+instance Aeson.ToJSON Identifier where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

@@ -1,8 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.ModLink where
 
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 
 -- | A link to a module with an optional label.
@@ -12,11 +13,7 @@ data ModLink doc = MkModLink
   { name :: ModuleName.ModuleName,
     label :: Maybe doc
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: (doc -> Json.Json) -> ModLink doc -> Json.Json
-toJson f (MkModLink n l) =
-  Json.object
-    [ ("name", ModuleName.toJson n),
-      ("label", maybe Json.Null f l)
-    ]
+instance (Aeson.ToJSON doc) => Aeson.ToJSON (ModLink doc) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

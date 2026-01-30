@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Example where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified GHC.Generics as Generics
 
 -- | An example expression with its expected result.
 -- Mirrors 'Documentation.Haddock.Types.Example' from haddock-library,
@@ -12,11 +13,7 @@ data Example = MkExample
   { expression :: Text.Text,
     result :: [Text.Text]
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Example -> Json.Json
-toJson (MkExample e r) =
-  Json.object
-    [ ("expression", Json.fromText e),
-      ("result", Json.fromList $ fmap Json.fromText r)
-    ]
+instance Aeson.ToJSON Example where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

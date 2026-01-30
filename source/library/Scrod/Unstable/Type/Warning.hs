@@ -1,20 +1,17 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Warning where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Category as Category
-import qualified Scrod.Unstable.Type.Json as Json
 
 data Warning = MkWarning
   { category :: Category.Category,
     value :: Text.Text
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Warning -> Json.Json
-toJson (MkWarning c v) =
-  Json.object
-    [ ("category", Category.toJson c),
-      ("value", Json.fromText v)
-    ]
+instance Aeson.ToJSON Warning where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

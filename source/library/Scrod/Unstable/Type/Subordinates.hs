@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Subordinates where
 
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.ExportName as ExportName
-import qualified Scrod.Unstable.Type.Json as Json
 
 -- | Subordinate exports for a type or class.
 -- Represents the contents of parentheses in exports like @Foo(..)@ or @Foo(Bar, Baz)@.
@@ -13,11 +14,7 @@ data Subordinates = MkSubordinates
     -- | Explicitly listed children.
     explicit :: [ExportName.ExportName]
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Subordinates -> Json.Json
-toJson (MkSubordinates w e) =
-  Json.object
-    [ ("wildcard", Json.fromBool w),
-      ("explicit", Json.fromList $ fmap ExportName.toJson e)
-    ]
+instance Aeson.ToJSON Subordinates where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

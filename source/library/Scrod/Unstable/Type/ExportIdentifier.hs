@@ -1,10 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.ExportIdentifier where
 
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ExportName as ExportName
-import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Subordinates as Subordinates
 import qualified Scrod.Unstable.Type.Warning as Warning
 
@@ -19,13 +20,7 @@ data ExportIdentifier = MkExportIdentifier
     warning :: Maybe Warning.Warning,
     doc :: Maybe Doc.Doc
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: ExportIdentifier -> Json.Json
-toJson (MkExportIdentifier n s w d) =
-  Json.object
-    [ ("name", ExportName.toJson n),
-      ("subordinates", maybe Json.Null Subordinates.toJson s),
-      ("warning", maybe Json.Null Warning.toJson w),
-      ("doc", maybe Json.Null Doc.toJson d)
-    ]
+instance Aeson.ToJSON ExportIdentifier where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

@@ -1,14 +1,17 @@
+{-# LANGUAGE DerivingVia #-}
+
 module Scrod.Unstable.Type.Category where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Unit.Module.Warnings as Warnings
-import qualified Scrod.Unstable.Type.Json as Json
 
 newtype Category = MkCategory
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
+  deriving (Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Category
 fromString =
@@ -18,6 +21,3 @@ fromString =
 fromGhc :: Warnings.WarningCategory -> Category
 fromGhc (Warnings.WarningCategory fastString) =
   fromString $ FastString.unpackFS fastString
-
-toJson :: Category -> Json.Json
-toJson (MkCategory t) = Json.fromText t

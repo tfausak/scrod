@@ -1,13 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module JsonSpec
-  ( -- * Test building
-    buildJsonSpec,
-
-    -- * Test discovery
-    discoverTests,
-    TestCase (..),
-    TestGroup (..),
+  ( discoverTests,
   )
 where
 
@@ -15,32 +9,23 @@ import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
 import qualified Data.List as List
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
-import qualified GHC.Stack as Stack
-import Heck (Test, describe, it)
-import qualified HeckHelpers
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Pointer as Pointer
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
+import qualified Test.Tasty as Tasty
+import Test.Tasty.HUnit (testCase, (@?=))
 
 -- | A single test case loaded from a JSON file.
 data TestCase = MkTestCase
   { input :: Text.Text,
     assertions :: Map.Map Pointer.Pointer Json.Json,
     expectError :: Bool
-  }
-  deriving (Eq, Ord, Show)
-
--- | A group of tests, possibly with nested subgroups.
--- Maps to a describe block in the test output.
-data TestGroup = MkTestGroup
-  { name :: FilePath,
-    tests :: [(FilePath, TestCase)],
-    subgroups :: [TestGroup]
   }
   deriving (Eq, Ord, Show)
 
@@ -82,51 +67,24 @@ parseAssertion (key, value) = case Pointer.parse $ Text.unpack key of
   Just ptr -> Right (ptr, value)
   Nothing -> Left $ "invalid JSON pointer: " <> Text.unpack key
 
--- | Build the JSON test spec from discovered test groups.
-buildJsonSpec ::
-  (Stack.HasCallStack, Monad n) =>
-  Test IO n ->
-  [TestGroup] ->
-  n ()
-buildJsonSpec t = mapM_ (runTestGroup t)
-
--- | Run a test group, recursively handling subgroups.
-runTestGroup ::
-  (Stack.HasCallStack, Monad n) =>
-  Test IO n ->
-  TestGroup ->
-  n ()
-runTestGroup t group =
-  describe t (name group) $ do
-    mapM_ (runTestGroup t) (subgroups group)
-    mapM_ (runTestCase t) (tests group)
-
--- | Run a single test case.
-runTestCase ::
-  (Stack.HasCallStack) =>
-  Test IO n ->
-  (FilePath, TestCase) ->
-  n ()
-runTestCase t (filePath, tc) =
-  it t (filePathToTestName filePath) $ do
-    let inputStr = Text.unpack $ input tc
+-- | Convert a test case to a Tasty test.
+testCaseToTest :: FilePath -> TestCase -> Tasty.TestTree
+testCaseToTest filePath tc =
+  testCase (filePathToTestName filePath) $
     if expectError tc
-      then HeckHelpers.assertSatisfies t Either.isLeft $ Main.extract inputStr
+      then Either.isLeft (Main.extract inputStr) @?= True
       else do
-        interface <- HeckHelpers.expectRight t $ Main.extract inputStr
+        Right interface <- pure $ Main.extract inputStr
         let actualJson = Interface.toJson interface
-        mapM_ (checkAssertion t actualJson) $ Map.toList (assertions tc)
+        mapM_ (checkAssertion actualJson) $ Map.toList (assertions tc)
+  where
+    inputStr = Text.unpack $ input tc
 
 -- | Check a single assertion.
-checkAssertion ::
-  (Stack.HasCallStack, Applicative m) =>
-  Test m n ->
-  Json.Json ->
-  (Pointer.Pointer, Json.Json) ->
-  m ()
-checkAssertion t actualJson (ptr, expected) = do
+checkAssertion :: Json.Json -> (Pointer.Pointer, Json.Json) -> IO ()
+checkAssertion actualJson (ptr, expected) = do
   let actual = Pointer.evaluate ptr actualJson
-  HeckHelpers.assertSatisfies t (\a -> a == Just expected) actual
+  actual @?= Just expected
 
 -- | Convert a file path to a test name.
 -- "has-no-language-by-default.json" -> "has no language by default"
@@ -137,10 +95,10 @@ filePathToTestName =
     dashToSpace '-' = ' '
     dashToSpace c = c
 
--- | Discover test groups from a directory.
+-- | Discover tests from a directory, returning a list of TestTree.
 -- Each subdirectory becomes a test group, which can contain
 -- both JSON test files and nested subdirectories.
-discoverTests :: FilePath -> IO [TestGroup]
+discoverTests :: FilePath -> IO [Tasty.TestTree]
 discoverTests baseDir = do
   exists <- Directory.doesDirectoryExist baseDir
   if not exists
@@ -148,36 +106,27 @@ discoverTests baseDir = do
     else do
       entries <- Directory.listDirectory baseDir
       let dirs = List.sort $ filter (not . List.isPrefixOf ".") entries
-      groups <- mapM (loadTestGroup baseDir) dirs
-      pure $ filter (not . isEmpty) groups
-
--- | Check if a test group has no tests and no subgroups.
-isEmpty :: TestGroup -> Bool
-isEmpty group = null (tests group) && null (subgroups group)
+      mapM (loadTestGroup baseDir) dirs
 
 -- | Load a test group from a directory.
 -- Recursively loads subdirectories as subgroups.
-loadTestGroup :: FilePath -> FilePath -> IO TestGroup
+loadTestGroup :: FilePath -> FilePath -> IO Tasty.TestTree
 loadTestGroup baseDir dirName = do
   let dirPath = baseDir FilePath.</> dirName
   isDir <- Directory.doesDirectoryExist dirPath
   if not isDir
-    then pure $ MkTestGroup dirName [] []
+    then pure $ Tasty.testGroup dirName []
     else do
       entries <- Directory.listDirectory dirPath
       let jsonFiles = List.sort $ filter (\f -> FilePath.takeExtension f == ".json") entries
       let subdirs = List.sort $ filter (not . List.isPrefixOf ".") entries
       testList <- mapM (loadTestFile dirPath) jsonFiles
       subgroupList <- mapM (loadTestGroup dirPath) subdirs
-      pure $
-        MkTestGroup
-          { name = dirName,
-            tests = [(f, tc) | (f, Just tc) <- testList],
-            subgroups = filter (not . isEmpty) subgroupList
-          }
+      let tests = Maybe.catMaybes testList
+      pure $ Tasty.testGroup dirName (subgroupList <> tests)
 
 -- | Load a single test file.
-loadTestFile :: FilePath -> FilePath -> IO (FilePath, Maybe TestCase)
+loadTestFile :: FilePath -> FilePath -> IO (Maybe Tasty.TestTree)
 loadTestFile dirPath fileName = do
   let filePath = dirPath FilePath.</> fileName
   contents <- LazyByteString.readFile filePath
@@ -185,9 +134,9 @@ loadTestFile dirPath fileName = do
   case Json.parse textContents of
     Left err -> do
       putStrLn $ "Warning: failed to parse " <> filePath <> ": " <> show err
-      pure (fileName, Nothing)
+      pure Nothing
     Right json -> case parseTestCase json of
       Left err -> do
         putStrLn $ "Warning: invalid test case in " <> filePath <> ": " <> err
-        pure (fileName, Nothing)
-      Right tc -> pure (fileName, Just tc)
+        pure Nothing
+      Right tc -> pure . Just $ testCaseToTest fileName tc

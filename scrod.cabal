@@ -134,14 +134,12 @@ test-suite scrod-test-suite
   build-depends:
     directory ^>=1.3,
     filepath ^>=1.5,
-    heck ^>=1.0.1,
     tasty ^>=1.5.3,
     tasty-hunit ^>=0.10.2,
 
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   other-modules:
-    HeckHelpers
     JsonSpec
     Spec
 

@@ -15,12 +15,12 @@ module Scrod.Unstable.Type.Pointer
   )
 where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified Data.Vector as Vector
-import qualified Scrod.Unstable.Type.Json as Json
 
 -- | A JSON Pointer as described by RFC 6901.
 -- A pointer is a sequence of reference tokens used to identify
@@ -62,17 +62,17 @@ unescape =
 
 -- | Evaluate a JSON Pointer against a JSON value.
 -- Returns Nothing if the pointer doesn't resolve to a value.
-evaluate :: Pointer -> Json.Json -> Maybe Json.Json
+evaluate :: Pointer -> Aeson.Value -> Maybe Aeson.Value
 evaluate (MkPointer []) json = Just json
 evaluate (MkPointer (t : ts)) json = do
   next <- step t json
   evaluate (MkPointer ts) next
 
 -- | Take a single step through a JSON value using a reference token.
-step :: Token -> Json.Json -> Maybe Json.Json
+step :: Token -> Aeson.Value -> Maybe Aeson.Value
 step (MkToken key) json = case json of
-  Json.Object m -> KeyMap.lookup (Key.fromText key) m
-  Json.Array xs -> do
+  Aeson.Object m -> KeyMap.lookup (Key.fromText key) m
+  Aeson.Array xs -> do
     i <- parseArrayIndex $ Text.unpack key
     xs Vector.!? i
   _ -> Nothing

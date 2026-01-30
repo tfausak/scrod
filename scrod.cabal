@@ -31,6 +31,7 @@ common library
     aeson ^>=2.2,
     base ^>=4.20,
     bytestring ^>=0.12,
+    clay ^>=0.15,
     containers ^>=0.7,
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,

@@ -152,7 +152,7 @@ parseCliExtensions = Maybe.mapMaybe parseOneExtension
       | "No" `List.isPrefixOf` s = fmap DynFlags.Off $ lookupExt (drop 2 s)
       | otherwise = fmap DynFlags.On $ lookupExt s
     lookupExt name = List.lookup name extensionMap
-    extensionMap = [(Session.flagSpecName x, Session.flagSpecFlag x) | x <- Session.xFlags]
+    extensionMap = fmap (\x -> (Session.flagSpecName x, Session.flagSpecFlag x)) Session.xFlags
 
 extensionsToMap ::
   [DynFlags.OnOff GhcExtension.Extension] ->
@@ -238,7 +238,113 @@ extractModuleExports lHsModule = do
 extractItems ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   [Located.Located Item.Item]
-extractItems lHsModule = runConvert $ extractItemsM lHsModule
+extractItems lHsModule =
+  let rawItems = runConvert $ extractItemsM lHsModule
+   in mergeItemsByName rawItems
+
+-- | Merge items that share the same name.
+-- This combines type signatures with their corresponding declarations.
+-- Uses the earliest source location and concatenates documentation.
+-- Only merges top-level items (those without a parent key).
+-- Maintains source order of items by placing merged items at their earliest location.
+mergeItemsByName :: [Located.Located Item.Item] -> [Located.Located Item.Item]
+mergeItemsByName items =
+  let -- Build a map of names to merge: name -> (earliest location, combined item)
+      mergeMap = buildMergeMap items
+      -- Build set of keys that have been merged into other items (to be removed)
+      removedKeys = buildRemovedKeys items mergeMap
+      -- Apply merges and filter out removed items
+      result = Maybe.mapMaybe (applyMerge mergeMap removedKeys) items
+   in result
+  where
+    -- Build map from name to merged item info
+    buildMergeMap ::
+      [Located.Located Item.Item] ->
+      Map.Map ItemName.ItemName (Located.Located Item.Item)
+    buildMergeMap is =
+      let -- Only consider top-level named items
+          candidates = filter isMergeCandidate is
+          -- Group by name
+          groups =
+            Map.fromListWith (<>) $
+              fmap (\item -> (Maybe.fromJust (Item.name (Located.value item)), [item])) candidates
+       in -- Merge each group (only groups with multiple items need merging)
+          Map.map mergeItemGroup groups
+
+    isMergeCandidate :: Located.Located Item.Item -> Bool
+    isMergeCandidate item =
+      let val = Located.value item
+       in Maybe.isNothing (Item.parentKey val) && Maybe.isJust (Item.name val)
+
+    mergeItemGroup :: [Located.Located Item.Item] -> Located.Located Item.Item
+    mergeItemGroup [] = error "mergeItemGroup: empty group"
+    mergeItemGroup [single] = single
+    mergeItemGroup group =
+      let -- Sort by location to find earliest
+          sorted = List.sortOn Located.location group
+       in case sorted of
+            [] -> error "mergeItemGroup: sorted empty"
+            (firstItem : _) ->
+              let -- Concatenate all documentation in source order
+                  combinedDoc = mconcat $ fmap (Item.documentation . Located.value) sorted
+                  -- Use earliest location, first item's key and parentKey
+                  mergedItem =
+                    (Located.value firstItem)
+                      { Item.documentation = combinedDoc
+                      }
+               in firstItem {Located.value = mergedItem}
+
+    -- Build set of keys that should be removed (merged into another item)
+    buildRemovedKeys ::
+      [Located.Located Item.Item] ->
+      Map.Map ItemName.ItemName (Located.Located Item.Item) ->
+      Map.Map ItemKey.ItemKey ()
+    buildRemovedKeys is mergeMap =
+      let -- For each merge candidate, check if it should be kept or removed
+          -- Keep the one with the earliest location, remove others
+          removals = concatMap (findRemovals mergeMap) is
+       in Map.fromList $ fmap (\k -> (k, ())) removals
+
+    findRemovals ::
+      Map.Map ItemName.ItemName (Located.Located Item.Item) ->
+      Located.Located Item.Item ->
+      [ItemKey.ItemKey]
+    findRemovals mergeMap item =
+      let val = Located.value item
+          itemKey = Item.key val
+       in case Item.name val of
+            Nothing -> []
+            Just name ->
+              case Map.lookup name mergeMap of
+                Nothing -> []
+                Just merged ->
+                  let mergedKey = Item.key (Located.value merged)
+                   in if itemKey /= mergedKey && isMergeCandidate item
+                        then [itemKey]
+                        else []
+
+    -- Apply merge: replace with merged item if this is the primary, or filter out if removed
+    applyMerge ::
+      Map.Map ItemName.ItemName (Located.Located Item.Item) ->
+      Map.Map ItemKey.ItemKey () ->
+      Located.Located Item.Item ->
+      Maybe (Located.Located Item.Item)
+    applyMerge mergeMap removedKeys item =
+      let val = Located.value item
+          itemKey = Item.key val
+       in if Map.member itemKey removedKeys
+            then Nothing -- This item was merged into another
+            else case Item.name val of
+              Nothing -> Just item -- Unnamed items pass through
+              Just name ->
+                if not (isMergeCandidate item)
+                  then Just item -- Child items pass through
+                  else case Map.lookup name mergeMap of
+                    Nothing -> Just item
+                    Just merged ->
+                      if Item.key (Located.value merged) == itemKey
+                        then Just merged -- This is the primary, use merged version
+                        else Just item -- Shouldn't happen, but pass through
 
 extractItemsM ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
@@ -314,7 +420,31 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
   Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
   Syntax.DocD {} -> fmap Maybe.maybeToList $ convertDeclSimpleM lDecl
+  Syntax.SigD _ sig -> convertSigDeclM doc lDecl sig
   _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractDeclName lDecl) lDecl
+
+-- | Convert a signature declaration, handling multi-name signatures.
+-- For signatures like "x, y :: Int", this creates a separate item for each name.
+convertSigDeclM ::
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.Sig Ghc.GhcPs ->
+  ConvertM [Located.Located Item.Item]
+convertSigDeclM doc lDecl sig = case sig of
+  Syntax.TypeSig _ names _ ->
+    fmap Maybe.catMaybes $ traverse (convertSigNameM doc lDecl) names
+  Syntax.PatSynSig _ names _ ->
+    fmap Maybe.catMaybes $ traverse (convertSigNameM doc lDecl) names
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractSigName sig) lDecl
+
+-- | Convert a single name from a signature into an item.
+convertSigNameM ::
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.LIdP Ghc.GhcPs ->
+  ConvertM (Maybe (Located.Located Item.Item))
+convertSigNameM doc lDecl lName =
+  mkItemM (Annotation.getLocA lDecl) Nothing (Just $ extractIdPName lName) doc
 
 -- | Convert a type/class declaration with documentation.
 convertTyClDeclWithDocM ::
@@ -536,7 +666,12 @@ extractDeclName lDecl = case SrcLoc.unLoc lDecl of
   Syntax.ValD _ bind -> extractBindName bind
   Syntax.SigD _ sig -> extractSigName sig
   Syntax.InstD _ inst -> extractInstDeclName inst
+  Syntax.KindSigD _ kindSig -> Just $ extractStandaloneKindSigName kindSig
   _ -> Nothing
+
+-- | Extract name from a standalone kind signature.
+extractStandaloneKindSigName :: Syntax.StandaloneKindSig Ghc.GhcPs -> ItemName.ItemName
+extractStandaloneKindSigName (Syntax.StandaloneKindSig _ lName _) = extractIdPName lName
 
 -- | Extract name from a type/class declaration.
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName

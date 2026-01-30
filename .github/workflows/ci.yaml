@@ -7,8 +7,8 @@ on:
     branches:
       - main
 jobs:
-  ci:
-    name: CI
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -17,14 +17,10 @@ jobs:
         run: |
           echo name=$( grep ^name: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT
           echo version=$( grep ^version: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT
-      - name: Gild
-        run: nix-shell --run 'cabal-gild --input ${{ steps.meta.outputs.name }}.cabal --mode check'
-      - name: Cabal check
-        run: nix-shell --run 'cabal check'
-      - name: HLint
-        run: nix-shell --run 'hlint .'
-      - name: Ormolu
-        run: nix-shell --run 'ormolu --mode check $(git ls-files "*.hs")'
+      - run: nix-shell --run 'cabal-gild --input ${{ steps.meta.outputs.name }}.cabal --mode check'
+      - run: nix-shell --run 'cabal check'
+      - run: nix-shell --run 'hlint .'
+      - run: nix-shell --run 'ormolu --mode check $( git ls-files "*.hs" )'
       - run: mkdir artifact
       - run: nix-shell --run 'ghc-pkg list'
       - run: nix-shell --run 'cabal sdist --output-dir artifact'
@@ -50,7 +46,5 @@ jobs:
         with:
           name: scrod-${{ github.sha }}
           path: artifact.tar
-      - name: Test
-        run: nix-shell --run 'cabal run -- scrod-test-suite'
-      - name: Weeder
-        run: nix-shell --run weeder
+      - run: nix-shell --run 'cabal run -- scrod-test-suite'
+      - run: nix-shell --run weeder

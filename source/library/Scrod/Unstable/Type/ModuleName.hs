@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.ModuleName where
 
@@ -10,7 +10,6 @@ newtype ModuleName = MkModuleName
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> ModuleName
 fromString =
@@ -21,3 +20,11 @@ fromGhc :: ModuleName.ModuleName -> ModuleName
 fromGhc =
   fromString
     . ModuleName.moduleNameString
+
+fromJson :: Aeson.Value -> Either String ModuleName
+fromJson = \case
+  Aeson.String txt -> Right (MkModuleName txt)
+  _ -> Left "ModuleName must be a string"
+
+toJson :: ModuleName -> Aeson.Value
+toJson (MkModuleName txt) = Aeson.String txt

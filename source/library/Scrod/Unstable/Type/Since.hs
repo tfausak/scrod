@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Since where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Version as Version
 
@@ -11,10 +12,23 @@ data Since = MkSince
   { package :: Maybe PackageName.PackageName,
     version :: Version.Version
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Since where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: Aeson.Value -> Either String Since
+fromJson = \case
+  Aeson.Object obj -> do
+    pkgJson <- JsonHelpers.lookupField obj "package"
+    pkg <- case pkgJson of
+      Aeson.Null -> Right Nothing
+      _ -> fmap Just (PackageName.fromJson pkgJson)
+    verJson <- JsonHelpers.lookupField obj "version"
+    ver <- Version.fromJson verJson
+    Right $ MkSince {package = pkg, version = ver}
+  _ -> Left "Since must be an object"
 
-instance Aeson.ToJSON Since where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: Since -> Aeson.Value
+toJson (MkSince pkg ver) =
+  Aeson.object
+    [ "package" Aeson..= maybe Aeson.Null PackageName.toJson pkg,
+      "version" Aeson..= Version.toJson ver
+    ]

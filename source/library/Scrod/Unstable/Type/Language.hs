@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.Language where
 
@@ -10,7 +10,6 @@ newtype Language = MkLanguage
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Language
 fromString =
@@ -21,3 +20,11 @@ fromGhc :: Flags.Language -> Language
 fromGhc =
   fromString
     . show
+
+fromJson :: Aeson.Value -> Either String Language
+fromJson = \case
+  Aeson.String txt -> Right (MkLanguage txt)
+  _ -> Left "Language must be a string"
+
+toJson :: Language -> Aeson.Value
+toJson (MkLanguage txt) = Aeson.String txt

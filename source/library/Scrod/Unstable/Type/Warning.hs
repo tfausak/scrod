@@ -1,20 +1,34 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Warning where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
-import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Category as Category
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 
 data Warning = MkWarning
   { category :: Category.Category,
     value :: Text.Text
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Warning where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: Aeson.Value -> Either String Warning
+fromJson = \case
+  Aeson.Object obj -> do
+    catJson <- JsonHelpers.lookupField obj "category"
+    cat <- Category.fromJson catJson
+    valJson <- JsonHelpers.lookupField obj "value"
+    val <- case valJson of
+      Aeson.String t -> Right t
+      _ -> Left "value must be a string"
+    Right $ MkWarning {category = cat, value = val}
+  _ -> Left "Warning must be an object"
 
-instance Aeson.ToJSON Warning where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: Warning -> Aeson.Value
+toJson (MkWarning cat val) =
+  Aeson.object
+    [ "category" Aeson..= Category.toJson cat,
+      "value" Aeson..= val
+    ]

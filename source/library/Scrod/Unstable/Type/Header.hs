@@ -1,9 +1,10 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Header where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 import qualified Scrod.Unstable.Type.Level as Level
 
 -- | A section header with a level and title.
@@ -12,10 +13,21 @@ data Header doc = MkHeader
   { level :: Level.Level,
     title :: doc
   }
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance (Aeson.FromJSON doc) => Aeson.FromJSON (Header doc) where
-  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Header doc)
+fromJson fromJsonDoc = \case
+  Aeson.Object obj -> do
+    lvlJson <- JsonHelpers.lookupField obj "level"
+    lvl <- Level.fromJson lvlJson
+    titleJson <- JsonHelpers.lookupField obj "title"
+    t <- fromJsonDoc titleJson
+    Right $ MkHeader {level = lvl, title = t}
+  _ -> Left "Header must be an object"
 
-instance (Aeson.ToJSON doc) => Aeson.ToJSON (Header doc) where
-  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+toJson :: (doc -> Aeson.Value) -> Header doc -> Aeson.Value
+toJson toJsonDoc (MkHeader lvl t) =
+  Aeson.object
+    [ "level" Aeson..= Level.toJson lvl,
+      "title" Aeson..= toJsonDoc t
+    ]

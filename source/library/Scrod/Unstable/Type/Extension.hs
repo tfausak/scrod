@@ -1,4 +1,4 @@
-{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Scrod.Unstable.Type.Extension where
 
@@ -15,7 +15,6 @@ newtype Extension = MkExtension
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Extension
 fromString =
@@ -40,3 +39,11 @@ extensionNameExceptions =
       )
     . Map.fromListWith (<>)
     $ fmap (\x -> (Session.flagSpecFlag x, [Session.flagSpecName x])) Session.xFlags
+
+fromJson :: Aeson.Value -> Either String Extension
+fromJson = \case
+  Aeson.String txt -> Right (MkExtension txt)
+  _ -> Left "Extension must be a string"
+
+toJson :: Extension -> Aeson.Value
+toJson (MkExtension txt) = Aeson.String txt

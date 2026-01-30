@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Level where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
-import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
+import qualified Data.Text as Text
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 
 -- | A header level from 1 to 6 inclusive.
 -- This type ensures only valid HTML header levels can be represented.
@@ -15,13 +16,36 @@ data Level
   | Four
   | Five
   | Six
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON Level where
-  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+fromJson :: Aeson.Value -> Either String Level
+fromJson = \case
+  Aeson.Object obj -> do
+    tagJson <- JsonHelpers.lookupField obj "tag"
+    tag <- case tagJson of
+      Aeson.String t -> Right t
+      _ -> Left "tag must be a string"
+    case tag of
+      "One" -> Right One
+      "Two" -> Right Two
+      "Three" -> Right Three
+      "Four" -> Right Four
+      "Five" -> Right Five
+      "Six" -> Right Six
+      _ -> Left $ "unknown Level tag: " <> Text.unpack tag
+  _ -> Left "Level must be an object"
 
-instance Aeson.ToJSON Level where
-  toJSON = Aeson.genericToJSON JsonOptions.sumOptions
+toJson :: Level -> Aeson.Value
+toJson lvl = Aeson.object ["tag" Aeson..= tag]
+  where
+    tag :: Text.Text
+    tag = case lvl of
+      One -> "One"
+      Two -> "Two"
+      Three -> "Three"
+      Four -> "Four"
+      Five -> "Five"
+      Six -> "Six"
 
 -- | Try to convert an 'Integral' value to a 'Level'.
 -- Returns 'Nothing' if the value is not in the range 1-6.

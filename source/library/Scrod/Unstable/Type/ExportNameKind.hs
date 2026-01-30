@@ -1,10 +1,11 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.ExportNameKind where
 
 import qualified Data.Aeson as Aeson
-import qualified GHC.Generics as Generics
-import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
+import qualified Data.Text as Text
+import qualified Scrod.Unstable.Type.JsonHelpers as JsonHelpers
 
 -- | Namespace annotation for a name in an export list.
 -- Corresponds to IEPattern and IEType from GHC's IEWrappedName.
@@ -16,10 +17,27 @@ data ExportNameKind
     Type
   | -- | @module Data.List@
     Module
-  deriving (Eq, Ord, Show, Generics.Generic)
+  deriving (Eq, Ord, Show)
 
-instance Aeson.FromJSON ExportNameKind where
-  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+fromJson :: Aeson.Value -> Either String ExportNameKind
+fromJson = \case
+  Aeson.Object obj -> do
+    tagJson <- JsonHelpers.lookupField obj "tag"
+    tag <- case tagJson of
+      Aeson.String t -> Right t
+      _ -> Left "tag must be a string"
+    case tag of
+      "Pattern" -> Right Pattern
+      "Type" -> Right Type
+      "Module" -> Right Module
+      _ -> Left $ "unknown ExportNameKind tag: " <> Text.unpack tag
+  _ -> Left "ExportNameKind must be an object"
 
-instance Aeson.ToJSON ExportNameKind where
-  toJSON = Aeson.genericToJSON JsonOptions.sumOptions
+toJson :: ExportNameKind -> Aeson.Value
+toJson kind = Aeson.object ["tag" Aeson..= tag]
+  where
+    tag :: Text.Text
+    tag = case kind of
+      Pattern -> "Pattern"
+      Type -> "Type"
+      Module -> "Module"

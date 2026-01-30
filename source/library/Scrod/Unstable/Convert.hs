@@ -247,14 +247,15 @@ extractItems lHsModule =
 -- Uses the earliest source location and concatenates documentation.
 -- Only merges top-level items (those without a parent key).
 -- Maintains source order of items by placing merged items at their earliest location.
+-- Updates child items' parentKey references when their parent is merged.
 mergeItemsByName :: [Located.Located Item.Item] -> [Located.Located Item.Item]
 mergeItemsByName items =
   let -- Build a map of names to merge: name -> (earliest location, combined item)
       mergeMap = buildMergeMap items
-      -- Build set of keys that have been merged into other items (to be removed)
-      removedKeys = buildRemovedKeys items mergeMap
-      -- Apply merges and filter out removed items
-      result = Maybe.mapMaybe (applyMerge mergeMap removedKeys) items
+      -- Build map from removed key -> merged key (for updating parentKey references)
+      keyRemapping = buildKeyRemapping items mergeMap
+      -- Apply merges, filter out removed items, and update parentKey references
+      result = Maybe.mapMaybe (applyMerge mergeMap keyRemapping) items
    in result
   where
     -- Build map from name to merged item info
@@ -294,22 +295,19 @@ mergeItemsByName items =
                       }
                in firstItem {Located.value = mergedItem}
 
-    -- Build set of keys that should be removed (merged into another item)
-    buildRemovedKeys ::
+    -- Build map from removed key -> merged key (for updating parentKey references)
+    buildKeyRemapping ::
       [Located.Located Item.Item] ->
       Map.Map ItemName.ItemName (Located.Located Item.Item) ->
-      Map.Map ItemKey.ItemKey ()
-    buildRemovedKeys is mergeMap =
-      let -- For each merge candidate, check if it should be kept or removed
-          -- Keep the one with the earliest location, remove others
-          removals = concatMap (findRemovals mergeMap) is
-       in Map.fromList $ fmap (\k -> (k, ())) removals
+      Map.Map ItemKey.ItemKey ItemKey.ItemKey
+    buildKeyRemapping is mergeMap =
+      Map.fromList $ concatMap (findRemapping mergeMap) is
 
-    findRemovals ::
+    findRemapping ::
       Map.Map ItemName.ItemName (Located.Located Item.Item) ->
       Located.Located Item.Item ->
-      [ItemKey.ItemKey]
-    findRemovals mergeMap item =
+      [(ItemKey.ItemKey, ItemKey.ItemKey)]
+    findRemapping mergeMap item =
       let val = Located.value item
           itemKey = Item.key val
        in case Item.name val of
@@ -320,31 +318,53 @@ mergeItemsByName items =
                 Just merged ->
                   let mergedKey = Item.key (Located.value merged)
                    in if itemKey /= mergedKey && isMergeCandidate item
-                        then [itemKey]
+                        then [(itemKey, mergedKey)]
                         else []
 
     -- Apply merge: replace with merged item if this is the primary, or filter out if removed
+    -- Also updates parentKey references for child items
     applyMerge ::
       Map.Map ItemName.ItemName (Located.Located Item.Item) ->
-      Map.Map ItemKey.ItemKey () ->
+      Map.Map ItemKey.ItemKey ItemKey.ItemKey ->
       Located.Located Item.Item ->
       Maybe (Located.Located Item.Item)
-    applyMerge mergeMap removedKeys item =
+    applyMerge mergeMap keyRemapping item =
       let val = Located.value item
           itemKey = Item.key val
-       in if Map.member itemKey removedKeys
+       in if Map.member itemKey keyRemapping
             then Nothing -- This item was merged into another
-            else case Item.name val of
-              Nothing -> Just item -- Unnamed items pass through
-              Just name ->
-                if not (isMergeCandidate item)
-                  then Just item -- Child items pass through
-                  else case Map.lookup name mergeMap of
-                    Nothing -> Just item
-                    Just merged ->
-                      if Item.key (Located.value merged) == itemKey
-                        then Just merged -- This is the primary, use merged version
-                        else Just item -- Shouldn't happen, but pass through
+            else
+              let -- Update parentKey if it points to a removed key
+                  updatedItem = updateParentKey keyRemapping item
+               in case Item.name val of
+                    Nothing -> Just updatedItem -- Unnamed items pass through
+                    Just name ->
+                      if not (isMergeCandidate item)
+                        then Just updatedItem -- Child items pass through (with updated parentKey)
+                        else case Map.lookup name mergeMap of
+                          Nothing -> Just updatedItem
+                          Just merged ->
+                            if Item.key (Located.value merged) == itemKey
+                              then Just merged -- This is the primary, use merged version
+                              else Just updatedItem -- Shouldn't happen, but pass through
+
+    -- Update an item's parentKey if it points to a removed key
+    updateParentKey ::
+      Map.Map ItemKey.ItemKey ItemKey.ItemKey ->
+      Located.Located Item.Item ->
+      Located.Located Item.Item
+    updateParentKey keyRemapping locatedItem =
+      let val = Located.value locatedItem
+       in case Item.parentKey val of
+            Nothing -> locatedItem
+            Just pk ->
+              case Map.lookup pk keyRemapping of
+                Nothing -> locatedItem -- parentKey not remapped
+                Just newPk ->
+                  locatedItem
+                    { Located.value =
+                        val {Item.parentKey = Just newPk}
+                    }
 
 extractItemsM ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->

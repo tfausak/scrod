@@ -1,0 +1,9 @@
+{
+  "input": ["x :: Int", "y :: Bool", "x = 1", "y = True"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/value/name": "x",
+    "/items/1/location/line": 2,
+    "/items/1/value/name": "y"
+  }
+}

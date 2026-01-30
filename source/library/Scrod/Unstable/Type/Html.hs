@@ -1,7 +1,6 @@
 module Scrod.Unstable.Type.Html
   ( -- * Re-exports from Lucid
     Html,
-    renderBS,
 
     -- * Rendering
     render,

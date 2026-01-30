@@ -106,30 +106,16 @@ discoverTests baseDir = do
     else do
       entries <- Directory.listDirectory baseDir
       let dirs = List.sort $ filter (not . List.isPrefixOf ".") entries
-      groups <- mapM (loadTestGroup baseDir) dirs
-      pure . fmap toTestTree $ filter (not . isEmpty) groups
-
--- | Check if a test group has no children.
--- We track this ourselves since TestTree internals aren't exported.
-data TestGroup = MkTestGroup
-  { groupName :: FilePath,
-    groupTests :: [Tasty.TestTree]
-  }
-
-toTestTree :: TestGroup -> Tasty.TestTree
-toTestTree g = Tasty.testGroup (groupName g) (groupTests g)
-
-isEmpty :: TestGroup -> Bool
-isEmpty g = null (groupTests g)
+      mapM (loadTestGroup baseDir) dirs
 
 -- | Load a test group from a directory.
 -- Recursively loads subdirectories as subgroups.
-loadTestGroup :: FilePath -> FilePath -> IO TestGroup
+loadTestGroup :: FilePath -> FilePath -> IO Tasty.TestTree
 loadTestGroup baseDir dirName = do
   let dirPath = baseDir FilePath.</> dirName
   isDir <- Directory.doesDirectoryExist dirPath
   if not isDir
-    then pure $ MkTestGroup dirName []
+    then pure $ Tasty.testGroup dirName []
     else do
       entries <- Directory.listDirectory dirPath
       let jsonFiles = List.sort $ filter (\f -> FilePath.takeExtension f == ".json") entries
@@ -137,8 +123,7 @@ loadTestGroup baseDir dirName = do
       testList <- mapM (loadTestFile dirPath) jsonFiles
       subgroupList <- mapM (loadTestGroup dirPath) subdirs
       let tests = Maybe.catMaybes testList
-      let subgroups = fmap toTestTree $ filter (not . isEmpty) subgroupList
-      pure $ MkTestGroup dirName (subgroups <> tests)
+      pure $ Tasty.testGroup dirName (subgroupList <> tests)
 
 -- | Load a single test file.
 loadTestFile :: FilePath -> FilePath -> IO (Maybe Tasty.TestTree)

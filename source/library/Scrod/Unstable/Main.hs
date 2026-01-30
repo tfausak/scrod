@@ -2,6 +2,7 @@ module Scrod.Unstable.Main where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LazyByteString
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Options.Applicative as Options
@@ -19,7 +20,7 @@ import qualified System.IO as IO
 data Options = MkOptions
   { optInputFormat :: InputFormat.InputFormat,
     optOutputFormat :: OutputFormat.OutputFormat,
-    optUrl :: Maybe Text.Text,
+    optSource :: Maybe String,
     optExtensions :: [String]
   }
   deriving (Eq, Ord, Show)
@@ -54,13 +55,11 @@ outputFormatOption =
       "html" -> Right OutputFormat.Html
       _ -> Left $ "Invalid output format: " <> s <> ". Expected 'json' or 'html'."
 
-urlOption :: Options.Parser (Maybe Text.Text)
-urlOption =
-  Options.optional . Options.strOption $
-    Options.long "url"
-      <> Options.short 'u'
-      <> Options.metavar "URL"
-      <> Options.help "Fetch Haskell source from URL"
+sourceArgument :: Options.Parser (Maybe String)
+sourceArgument =
+  Options.optional . Options.strArgument $
+    Options.metavar "SOURCE"
+      <> Options.help "File path or URL (reads from stdin if omitted)"
 
 extensionOption :: Options.Parser [String]
 extensionOption =
@@ -74,7 +73,7 @@ optionsParser =
   MkOptions
     <$> inputFormatOption
     <*> outputFormatOption
-    <*> urlOption
+    <*> sourceArgument
     <*> extensionOption
 
 parserInfo :: Options.ParserInfo Options
@@ -82,14 +81,16 @@ parserInfo =
   Options.info (Options.helper <*> optionsParser) $
     Options.fullDesc
       <> Options.header "scrod - Haskell documentation extraction tool"
-      <> Options.progDesc "Reads input from stdin, outputs documentation to stdout."
+      <> Options.progDesc "Extract documentation from Haskell source code."
 
 defaultMain :: IO ()
 defaultMain = do
   opts <- Options.execParser parserInfo
-  contentsResult <- case optUrl opts of
+  contentsResult <- case optSource opts of
     Nothing -> Right <$> getContents
-    Just url -> Http.fetch url
+    Just source
+      | isUrl source -> Http.fetch (Text.pack source)
+      | otherwise -> Right <$> readFile source
   case contentsResult of
     Left err -> do
       IO.hPutStrLn IO.stderr err
@@ -103,6 +104,9 @@ defaultMain = do
           let output = renderOutput (optOutputFormat opts) interface
           LazyByteString.putStr output
           putStrLn ""
+
+isUrl :: String -> Bool
+isUrl s = "http://" `List.isPrefixOf` s || "https://" `List.isPrefixOf` s
 
 parseInput :: InputFormat.InputFormat -> [String] -> String -> Either String Interface.Interface
 parseInput format extensions contents = case format of

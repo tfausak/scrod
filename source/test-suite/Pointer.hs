@@ -2,7 +2,7 @@
 
 -- | JSON Pointer implementation per RFC 6901.
 -- https://datatracker.ietf.org/doc/html/rfc6901
-module Scrod.Unstable.Type.Pointer
+module Pointer
   ( -- * Types
     Pointer (..),
     Token (..),

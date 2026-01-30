@@ -64,13 +64,8 @@ unorderedListToHtml items =
   Lucid.ul_ $ foldMap (Lucid.li_ . toHtml) items
 
 orderedListToHtml :: [(Int, Doc.Doc)] -> Lucid.Html ()
-orderedListToHtml items =
-  case items of
-    [] -> mempty
-    ((start, _) : _) ->
-      Lucid.ol_
-        [Lucid.start_ (Text.pack $ show start) | start /= 1]
-        $ foldMap (Lucid.li_ . toHtml . snd) items
+orderedListToHtml = foldMap $ \(i, d) ->
+  Lucid.li_ [Lucid.value_ . Text.pack $ show i] $ toHtml d
 
 defListToHtml :: [(Doc.Doc, Doc.Doc)] -> Lucid.Html ()
 defListToHtml defs =
@@ -142,5 +137,6 @@ tableToHtml (Table.MkTable headerRows bodyRows) =
 
     cellAttrs :: Natural.Natural -> Natural.Natural -> [Lucid.Attributes]
     cellAttrs c r =
-      [Lucid.colspan_ (Text.pack $ show c) | c /= 1]
-        <> [Lucid.rowspan_ (Text.pack $ show r) | r /= 1]
+      [ Lucid.colspan_ . Text.pack $ show c,
+        Lucid.rowspan_ . Text.pack $ show r
+      ]

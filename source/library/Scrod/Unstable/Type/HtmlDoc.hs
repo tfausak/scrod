@@ -5,6 +5,7 @@ module Scrod.Unstable.Type.HtmlDoc where
 import qualified Data.Maybe
 import qualified Data.Text as Text
 import qualified Lucid
+import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Header as Header
@@ -123,16 +124,24 @@ levelToElement level = case level of
 tableToHtml :: Table.Table Doc.Doc -> Html.Html
 tableToHtml (Table.MkTable headerRows bodyRows) =
   Lucid.table_ $
-    (if null headerRows then mempty else Lucid.thead_ (foldMap rowToHtml headerRows))
-      <> (if null bodyRows then mempty else Lucid.tbody_ (foldMap rowToHtml bodyRows))
+    (if null headerRows then mempty else Lucid.thead_ (foldMap headerRowToHtml headerRows))
+      <> (if null bodyRows then mempty else Lucid.tbody_ (foldMap bodyRowToHtml bodyRows))
   where
-    rowToHtml :: [TableCell.Cell Doc.Doc] -> Html.Html
-    rowToHtml cells = Lucid.tr_ $ foldMap cellToHtml cells
+    headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Html.Html
+    headerRowToHtml cells = Lucid.tr_ $ foldMap headerCellToHtml cells
 
-cellToHtml :: TableCell.Cell Doc.Doc -> Html.Html
-cellToHtml (TableCell.MkCell colspan rowspan contents) =
-  Lucid.td_ attrs (toHtml contents)
-  where
-    attrs =
-      [Lucid.colspan_ (Text.pack $ show colspan) | colspan /= 1]
-        <> [Lucid.rowspan_ (Text.pack $ show rowspan) | rowspan /= 1]
+    bodyRowToHtml :: [TableCell.Cell Doc.Doc] -> Html.Html
+    bodyRowToHtml cells = Lucid.tr_ $ foldMap bodyCellToHtml cells
+
+    headerCellToHtml :: TableCell.Cell Doc.Doc -> Html.Html
+    headerCellToHtml (TableCell.MkCell colspan rowspan contents) =
+      Lucid.th_ (cellAttrs colspan rowspan) (toHtml contents)
+
+    bodyCellToHtml :: TableCell.Cell Doc.Doc -> Html.Html
+    bodyCellToHtml (TableCell.MkCell colspan rowspan contents) =
+      Lucid.td_ (cellAttrs colspan rowspan) (toHtml contents)
+
+    cellAttrs :: Natural.Natural -> Natural.Natural -> [Lucid.Attributes]
+    cellAttrs c r =
+      [Lucid.colspan_ (Text.pack $ show c) | c /= 1]
+        <> [Lucid.rowspan_ (Text.pack $ show r) | r /= 1]

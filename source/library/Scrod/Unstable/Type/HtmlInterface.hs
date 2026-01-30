@@ -111,7 +111,10 @@ exportsSection maybeExports = case maybeExports of
   Just exports ->
     Lucid.section_ [Lucid.class_ "exports"] $ do
       Lucid.h2_ "Exports"
-      Lucid.div_ [Lucid.class_ "export-list"] (foldMap HtmlExport.toHtml exports)
+      Lucid.ul_ [Lucid.class_ "export-list"] (foldMap exportToListItem exports)
+  where
+    exportToListItem :: Export.Export -> Html.Html
+    exportToListItem export = Lucid.li_ (HtmlExport.toHtml export)
 
 extensionsSection :: Map.Map Extension.Extension Bool -> Html.Html
 extensionsSection extensions

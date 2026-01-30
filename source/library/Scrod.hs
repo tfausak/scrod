@@ -4,4 +4,4 @@ module Scrod
   )
 where
 
-import qualified Scrod.Unstable.Main as Main
+import qualified Scrod.Main as Main

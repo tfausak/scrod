@@ -10,7 +10,7 @@ import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Data.Vector as Vector
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Scrod.Type.Json as Json
 import qualified Test.Tasty as Tasty
 import Test.Tasty.HUnit (testCase, (@?=))
 

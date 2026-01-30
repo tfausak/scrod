@@ -1,8 +1,8 @@
 {
-  "input": ["type S :: Type -> Type", "type S a = [a]"],
+  "input": ["x :: Int"],
   "assertions": {
     "/items/0/location/line": 1,
     "/items/0/location/column": 1,
-    "/items/0/value/name": "S"
+    "/items/0/value/name": "x"
   }
 }

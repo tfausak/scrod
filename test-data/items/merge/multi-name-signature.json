@@ -1,0 +1,9 @@
+{
+  "input": ["x, y :: Int", "x = 1", "y = 2"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/value/name": "x",
+    "/items/1/location/line": 1,
+    "/items/1/value/name": "y"
+  }
+}

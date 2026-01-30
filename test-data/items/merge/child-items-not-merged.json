@@ -1,0 +1,11 @@
+{
+  "input": ["data A = A { a :: Int }"],
+  "assertions": {
+    "/items/0/value/name": "A",
+    "/items/0/value/parentKey": null,
+    "/items/1/value/name": "A",
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/name": "a",
+    "/items/2/value/parentKey": 2
+  }
+}

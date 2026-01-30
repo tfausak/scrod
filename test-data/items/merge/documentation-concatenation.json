@@ -1,0 +1,8 @@
+{
+  "input": ["-- | Signature doc", "x :: Int", "-- | Declaration doc", "x = 1"],
+  "assertions": {
+    "/items/0/location/line": 2,
+    "/items/0/value/name": "x",
+    "/items/0/value/documentation/tag": "Append"
+  }
+}

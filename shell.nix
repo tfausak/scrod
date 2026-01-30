@@ -17,6 +17,5 @@ pkgs.mkShell {
     pkgs.pkg-config
     pkgs.vim
     pkgs.zlib
-    pkgs.zstd
   ];
 }

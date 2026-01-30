@@ -2,6 +2,7 @@
   "input": ["{-# LANGUAGE PatternSynonyms #-} pattern Q :: forall a . a -> Maybe a"],
   "assertions": {
     "/items/0/location/line": 1,
-    "/items/0/location/column": 34
+    "/items/0/location/column": 42,
+    "/items/0/value/name": "Q"
   }
 }

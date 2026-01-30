@@ -3,4 +3,5 @@
 - group: { enabled: true, name: future }
 - group: { enabled: true, name: generalise }
 - ignore: { name: Use <$> }
+- ignore: { name: Use list comprehension }
 - ignore: { name: Use tuple-section }

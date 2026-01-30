@@ -1,0 +1,10 @@
+{
+  "input": ["type T :: Type", "data T = MkT"],
+  "assertions": {
+    "/items/0/location/line": 1,
+    "/items/0/location/column": 1,
+    "/items/0/value/name": "T",
+    "/items/1/value/name": "MkT",
+    "/items/1/value/parentKey": 1
+  }
+}

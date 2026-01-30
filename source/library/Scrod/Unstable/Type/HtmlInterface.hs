@@ -11,7 +11,6 @@ import qualified Scrod.Unstable.Type.Css as Css
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Export as Export
 import qualified Scrod.Unstable.Type.Extension as Extension
-import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.HtmlDoc as HtmlDoc
 import qualified Scrod.Unstable.Type.HtmlExport as HtmlExport
 import qualified Scrod.Unstable.Type.HtmlItem as HtmlItem
@@ -26,7 +25,7 @@ import qualified Scrod.Unstable.Type.Version as Version
 import qualified Scrod.Unstable.Type.Warning as Warning
 
 -- | Convert an Interface to a complete HTML document.
-toHtml :: Interface.Interface -> Html.Html
+toHtml :: Interface.Interface -> Lucid.Html ()
 toHtml interface =
   Lucid.doctypehtml_ $ do
     Lucid.head_ $ do
@@ -46,14 +45,14 @@ moduleTitle interface = case Interface.name interface of
   Nothing -> "Scrod Documentation"
   Just (Located.MkLocated _ (ModuleName.MkModuleName name)) -> name
 
-headerSection :: Interface.Interface -> Html.Html
+headerSection :: Interface.Interface -> Lucid.Html ()
 headerSection interface =
   Lucid.header_ [Lucid.class_ "module-header"] $ do
     Lucid.h1_ (Lucid.toHtml $ moduleTitle interface)
     warningHtml
     moduleDocHtml
   where
-    warningHtml :: Html.Html
+    warningHtml :: Lucid.Html ()
     warningHtml = case Interface.warning interface of
       Nothing -> mempty
       Just (Warning.MkWarning (Category.MkCategory cat) val) ->
@@ -62,29 +61,29 @@ headerSection interface =
           Lucid.toHtml (": " :: Text.Text)
           Lucid.toHtml val
 
-    moduleDocHtml :: Html.Html
+    moduleDocHtml :: Lucid.Html ()
     moduleDocHtml = case Interface.documentation interface of
       Doc.Empty -> mempty
       doc -> Lucid.div_ [Lucid.class_ "module-doc"] (HtmlDoc.toHtml doc)
 
-metadataSection :: Interface.Interface -> Html.Html
+metadataSection :: Interface.Interface -> Lucid.Html ()
 metadataSection interface =
   Lucid.section_ [Lucid.class_ "metadata"] $
     Lucid.dl_ (versionItem <> languageItem <> sinceItem)
   where
-    versionItem :: Html.Html
+    versionItem :: Lucid.Html ()
     versionItem = do
       Lucid.dt_ "Scrod version"
       Lucid.dd_ (Lucid.toHtml $ versionToText (Interface.version interface))
 
-    languageItem :: Html.Html
+    languageItem :: Lucid.Html ()
     languageItem = case Interface.language interface of
       Nothing -> mempty
       Just (Language.MkLanguage lang) -> do
         Lucid.dt_ "Language"
         Lucid.dd_ (Lucid.toHtml lang)
 
-    sinceItem :: Html.Html
+    sinceItem :: Lucid.Html ()
     sinceItem = case Interface.since interface of
       Nothing -> mempty
       Just since -> do
@@ -95,16 +94,16 @@ versionToText :: Version.Version -> Text.Text
 versionToText (Version.MkVersion parts) =
   Text.intercalate "." . fmap (Text.pack . show) $ NonEmpty.toList parts
 
-sinceToHtml :: Since.Since -> Html.Html
+sinceToHtml :: Since.Since -> Lucid.Html ()
 sinceToHtml (Since.MkSince maybePackage version) =
   packageHtml <> Lucid.toHtml (versionToText version)
   where
-    packageHtml :: Html.Html
+    packageHtml :: Lucid.Html ()
     packageHtml = case maybePackage of
       Nothing -> mempty
       Just (PackageName.MkPackageName pkg) -> Lucid.toHtml (pkg <> "-")
 
-exportsSection :: Maybe [Export.Export] -> Html.Html
+exportsSection :: Maybe [Export.Export] -> Lucid.Html ()
 exportsSection maybeExports = case maybeExports of
   Nothing -> mempty
   Just [] -> mempty
@@ -113,10 +112,10 @@ exportsSection maybeExports = case maybeExports of
       Lucid.h2_ "Exports"
       Lucid.ul_ [Lucid.class_ "export-list"] (foldMap exportToListItem exports)
   where
-    exportToListItem :: Export.Export -> Html.Html
+    exportToListItem :: Export.Export -> Lucid.Html ()
     exportToListItem export = Lucid.li_ (HtmlExport.toHtml export)
 
-extensionsSection :: Map.Map Extension.Extension Bool -> Html.Html
+extensionsSection :: Map.Map Extension.Extension Bool -> Lucid.Html ()
 extensionsSection extensions
   | Map.null extensions = mempty
   | otherwise =
@@ -124,13 +123,13 @@ extensionsSection extensions
         Lucid.h2_ "Extensions"
         Lucid.div_ [Lucid.class_ "extension-list"] (foldMap extToHtml $ Map.toList extensions)
   where
-    extToHtml :: (Extension.Extension, Bool) -> Html.Html
+    extToHtml :: (Extension.Extension, Bool) -> Lucid.Html ()
     extToHtml (Extension.MkExtension name, enabled) =
       let cls :: Text.Text
           cls = if enabled then "extension" else "extension extension-disabled"
        in Lucid.span_ [Lucid.class_ cls] (Lucid.toHtml name) <> " "
 
-itemsSection :: [Located.Located Item.Item] -> Html.Html
+itemsSection :: [Located.Located Item.Item] -> Lucid.Html ()
 itemsSection [] = mempty
 itemsSection items =
   Lucid.section_ [Lucid.class_ "items"] $ do

@@ -15,5 +15,8 @@ data ModLink doc = MkModLink
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance (Aeson.FromJSON doc) => Aeson.FromJSON (ModLink doc) where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance (Aeson.ToJSON doc) => Aeson.ToJSON (ModLink doc) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

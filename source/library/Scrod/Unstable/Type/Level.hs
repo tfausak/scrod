@@ -17,6 +17,9 @@ data Level
   | Six
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Level where
+  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+
 instance Aeson.ToJSON Level where
   toJSON = Aeson.genericToJSON JsonOptions.sumOptions
 

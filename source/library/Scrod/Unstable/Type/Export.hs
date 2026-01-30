@@ -23,5 +23,8 @@ data Export
     DocNamed Text.Text
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Export where
+  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+
 instance Aeson.ToJSON Export where
   toJSON = Aeson.genericToJSON JsonOptions.sumOptions

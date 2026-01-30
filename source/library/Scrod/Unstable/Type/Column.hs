@@ -9,7 +9,7 @@ newtype Column = MkColumn
   { value :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.ToJSON) via Natural.Natural
+  deriving (Aeson.FromJSON, Aeson.ToJSON) via Natural.Natural
 
 fromInt :: Int -> Maybe Column
 fromInt x =

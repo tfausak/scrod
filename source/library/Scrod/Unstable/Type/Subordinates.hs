@@ -16,5 +16,8 @@ data Subordinates = MkSubordinates
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Subordinates where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON Subordinates where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

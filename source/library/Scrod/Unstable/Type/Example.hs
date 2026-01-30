@@ -15,5 +15,8 @@ data Example = MkExample
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Example where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON Example where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

@@ -12,4 +12,4 @@ newtype Section = MkSection
   { header :: Header.Header Doc.Doc
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.ToJSON) via (Header.Header Doc.Doc)
+  deriving (Aeson.FromJSON, Aeson.ToJSON) via (Header.Header Doc.Doc)

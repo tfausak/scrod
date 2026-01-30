@@ -14,6 +14,9 @@ data Located a = MkLocated
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance (Aeson.FromJSON a) => Aeson.FromJSON (Located a) where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance (Aeson.ToJSON a) => Aeson.ToJSON (Located a) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
 

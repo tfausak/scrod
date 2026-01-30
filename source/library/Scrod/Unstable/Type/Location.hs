@@ -15,6 +15,9 @@ data Location = MkLocation
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Location where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON Location where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
 

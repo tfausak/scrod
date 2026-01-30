@@ -16,5 +16,8 @@ data Cell doc = MkCell
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance (Aeson.FromJSON doc) => Aeson.FromJSON (Cell doc) where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance (Aeson.ToJSON doc) => Aeson.ToJSON (Cell doc) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

@@ -16,5 +16,8 @@ data Namespace
     Type
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Namespace where
+  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+
 instance Aeson.ToJSON Namespace where
   toJSON = Aeson.genericToJSON JsonOptions.sumOptions

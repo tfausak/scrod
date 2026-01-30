@@ -15,5 +15,8 @@ data Hyperlink doc = MkHyperlink
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance (Aeson.FromJSON doc) => Aeson.FromJSON (Hyperlink doc) where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance (Aeson.ToJSON doc) => Aeson.ToJSON (Hyperlink doc) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

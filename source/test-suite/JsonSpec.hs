@@ -16,9 +16,9 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Data.Vector as Vector
+import qualified Pointer
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Json as Json
-import qualified Scrod.Unstable.Type.Pointer as Pointer
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified Test.Tasty as Tasty

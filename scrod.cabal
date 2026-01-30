@@ -129,7 +129,6 @@ library
     Scrod.Unstable.Type.OutputFormat
     Scrod.Unstable.Type.PackageName
     Scrod.Unstable.Type.Picture
-    Scrod.Unstable.Type.Pointer
     Scrod.Unstable.Type.Section
     Scrod.Unstable.Type.Since
     Scrod.Unstable.Type.Subordinates
@@ -153,6 +152,7 @@ test-suite scrod-test-suite
   main-is: Main.hs
   other-modules:
     JsonSpec
+    Pointer
     Spec
 
   type: exitcode-stdio-1.0

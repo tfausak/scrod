@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Example where
 
 import qualified Data.Text as Text
@@ -15,6 +17,6 @@ data Example = MkExample
 toJson :: Example -> Json.Json
 toJson (MkExample e r) =
   Json.object
-    [ (Text.pack "expression", Json.fromText e),
-      (Text.pack "result", Json.fromList $ fmap Json.fromText r)
+    [ ("expression", Json.fromText e),
+      ("result", Json.fromList $ fmap Json.fromText r)
     ]

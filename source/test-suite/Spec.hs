@@ -3,12 +3,13 @@
 
 module Spec (spec) where
 
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
-import qualified Data.Map as Map
+import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
-import qualified Scrod.Unstable.Type.Decimal as Decimal
+import qualified Data.Vector as Vector
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Test.Tasty as Tasty
 import Test.Tasty.HUnit (testCase, (@?=))
@@ -30,19 +31,19 @@ spec =
               result @?= Json.Boolean False,
             testCase "parses integer" $ do
               Right result <- pure $ Json.parse "123"
-              result @?= Json.Number (Decimal.MkDecimal 123 0),
+              result @?= Json.Number (Scientific.scientific 123 0),
             testCase "parses negative integer" $ do
               Right result <- pure $ Json.parse "-42"
-              result @?= Json.Number (Decimal.MkDecimal (-42) 0),
+              result @?= Json.Number (Scientific.scientific (-42) 0),
             testCase "parses decimal" $ do
               Right result <- pure $ Json.parse "1.23"
-              result @?= Json.Number (Decimal.MkDecimal 123 (-2)),
+              result @?= Json.Number (Scientific.scientific 123 (-2)),
             testCase "parses scientific notation" $ do
               Right result <- pure $ Json.parse "1e10"
-              result @?= Json.Number (Decimal.MkDecimal 1 10),
+              result @?= Json.Number (Scientific.scientific 1 10),
             testCase "parses scientific with decimal" $ do
               Right result <- pure $ Json.parse "1.5e2"
-              result @?= Json.Number (Decimal.MkDecimal 15 1),
+              result @?= Json.Number (Scientific.scientific 15 1),
             testCase "parses string" $ do
               Right result <- pure $ Json.parse "\"hello\""
               result @?= Json.String "hello",
@@ -54,40 +55,43 @@ spec =
               result @?= Json.String "A",
             testCase "parses empty array" $ do
               Right result <- pure $ Json.parse "[]"
-              result @?= Json.Array [],
+              result @?= Json.Array Vector.empty,
             testCase "parses empty object" $ do
               Right result <- pure $ Json.parse "{}"
-              result @?= Json.Object Map.empty,
+              result @?= Json.Object KeyMap.empty,
             testCase "parses array with values" $ do
               Right result <- pure $ Json.parse "[1, 2, 3]"
               result
                 @?= Json.Array
-                  [ Json.Number $ Decimal.MkDecimal 1 0,
-                    Json.Number $ Decimal.MkDecimal 2 0,
-                    Json.Number $ Decimal.MkDecimal 3 0
-                  ],
+                  ( Vector.fromList
+                      [ Json.Number $ Scientific.scientific 1 0,
+                        Json.Number $ Scientific.scientific 2 0,
+                        Json.Number $ Scientific.scientific 3 0
+                      ]
+                  ),
             testCase "parses object with values" $ do
               Right result <- pure $ Json.parse "{\"a\": 1}"
               result
                 @?= Json.Object
-                  (Map.singleton "a" (Json.Number $ Decimal.MkDecimal 1 0)),
+                  (KeyMap.singleton "a" (Json.Number $ Scientific.scientific 1 0)),
             testCase "parses nested structures" $ do
               Right result <- pure $ Json.parse "{\"arr\": [1, {\"nested\": true}]}"
               result
                 @?= Json.Object
-                  ( Map.singleton
+                  ( KeyMap.singleton
                       "arr"
-                      ( Json.Array
-                          [ Json.Number $ Decimal.MkDecimal 1 0,
-                            Json.Object $ Map.singleton "nested" (Json.Boolean True)
-                          ]
+                      ( Json.Array $
+                          Vector.fromList
+                            [ Json.Number $ Scientific.scientific 1 0,
+                              Json.Object $ KeyMap.singleton "nested" (Json.Boolean True)
+                            ]
                       )
                   ),
             testCase "handles whitespace" $ do
               Right result <- pure $ Json.parse "  { \"a\" : 1 }  "
               result
                 @?= Json.Object
-                  (Map.singleton "a" (Json.Number $ Decimal.MkDecimal 1 0)),
+                  (KeyMap.singleton "a" (Json.Number $ Scientific.scientific 1 0)),
             testCase "fails on invalid json" $
               Either.isLeft (Json.parse "invalid") @?= True,
             testCase "fails on trailing content" $
@@ -102,19 +106,19 @@ spec =
             testCase "renders false" $
               Json.render (Json.Boolean False) @?= "false",
             testCase "renders number" $
-              Json.render (Json.Number $ Decimal.MkDecimal 123 0) @?= "123",
+              Json.render (Json.Number $ Scientific.scientific 123 0) @?= "123",
             testCase "renders string" $
               Json.render (Json.String "hello") @?= "\"hello\"",
             testCase "renders string with escapes" $
               Json.render (Json.String "a\nb") @?= "\"a\\nb\"",
             testCase "renders empty array" $
-              Json.render (Json.Array []) @?= "[]",
+              Json.render (Json.Array Vector.empty) @?= "[]",
             testCase "renders array" $
-              Json.render (Json.Array [Json.Null, Json.Boolean True]) @?= "[null,true]",
+              Json.render (Json.Array $ Vector.fromList [Json.Null, Json.Boolean True]) @?= "[null,true]",
             testCase "renders empty object" $
-              Json.render (Json.Object Map.empty) @?= "{}",
+              Json.render (Json.Object KeyMap.empty) @?= "{}",
             testCase "renders object" $
-              Json.render (Json.Object $ Map.singleton "a" Json.Null) @?= "{\"a\":null}"
+              Json.render (Json.Object $ KeyMap.singleton "a" Json.Null) @?= "{\"a\":null}"
           ],
         Tasty.testGroup
           "roundtrip"
@@ -129,7 +133,7 @@ spec =
               Right result <- pure . Json.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "number roundtrips" $ do
-              let original = Json.Number $ Decimal.MkDecimal 12345 (-2)
+              let original = Json.Number $ Scientific.scientific 12345 (-2)
               let rendered = Json.render original
               Right result <- pure . Json.parse $ decodeUtf8 rendered
               result @?= original,
@@ -139,16 +143,16 @@ spec =
               Right result <- pure . Json.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "array roundtrips" $ do
-              let original = Json.Array [Json.Null, Json.Boolean True, Json.Number $ Decimal.MkDecimal 1 0]
+              let original = Json.Array $ Vector.fromList [Json.Null, Json.Boolean True, Json.Number $ Scientific.scientific 1 0]
               let rendered = Json.render original
               Right result <- pure . Json.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "object roundtrips" $ do
               let original =
                     Json.Object $
-                      Map.fromList
+                      KeyMap.fromList
                         [ ("name", Json.String "test"),
-                          ("count", Json.Number $ Decimal.MkDecimal 42 0)
+                          ("count", Json.Number $ Scientific.scientific 42 0)
                         ]
               let rendered = Json.render original
               Right result <- pure . Json.parse $ decodeUtf8 rendered
@@ -156,12 +160,13 @@ spec =
             testCase "nested structure roundtrips" $ do
               let original =
                     Json.Object $
-                      Map.singleton
+                      KeyMap.singleton
                         "data"
-                        ( Json.Array
-                            [ Json.Object $ Map.singleton "id" (Json.Number $ Decimal.MkDecimal 1 0),
-                              Json.Object $ Map.singleton "id" (Json.Number $ Decimal.MkDecimal 2 0)
-                            ]
+                        ( Json.Array $
+                            Vector.fromList
+                              [ Json.Object $ KeyMap.singleton "id" (Json.Number $ Scientific.scientific 1 0),
+                                Json.Object $ KeyMap.singleton "id" (Json.Number $ Scientific.scientific 2 0)
+                              ]
                         )
               let rendered = Json.render original
               Right result <- pure . Json.parse $ decodeUtf8 rendered

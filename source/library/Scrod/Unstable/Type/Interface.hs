@@ -1,7 +1,8 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Interface where
 
 import qualified Data.Map as Map
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Export as Export
 import qualified Scrod.Unstable.Type.Extension as Extension
@@ -30,15 +31,15 @@ data Interface = MkInterface
 toJson :: Interface -> Json.Json
 toJson (MkInterface ver lang exts doc s n w e i) =
   Json.object
-    [ (Text.pack "version", Version.toJson ver),
-      (Text.pack "language", maybe Json.Null Language.toJson lang),
-      (Text.pack "extensions", extensionsToJson exts),
-      (Text.pack "documentation", Doc.toJson doc),
-      (Text.pack "since", maybe Json.Null Since.toJson s),
-      (Text.pack "name", maybe Json.Null (Located.toJson ModuleName.toJson) n),
-      (Text.pack "warning", maybe Json.Null Warning.toJson w),
-      (Text.pack "exports", maybe Json.Null (Json.fromList . fmap Export.toJson) e),
-      (Text.pack "items", Json.fromList $ fmap (Located.toJson Item.toJson) i)
+    [ ("version", Version.toJson ver),
+      ("language", maybe Json.Null Language.toJson lang),
+      ("extensions", extensionsToJson exts),
+      ("documentation", Doc.toJson doc),
+      ("since", maybe Json.Null Since.toJson s),
+      ("name", maybe Json.Null (Located.toJson ModuleName.toJson) n),
+      ("warning", maybe Json.Null Warning.toJson w),
+      ("exports", maybe Json.Null (Json.fromList . fmap Export.toJson) e),
+      ("items", Json.fromList $ fmap (Located.toJson Item.toJson) i)
     ]
   where
     extensionsToJson =
@@ -46,8 +47,8 @@ toJson (MkInterface ver lang exts doc s n w e i) =
         . fmap
           ( \(ext, enabled) ->
               Json.object
-                [ (Text.pack "extension", Extension.toJson ext),
-                  (Text.pack "enabled", Json.fromBool enabled)
+                [ ("extension", Extension.toJson ext),
+                  ("enabled", Json.fromBool enabled)
                 ]
           )
         . Map.toList

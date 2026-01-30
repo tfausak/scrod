@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.ModLink where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.ModuleName as ModuleName
 
@@ -16,6 +17,6 @@ data ModLink doc = MkModLink
 toJson :: (doc -> Json.Json) -> ModLink doc -> Json.Json
 toJson f (MkModLink n l) =
   Json.object
-    [ (Text.pack "name", ModuleName.toJson n),
-      (Text.pack "label", maybe Json.Null f l)
+    [ ("name", ModuleName.toJson n),
+      ("label", maybe Json.Null f l)
     ]

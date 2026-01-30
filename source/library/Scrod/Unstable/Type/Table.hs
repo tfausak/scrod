@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Table where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.TableCell as TableCell
 
@@ -15,8 +16,8 @@ data Table doc = MkTable
 toJson :: (doc -> Json.Json) -> Table doc -> Json.Json
 toJson f (MkTable h b) =
   Json.object
-    [ (Text.pack "headerRows", rowsToJson h),
-      (Text.pack "bodyRows", rowsToJson b)
+    [ ("headerRows", rowsToJson h),
+      ("bodyRows", rowsToJson b)
     ]
   where
     rowsToJson = Json.fromList . fmap (Json.fromList . fmap (TableCell.toJson f))

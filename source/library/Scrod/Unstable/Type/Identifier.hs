@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Identifier where
 
 import qualified Data.Text as Text
@@ -16,6 +18,6 @@ data Identifier = MkIdentifier
 toJson :: Identifier -> Json.Json
 toJson (MkIdentifier ns v) =
   Json.object
-    [ (Text.pack "namespace", maybe Json.Null Namespace.toJson ns),
-      (Text.pack "value", Json.fromText v)
+    [ ("namespace", maybe Json.Null Namespace.toJson ns),
+      ("value", Json.fromText v)
     ]

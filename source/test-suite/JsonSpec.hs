@@ -5,6 +5,8 @@ module JsonSpec
   )
 where
 
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
 import qualified Data.List as List
@@ -12,6 +14,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
+import qualified Data.Vector as Vector
 import qualified Scrod.Unstable.Main as Main
 import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Json as Json
@@ -27,23 +30,23 @@ data TestCase = MkTestCase
     assertions :: Map.Map Pointer.Pointer Json.Json,
     expectError :: Bool
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
 
 -- | Parse a test case from JSON.
 -- Input is expected to be an array of strings (joined with newlines).
 parseTestCase :: Json.Json -> Either String TestCase
 parseTestCase json = case json of
   Json.Object m -> do
-    inp <- case Map.lookup (Text.pack "input") m of
+    inp <- case KeyMap.lookup "input" m of
       Just (Json.Array xs) -> do
-        strs <- traverse expectString xs
-        Right $ Text.intercalate (Text.pack "\n") strs
+        strs <- traverse expectString (Vector.toList xs)
+        Right $ Text.intercalate "\n" strs
       Just _ -> Left "input must be an array of strings"
       Nothing -> Left "missing input field"
-    let err = case Map.lookup (Text.pack "error") m of
+    let err = case KeyMap.lookup "error" m of
           Just (Json.Boolean b) -> b
           _ -> False
-    asserts <- case Map.lookup (Text.pack "assertions") m of
+    asserts <- case KeyMap.lookup "assertions" m of
       Just (Json.Object a) -> parseAssertions a
       Just _ -> Left "assertions must be an object"
       Nothing -> Right Map.empty
@@ -56,16 +59,16 @@ expectString (Json.String s) = Right s
 expectString _ = Left "expected string"
 
 -- | Parse the assertions object.
-parseAssertions :: Map.Map Text.Text Json.Json -> Either String (Map.Map Pointer.Pointer Json.Json)
+parseAssertions :: KeyMap.KeyMap Json.Json -> Either String (Map.Map Pointer.Pointer Json.Json)
 parseAssertions m = do
-  pairs <- traverse parseAssertion $ Map.toList m
+  pairs <- traverse parseAssertion $ KeyMap.toList m
   Right $ Map.fromList pairs
 
 -- | Parse a single assertion (pointer -> expected value).
-parseAssertion :: (Text.Text, Json.Json) -> Either String (Pointer.Pointer, Json.Json)
-parseAssertion (key, value) = case Pointer.parse $ Text.unpack key of
+parseAssertion :: (Key.Key, Json.Json) -> Either String (Pointer.Pointer, Json.Json)
+parseAssertion (key, value) = case Pointer.parse $ Text.unpack (Key.toText key) of
   Just ptr -> Right (ptr, value)
-  Nothing -> Left $ "invalid JSON pointer: " <> Text.unpack key
+  Nothing -> Left $ "invalid JSON pointer: " <> Text.unpack (Key.toText key)
 
 -- | Convert a test case to a Tasty test.
 testCaseToTest :: FilePath -> TestCase -> Tasty.TestTree
@@ -133,7 +136,7 @@ loadTestFile dirPath fileName = do
   let textContents = Encoding.decodeUtf8 $ LazyByteString.toStrict contents
   case Json.parse textContents of
     Left err -> do
-      putStrLn $ "Warning: failed to parse " <> filePath <> ": " <> show err
+      putStrLn $ "Warning: failed to parse " <> filePath <> ": " <> err
       pure Nothing
     Right json -> case parseTestCase json of
       Left err -> do

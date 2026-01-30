@@ -1,6 +1,7 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.ExportIdentifier where
 
-import qualified Data.Text as Text
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ExportName as ExportName
 import qualified Scrod.Unstable.Type.Json as Json
@@ -23,8 +24,8 @@ data ExportIdentifier = MkExportIdentifier
 toJson :: ExportIdentifier -> Json.Json
 toJson (MkExportIdentifier n s w d) =
   Json.object
-    [ (Text.pack "name", ExportName.toJson n),
-      (Text.pack "subordinates", maybe Json.Null Subordinates.toJson s),
-      (Text.pack "warning", maybe Json.Null Warning.toJson w),
-      (Text.pack "doc", maybe Json.Null Doc.toJson d)
+    [ ("name", ExportName.toJson n),
+      ("subordinates", maybe Json.Null Subordinates.toJson s),
+      ("warning", maybe Json.Null Warning.toJson w),
+      ("doc", maybe Json.Null Doc.toJson d)
     ]

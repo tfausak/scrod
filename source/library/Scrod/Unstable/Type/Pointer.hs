@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 -- | JSON Pointer implementation per RFC 6901.
 -- https://datatracker.ietf.org/doc/html/rfc6901
 module Scrod.Unstable.Type.Pointer
@@ -13,10 +15,11 @@ module Scrod.Unstable.Type.Pointer
   )
 where
 
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Char as Char
-import qualified Data.List as List
-import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified Data.Vector as Vector
 import qualified Scrod.Unstable.Type.Json as Json
 
 -- | A JSON Pointer as described by RFC 6901.
@@ -54,8 +57,8 @@ splitOn c s = case break (== c) s of
 -- ~0 -> ~
 unescape :: Text.Text -> Text.Text
 unescape =
-  Text.replace (Text.pack "~0") (Text.pack "~")
-    . Text.replace (Text.pack "~1") (Text.pack "/")
+  Text.replace "~0" "~"
+    . Text.replace "~1" "/"
 
 -- | Evaluate a JSON Pointer against a JSON value.
 -- Returns Nothing if the pointer doesn't resolve to a value.
@@ -68,12 +71,10 @@ evaluate (MkPointer (t : ts)) json = do
 -- | Take a single step through a JSON value using a reference token.
 step :: Token -> Json.Json -> Maybe Json.Json
 step (MkToken key) json = case json of
-  Json.Object m -> Map.lookup key m
+  Json.Object m -> KeyMap.lookup (Key.fromText key) m
   Json.Array xs -> do
     i <- parseArrayIndex $ Text.unpack key
-    if i < length xs
-      then Just $ xs List.!! i
-      else Nothing
+    xs Vector.!? i
   _ -> Nothing
 
 -- | Parse an array index per RFC 6901 section 4.

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 module Scrod.Unstable.Type.Picture where
 
 import qualified Data.Text as Text
@@ -15,6 +17,6 @@ data Picture = MkPicture
 toJson :: Picture -> Json.Json
 toJson (MkPicture u t) =
   Json.object
-    [ (Text.pack "uri", Json.fromText u),
-      (Text.pack "title", maybe Json.Null Json.fromText t)
+    [ ("uri", Json.fromText u),
+      ("title", maybe Json.Null Json.fromText t)
     ]

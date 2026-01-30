@@ -75,9 +75,9 @@ testCaseToTest :: FilePath -> TestCase -> Tasty.TestTree
 testCaseToTest filePath tc =
   testCase (filePathToTestName filePath) $
     if expectError tc
-      then Either.isLeft (Main.extract inputStr) @?= True
+      then Either.isLeft (Main.extract [] inputStr) @?= True
       else do
-        Right interface <- pure $ Main.extract inputStr
+        Right interface <- pure $ Main.extract [] inputStr
         let actualJson = Aeson.toJSON interface
         mapM_ (checkAssertion actualJson) $ Map.toList (assertions tc)
   where

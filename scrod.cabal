@@ -36,6 +36,9 @@ common library
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,
     haddock-library ^>=1.11,
+    http-client ^>=0.7,
+    http-client-tls ^>=0.3,
+    http-types ^>=0.12,
     lucid2 ^>=0.0,
     optparse-applicative ^>=0.18,
     scientific ^>=0.3,
@@ -85,6 +88,7 @@ library
     Scrod.Unstable.Extra.DynFlags
     Scrod.Unstable.Extra.FileSettings
     Scrod.Unstable.Extra.GhcNameVersion
+    Scrod.Unstable.Extra.Http
     Scrod.Unstable.Extra.Natural
     Scrod.Unstable.Extra.OnOff
     Scrod.Unstable.Extra.ParserOpts

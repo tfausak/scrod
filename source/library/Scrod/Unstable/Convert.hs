@@ -3,6 +3,7 @@ module Scrod.Unstable.Convert where
 import qualified Control.Exception as Exception
 import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.Bifunctor as Bifunctor
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -116,24 +117,26 @@ mkItemWithKeyM srcSpan parentKey itemName doc =
           )
 
 convert ::
+  [String] ->
   Either
     (Either SourceError.SourceError (Error.Messages Errors.PsMessage))
     ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension]),
       SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
     ) ->
   Either String Interface.Interface
-convert input = case input of
+convert cliExtensions input = case input of
   Left (Left sourceError) ->
     Left $ Exception.displayException sourceError
   Left (Right messages) ->
     Left . Outputable.showSDocUnsafe $ Outputable.ppr messages
-  Right ((language, extensions), lHsModule) -> do
+  Right ((language, sourceExtensions), lHsModule) -> do
     version <- maybe (Left "invalid version") pure $ Version.fromBase PackageInfo.version
+    let mergedExtensions = sourceExtensions <> parseCliExtensions cliExtensions
     pure
       Interface.MkInterface
         { Interface.version = version,
           Interface.language = fmap Language.fromGhc language,
-          Interface.extensions = extensionsToMap extensions,
+          Interface.extensions = extensionsToMap mergedExtensions,
           Interface.documentation = extractModuleDocumentation lHsModule,
           Interface.since = extractModuleSince lHsModule,
           Interface.name = extractModuleName lHsModule,
@@ -141,6 +144,15 @@ convert input = case input of
           Interface.exports = extractModuleExports lHsModule,
           Interface.items = extractItems lHsModule
         }
+
+parseCliExtensions :: [String] -> [DynFlags.OnOff GhcExtension.Extension]
+parseCliExtensions = Maybe.mapMaybe parseOneExtension
+  where
+    parseOneExtension s
+      | "No" `List.isPrefixOf` s = fmap DynFlags.Off $ lookupExt (drop 2 s)
+      | otherwise = fmap DynFlags.On $ lookupExt s
+    lookupExt name = List.lookup name extensionMap
+    extensionMap = [(Session.flagSpecName x, Session.flagSpecFlag x) | x <- Session.xFlags]
 
 extensionsToMap ::
   [DynFlags.OnOff GhcExtension.Extension] ->

@@ -2,10 +2,12 @@ module Scrod.Unstable.Main where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LazyByteString
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Options.Applicative as Options
 import qualified Scrod.Unstable.Convert as Convert
+import qualified Scrod.Unstable.Extra.Http as Http
 import qualified Scrod.Unstable.Parse as Parse
 import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.HtmlInterface as HtmlInterface
@@ -17,7 +19,9 @@ import qualified System.IO as IO
 
 data Options = MkOptions
   { optInputFormat :: InputFormat.InputFormat,
-    optOutputFormat :: OutputFormat.OutputFormat
+    optOutputFormat :: OutputFormat.OutputFormat,
+    optSource :: Maybe String,
+    optExtensions :: [String]
   }
   deriving (Eq, Ord, Show)
 
@@ -51,32 +55,62 @@ outputFormatOption =
       "html" -> Right OutputFormat.Html
       _ -> Left $ "Invalid output format: " <> s <> ". Expected 'json' or 'html'."
 
+sourceArgument :: Options.Parser (Maybe String)
+sourceArgument =
+  Options.optional . Options.strArgument $
+    Options.metavar "SOURCE"
+      <> Options.help "File path or URL (reads from stdin if omitted)"
+
+extensionOption :: Options.Parser [String]
+extensionOption =
+  Options.many . Options.strOption $
+    Options.short 'X'
+      <> Options.metavar "EXTENSION"
+      <> Options.help "Enable GHC extension (e.g., OverloadedStrings)"
+
 optionsParser :: Options.Parser Options
-optionsParser = MkOptions <$> inputFormatOption <*> outputFormatOption
+optionsParser =
+  MkOptions
+    <$> inputFormatOption
+    <*> outputFormatOption
+    <*> sourceArgument
+    <*> extensionOption
 
 parserInfo :: Options.ParserInfo Options
 parserInfo =
   Options.info (Options.helper <*> optionsParser) $
     Options.fullDesc
       <> Options.header "scrod - Haskell documentation extraction tool"
-      <> Options.progDesc "Reads input from stdin, outputs documentation to stdout."
+      <> Options.progDesc "Extract documentation from Haskell source code."
 
 defaultMain :: IO ()
 defaultMain = do
   opts <- Options.execParser parserInfo
-  contents <- getContents
-  case parseInput (optInputFormat opts) contents of
+  contentsResult <- case optSource opts of
+    Nothing -> Right <$> getContents
+    Just source
+      | isUrl source -> Http.fetch (Text.pack source)
+      | otherwise -> Right <$> readFile source
+  case contentsResult of
     Left err -> do
       IO.hPutStrLn IO.stderr err
       Exit.exitFailure
-    Right interface -> do
-      let output = renderOutput (optOutputFormat opts) interface
-      LazyByteString.putStr output
-      putStrLn ""
+    Right contents ->
+      case parseInput (optInputFormat opts) (optExtensions opts) contents of
+        Left err -> do
+          IO.hPutStrLn IO.stderr err
+          Exit.exitFailure
+        Right interface -> do
+          let output = renderOutput (optOutputFormat opts) interface
+          LazyByteString.putStr output
+          putStrLn ""
 
-parseInput :: InputFormat.InputFormat -> String -> Either String Interface.Interface
-parseInput format contents = case format of
-  InputFormat.Haskell -> extract contents
+isUrl :: String -> Bool
+isUrl s = "http://" `List.isPrefixOf` s || "https://" `List.isPrefixOf` s
+
+parseInput :: InputFormat.InputFormat -> [String] -> String -> Either String Interface.Interface
+parseInput format extensions contents = case format of
+  InputFormat.Haskell -> extract extensions contents
   InputFormat.Json -> parseJson contents
 
 parseJson :: String -> Either String Interface.Interface
@@ -90,5 +124,5 @@ renderOutput format interface = case format of
   OutputFormat.Json -> Aeson.encode interface
   OutputFormat.Html -> Html.render $ HtmlInterface.toHtml interface
 
-extract :: String -> Either String Interface.Interface
-extract = Convert.convert . Parse.parse
+extract :: [String] -> String -> Either String Interface.Interface
+extract extensions = Convert.convert extensions . Parse.parse

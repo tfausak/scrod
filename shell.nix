@@ -14,6 +14,9 @@ pkgs.mkShell {
     pkgs.jq
     pkgs.nixfmt-rfc-style
     pkgs.ormolu
+    pkgs.pkg-config
     pkgs.vim
+    pkgs.zlib
+    pkgs.zstd
   ];
 }

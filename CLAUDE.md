@@ -51,6 +51,20 @@ nix-shell
 
 The shell provides: `cabal-install`, `ghc`, `haskell-language-server`, `hlint`, `ormolu`, `cabal-gild`, `weeder`, `nixfmt-rfc-style`
 
+## Scripts
+
+**IMPORTANT**: Use the scripts in `scripts/` instead of running equivalent commands directly.
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/hlint.sh` | Run HLint on source directory |
+| `scripts/ormolu.sh` | Format all Haskell files in place |
+| `scripts/cabal-test.sh` | Run tests (hides passing tests) |
+| `scripts/cabal-gild.sh` | Format scrod.cabal in place |
+| `scripts/weeder.sh` | Check for unused code |
+| `scripts/cabal-repl.sh` | Start REPL with warnings as warnings |
+| `scripts/cabal-check.sh` | Run cabal check on the package |
+
 ## Common Commands
 
 ### Building
@@ -63,18 +77,17 @@ cabal build --flags=pedantic   # Build with -Werror (CI mode)
 ### Testing
 
 ```bash
-cabal test                                                      # Run test suite
-cabal test --test-show-details=direct --test-option=--hide-successes  # Hide passing tests
+scripts/cabal-test.sh          # Run test suite (preferred)
 ```
 
 ### Code Quality
 
 ```bash
-hlint .                                      # Run linter
-ormolu --mode check $(git ls-files "*.hs")   # Check formatting
-ormolu --mode inplace $(git ls-files "*.hs") # Apply formatting
-cabal-gild --input scrod.cabal --mode check  # Check .cabal formatting
-cabal check                                  # Validate package metadata
+scripts/hlint.sh               # Run linter (preferred)
+scripts/ormolu.sh              # Format code in place (preferred)
+scripts/cabal-gild.sh          # Format .cabal file (preferred)
+scripts/weeder.sh              # Check for unused code (preferred)
+scripts/cabal-check.sh         # Validate package metadata
 ```
 
 ### Running the Tool

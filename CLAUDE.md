@@ -63,6 +63,7 @@ The shell provides: `cabal-install`, `ghc`, `haskell-language-server`, `hlint`, 
 | `scripts/cabal-gild.sh` | Format scrod.cabal in place |
 | `scripts/weeder.sh` | Check for unused code |
 | `scripts/cabal-repl.sh` | Start REPL with warnings as warnings |
+| `scripts/cabal-check.sh` | Run cabal check on the package |
 
 ## Common Commands
 

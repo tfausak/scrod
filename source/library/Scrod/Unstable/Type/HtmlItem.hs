@@ -8,7 +8,6 @@ import qualified Lucid
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Type.Column as Column
 import qualified Scrod.Unstable.Type.Doc as Doc
-import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.HtmlDoc as HtmlDoc
 import qualified Scrod.Unstable.Type.Item as Item
 import qualified Scrod.Unstable.Type.ItemKey as ItemKey
@@ -18,7 +17,7 @@ import qualified Scrod.Unstable.Type.Located as Located
 import qualified Scrod.Unstable.Type.Location as Location
 
 -- | Convert a single Item to HTML.
-toHtml :: Located.Located Item.Item -> Html.Html
+toHtml :: Located.Located Item.Item -> Lucid.Html ()
 toHtml (Located.MkLocated loc (Item.MkItem key _parentKey maybeName doc)) =
   Lucid.div_ attrs $
     nameHtml
@@ -31,30 +30,30 @@ toHtml (Located.MkLocated loc (Item.MkItem key _parentKey maybeName doc)) =
         Lucid.id_ ("item-" <> Text.pack (show (ItemKey.value key)))
       ]
 
-    nameHtml :: Html.Html
+    nameHtml :: Lucid.Html ()
     nameHtml = case maybeName of
       Nothing -> mempty
       Just (ItemName.MkItemName name) ->
         Lucid.span_ [Lucid.class_ "item-name"] (Lucid.toHtml name)
 
-    keyHtml :: Html.Html
+    keyHtml :: Lucid.Html ()
     keyHtml =
       Lucid.span_ [Lucid.class_ "item-key"] $
         Lucid.toHtml ("#" <> Text.pack (show (ItemKey.value key)))
 
-    docHtml :: Html.Html
+    docHtml :: Lucid.Html ()
     docHtml = case doc of
       Doc.Empty -> mempty
       _ -> Lucid.div_ [Lucid.class_ "item-doc"] (HtmlDoc.toHtml doc)
 
-locationHtml :: Location.Location -> Html.Html
+locationHtml :: Location.Location -> Lucid.Html ()
 locationHtml (Location.MkLocation (Line.MkLine l) (Column.MkColumn c)) =
   Lucid.span_ [Lucid.class_ "item-location"] $
     Lucid.toHtml (" (line " <> Text.pack (show l) <> ", col " <> Text.pack (show c) <> ")")
 
 -- | Render items with hierarchical structure based on parentKey.
 -- Groups children under their parent items.
-toHtmlHierarchical :: [Located.Located Item.Item] -> Html.Html
+toHtmlHierarchical :: [Located.Located Item.Item] -> Lucid.Html ()
 toHtmlHierarchical items =
   foldMap renderItem topLevelItems
   where
@@ -75,7 +74,7 @@ toHtmlHierarchical items =
     isNothing _ = False
 
     -- Render an item and its children
-    renderItem :: Located.Located Item.Item -> Html.Html
+    renderItem :: Located.Located Item.Item -> Lucid.Html ()
     renderItem li =
       let key = ItemKey.value (Item.key (Located.value li))
           children = Map.findWithDefault [] key childrenMap

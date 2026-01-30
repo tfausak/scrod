@@ -9,7 +9,6 @@ import qualified Numeric.Natural as Natural
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Example as Example
 import qualified Scrod.Unstable.Type.Header as Header
-import qualified Scrod.Unstable.Type.Html as Html
 import qualified Scrod.Unstable.Type.Hyperlink as Hyperlink
 import qualified Scrod.Unstable.Type.Identifier as Identifier
 import qualified Scrod.Unstable.Type.Level as Level
@@ -21,7 +20,7 @@ import qualified Scrod.Unstable.Type.Table as Table
 import qualified Scrod.Unstable.Type.TableCell as TableCell
 
 -- | Convert a Doc to HTML.
-toHtml :: Doc.Doc -> Html.Html
+toHtml :: Doc.Doc -> Lucid.Html ()
 toHtml doc = case doc of
   Doc.Empty -> mempty
   Doc.Append d1 d2 -> toHtml d1 <> toHtml d2
@@ -46,7 +45,7 @@ toHtml doc = case doc of
   Doc.Header h -> headerToHtml h
   Doc.Table t -> tableToHtml t
 
-identifierToHtml :: Identifier.Identifier -> Html.Html
+identifierToHtml :: Identifier.Identifier -> Lucid.Html ()
 identifierToHtml (Identifier.MkIdentifier ns val) =
   Lucid.code_ [Lucid.class_ "identifier"] (Lucid.toHtml $ prefix <> val)
   where
@@ -55,16 +54,16 @@ identifierToHtml (Identifier.MkIdentifier ns val) =
       Just Namespace.Value -> "v'"
       Just Namespace.Type -> "t'"
 
-modLinkToHtml :: ModLink.ModLink Doc.Doc -> Html.Html
+modLinkToHtml :: ModLink.ModLink Doc.Doc -> Lucid.Html ()
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =
   Lucid.code_ [Lucid.class_ "module-link"] $
     maybe (Lucid.toHtml modName) toHtml maybeLabel
 
-unorderedListToHtml :: [Doc.Doc] -> Html.Html
+unorderedListToHtml :: [Doc.Doc] -> Lucid.Html ()
 unorderedListToHtml items =
   Lucid.ul_ $ foldMap (Lucid.li_ . toHtml) items
 
-orderedListToHtml :: [(Int, Doc.Doc)] -> Html.Html
+orderedListToHtml :: [(Int, Doc.Doc)] -> Lucid.Html ()
 orderedListToHtml items =
   case items of
     [] -> mempty
@@ -73,34 +72,34 @@ orderedListToHtml items =
         [Lucid.start_ (Text.pack $ show start) | start /= 1]
         $ foldMap (Lucid.li_ . toHtml . snd) items
 
-defListToHtml :: [(Doc.Doc, Doc.Doc)] -> Html.Html
+defListToHtml :: [(Doc.Doc, Doc.Doc)] -> Lucid.Html ()
 defListToHtml defs =
   Lucid.dl_ $
     foldMap
       (\(term, def) -> Lucid.dt_ (toHtml term) <> Lucid.dd_ (toHtml def))
       defs
 
-codeBlockToHtml :: Doc.Doc -> Html.Html
+codeBlockToHtml :: Doc.Doc -> Lucid.Html ()
 codeBlockToHtml d =
   Lucid.pre_ $ Lucid.code_ (toHtml d)
 
-hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Html.Html
+hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Lucid.Html ()
 hyperlinkToHtml (Hyperlink.MkHyperlink url maybeLabel) =
   Lucid.a_ [Lucid.href_ url] $
     maybe (Lucid.toHtml url) toHtml maybeLabel
 
-pictureToHtml :: Picture.Picture -> Html.Html
+pictureToHtml :: Picture.Picture -> Lucid.Html ()
 pictureToHtml (Picture.MkPicture uri maybeTitle) =
   Lucid.img_ $
     [Lucid.src_ uri, Lucid.alt_ (Data.Maybe.fromMaybe "" maybeTitle)]
       <> foldMap (\t -> [Lucid.title_ t]) maybeTitle
 
-examplesToHtml :: [Example.Example] -> Html.Html
+examplesToHtml :: [Example.Example] -> Lucid.Html ()
 examplesToHtml examples =
   Lucid.div_ [Lucid.class_ "examples"] $
     foldMap exampleToHtml examples
 
-exampleToHtml :: Example.Example -> Html.Html
+exampleToHtml :: Example.Example -> Lucid.Html ()
 exampleToHtml (Example.MkExample expr results) =
   Lucid.div_ [Lucid.class_ "example"] $
     Lucid.div_ [Lucid.class_ "example-expression"] (Lucid.toHtml expr)
@@ -108,11 +107,11 @@ exampleToHtml (Example.MkExample expr results) =
         (Lucid.div_ [Lucid.class_ "example-result"] . Lucid.toHtml)
         results
 
-headerToHtml :: Header.Header Doc.Doc -> Html.Html
+headerToHtml :: Header.Header Doc.Doc -> Lucid.Html ()
 headerToHtml (Header.MkHeader level title) =
   levelToElement level (toHtml title)
 
-levelToElement :: Level.Level -> Html.Html -> Html.Html
+levelToElement :: Level.Level -> Lucid.Html () -> Lucid.Html ()
 levelToElement level = case level of
   Level.One -> Lucid.h1_
   Level.Two -> Lucid.h2_
@@ -121,23 +120,23 @@ levelToElement level = case level of
   Level.Five -> Lucid.h5_
   Level.Six -> Lucid.h6_
 
-tableToHtml :: Table.Table Doc.Doc -> Html.Html
+tableToHtml :: Table.Table Doc.Doc -> Lucid.Html ()
 tableToHtml (Table.MkTable headerRows bodyRows) =
   Lucid.table_ $
     (if null headerRows then mempty else Lucid.thead_ (foldMap headerRowToHtml headerRows))
       <> (if null bodyRows then mempty else Lucid.tbody_ (foldMap bodyRowToHtml bodyRows))
   where
-    headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Html.Html
+    headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Lucid.Html ()
     headerRowToHtml cells = Lucid.tr_ $ foldMap headerCellToHtml cells
 
-    bodyRowToHtml :: [TableCell.Cell Doc.Doc] -> Html.Html
+    bodyRowToHtml :: [TableCell.Cell Doc.Doc] -> Lucid.Html ()
     bodyRowToHtml cells = Lucid.tr_ $ foldMap bodyCellToHtml cells
 
-    headerCellToHtml :: TableCell.Cell Doc.Doc -> Html.Html
+    headerCellToHtml :: TableCell.Cell Doc.Doc -> Lucid.Html ()
     headerCellToHtml (TableCell.MkCell colspan rowspan contents) =
       Lucid.th_ (cellAttrs colspan rowspan) (toHtml contents)
 
-    bodyCellToHtml :: TableCell.Cell Doc.Doc -> Html.Html
+    bodyCellToHtml :: TableCell.Cell Doc.Doc -> Lucid.Html ()
     bodyCellToHtml (TableCell.MkCell colspan rowspan contents) =
       Lucid.td_ (cellAttrs colspan rowspan) (toHtml contents)
 

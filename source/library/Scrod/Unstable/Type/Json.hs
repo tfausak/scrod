@@ -15,7 +15,6 @@ module Scrod.Unstable.Type.Json
     parse,
 
     -- * Rendering
-    toBuilder,
     render,
 
     -- * Construction helpers
@@ -36,7 +35,6 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.Bifunctor as Bifunctor
-import qualified Data.ByteString.Builder as Builder
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Map as Map
 import qualified Data.Scientific as Scientific
@@ -87,10 +85,6 @@ parse = Aeson.eitherDecodeStrict' . Encoding.encodeUtf8
 -- | Render a Json value to a lazy ByteString.
 render :: Json -> LazyByteString.ByteString
 render = Aeson.encode
-
--- | Render a Json value to a ByteString Builder.
-toBuilder :: Json -> Builder.Builder
-toBuilder = Builder.lazyByteString . render
 
 -- * Construction helpers
 

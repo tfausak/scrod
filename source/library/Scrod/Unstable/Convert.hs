@@ -263,12 +263,13 @@ mergeItemsByName items =
       [Located.Located Item.Item] ->
       Map.Map ItemName.ItemName (Located.Located Item.Item)
     buildMergeMap is =
-      let -- Only consider top-level named items
-          candidates = filter isMergeCandidate is
+      let -- Only consider top-level named items, extracting name safely
+          namedCandidates =
+            Maybe.mapMaybe
+              (\item -> fmap (\n -> (n, [item])) (Item.name (Located.value item)))
+              (filter isMergeCandidate is)
           -- Group by name
-          groups =
-            Map.fromListWith (<>) $
-              fmap (\item -> (Maybe.fromJust (Item.name (Located.value item)), [item])) candidates
+          groups = Map.fromListWith (<>) namedCandidates
        in -- Merge each group (only groups with multiple items need merging)
           Map.map mergeItemGroup groups
 
@@ -452,19 +453,19 @@ convertSigDeclM ::
   ConvertM [Located.Located Item.Item]
 convertSigDeclM doc lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
-    fmap Maybe.catMaybes $ traverse (convertSigNameM doc lDecl) names
+    fmap Maybe.catMaybes $ traverse (convertSigNameM doc) names
   Syntax.PatSynSig _ names _ ->
-    fmap Maybe.catMaybes $ traverse (convertSigNameM doc lDecl) names
+    fmap Maybe.catMaybes $ traverse (convertSigNameM doc) names
   _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractSigName sig) lDecl
 
 -- | Convert a single name from a signature into an item.
+-- Uses the individual name's location for accuracy in multi-name signatures.
 convertSigNameM ::
   Doc.Doc ->
-  Syntax.LHsDecl Ghc.GhcPs ->
   Syntax.LIdP Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc lDecl lName =
-  mkItemM (Annotation.getLocA lDecl) Nothing (Just $ extractIdPName lName) doc
+convertSigNameM doc lName =
+  mkItemM (Annotation.getLocA lName) Nothing (Just $ extractIdPName lName) doc
 
 -- | Convert a type/class declaration with documentation.
 convertTyClDeclWithDocM ::

@@ -2,7 +2,7 @@
   "input": ["{-# LANGUAGE PatternSynonyms #-}", "pattern P :: Bool", "pattern P = True"],
   "assertions": {
     "/items/0/location/line": 2,
-    "/items/0/location/column": 1,
+    "/items/0/location/column": 9,
     "/items/0/value/name": "P"
   }
 }

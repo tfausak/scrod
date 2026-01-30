@@ -15,5 +15,8 @@ data ExportName = MkExportName
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON ExportName where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON ExportName where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

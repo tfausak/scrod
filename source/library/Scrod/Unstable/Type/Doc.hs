@@ -55,5 +55,8 @@ instance Semigroup Doc where
 instance Monoid Doc where
   mempty = Empty
 
+instance Aeson.FromJSON Doc where
+  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+
 instance Aeson.ToJSON Doc where
   toJSON = Aeson.genericToJSON JsonOptions.sumOptions

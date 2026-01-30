@@ -15,5 +15,8 @@ data Picture = MkPicture
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Picture where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON Picture where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

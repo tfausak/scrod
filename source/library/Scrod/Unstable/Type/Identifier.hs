@@ -16,5 +16,8 @@ data Identifier = MkIdentifier
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON Identifier where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance Aeson.ToJSON Identifier where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

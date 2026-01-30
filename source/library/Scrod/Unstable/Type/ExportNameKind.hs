@@ -18,5 +18,8 @@ data ExportNameKind
     Module
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance Aeson.FromJSON ExportNameKind where
+  parseJSON = Aeson.genericParseJSON JsonOptions.sumOptions
+
 instance Aeson.ToJSON ExportNameKind where
   toJSON = Aeson.genericToJSON JsonOptions.sumOptions

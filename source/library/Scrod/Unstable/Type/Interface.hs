@@ -3,6 +3,7 @@
 module Scrod.Unstable.Type.Interface where
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Types
 import qualified Data.Map as Map
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.Export as Export
@@ -28,6 +29,31 @@ data Interface = MkInterface
   }
   deriving (Eq, Ord, Show)
 
+instance Aeson.FromJSON Interface where
+  parseJSON = Aeson.withObject "Interface" $ \obj -> do
+    ver <- obj Aeson..: "version"
+    lang <- obj Aeson..: "language"
+    extsJson <- obj Aeson..: "extensions"
+    exts <- extensionsFromJson extsJson
+    doc <- obj Aeson..: "documentation"
+    s <- obj Aeson..: "since"
+    n <- obj Aeson..: "name"
+    w <- obj Aeson..: "warning"
+    e <- obj Aeson..: "exports"
+    i <- obj Aeson..: "items"
+    pure $
+      MkInterface
+        { version = ver,
+          language = lang,
+          extensions = exts,
+          documentation = doc,
+          since = s,
+          name = n,
+          warning = w,
+          exports = e,
+          items = i
+        }
+
 instance Aeson.ToJSON Interface where
   toJSON (MkInterface ver lang exts doc s n w e i) =
     Aeson.object
@@ -41,6 +67,15 @@ instance Aeson.ToJSON Interface where
         "exports" Aeson..= e,
         "items" Aeson..= i
       ]
+
+extensionsFromJson :: [Aeson.Value] -> Types.Parser (Map.Map Extension.Extension Bool)
+extensionsFromJson = fmap Map.fromList . traverse parseExt
+  where
+    parseExt :: Aeson.Value -> Types.Parser (Extension.Extension, Bool)
+    parseExt = Aeson.withObject "Extension" $ \obj -> do
+      ext <- obj Aeson..: "extension"
+      enabled <- obj Aeson..: "enabled"
+      pure (ext, enabled)
 
 extensionsToJson :: Map.Map Extension.Extension Bool -> [Aeson.Value]
 extensionsToJson =

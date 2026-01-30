@@ -10,7 +10,7 @@ newtype Language = MkLanguage
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
-  deriving (Aeson.ToJSON) via Text.Text
+  deriving (Aeson.FromJSON, Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Language
 fromString =

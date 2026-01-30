@@ -13,6 +13,13 @@ newtype Version = MkVersion
   }
   deriving (Eq, Ord, Show)
 
+instance Aeson.FromJSON Version where
+  parseJSON v = do
+    ns <- Aeson.parseJSON v
+    case NonEmpty.nonEmpty ns of
+      Nothing -> fail "Version must be a non-empty list"
+      Just ne -> pure $ MkVersion ne
+
 instance Aeson.ToJSON Version where
   toJSON (MkVersion ns) = Aeson.toJSON $ NonEmpty.toList ns
 

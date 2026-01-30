@@ -112,6 +112,7 @@ library
     Scrod.Unstable.Type.HtmlItem
     Scrod.Unstable.Type.Hyperlink
     Scrod.Unstable.Type.Identifier
+    Scrod.Unstable.Type.InputFormat
     Scrod.Unstable.Type.Interface
     Scrod.Unstable.Type.Item
     Scrod.Unstable.Type.ItemKey

@@ -14,5 +14,8 @@ data Table doc = MkTable
   }
   deriving (Eq, Ord, Show, Generics.Generic)
 
+instance (Aeson.FromJSON doc) => Aeson.FromJSON (Table doc) where
+  parseJSON = Aeson.genericParseJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
+
 instance (Aeson.ToJSON doc) => Aeson.ToJSON (Table doc) where
   toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

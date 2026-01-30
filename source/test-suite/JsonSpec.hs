@@ -27,14 +27,14 @@ import Test.Tasty.HUnit (testCase, (@?=))
 -- | A single test case loaded from a JSON file.
 data TestCase = MkTestCase
   { input :: Text.Text,
-    assertions :: Map.Map Pointer.Pointer Json.Json,
+    assertions :: Map.Map Pointer.Pointer Aeson.Value,
     expectError :: Bool
   }
   deriving (Eq, Show)
 
 -- | Parse a test case from JSON.
 -- Input is expected to be an array of strings (joined with newlines).
-parseTestCase :: Json.Json -> Either String TestCase
+parseTestCase :: Aeson.Value -> Either String TestCase
 parseTestCase json = case json of
   Json.Object m -> do
     inp <- case KeyMap.lookup "input" m of
@@ -54,18 +54,18 @@ parseTestCase json = case json of
   _ -> Left "test case must be an object"
 
 -- | Extract a string from a JSON value.
-expectString :: Json.Json -> Either String Text.Text
+expectString :: Aeson.Value -> Either String Text.Text
 expectString (Json.String s) = Right s
 expectString _ = Left "expected string"
 
 -- | Parse the assertions object.
-parseAssertions :: KeyMap.KeyMap Json.Json -> Either String (Map.Map Pointer.Pointer Json.Json)
+parseAssertions :: KeyMap.KeyMap Aeson.Value -> Either String (Map.Map Pointer.Pointer Aeson.Value)
 parseAssertions m = do
   pairs <- traverse parseAssertion $ KeyMap.toList m
   Right $ Map.fromList pairs
 
 -- | Parse a single assertion (pointer -> expected value).
-parseAssertion :: (Key.Key, Json.Json) -> Either String (Pointer.Pointer, Json.Json)
+parseAssertion :: (Key.Key, Aeson.Value) -> Either String (Pointer.Pointer, Aeson.Value)
 parseAssertion (key, value) = case Pointer.parse $ Text.unpack (Key.toText key) of
   Just ptr -> Right (ptr, value)
   Nothing -> Left $ "invalid JSON pointer: " <> Text.unpack (Key.toText key)
@@ -84,7 +84,7 @@ testCaseToTest filePath tc =
     inputStr = Text.unpack $ input tc
 
 -- | Check a single assertion.
-checkAssertion :: Json.Json -> (Pointer.Pointer, Json.Json) -> IO ()
+checkAssertion :: Aeson.Value -> (Pointer.Pointer, Aeson.Value) -> IO ()
 checkAssertion actualJson (ptr, expected) = do
   let actual = Pointer.evaluate ptr actualJson
   actual @?= Just expected

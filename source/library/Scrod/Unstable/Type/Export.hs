@@ -1,11 +1,13 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Export where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Doc as Doc
 import qualified Scrod.Unstable.Type.ExportIdentifier as ExportIdentifier
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
 import qualified Scrod.Unstable.Type.Section as Section
 
 -- | A single entry in a module's export list.
@@ -19,11 +21,7 @@ data Export
     Doc Doc.Doc
   | -- | Named doc reference: @-- $chunkName@
     DocNamed Text.Text
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Export -> Json.Json
-toJson export = case export of
-  Identifier i -> Json.tagged "Identifier" $ ExportIdentifier.toJson i
-  Group s -> Json.tagged "Group" $ Section.toJson s
-  Doc d -> Json.tagged "Doc" $ Doc.toJson d
-  DocNamed t -> Json.tagged "DocNamed" $ Json.fromText t
+instance Aeson.ToJSON Export where
+  toJSON = Aeson.genericToJSON JsonOptions.sumOptions

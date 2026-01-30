@@ -1,6 +1,6 @@
 {
   "input": ["-- | [x]: y", "module M where"],
   "assertions": {
-    "/documentation": {"tag": "DefList", "contents": [{"term": {"tag": "String", "contents": "x"}, "definition": {"tag": "String", "contents": "y"}}]}
+    "/documentation": {"tag": "DefList", "contents": [[{"tag": "String", "contents": "x"}, {"tag": "String", "contents": "y"}]]}
   }
 }

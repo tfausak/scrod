@@ -1,6 +1,6 @@
 {
   "input": ["-- | 2. x", "module M where"],
   "assertions": {
-    "/documentation": {"tag": "OrderedList", "contents": [{"number": 2, "doc": {"tag": "Paragraph", "contents": {"tag": "String", "contents": "x"}}}]}
+    "/documentation": {"tag": "OrderedList", "contents": [[2, {"tag": "Paragraph", "contents": {"tag": "String", "contents": "x"}}]]}
   }
 }

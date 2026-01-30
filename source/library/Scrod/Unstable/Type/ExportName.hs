@@ -1,10 +1,11 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.ExportName where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.ExportNameKind as ExportNameKind
-import qualified Scrod.Unstable.Type.Json as Json
 
 -- | A name in an export list, possibly annotated with 'pattern' or 'type'.
 -- Mirrors GHC's IEWrappedName but simplified.
@@ -12,11 +13,7 @@ data ExportName = MkExportName
   { kind :: Maybe ExportNameKind.ExportNameKind,
     name :: Text.Text
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: ExportName -> Json.Json
-toJson (MkExportName k n) =
-  Json.object
-    [ ("kind", maybe Json.Null ExportNameKind.toJson k),
-      ("name", Json.fromText n)
-    ]
+instance Aeson.ToJSON ExportName where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

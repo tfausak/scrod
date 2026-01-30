@@ -1,8 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Since where
 
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.PackageName as PackageName
 import qualified Scrod.Unstable.Type.Version as Version
 
@@ -10,11 +11,7 @@ data Since = MkSince
   { package :: Maybe PackageName.PackageName,
     version :: Version.Version
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: Since -> Json.Json
-toJson (MkSince p v) =
-  Json.object
-    [ ("package", maybe Json.Null PackageName.toJson p),
-      ("version", Version.toJson v)
-    ]
+instance Aeson.ToJSON Since where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

@@ -1,5 +1,8 @@
+{-# LANGUAGE DerivingVia #-}
+
 module Scrod.Unstable.Type.Extension where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Functor.Identity as Identity
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -7,12 +10,12 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified GHC.Driver.Session as Session
 import qualified GHC.LanguageExtensions.Type as Ghc
-import qualified Scrod.Unstable.Type.Json as Json
 
 newtype Extension = MkExtension
   { value :: Text.Text
   }
   deriving (Eq, Ord, Show)
+  deriving (Aeson.ToJSON) via Text.Text
 
 fromString :: String -> Extension
 fromString =
@@ -37,6 +40,3 @@ extensionNameExceptions =
       )
     . Map.fromListWith (<>)
     $ fmap (\x -> (Session.flagSpecFlag x, [Session.flagSpecName x])) Session.xFlags
-
-toJson :: Extension -> Json.Json
-toJson (MkExtension t) = Json.fromText t

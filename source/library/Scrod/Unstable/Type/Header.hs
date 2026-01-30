@@ -1,8 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.Header where
 
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Scrod.Unstable.Type.Level as Level
 
 -- | A section header with a level and title.
@@ -11,11 +12,7 @@ data Header doc = MkHeader
   { level :: Level.Level,
     title :: doc
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: (doc -> Json.Json) -> Header doc -> Json.Json
-toJson f (MkHeader l t) =
-  Json.object
-    [ ("level", Level.toJson l),
-      ("title", f t)
-    ]
+instance (Aeson.ToJSON doc) => Aeson.ToJSON (Header doc) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

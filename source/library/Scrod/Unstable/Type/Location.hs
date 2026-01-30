@@ -1,18 +1,22 @@
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Unstable.Type.Location where
 
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Scrod.Unstable.Type.Column as Column
-import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Line as Line
 
 data Location = MkLocation
   { line :: Line.Line,
     column :: Column.Column
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
+
+instance Aeson.ToJSON Location where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}
 
 fromSrcLoc :: SrcLoc.SrcLoc -> Maybe Location
 fromSrcLoc srcLoc = case srcLoc of
@@ -28,10 +32,3 @@ fromSrcLoc srcLoc = case srcLoc of
 
 fromSrcSpan :: SrcLoc.SrcSpan -> Maybe Location
 fromSrcSpan = fromSrcLoc . SrcLoc.srcSpanStart
-
-toJson :: Location -> Json.Json
-toJson (MkLocation l c) =
-  Json.object
-    [ ("line", Line.toJson l),
-      ("column", Column.toJson c)
-    ]

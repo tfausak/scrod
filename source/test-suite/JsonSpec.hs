@@ -5,6 +5,7 @@ module JsonSpec
   )
 where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as LazyByteString
@@ -16,7 +17,6 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Data.Vector as Vector
 import qualified Scrod.Unstable.Main as Main
-import qualified Scrod.Unstable.Type.Interface as Interface
 import qualified Scrod.Unstable.Type.Json as Json
 import qualified Scrod.Unstable.Type.Pointer as Pointer
 import qualified System.Directory as Directory
@@ -78,7 +78,7 @@ testCaseToTest filePath tc =
       then Either.isLeft (Main.extract inputStr) @?= True
       else do
         Right interface <- pure $ Main.extract inputStr
-        let actualJson = Interface.toJson interface
+        let actualJson = Aeson.toJSON interface
         mapM_ (checkAssertion actualJson) $ Map.toList (assertions tc)
   where
     inputStr = Text.unpack $ input tc

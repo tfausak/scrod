@@ -1,8 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.ExportNameKind where
 
-import qualified Scrod.Unstable.Type.Json as Json
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
+import qualified Scrod.Unstable.Type.JsonOptions as JsonOptions
 
 -- | Namespace annotation for a name in an export list.
 -- Corresponds to IEPattern and IEType from GHC's IEWrappedName.
@@ -14,10 +16,7 @@ data ExportNameKind
     Type
   | -- | @module Data.List@
     Module
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: ExportNameKind -> Json.Json
-toJson kind = case kind of
-  Pattern -> Json.tag "Pattern"
-  Type -> Json.tag "Type"
-  Module -> Json.tag "Module"
+instance Aeson.ToJSON ExportNameKind where
+  toJSON = Aeson.genericToJSON JsonOptions.sumOptions

@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Scrod.Unstable.Type.TableCell where
 
+import qualified Data.Aeson as Aeson
+import qualified GHC.Generics as Generics
 import qualified Numeric.Natural as Natural
-import qualified Scrod.Unstable.Type.Json as Json
 
 -- | A table cell with colspan, rowspan, and contents.
 -- Mirrors 'Documentation.Haddock.Types.TableCell' from haddock-library,
@@ -13,12 +14,7 @@ data Cell doc = MkCell
     rowspan :: Natural.Natural,
     contents :: doc
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord, Show, Generics.Generic)
 
-toJson :: (doc -> Json.Json) -> Cell doc -> Json.Json
-toJson f (MkCell c r d) =
-  Json.object
-    [ ("colspan", Json.fromNatural c),
-      ("rowspan", Json.fromNatural r),
-      ("contents", f d)
-    ]
+instance (Aeson.ToJSON doc) => Aeson.ToJSON (Cell doc) where
+  toJSON = Aeson.genericToJSON Aeson.defaultOptions {Aeson.fieldLabelModifier = id}

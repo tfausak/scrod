@@ -82,7 +82,7 @@ library ghc
     Scrod.Extra.ToolSettings
     Scrod.Parse
 
-library types
+library core
   import: library
   autogen-modules: PackageInfo_scrod
   build-depends:
@@ -94,8 +94,8 @@ library types
     text ^>=2.1.3,
     transformers ^>=0.6.1,
 
-  hs-source-dirs: source/libraries/types
-  -- cabal-gild: discover source/libraries/types
+  hs-source-dirs: source/libraries/core
+  -- cabal-gild: discover source/libraries/core
   exposed-modules:
     Scrod.Convert
     Scrod.Type.Category
@@ -143,7 +143,7 @@ library json
     aeson ^>=2.2.3,
     bytestring ^>=0.12.2,
     containers ^>=0.7,
-    scrod:types,
+    scrod:core,
     text ^>=2.1.3,
     vector ^>=0.13.2,
 
@@ -193,7 +193,7 @@ library html
     clay ^>=0.16.1,
     containers ^>=0.7,
     lucid2 ^>=0.0.20250303,
-    scrod:types,
+    scrod:core,
     text ^>=2.1.3,
 
   hs-source-dirs: source/libraries/html
@@ -214,10 +214,10 @@ library
     http-client-tls ^>=0.3.6,
     http-types ^>=0.12.4,
     optparse-applicative ^>=0.19.0,
+    scrod:core,
     scrod:ghc,
     scrod:html,
     scrod:json,
-    scrod:types,
     text ^>=2.1.3,
 
   hs-source-dirs: source/libraries/scrod

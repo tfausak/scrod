@@ -1,0 +1,23 @@
+{
+  "input": [
+    "data MultiClause = MultiClause",
+    "  deriving (Show) -- ^ Show documentation",
+    "  deriving (Eq)   -- ^ Eq documentation"
+  ],
+  "assertions": {
+    "/items/0/value/name": "MultiClause",
+    "/items/1/value/name": "MultiClause",
+    "/items/2/value/name": null,
+    "/items/2/value/parentKey": 1,
+    "/items/2/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Show documentation"}
+    },
+    "/items/3/value/name": null,
+    "/items/3/value/parentKey": 1,
+    "/items/3/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Eq documentation"}
+    }
+  }
+}

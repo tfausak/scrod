@@ -1,0 +1,18 @@
+{
+  "input": [
+    "data Foo = Foo",
+    "  deriving (Show) -- ^ Show instance documentation"
+  ],
+  "assertions": {
+    "/items/0/value/name": "Foo",
+    "/items/0/value/documentation": {"tag": "Empty"},
+    "/items/1/value/name": "Foo",
+    "/items/1/value/parentKey": 1,
+    "/items/2/value/name": null,
+    "/items/2/value/parentKey": 1,
+    "/items/2/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Show instance documentation"}
+    }
+  }
+}

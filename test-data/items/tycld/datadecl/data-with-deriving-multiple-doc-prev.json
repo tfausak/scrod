@@ -1,0 +1,19 @@
+{
+  "input": [
+    "data Bar = Bar",
+    "  deriving (Eq, Ord) -- ^ Only Ord gets this doc"
+  ],
+  "assertions": {
+    "/items/0/value/name": "Bar",
+    "/items/1/value/name": "Bar",
+    "/items/2/value/name": null,
+    "/items/2/value/parentKey": 1,
+    "/items/2/value/documentation": {"tag": "Empty"},
+    "/items/3/value/name": null,
+    "/items/3/value/parentKey": 1,
+    "/items/3/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Only Ord gets this doc"}
+    }
+  }
+}

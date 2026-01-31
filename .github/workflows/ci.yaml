@@ -37,7 +37,9 @@ jobs:
       - uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
-          path: ~/.local/state/cabal
+          path: |
+            ~/.local/state/cabal
+            ~\AppData\Roaming\cabal
           restore-keys: ${{ runner.os }}-
       - run: cabal build --only-download
       - run: cabal build --only-dependencies

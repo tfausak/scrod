@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE ExplicitForAll #-}", "instance forall a. Eq a => Eq (Maybe a) where"],
+  "assertions": {
+    "/items/0/value/name": "forall a. Eq a => Eq (Maybe a)"
+  }
+}

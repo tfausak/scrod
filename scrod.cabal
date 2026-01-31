@@ -28,24 +28,7 @@ flag pedantic
 
 common library
   build-depends:
-    aeson ^>=2.2.3,
-    base ^>=4.20.2,
-    bytestring ^>=0.12.2,
-    clay ^>=0.16.1,
-    containers ^>=0.7,
-    ghc ^>=9.10.3,
-    ghc-boot-th ^>=9.10.3,
-    haddock-library ^>=1.11,
-    http-client ^>=0.7.19,
-    http-client-tls ^>=0.3.6,
-    http-types ^>=0.12.4,
-    lucid2 ^>=0.0.20250303,
-    optparse-applicative ^>=0.19.0,
-    scientific ^>=0.3.8,
-    template-haskell ^>=2.22.0,
-    text ^>=2.1.3,
-    transformers ^>=0.6.1,
-    vector ^>=0.13.2,
+    base ^>=4.20.2
 
   default-language: Haskell2010
   ghc-options:
@@ -74,38 +57,17 @@ common executable
   ghc-options:
     -rtsopts
     -threaded
-    -Wno-unused-packages
 
--- Private sub-library for GHC integration
-library scrod-ghc
+library ghc
+  import: library
   build-depends:
-    base ^>=4.20.2,
     containers ^>=0.7,
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,
     template-haskell ^>=2.22.0,
 
-  default-language: Haskell2010
-  ghc-options:
-    -fmax-relevant-binds=0
-    -fno-show-error-context
-    -funclutter-valid-hole-fits
-    -Weverything
-    -Wno-all-missed-specialisations
-    -Wno-implicit-prelude
-    -Wno-missed-specialisations
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-kind-signatures
-    -Wno-missing-role-annotations
-    -Wno-missing-safe-haskell-mode
-    -Wno-prepositive-qualified-module
-    -Wno-safe
-    -Wno-unsafe
-
-  if flag(pedantic)
-    ghc-options: -Werror
-  hs-source-dirs: source/library
+  hs-source-dirs: source/libraries/ghc
+  -- cabal-gild: discover source/libraries/ghc
   exposed-modules:
     Scrod.Exception.Uninitialized
     Scrod.Extra.ArchOS
@@ -120,41 +82,20 @@ library scrod-ghc
     Scrod.Extra.ToolSettings
     Scrod.Parse
 
-  visibility: private
-
--- Private sub-library for core types (no JSON/HTML)
-library scrod-types
+library types
+  import: library
+  autogen-modules: PackageInfo_scrod
   build-depends:
-    base ^>=4.20.2,
     containers ^>=0.7,
     ghc ^>=9.10.3,
     ghc-boot-th ^>=9.10.3,
     haddock-library ^>=1.11,
-    scrod:scrod-ghc,
+    scrod:ghc,
     text ^>=2.1.3,
     transformers ^>=0.6.1,
 
-  default-language: Haskell2010
-  ghc-options:
-    -fmax-relevant-binds=0
-    -fno-show-error-context
-    -funclutter-valid-hole-fits
-    -Weverything
-    -Wno-all-missed-specialisations
-    -Wno-implicit-prelude
-    -Wno-missed-specialisations
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-kind-signatures
-    -Wno-missing-role-annotations
-    -Wno-missing-safe-haskell-mode
-    -Wno-prepositive-qualified-module
-    -Wno-safe
-    -Wno-unsafe
-
-  if flag(pedantic)
-    ghc-options: -Werror
-  hs-source-dirs: source/library
+  hs-source-dirs: source/libraries/types
+  -- cabal-gild: discover source/libraries/types
   exposed-modules:
     Scrod.Convert
     Scrod.Type.Category
@@ -194,52 +135,21 @@ library scrod-types
     Scrod.Type.Version
     Scrod.Type.Warning
 
-  other-modules:
-    PackageInfo_scrod
-    Scrod.Extra.Natural
-    Scrod.Extra.OnOff
+  other-modules: PackageInfo_scrod
 
-  autogen-modules: PackageInfo_scrod
-  visibility: private
-
--- Private sub-library for JSON serialization
-library scrod-json
+library json
+  import: library
   build-depends:
     aeson ^>=2.2.3,
-    base ^>=4.20.2,
     bytestring ^>=0.12.2,
     containers ^>=0.7,
-    ghc ^>=9.10.3,
-    ghc-boot-th ^>=9.10.3,
-    haddock-library ^>=1.11,
     scientific ^>=0.3.8,
-    scrod:scrod-ghc,
-    scrod:scrod-types,
+    scrod:types,
     text ^>=2.1.3,
     vector ^>=0.13.2,
 
-  default-language: Haskell2010
-  ghc-options:
-    -fmax-relevant-binds=0
-    -fno-show-error-context
-    -funclutter-valid-hole-fits
-    -Weverything
-    -Wno-all-missed-specialisations
-    -Wno-implicit-prelude
-    -Wno-missed-specialisations
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-home-modules
-    -Wno-missing-kind-signatures
-    -Wno-missing-role-annotations
-    -Wno-missing-safe-haskell-mode
-    -Wno-prepositive-qualified-module
-    -Wno-safe
-    -Wno-unsafe
-
-  if flag(pedantic)
-    ghc-options: -Werror
-  hs-source-dirs: source/library
+  hs-source-dirs: source/libraries/json
+  -- cabal-gild: discover source/libraries/json
   exposed-modules:
     Scrod.Json.Category
     Scrod.Json.Column
@@ -277,45 +187,18 @@ library scrod-json
     Scrod.Json.Version
     Scrod.Json.Warning
 
-  visibility: private
-
--- Private sub-library for HTML rendering
-library scrod-html
+library html
+  import: library
   build-depends:
-    base ^>=4.20.2,
     bytestring ^>=0.12.2,
     clay ^>=0.16.1,
     containers ^>=0.7,
-    ghc ^>=9.10.3,
-    ghc-boot-th ^>=9.10.3,
-    haddock-library ^>=1.11,
     lucid2 ^>=0.0.20250303,
-    scrod:scrod-ghc,
-    scrod:scrod-types,
+    scrod:types,
     text ^>=2.1.3,
 
-  default-language: Haskell2010
-  ghc-options:
-    -fmax-relevant-binds=0
-    -fno-show-error-context
-    -funclutter-valid-hole-fits
-    -Weverything
-    -Wno-all-missed-specialisations
-    -Wno-implicit-prelude
-    -Wno-missed-specialisations
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-home-modules
-    -Wno-missing-kind-signatures
-    -Wno-missing-role-annotations
-    -Wno-missing-safe-haskell-mode
-    -Wno-prepositive-qualified-module
-    -Wno-safe
-    -Wno-unsafe
-
-  if flag(pedantic)
-    ghc-options: -Werror
-  hs-source-dirs: source/library
+  hs-source-dirs: source/libraries/html
+  -- cabal-gild: discover source/libraries/html
   exposed-modules:
     Scrod.Html.Css
     Scrod.Html.Doc
@@ -324,75 +207,44 @@ library scrod-html
     Scrod.Html.Item
     Scrod.Html.Utilities
 
-  visibility: private
-
--- Public main library (CLI + re-exports)
 library
-  autogen-modules: PackageInfo_scrod
+  import: library
   build-depends:
-    aeson ^>=2.2.3,
-    base ^>=4.20.2,
     bytestring ^>=0.12.2,
-    clay ^>=0.16.1,
-    containers ^>=0.7,
-    ghc ^>=9.10.3,
-    ghc-boot-th ^>=9.10.3,
-    haddock-library ^>=1.11,
     http-client ^>=0.7.19,
     http-client-tls ^>=0.3.6,
     http-types ^>=0.12.4,
-    lucid2 ^>=0.0.20250303,
     optparse-applicative ^>=0.19.0,
-    scientific ^>=0.3.8,
-    scrod:scrod-ghc,
-    scrod:scrod-html,
-    scrod:scrod-json,
-    scrod:scrod-types,
-    template-haskell ^>=2.22.0,
+    scrod:ghc,
+    scrod:html,
+    scrod:json,
+    scrod:types,
     text ^>=2.1.3,
-    transformers ^>=0.6.1,
-    vector ^>=0.13.2,
 
-  default-language: Haskell2010
-  ghc-options:
-    -fmax-relevant-binds=0
-    -fno-show-error-context
-    -funclutter-valid-hole-fits
-    -Weverything
-    -Wno-all-missed-specialisations
-    -Wno-implicit-prelude
-    -Wno-missed-specialisations
-    -Wno-missing-deriving-strategies
-    -Wno-missing-export-lists
-    -Wno-missing-home-modules
-    -Wno-missing-kind-signatures
-    -Wno-missing-role-annotations
-    -Wno-missing-safe-haskell-mode
-    -Wno-prepositive-qualified-module
-    -Wno-safe
-    -Wno-unsafe
-
-  if flag(pedantic)
-    ghc-options: -Werror
-  hs-source-dirs: source/library
+  hs-source-dirs: source/libraries/scrod
+  -- cabal-gild: discover source/libraries/scrod
   exposed-modules:
     Scrod
-    Scrod.Main
-
-  other-modules:
-    PackageInfo_scrod
     Scrod.Extra.Http
+    Scrod.Main
 
 test-suite scrod-test-suite
   import: executable
   build-depends:
+    aeson ^>=2.2.3,
+    bytestring ^>=0.12.2,
+    containers ^>=0.7,
     directory ^>=1.3.8,
     filepath ^>=1.5.4,
+    scientific ^>=0.3.8,
     tasty ^>=1.5.3,
     tasty-hunit ^>=0.10.2,
+    text ^>=2.1.3,
+    vector ^>=0.13.2,
 
   hs-source-dirs: source/test-suite
   main-is: Main.hs
+  -- cabal-gild: discover source/test-suite --exclude=**/Main.hs
   other-modules:
     JsonSpec
     Pointer

@@ -27,7 +27,7 @@ jobs:
       - run: ghc-pkg list
       - run: cabal update
       - run: cabal sdist --output-dir artifact
-      - run: cabal configure --enable-documentation --enable-tests --flags=pedantic --ghc-options='-fwrite-ide-info -hiedir=hie' --haddock-for-hackage --jobs
+      - run: cabal configure --enable-documentation --enable-tests --flags=pedantic --ghc-options='-fwrite-ide-info -hiedir=artifact/hie' --haddock-for-hackage --jobs
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: cabal freeze
@@ -103,7 +103,7 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
       - run: tar --extract --file artifact.tar --verbose
-      - run: cabal run -- ${{ needs.meta.outputs.name }}-test-suite
+      - run: ./${{ needs.meta.outputs.name }}-test-suite
   weeder:
     name: Weeder
     runs-on: ubuntu-latest

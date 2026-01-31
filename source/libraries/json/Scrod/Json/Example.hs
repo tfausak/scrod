@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Example where
@@ -10,7 +9,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Example as Type
 
 fromJson :: Aeson.Value -> Either String Type.Example
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     exprJson <- Helpers.lookupField obj "expression"
     expr <- case exprJson of
@@ -24,7 +23,7 @@ fromJson = \case
   _ -> Left "Example must be an object"
   where
     fromJsonString :: Aeson.Value -> Either String Text.Text
-    fromJsonString = \case
+    fromJsonString strValue = case strValue of
       Aeson.String t -> Right t
       _ -> Left "result elements must be strings"
 

@@ -143,7 +143,6 @@ library json
     aeson ^>=2.2.3,
     bytestring ^>=0.12.2,
     containers ^>=0.7,
-    scientific ^>=0.3.8,
     scrod:types,
     text ^>=2.1.3,
     vector ^>=0.13.2,

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Item where
@@ -11,7 +10,7 @@ import qualified Scrod.Json.ItemName as ItemName
 import qualified Scrod.Type.Item as Type
 
 fromJson :: Aeson.Value -> Either String Type.Item
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     keyJson <- Helpers.lookupField obj "key"
     k <- ItemKey.fromJson keyJson

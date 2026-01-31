@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Subordinates where
@@ -10,7 +9,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Subordinates as Type
 
 fromJson :: Aeson.Value -> Either String Type.Subordinates
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     wildcardJson <- Helpers.lookupField obj "wildcard"
     w <- case wildcardJson of

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Header where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.Level as Level
 import qualified Scrod.Type.Header as Type
 
 fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Type.Header doc)
-fromJson fromJsonDoc = \case
+fromJson fromJsonDoc value = case value of
   Aeson.Object obj -> do
     lvlJson <- Helpers.lookupField obj "level"
     lvl <- Level.fromJson lvlJson

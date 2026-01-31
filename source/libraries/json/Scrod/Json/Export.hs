@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Export where
@@ -12,7 +11,7 @@ import qualified Scrod.Json.Section as Section
 import qualified Scrod.Type.Export as Type
 
 fromJson :: Aeson.Value -> Either String Type.Export
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     tagJson <- Helpers.lookupField obj "tag"
     tag <- case tagJson of
@@ -41,7 +40,7 @@ fromJson = \case
   _ -> Left "Export must be an object"
 
 toJson :: Type.Export -> Aeson.Value
-toJson = \case
+toJson export = case export of
   Type.Identifier ident ->
     Aeson.object
       [ "tag" Aeson..= ("Identifier" :: Text.Text),

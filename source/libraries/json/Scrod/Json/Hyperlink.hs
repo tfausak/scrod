@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Hyperlink where
@@ -8,7 +7,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Hyperlink as Type
 
 fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Type.Hyperlink doc)
-fromJson fromJsonDoc = \case
+fromJson fromJsonDoc value = case value of
   Aeson.Object obj -> do
     urlJson <- Helpers.lookupField obj "url"
     u <- case urlJson of

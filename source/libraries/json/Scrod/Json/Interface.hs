@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Interface where
@@ -21,7 +20,7 @@ import qualified Scrod.Type.Extension as Extension
 import qualified Scrod.Type.Interface as Type
 
 fromJson :: Aeson.Value -> Either String Type.Interface
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     verJson <- Helpers.lookupField obj "version"
     ver <- Version.fromJson verJson
@@ -83,13 +82,13 @@ toJson (Type.MkInterface ver lang exts doc s n w e i) =
     ]
 
 extensionsFromJson :: Aeson.Value -> Either String (Map.Map Extension.Extension Bool)
-extensionsFromJson = \case
+extensionsFromJson value = case value of
   Aeson.Array vec -> do
     pairs <- traverse parseExtPair (Vector.toList vec)
     Right (Map.fromList pairs)
   _ -> Left "extensions must be an array"
   where
-    parseExtPair = \case
+    parseExtPair pairValue = case pairValue of
       Aeson.Object obj -> do
         extJson <- Helpers.lookupField obj "extension"
         ext <- JsonExtension.fromJson extJson

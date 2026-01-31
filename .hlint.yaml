@@ -5,3 +5,15 @@
 - ignore: { name: Use <$> }
 - ignore: { name: Use list comprehension }
 - ignore: { name: Use tuple-section }
+- extensions:
+    - default: false
+    - name:
+        - NamedFieldPuns
+        - OverloadedStrings
+        - TemplateHaskellQuotes
+- functions:
+    - within: []
+      name:
+        - error
+        - fromJust
+        - undefined

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.ExportName where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.ExportName as Type
 
 fromJson :: Aeson.Value -> Either String Type.ExportName
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     kindJson <- Helpers.lookupField obj "kind"
     k <- case kindJson of

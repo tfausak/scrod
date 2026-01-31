@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Picture where
@@ -8,7 +7,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Picture as Type
 
 fromJson :: Aeson.Value -> Either String Type.Picture
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     uriJson <- Helpers.lookupField obj "uri"
     u <- case uriJson of

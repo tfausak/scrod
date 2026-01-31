@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.ModLink where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.ModuleName as ModuleName
 import qualified Scrod.Type.ModLink as Type
 
 fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Type.ModLink doc)
-fromJson fromJsonDoc = \case
+fromJson fromJsonDoc value = case value of
   Aeson.Object obj -> do
     nameJson <- Helpers.lookupField obj "name"
     n <- ModuleName.fromJson nameJson

@@ -19,13 +19,12 @@ jobs:
           - windows
     steps:
       - uses: actions/checkout@v6
-      - uses: haskell/ghcup-setup@v1
+      - id: haskell
+        uses: haskell-actions/setup@v2
         with:
-          ghc: 9.10.3
-          cabal: latest
+          ghc-version: 9.10.3
       - run: mkdir artifact
       - run: ghc-pkg list
-      - run: cabal update
       - run: cabal sdist --output-dir artifact
       - run: cabal configure --enable-documentation --enable-tests --flags=pedantic --ghc-options='-fwrite-ide-info -hiedir=artifact/hie' --haddock-for-hackage --jobs
       - run: cat cabal.project.local
@@ -37,9 +36,7 @@ jobs:
       - uses: actions/cache@v5
         with:
           key: ${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
-          path: |
-            ~/.local/state/cabal
-            ~\AppData\Roaming\cabal
+          path: ${{ steps.haskell.outputs.cabal-store }}
           restore-keys: ${{ runner.os }}-
       - run: cabal build --only-download
       - run: cabal build --only-dependencies

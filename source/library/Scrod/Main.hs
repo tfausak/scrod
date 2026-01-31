@@ -6,12 +6,13 @@ import qualified Data.Text as Text
 import qualified Options.Applicative as Options
 import qualified Scrod.Convert as Convert
 import qualified Scrod.Extra.Http as Http
+import qualified Scrod.Html.Interface as HtmlInterface
+import qualified Scrod.Html.Utilities as Html
+import qualified Scrod.Json.Interface as JsonInterface
+import qualified Scrod.Json.Utilities as Json
 import qualified Scrod.Parse as Parse
-import qualified Scrod.Type.Html as Html
-import qualified Scrod.Type.HtmlInterface as HtmlInterface
 import qualified Scrod.Type.InputFormat as InputFormat
 import qualified Scrod.Type.Interface as Interface
-import qualified Scrod.Type.Json as Json
 import qualified Scrod.Type.OutputFormat as OutputFormat
 import qualified System.Exit as Exit
 import qualified System.IO as IO
@@ -115,11 +116,11 @@ parseInput format extensions contents = case format of
 parseJson :: String -> Either String Interface.Interface
 parseJson input = do
   value <- Json.parse (Text.pack input)
-  Interface.fromJson value
+  JsonInterface.fromJson value
 
 renderOutput :: OutputFormat.OutputFormat -> Interface.Interface -> LazyByteString.ByteString
 renderOutput format interface = case format of
-  OutputFormat.Json -> Json.render $ Interface.toJson interface
+  OutputFormat.Json -> Json.render $ JsonInterface.toJson interface
   OutputFormat.Html -> Html.render $ HtmlInterface.toHtml interface
 
 extract :: [String] -> String -> Either String Interface.Interface

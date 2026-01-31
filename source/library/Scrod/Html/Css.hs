@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Type.Css where
+module Scrod.Html.Css where
 
 import qualified Clay
 import qualified Clay.Media as Media

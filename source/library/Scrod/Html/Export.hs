@@ -1,16 +1,16 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Type.HtmlExport where
+module Scrod.Html.Export where
 
 import qualified Data.Text as Text
 import qualified Lucid
+import qualified Scrod.Html.Doc as HtmlDoc
 import qualified Scrod.Type.Category as Category
 import qualified Scrod.Type.Export as Export
 import qualified Scrod.Type.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Type.ExportName as ExportName
 import qualified Scrod.Type.ExportNameKind as ExportNameKind
 import qualified Scrod.Type.Header as Header
-import qualified Scrod.Type.HtmlDoc as HtmlDoc
 import qualified Scrod.Type.Level as Level
 import qualified Scrod.Type.Section as Section
 import qualified Scrod.Type.Subordinates as Subordinates

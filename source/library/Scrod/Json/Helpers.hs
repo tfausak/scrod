@@ -1,4 +1,4 @@
-module Scrod.Type.JsonHelpers where
+module Scrod.Json.Helpers where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Key as Key

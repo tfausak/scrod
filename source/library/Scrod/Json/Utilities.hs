@@ -1,6 +1,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 
-module Scrod.Type.Json
+module Scrod.Json.Utilities
   ( -- * Types
     Aeson.Value,
     pattern Null,

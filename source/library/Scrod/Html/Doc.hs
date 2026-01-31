@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Type.HtmlDoc where
+module Scrod.Html.Doc where
 
 import qualified Data.Maybe
 import qualified Data.Text as Text

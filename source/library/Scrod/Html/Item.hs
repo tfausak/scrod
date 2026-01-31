@@ -1,14 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Type.HtmlItem where
+module Scrod.Html.Item where
 
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Lucid
 import qualified Numeric.Natural as Natural
+import qualified Scrod.Html.Doc as HtmlDoc
 import qualified Scrod.Type.Column as Column
 import qualified Scrod.Type.Doc as Doc
-import qualified Scrod.Type.HtmlDoc as HtmlDoc
 import qualified Scrod.Type.Item as Item
 import qualified Scrod.Type.ItemKey as ItemKey
 import qualified Scrod.Type.ItemName as ItemName

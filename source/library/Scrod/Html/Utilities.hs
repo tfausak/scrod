@@ -1,4 +1,4 @@
-module Scrod.Type.Html
+module Scrod.Html.Utilities
   ( -- * Rendering
     render,
   )

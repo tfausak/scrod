@@ -1,19 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Scrod.Type.HtmlInterface where
+module Scrod.Html.Interface where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified Lucid
+import qualified Scrod.Html.Css as Css
+import qualified Scrod.Html.Doc as HtmlDoc
+import qualified Scrod.Html.Export as HtmlExport
+import qualified Scrod.Html.Item as HtmlItem
 import qualified Scrod.Type.Category as Category
-import qualified Scrod.Type.Css as Css
 import qualified Scrod.Type.Doc as Doc
 import qualified Scrod.Type.Export as Export
 import qualified Scrod.Type.Extension as Extension
-import qualified Scrod.Type.HtmlDoc as HtmlDoc
-import qualified Scrod.Type.HtmlExport as HtmlExport
-import qualified Scrod.Type.HtmlItem as HtmlItem
 import qualified Scrod.Type.Interface as Interface
 import qualified Scrod.Type.Item as Item
 import qualified Scrod.Type.Language as Language

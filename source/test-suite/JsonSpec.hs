@@ -17,9 +17,7 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Data.Vector as Vector
 import qualified Pointer
-import qualified Scrod.Main as Main
-import qualified Scrod.Type.Interface as Interface
-import qualified Scrod.Type.Json as Json
+import qualified Scrod
 import qualified System.Directory as Directory
 import qualified System.FilePath as FilePath
 import qualified Test.Tasty as Tasty
@@ -37,18 +35,18 @@ data TestCase = MkTestCase
 -- Input is expected to be an array of strings (joined with newlines).
 parseTestCase :: Aeson.Value -> Either String TestCase
 parseTestCase json = case json of
-  Json.Object m -> do
+  Aeson.Object m -> do
     inp <- case KeyMap.lookup "input" m of
-      Just (Json.Array xs) -> do
+      Just (Aeson.Array xs) -> do
         strs <- traverse expectString (Vector.toList xs)
         Right $ Text.intercalate "\n" strs
       Just _ -> Left "input must be an array of strings"
       Nothing -> Left "missing input field"
     let err = case KeyMap.lookup "error" m of
-          Just (Json.Boolean b) -> b
+          Just (Aeson.Bool b) -> b
           _ -> False
     asserts <- case KeyMap.lookup "assertions" m of
-      Just (Json.Object a) -> parseAssertions a
+      Just (Aeson.Object a) -> parseAssertions a
       Just _ -> Left "assertions must be an object"
       Nothing -> Right Map.empty
     Right MkTestCase {input = inp, assertions = asserts, expectError = err}
@@ -56,7 +54,7 @@ parseTestCase json = case json of
 
 -- | Extract a string from a JSON value.
 expectString :: Aeson.Value -> Either String Text.Text
-expectString (Json.String s) = Right s
+expectString (Aeson.String s) = Right s
 expectString _ = Left "expected string"
 
 -- | Parse the assertions object.
@@ -76,10 +74,10 @@ testCaseToTest :: FilePath -> TestCase -> Tasty.TestTree
 testCaseToTest filePath tc =
   testCase (filePathToTestName filePath) $
     if expectError tc
-      then Either.isLeft (Main.extract [] inputStr) @?= True
+      then Either.isLeft (Scrod.extract [] inputStr) @?= True
       else do
-        Right interface <- pure $ Main.extract [] inputStr
-        let actualJson = Interface.toJson interface
+        Right interface <- pure $ Scrod.extract [] inputStr
+        let actualJson = Scrod.toJson interface
         mapM_ (checkAssertion actualJson) $ Map.toList (assertions tc)
   where
     inputStr = Text.unpack $ input tc
@@ -135,7 +133,7 @@ loadTestFile dirPath fileName = do
   let filePath = dirPath FilePath.</> fileName
   contents <- LazyByteString.readFile filePath
   let textContents = Encoding.decodeUtf8 $ LazyByteString.toStrict contents
-  case Json.parse textContents of
+  case Scrod.parse textContents of
     Left err -> do
       putStrLn $ "Warning: failed to parse " <> filePath <> ": " <> err
       pure Nothing

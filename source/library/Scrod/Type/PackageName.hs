@@ -1,8 +1,5 @@
-{-# LANGUAGE LambdaCase #-}
-
 module Scrod.Type.PackageName where
 
-import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 
 newtype PackageName = MkPackageName
@@ -14,11 +11,3 @@ fromString :: String -> PackageName
 fromString =
   MkPackageName
     . Text.pack
-
-fromJson :: Aeson.Value -> Either String PackageName
-fromJson = \case
-  Aeson.String txt -> Right (MkPackageName txt)
-  _ -> Left "PackageName must be a string"
-
-toJson :: PackageName -> Aeson.Value
-toJson (MkPackageName txt) = Aeson.String txt

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Since where
@@ -10,7 +9,7 @@ import qualified Scrod.Json.Version as Version
 import qualified Scrod.Type.Since as Type
 
 fromJson :: Aeson.Value -> Either String Type.Since
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     pkgJson <- Helpers.lookupField obj "package"
     pkg <- case pkgJson of

@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Table where
@@ -10,7 +9,7 @@ import qualified Scrod.Json.TableCell as TableCell
 import qualified Scrod.Type.Table as Type
 
 fromJson :: (Aeson.Value -> Either String doc) -> Aeson.Value -> Either String (Type.Table doc)
-fromJson fromJsonDoc = \case
+fromJson fromJsonDoc value = case value of
   Aeson.Object obj -> do
     headerJson <- Helpers.lookupField obj "headerRows"
     hRows <- parseRows headerJson
@@ -19,10 +18,10 @@ fromJson fromJsonDoc = \case
     Right $ Type.MkTable {Type.headerRows = hRows, Type.bodyRows = bRows}
   _ -> Left "Table must be an object"
   where
-    parseRows = \case
+    parseRows rowsValue = case rowsValue of
       Aeson.Array vec -> traverse parseRow (Vector.toList vec)
       _ -> Left "rows must be an array"
-    parseRow = \case
+    parseRow rowValue = case rowValue of
       Aeson.Array vec -> traverse (TableCell.fromJson fromJsonDoc) (Vector.toList vec)
       _ -> Left "row must be an array"
 

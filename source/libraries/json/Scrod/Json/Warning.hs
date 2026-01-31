@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Warning where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Warning as Type
 
 fromJson :: Aeson.Value -> Either String Type.Warning
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     catJson <- Helpers.lookupField obj "category"
     cat <- Category.fromJson catJson

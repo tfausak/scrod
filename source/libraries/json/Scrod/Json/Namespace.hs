@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Namespace where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Type.Namespace as Type
 
 fromJson :: Aeson.Value -> Either String Type.Namespace
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     tagJson <- Helpers.lookupField obj "tag"
     tag <- case tagJson of

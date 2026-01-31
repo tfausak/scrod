@@ -266,7 +266,7 @@ mergeItemsByName items =
       let -- Only consider top-level named items, extracting name safely
           namedCandidates =
             Maybe.mapMaybe
-              (\item -> fmap (\n -> (n, [item])) (Item.name (Located.value item)))
+              (\item -> fmap (\n -> (n, item NonEmpty.:| [])) (Item.name (Located.value item)))
               (filter isMergeCandidate is)
           -- Group by name
           groups = Map.fromListWith (<>) namedCandidates
@@ -278,23 +278,20 @@ mergeItemsByName items =
       let val = Located.value item
        in Maybe.isNothing (Item.parentKey val) && Maybe.isJust (Item.name val)
 
-    mergeItemGroup :: [Located.Located Item.Item] -> Located.Located Item.Item
-    mergeItemGroup [] = error "mergeItemGroup: empty group"
-    mergeItemGroup [single] = single
+    mergeItemGroup :: NonEmpty.NonEmpty (Located.Located Item.Item) -> Located.Located Item.Item
+    mergeItemGroup (single NonEmpty.:| []) = single
     mergeItemGroup group =
       let -- Sort by location to find earliest
-          sorted = List.sortOn Located.location group
-       in case sorted of
-            [] -> error "mergeItemGroup: sorted empty"
-            (firstItem : _) ->
-              let -- Concatenate all documentation in source order
-                  combinedDoc = foldr (Doc.append . Item.documentation . Located.value) Doc.Empty sorted
-                  -- Use earliest location, first item's key and parentKey
-                  mergedItem =
-                    (Located.value firstItem)
-                      { Item.documentation = combinedDoc
-                      }
-               in firstItem {Located.value = mergedItem}
+          sorted = NonEmpty.sortWith Located.location group
+          firstItem = NonEmpty.head sorted
+          -- Concatenate all documentation in source order
+          combinedDoc = foldr (Doc.append . Item.documentation . Located.value) Doc.Empty sorted
+          -- Use earliest location, first item's key and parentKey
+          mergedItem =
+            (Located.value firstItem)
+              { Item.documentation = combinedDoc
+              }
+       in firstItem {Located.value = mergedItem}
 
     -- Build map from removed key -> merged key (for updating parentKey references)
     buildKeyRemapping ::

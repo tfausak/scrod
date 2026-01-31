@@ -1,11 +1,8 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Scrod.Json.Doc where
 
 import qualified Data.Aeson as Aeson
-import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
 import qualified Data.Vector as Vector
 import qualified Scrod.Json.Example as Example
@@ -19,7 +16,7 @@ import qualified Scrod.Json.Table as Table
 import qualified Scrod.Type.Doc as Type
 
 fromJson :: Aeson.Value -> Either String Type.Doc
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     tagJson <- Helpers.lookupField obj "tag"
     tag <- case tagJson of
@@ -137,18 +134,14 @@ fromJson = \case
   _ -> Left "Doc must be an object"
   where
     parsePair :: Aeson.Value -> Either String (Int, Type.Doc)
-    parsePair = \case
+    parsePair pairValue = case pairValue of
       Aeson.Array vec | Vector.length vec == 2 -> do
-        n <- case vec Vector.! 0 of
-          Aeson.Number num -> case Scientific.floatingOrInteger num of
-            Right i -> Right i
-            Left (_ :: Double) -> Left "OrderedList index must be an integer"
-          _ -> Left "OrderedList index must be a number"
+        n <- Helpers.fromJsonInt (vec Vector.! 0)
         doc <- fromJson (vec Vector.! 1)
         Right (n, doc)
       _ -> Left "OrderedList pair must be array of 2 elements"
     parseDefPair :: Aeson.Value -> Either String (Type.Doc, Type.Doc)
-    parseDefPair = \case
+    parseDefPair defPairValue = case defPairValue of
       Aeson.Array vec | Vector.length vec == 2 -> do
         term <- fromJson (vec Vector.! 0)
         def <- fromJson (vec Vector.! 1)
@@ -156,7 +149,7 @@ fromJson = \case
       _ -> Left "DefList pair must be array of 2 elements"
 
 toJson :: Type.Doc -> Aeson.Value
-toJson = \case
+toJson docValue = case docValue of
   Type.Empty -> Aeson.object ["tag" Aeson..= ("Empty" :: Text.Text)]
   Type.Append doc1 doc2 ->
     Aeson.object
@@ -206,7 +199,7 @@ toJson = \case
   Type.OrderedList pairs ->
     Aeson.object
       [ "tag" Aeson..= ("OrderedList" :: Text.Text),
-        "contents" Aeson..= fmap (\(n, doc) -> [Aeson.Number (fromIntegral n), toJson doc]) pairs
+        "contents" Aeson..= fmap (\(n, doc) -> [Aeson.toJSON n, toJson doc]) pairs
       ]
   Type.DefList pairs ->
     Aeson.object

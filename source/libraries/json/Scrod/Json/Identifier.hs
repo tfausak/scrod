@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Identifier where
@@ -9,7 +8,7 @@ import qualified Scrod.Json.Namespace as Namespace
 import qualified Scrod.Type.Identifier as Type
 
 fromJson :: Aeson.Value -> Either String Type.Identifier
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     nsJson <- Helpers.lookupField obj "namespace"
     ns <- case nsJson of

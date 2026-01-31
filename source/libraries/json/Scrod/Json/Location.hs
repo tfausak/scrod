@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Scrod.Json.Location where
@@ -10,7 +9,7 @@ import qualified Scrod.Json.Line as Line
 import qualified Scrod.Type.Location as Type
 
 fromJson :: Aeson.Value -> Either String Type.Location
-fromJson = \case
+fromJson value = case value of
   Aeson.Object obj -> do
     lineJson <- Helpers.lookupField obj "line"
     l <- Line.fromJson lineJson

@@ -1,0 +1,6 @@
+{
+  "input": ["instance Eq a => Eq (Maybe (Either a b)) where"],
+  "assertions": {
+    "/items/0/value/name": "Eq a => Eq (Maybe (Either a b))"
+  }
+}

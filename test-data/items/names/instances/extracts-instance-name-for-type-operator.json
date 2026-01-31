@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE TypeOperators #-}", "data a :+: b", "instance Eq (Int :+: Bool) where"],
+  "assertions": {
+    "/items/1/value/name": "Eq (Int :+: Bool)"
+  }
+}

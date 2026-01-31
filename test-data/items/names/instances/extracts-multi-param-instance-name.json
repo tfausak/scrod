@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE MultiParamTypeClasses #-}", "class C a b", "instance C Int Bool where"],
+  "assertions": {
+    "/items/1/value/name": "C Int Bool"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE TypeFamilies #-}", "data family D a", "newtype instance D Char = DChar Char"],
+  "assertions": {
+    "/items/1/value/name": "newtype instance D Char = DChar Char"
+  }
+}

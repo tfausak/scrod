@@ -1,0 +1,6 @@
+{
+  "input": ["{-# LANGUAGE TypeFamilies #-}", "type family F a", "type instance F Int = Bool"],
+  "assertions": {
+    "/items/1/value/name": "type instance F Int = Bool"
+  }
+}

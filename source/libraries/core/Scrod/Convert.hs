@@ -733,9 +733,20 @@ extractSigName sig = case sig of
   Syntax.ClassOpSig _ _ (lName : _) _ -> Just $ extractIdPName lName
   _ -> Nothing
 
--- | Extract name from an instance declaration (returns Nothing for now).
+-- | Extract name from an instance declaration.
+-- For class instances, uses the instance head (e.g., "Eq a => Eq (Maybe a)").
+-- For data family instances and type family instances, uses the full instance declaration.
 extractInstDeclName :: Syntax.InstDecl Ghc.GhcPs -> Maybe ItemName.ItemName
-extractInstDeclName _ = Nothing
+extractInstDeclName inst = Just $ case inst of
+  Syntax.ClsInstD _ clsInst ->
+    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+      Syntax.cid_poly_ty clsInst
+  Syntax.DataFamInstD _ dataFamInst ->
+    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+      dataFamInst
+  Syntax.TyFamInstD _ tyFamInst ->
+    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+      tyFamInst
 
 -- | Extract name from a constructor declaration.
 extractConDeclName :: Syntax.ConDecl Ghc.GhcPs -> ItemName.ItemName

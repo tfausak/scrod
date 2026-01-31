@@ -579,12 +579,22 @@ convertDerivClauseTysM parentKey dct = case dct of
   Syntax.DctSingle _ lSigTy -> fmap Maybe.maybeToList $ convertDerivedTypeM parentKey lSigTy
   Syntax.DctMulti _ lSigTys -> fmap Maybe.catMaybes $ traverse (convertDerivedTypeM parentKey) lSigTys
 
+extractDerivedTypeDoc ::
+  Syntax.LHsSigType Ghc.GhcPs ->
+  Doc.Doc
+extractDerivedTypeDoc lSigTy =
+  let sigTy = SrcLoc.unLoc lSigTy
+      bodyTy = SrcLoc.unLoc (Syntax.sig_body sigTy)
+   in case bodyTy of
+        Syntax.HsDocTy _ _ lDoc -> convertLHsDoc lDoc
+        _ -> Doc.Empty
+
 convertDerivedTypeM ::
   Maybe ItemKey.ItemKey ->
   Syntax.LHsSigType Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertDerivedTypeM parentKey lSigTy =
-  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing Doc.Empty
+  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing (extractDerivedTypeDoc lSigTy)
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->

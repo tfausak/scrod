@@ -1,0 +1,16 @@
+{
+  "input": [
+    "data T = T",
+    "-- | Standalone Show instance",
+    "deriving instance Show T"
+  ],
+  "assertions": {
+    "/items/0/value/name": "T",
+    "/items/1/value/name": "T",
+    "/items/2/value/name": null,
+    "/items/2/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Standalone Show instance"}
+    }
+  }
+}

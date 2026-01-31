@@ -1,0 +1,23 @@
+{
+  "input": [
+    "data Qux = Qux",
+    "  -- | Only Show gets this doc",
+    "  deriving (Show, Eq, Ord)"
+  ],
+  "assertions": {
+    "/items/0/value/name": "Qux",
+    "/items/1/value/name": "Qux",
+    "/items/2/value/name": null,
+    "/items/2/value/parentKey": 1,
+    "/items/2/value/documentation": {
+      "tag": "Paragraph",
+      "contents": {"tag": "String", "contents": "Only Show gets this doc"}
+    },
+    "/items/3/value/name": null,
+    "/items/3/value/parentKey": 1,
+    "/items/3/value/documentation": {"tag": "Empty"},
+    "/items/4/value/name": null,
+    "/items/4/value/parentKey": 1,
+    "/items/4/value/documentation": {"tag": "Empty"}
+  }
+}

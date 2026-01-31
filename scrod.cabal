@@ -28,24 +28,7 @@ flag pedantic
 
 common library
   build-depends:
-    aeson ^>=2.2.3,
-    base ^>=4.20.2,
-    bytestring ^>=0.12.2,
-    clay ^>=0.16.1,
-    containers ^>=0.7,
-    ghc ^>=9.10.3,
-    ghc-boot-th ^>=9.10.3,
-    haddock-library ^>=1.11,
-    http-client ^>=0.7.19,
-    http-client-tls ^>=0.3.6,
-    http-types ^>=0.12.4,
-    lucid2 ^>=0.0.20250303,
-    optparse-applicative ^>=0.19.0,
-    scientific ^>=0.3.8,
-    template-haskell ^>=2.22.0,
-    text ^>=2.1.3,
-    transformers ^>=0.6.1,
-    vector ^>=0.13.2,
+    base ^>=4.20.2
 
   default-language: Haskell2010
   ghc-options:
@@ -74,33 +57,50 @@ common executable
   ghc-options:
     -rtsopts
     -threaded
-    -Wno-unused-packages
 
-library
+library ghc
   import: library
-  autogen-modules: PackageInfo_scrod
-  -- cabal-gild: discover source/library
+  build-depends:
+    containers ^>=0.7,
+    ghc ^>=9.10.3,
+    ghc-boot-th ^>=9.10.3,
+    template-haskell ^>=2.22.0,
+
+  hs-source-dirs: source/libraries/ghc
+  -- cabal-gild: discover source/libraries/ghc
   exposed-modules:
-    Scrod
-    Scrod.Convert
     Scrod.Exception.Uninitialized
     Scrod.Extra.ArchOS
     Scrod.Extra.DynFlags
     Scrod.Extra.FileSettings
     Scrod.Extra.GhcNameVersion
-    Scrod.Extra.Http
     Scrod.Extra.Natural
     Scrod.Extra.OnOff
     Scrod.Extra.ParserOpts
     Scrod.Extra.Platform
     Scrod.Extra.PlatformMisc
     Scrod.Extra.ToolSettings
-    Scrod.Main
     Scrod.Parse
+
+library types
+  import: library
+  autogen-modules: PackageInfo_scrod
+  build-depends:
+    containers ^>=0.7,
+    ghc ^>=9.10.3,
+    ghc-boot-th ^>=9.10.3,
+    haddock-library ^>=1.11,
+    scrod:ghc,
+    text ^>=2.1.3,
+    transformers ^>=0.6.1,
+
+  hs-source-dirs: source/libraries/types
+  -- cabal-gild: discover source/libraries/types
+  exposed-modules:
+    Scrod.Convert
     Scrod.Type.Category
     Scrod.Type.Column
     Scrod.Type.ConversionState
-    Scrod.Type.Css
     Scrod.Type.Doc
     Scrod.Type.Example
     Scrod.Type.Export
@@ -109,11 +109,6 @@ library
     Scrod.Type.ExportNameKind
     Scrod.Type.Extension
     Scrod.Type.Header
-    Scrod.Type.Html
-    Scrod.Type.HtmlDoc
-    Scrod.Type.HtmlExport
-    Scrod.Type.HtmlInterface
-    Scrod.Type.HtmlItem
     Scrod.Type.Hyperlink
     Scrod.Type.Identifier
     Scrod.Type.InputFormat
@@ -121,8 +116,6 @@ library
     Scrod.Type.Item
     Scrod.Type.ItemKey
     Scrod.Type.ItemName
-    Scrod.Type.Json
-    Scrod.Type.JsonHelpers
     Scrod.Type.Language
     Scrod.Type.Level
     Scrod.Type.Line
@@ -142,19 +135,116 @@ library
     Scrod.Type.Version
     Scrod.Type.Warning
 
-  hs-source-dirs: source/library
   other-modules: PackageInfo_scrod
+
+library json
+  import: library
+  build-depends:
+    aeson ^>=2.2.3,
+    bytestring ^>=0.12.2,
+    containers ^>=0.7,
+    scientific ^>=0.3.8,
+    scrod:types,
+    text ^>=2.1.3,
+    vector ^>=0.13.2,
+
+  hs-source-dirs: source/libraries/json
+  -- cabal-gild: discover source/libraries/json
+  exposed-modules:
+    Scrod.Json.Category
+    Scrod.Json.Column
+    Scrod.Json.Doc
+    Scrod.Json.Example
+    Scrod.Json.Export
+    Scrod.Json.ExportIdentifier
+    Scrod.Json.ExportName
+    Scrod.Json.ExportNameKind
+    Scrod.Json.Extension
+    Scrod.Json.Header
+    Scrod.Json.Helpers
+    Scrod.Json.Hyperlink
+    Scrod.Json.Identifier
+    Scrod.Json.Interface
+    Scrod.Json.Item
+    Scrod.Json.ItemKey
+    Scrod.Json.ItemName
+    Scrod.Json.Language
+    Scrod.Json.Level
+    Scrod.Json.Line
+    Scrod.Json.Located
+    Scrod.Json.Location
+    Scrod.Json.ModLink
+    Scrod.Json.ModuleName
+    Scrod.Json.Namespace
+    Scrod.Json.PackageName
+    Scrod.Json.Picture
+    Scrod.Json.Section
+    Scrod.Json.Since
+    Scrod.Json.Subordinates
+    Scrod.Json.Table
+    Scrod.Json.TableCell
+    Scrod.Json.Utilities
+    Scrod.Json.Version
+    Scrod.Json.Warning
+
+library html
+  import: library
+  build-depends:
+    bytestring ^>=0.12.2,
+    clay ^>=0.16.1,
+    containers ^>=0.7,
+    lucid2 ^>=0.0.20250303,
+    scrod:types,
+    text ^>=2.1.3,
+
+  hs-source-dirs: source/libraries/html
+  -- cabal-gild: discover source/libraries/html
+  exposed-modules:
+    Scrod.Html.Css
+    Scrod.Html.Doc
+    Scrod.Html.Export
+    Scrod.Html.Interface
+    Scrod.Html.Item
+    Scrod.Html.Utilities
+
+library
+  import: library
+  build-depends:
+    bytestring ^>=0.12.2,
+    http-client ^>=0.7.19,
+    http-client-tls ^>=0.3.6,
+    http-types ^>=0.12.4,
+    optparse-applicative ^>=0.19.0,
+    scrod:ghc,
+    scrod:html,
+    scrod:json,
+    scrod:types,
+    text ^>=2.1.3,
+
+  hs-source-dirs: source/libraries/scrod
+  -- cabal-gild: discover source/libraries/scrod
+  exposed-modules:
+    Scrod
+    Scrod.Extra.Http
+    Scrod.Main
 
 test-suite scrod-test-suite
   import: executable
   build-depends:
+    aeson ^>=2.2.3,
+    bytestring ^>=0.12.2,
+    containers ^>=0.7,
     directory ^>=1.3.8,
     filepath ^>=1.5.4,
+    scientific ^>=0.3.8,
     tasty ^>=1.5.3,
     tasty-hunit ^>=0.10.2,
+    text ^>=2.1.3,
+    vector ^>=0.13.2,
 
   hs-source-dirs: source/test-suite
   main-is: Main.hs
+  -- cabal-gild: discover source/test-suite --exclude=**/Main.hs
   other-modules:
     JsonSpec
     Pointer

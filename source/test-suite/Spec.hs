@@ -3,6 +3,7 @@
 
 module Spec (spec) where
 
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Data.ByteString.Lazy as LazyByteString
 import qualified Data.Either as Either
@@ -10,7 +11,7 @@ import qualified Data.Scientific as Scientific
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Encoding
 import qualified Data.Vector as Vector
-import qualified Scrod.Type.Json as Json
+import qualified Scrod
 import qualified Test.Tasty as Tasty
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -21,155 +22,155 @@ spec =
       [ Tasty.testGroup
           "parse"
           [ testCase "parses null" $ do
-              Right result <- pure $ Json.parse "null"
-              result @?= Json.Null,
+              Right result <- pure $ Scrod.parse "null"
+              result @?= Aeson.Null,
             testCase "parses true" $ do
-              Right result <- pure $ Json.parse "true"
-              result @?= Json.Boolean True,
+              Right result <- pure $ Scrod.parse "true"
+              result @?= Aeson.Bool True,
             testCase "parses false" $ do
-              Right result <- pure $ Json.parse "false"
-              result @?= Json.Boolean False,
+              Right result <- pure $ Scrod.parse "false"
+              result @?= Aeson.Bool False,
             testCase "parses integer" $ do
-              Right result <- pure $ Json.parse "123"
-              result @?= Json.Number (Scientific.scientific 123 0),
+              Right result <- pure $ Scrod.parse "123"
+              result @?= Aeson.Number (Scientific.scientific 123 0),
             testCase "parses negative integer" $ do
-              Right result <- pure $ Json.parse "-42"
-              result @?= Json.Number (Scientific.scientific (-42) 0),
+              Right result <- pure $ Scrod.parse "-42"
+              result @?= Aeson.Number (Scientific.scientific (-42) 0),
             testCase "parses decimal" $ do
-              Right result <- pure $ Json.parse "1.23"
-              result @?= Json.Number (Scientific.scientific 123 (-2)),
+              Right result <- pure $ Scrod.parse "1.23"
+              result @?= Aeson.Number (Scientific.scientific 123 (-2)),
             testCase "parses scientific notation" $ do
-              Right result <- pure $ Json.parse "1e10"
-              result @?= Json.Number (Scientific.scientific 1 10),
+              Right result <- pure $ Scrod.parse "1e10"
+              result @?= Aeson.Number (Scientific.scientific 1 10),
             testCase "parses scientific with decimal" $ do
-              Right result <- pure $ Json.parse "1.5e2"
-              result @?= Json.Number (Scientific.scientific 15 1),
+              Right result <- pure $ Scrod.parse "1.5e2"
+              result @?= Aeson.Number (Scientific.scientific 15 1),
             testCase "parses string" $ do
-              Right result <- pure $ Json.parse "\"hello\""
-              result @?= Json.String "hello",
+              Right result <- pure $ Scrod.parse "\"hello\""
+              result @?= Aeson.String "hello",
             testCase "parses string with escapes" $ do
-              Right result <- pure $ Json.parse "\"a\\nb\""
-              result @?= Json.String "a\nb",
+              Right result <- pure $ Scrod.parse "\"a\\nb\""
+              result @?= Aeson.String "a\nb",
             testCase "parses string with unicode escape" $ do
-              Right result <- pure $ Json.parse "\"\\u0041\""
-              result @?= Json.String "A",
+              Right result <- pure $ Scrod.parse "\"\\u0041\""
+              result @?= Aeson.String "A",
             testCase "parses empty array" $ do
-              Right result <- pure $ Json.parse "[]"
-              result @?= Json.Array Vector.empty,
+              Right result <- pure $ Scrod.parse "[]"
+              result @?= Aeson.Array Vector.empty,
             testCase "parses empty object" $ do
-              Right result <- pure $ Json.parse "{}"
-              result @?= Json.Object KeyMap.empty,
+              Right result <- pure $ Scrod.parse "{}"
+              result @?= Aeson.Object KeyMap.empty,
             testCase "parses array with values" $ do
-              Right result <- pure $ Json.parse "[1, 2, 3]"
+              Right result <- pure $ Scrod.parse "[1, 2, 3]"
               result
-                @?= Json.Array
+                @?= Aeson.Array
                   ( Vector.fromList
-                      [ Json.Number $ Scientific.scientific 1 0,
-                        Json.Number $ Scientific.scientific 2 0,
-                        Json.Number $ Scientific.scientific 3 0
+                      [ Aeson.Number $ Scientific.scientific 1 0,
+                        Aeson.Number $ Scientific.scientific 2 0,
+                        Aeson.Number $ Scientific.scientific 3 0
                       ]
                   ),
             testCase "parses object with values" $ do
-              Right result <- pure $ Json.parse "{\"a\": 1}"
+              Right result <- pure $ Scrod.parse "{\"a\": 1}"
               result
-                @?= Json.Object
-                  (KeyMap.singleton "a" (Json.Number $ Scientific.scientific 1 0)),
+                @?= Aeson.Object
+                  (KeyMap.singleton "a" (Aeson.Number $ Scientific.scientific 1 0)),
             testCase "parses nested structures" $ do
-              Right result <- pure $ Json.parse "{\"arr\": [1, {\"nested\": true}]}"
+              Right result <- pure $ Scrod.parse "{\"arr\": [1, {\"nested\": true}]}"
               result
-                @?= Json.Object
+                @?= Aeson.Object
                   ( KeyMap.singleton
                       "arr"
-                      ( Json.Array $
+                      ( Aeson.Array $
                           Vector.fromList
-                            [ Json.Number $ Scientific.scientific 1 0,
-                              Json.Object $ KeyMap.singleton "nested" (Json.Boolean True)
+                            [ Aeson.Number $ Scientific.scientific 1 0,
+                              Aeson.Object $ KeyMap.singleton "nested" (Aeson.Bool True)
                             ]
                       )
                   ),
             testCase "handles whitespace" $ do
-              Right result <- pure $ Json.parse "  { \"a\" : 1 }  "
+              Right result <- pure $ Scrod.parse "  { \"a\" : 1 }  "
               result
-                @?= Json.Object
-                  (KeyMap.singleton "a" (Json.Number $ Scientific.scientific 1 0)),
+                @?= Aeson.Object
+                  (KeyMap.singleton "a" (Aeson.Number $ Scientific.scientific 1 0)),
             testCase "fails on invalid json" $
-              Either.isLeft (Json.parse "invalid") @?= True,
+              Either.isLeft (Scrod.parse "invalid") @?= True,
             testCase "fails on trailing content" $
-              Either.isLeft (Json.parse "null extra") @?= True
+              Either.isLeft (Scrod.parse "null extra") @?= True
           ],
         Tasty.testGroup
           "render"
           [ testCase "renders null" $
-              Json.render Json.Null @?= "null",
+              Scrod.render Aeson.Null @?= "null",
             testCase "renders true" $
-              Json.render (Json.Boolean True) @?= "true",
+              Scrod.render (Aeson.Bool True) @?= "true",
             testCase "renders false" $
-              Json.render (Json.Boolean False) @?= "false",
+              Scrod.render (Aeson.Bool False) @?= "false",
             testCase "renders number" $
-              Json.render (Json.Number $ Scientific.scientific 123 0) @?= "123",
+              Scrod.render (Aeson.Number $ Scientific.scientific 123 0) @?= "123",
             testCase "renders string" $
-              Json.render (Json.String "hello") @?= "\"hello\"",
+              Scrod.render (Aeson.String "hello") @?= "\"hello\"",
             testCase "renders string with escapes" $
-              Json.render (Json.String "a\nb") @?= "\"a\\nb\"",
+              Scrod.render (Aeson.String "a\nb") @?= "\"a\\nb\"",
             testCase "renders empty array" $
-              Json.render (Json.Array Vector.empty) @?= "[]",
+              Scrod.render (Aeson.Array Vector.empty) @?= "[]",
             testCase "renders array" $
-              Json.render (Json.Array $ Vector.fromList [Json.Null, Json.Boolean True]) @?= "[null,true]",
+              Scrod.render (Aeson.Array $ Vector.fromList [Aeson.Null, Aeson.Bool True]) @?= "[null,true]",
             testCase "renders empty object" $
-              Json.render (Json.Object KeyMap.empty) @?= "{}",
+              Scrod.render (Aeson.Object KeyMap.empty) @?= "{}",
             testCase "renders object" $
-              Json.render (Json.Object $ KeyMap.singleton "a" Json.Null) @?= "{\"a\":null}"
+              Scrod.render (Aeson.Object $ KeyMap.singleton "a" Aeson.Null) @?= "{\"a\":null}"
           ],
         Tasty.testGroup
           "roundtrip"
           [ testCase "null roundtrips" $ do
-              let original = Json.Null
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let original = Aeson.Null
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "boolean roundtrips" $ do
-              let original = Json.Boolean True
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let original = Aeson.Bool True
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "number roundtrips" $ do
-              let original = Json.Number $ Scientific.scientific 12345 (-2)
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let original = Aeson.Number $ Scientific.scientific 12345 (-2)
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "string roundtrips" $ do
-              let original = Json.String "hello world"
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let original = Aeson.String "hello world"
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "array roundtrips" $ do
-              let original = Json.Array $ Vector.fromList [Json.Null, Json.Boolean True, Json.Number $ Scientific.scientific 1 0]
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let original = Aeson.Array $ Vector.fromList [Aeson.Null, Aeson.Bool True, Aeson.Number $ Scientific.scientific 1 0]
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "object roundtrips" $ do
               let original =
-                    Json.Object $
+                    Aeson.Object $
                       KeyMap.fromList
-                        [ ("name", Json.String "test"),
-                          ("count", Json.Number $ Scientific.scientific 42 0)
+                        [ ("name", Aeson.String "test"),
+                          ("count", Aeson.Number $ Scientific.scientific 42 0)
                         ]
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original,
             testCase "nested structure roundtrips" $ do
               let original =
-                    Json.Object $
+                    Aeson.Object $
                       KeyMap.singleton
                         "data"
-                        ( Json.Array $
+                        ( Aeson.Array $
                             Vector.fromList
-                              [ Json.Object $ KeyMap.singleton "id" (Json.Number $ Scientific.scientific 1 0),
-                                Json.Object $ KeyMap.singleton "id" (Json.Number $ Scientific.scientific 2 0)
+                              [ Aeson.Object $ KeyMap.singleton "id" (Aeson.Number $ Scientific.scientific 1 0),
+                                Aeson.Object $ KeyMap.singleton "id" (Aeson.Number $ Scientific.scientific 2 0)
                               ]
                         )
-              let rendered = Json.render original
-              Right result <- pure . Json.parse $ decodeUtf8 rendered
+              let rendered = Scrod.render original
+              Right result <- pure . Scrod.parse $ decodeUtf8 rendered
               result @?= original
           ]
       ]

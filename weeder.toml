@@ -1,6 +1,14 @@
 # https://github.com/ocharles/weeder
-root-instances = ["Eq", "Ord", "Show"]
+root-instances = [
+  "Eq",
+  "Ord",
+  "Show",
+]
 root-modules = []
-roots = ["^Main[.]main$", "^PackageInfo_scrod[.]"]
+roots = [
+  "^Main[.]main$",
+  "^PackageInfo_scrod[.]",
+  "^Scrod[.]Main[.]defaultMain$",
+]
 type-class-roots = false
 unused-types = true

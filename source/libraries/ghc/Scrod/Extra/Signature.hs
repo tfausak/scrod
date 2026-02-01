@@ -51,7 +51,10 @@ extractFromConDecl conDecl = case conDecl of
     -- For GADT constructors, combine arguments and result type
     let argsText = case args of
           Hs.PrefixConGADT _ argTypes -> Text.intercalate " -> " (fmap (toSignatureText . Hs.hsScaledThing) argTypes)
-          Hs.RecConGADT _ _ -> ""
+          Hs.RecConGADT _ lFieldsRec ->
+            let fields = SrcLoc.unLoc lFieldsRec
+                fieldTypes = fmap (extractFromConDeclField . SrcLoc.unLoc) fields
+             in Text.intercalate " -> " fieldTypes
         resText = toSignatureText resTy
      in if Text.null argsText
           then Just resText
@@ -68,7 +71,12 @@ extractFromH98Args details = case details of
       else Just $ Text.intercalate " -> " (fmap (toSignatureText . Hs.hsScaledThing) args)
   Syntax.InfixCon arg1 arg2 ->
     Just $ toSignatureText (Hs.hsScaledThing arg1) <> " -> " <> toSignatureText (Hs.hsScaledThing arg2)
-  Syntax.RecCon _ -> Nothing
+  Syntax.RecCon lFieldsRec ->
+    let fields = SrcLoc.unLoc lFieldsRec
+        fieldTypes = fmap (extractFromConDeclField . SrcLoc.unLoc) fields
+     in if null fieldTypes
+          then Nothing
+          else Just $ Text.intercalate " -> " fieldTypes
 
 -- | Extract signature from a record field.
 extractFromConDeclField :: Syntax.ConDeclField Ghc.GhcPs -> Text.Text

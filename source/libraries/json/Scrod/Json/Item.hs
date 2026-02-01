@@ -3,6 +3,8 @@
 module Scrod.Json.Item where
 
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KeyMap
 import qualified Scrod.Json.Doc as Doc
 import qualified Scrod.Json.Helpers as Helpers
 import qualified Scrod.Json.ItemKey as ItemKey
@@ -24,10 +26,11 @@ fromJson value = case value of
       _ -> fmap Just (ItemName.fromJson nameJson)
     docJson <- Helpers.lookupField obj "documentation"
     doc <- Doc.fromJson docJson
-    signatureJson <- Helpers.lookupField obj "signature"
+    let signatureJson = KeyMap.lookup (Key.fromText "signature") obj
     sig <- case signatureJson of
-      Aeson.Null -> Right Nothing
-      Aeson.String s -> Right (Just s)
+      Nothing -> Right Nothing
+      Just Aeson.Null -> Right Nothing
+      Just (Aeson.String s) -> Right (Just s)
       _ -> Left "signature must be null or a string"
     Right $ Type.MkItem {Type.key = k, Type.parentKey = pk, Type.name = n, Type.documentation = doc, Type.signature = sig}
   _ -> Left "Item must be an object"

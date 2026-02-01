@@ -640,7 +640,7 @@ convertConDeclM parentKey lConDecl = do
   case result of
     Nothing -> pure []
     Just (constructorItem, key) -> do
-      fieldItems <- extractFieldsFromConDeclM (Just key) lConDecl conDecl
+      fieldItems <- extractFieldsFromConDeclM (Just key) conDecl
       pure $ [constructorItem] <> fieldItems
 
 extractConDeclDoc ::
@@ -654,10 +654,9 @@ extractConDeclDoc conDecl = case conDecl of
 
 extractFieldsFromConDeclM ::
   Maybe ItemKey.ItemKey ->
-  Syntax.LConDecl Ghc.GhcPs ->
   Syntax.ConDecl Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-extractFieldsFromConDeclM parentKey _lConDecl conDecl = case conDecl of
+extractFieldsFromConDeclM parentKey conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_args = args} ->
     extractFieldsFromH98DetailsM parentKey args
   Syntax.ConDeclGADT {Syntax.con_g_args = gArgs} ->

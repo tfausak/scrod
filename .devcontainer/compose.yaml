@@ -1,0 +1,15 @@
+services:
+  devcontainer:
+    command: nix-shell --command 'echo ready && sleep infinity' --pure
+    image: nixos/nix:2.33.1
+    init: true
+    volumes:
+      - ..:/workspace
+      - cabal-cache:/root/.cache/cabal
+      - cabal-state:/root/.local/state/cabal
+      - nix:/nix
+    working_dir: /workspace
+volumes:
+  cabal-cache: null
+  cabal-state: null
+  nix: null

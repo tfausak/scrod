@@ -5,11 +5,4 @@ services:
     init: true
     volumes:
       - ..:/workspace
-      - cabal-cache:/root/.cache/cabal
-      - cabal-state:/root/.local/state/cabal
-      - nix:/nix
     working_dir: /workspace
-volumes:
-  cabal-cache: null
-  cabal-state: null
-  nix: null

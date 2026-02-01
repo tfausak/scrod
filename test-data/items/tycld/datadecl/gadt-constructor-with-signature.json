@@ -1,0 +1,8 @@
+{
+  "input": ["{-# LANGUAGE GADTs #-}", "data T where MkT :: Int -> String -> T"],
+  "assertions": {
+    "/items/0/value/name": "T",
+    "/items/1/value/name": "MkT",
+    "/items/1/value/signature": "Int -> String -> T"
+  }
+}

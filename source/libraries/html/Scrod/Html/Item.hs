@@ -18,9 +18,10 @@ import qualified Scrod.Type.Location as Location
 
 -- | Convert a single Item to HTML.
 toHtml :: Located.Located Item.Item -> Lucid.Html ()
-toHtml (Located.MkLocated loc (Item.MkItem key _parentKey maybeName doc)) =
+toHtml (Located.MkLocated loc (Item.MkItem key _parentKey maybeName doc maybeSig)) =
   Lucid.div_ attrs $
     nameHtml
+      <> signatureHtml
       <> keyHtml
       <> locationHtml loc
       <> docHtml
@@ -35,6 +36,13 @@ toHtml (Located.MkLocated loc (Item.MkItem key _parentKey maybeName doc)) =
       Nothing -> mempty
       Just (ItemName.MkItemName name) ->
         Lucid.span_ [Lucid.class_ "item-name"] (Lucid.toHtml name)
+
+    signatureHtml :: Lucid.Html ()
+    signatureHtml = case maybeSig of
+      Nothing -> mempty
+      Just sig ->
+        Lucid.span_ [Lucid.class_ "item-signature"] $
+          Lucid.toHtml (" :: " <> sig)
 
     keyHtml :: Lucid.Html ()
     keyHtml =

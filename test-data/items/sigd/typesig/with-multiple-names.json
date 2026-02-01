@@ -2,6 +2,8 @@
   "input": ["f, g :: Int"],
   "assertions": {
     "/items/0/location/line": 1,
-    "/items/0/location/column": 1
+    "/items/0/location/column": 1,
+    "/items/0/value/signature": "Int",
+    "/items/1/value/signature": "Int"
   }
 }

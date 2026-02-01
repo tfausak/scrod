@@ -1,0 +1,35 @@
+{
+  "input": [
+    "{-# LANGUAGE PatternSynonyms #-}",
+    "module Test where",
+    "",
+    "-- Type signature",
+    "f :: Int -> String",
+    "f x = show x",
+    "",
+    "-- Kind signature",
+    "type T :: Type",
+    "data T = MkT Int",
+    "",
+    "-- Class with method signature",
+    "class C a where",
+    "  method :: a -> Int",
+    "",
+    "-- Pattern synonym",
+    "pattern P :: Int -> Maybe Int",
+    "pattern P x = Just x"
+  ],
+  "assertions": {
+    "/items/0/value/name": "f",
+    "/items/0/value/signature": "Int -> String",
+    "/items/1/value/name": "T",
+    "/items/1/value/signature": "Type",
+    "/items/2/value/name": "MkT",
+    "/items/2/value/signature": "Int",
+    "/items/3/value/name": "C",
+    "/items/4/value/name": "method",
+    "/items/4/value/signature": "a -> Int",
+    "/items/5/value/name": "P",
+    "/items/5/value/signature": "Int -> Maybe Int"
+  }
+}

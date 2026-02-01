@@ -1,0 +1,9 @@
+{
+  "input": ["data T = MkT Int String"],
+  "assertions": {
+    "/items/0/value/name": "T",
+    "/items/0/value/signature": null,
+    "/items/1/value/name": "MkT",
+    "/items/1/value/signature": "Int -> String"
+  }
+}

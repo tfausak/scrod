@@ -3,6 +3,7 @@
   "assertions": {
     "/items/0/location/line": 1,
     "/items/0/location/column": 1,
-    "/items/0/value/name": "x"
+    "/items/0/value/name": "x",
+    "/items/0/value/signature": "Int"
   }
 }

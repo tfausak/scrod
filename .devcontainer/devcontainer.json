@@ -1,0 +1,6 @@
+{
+  "dockerComposeFile": "compose.yaml",
+  "postCreateCommand": "nix-shell --command true --pure",
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace"
+}

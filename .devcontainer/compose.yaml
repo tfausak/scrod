@@ -1,0 +1,8 @@
+services:
+  devcontainer:
+    command: sleep infinity
+    image: nixos/nix:2.33.1
+    init: true
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace

@@ -1,0 +1,11 @@
+{
+  "input": ["data Person = Person { name :: String, age :: Int }"],
+  "assertions": {
+    "/items/0/value/name": "Person",
+    "/items/1/value/name": "Person",
+    "/items/2/value/name": "name",
+    "/items/2/value/signature": "String",
+    "/items/3/value/name": "age",
+    "/items/3/value/signature": "Int"
+  }
+}

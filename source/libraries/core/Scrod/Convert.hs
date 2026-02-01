@@ -33,6 +33,7 @@ import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Extra.OnOff as OnOff
+import qualified Scrod.Extra.Signature as Signature
 import qualified Scrod.Type.Category as Category
 import qualified Scrod.Type.ConversionState as ConversionState
 import qualified Scrod.Type.Doc as Doc
@@ -84,9 +85,10 @@ mkItemM ::
   Maybe ItemKey.ItemKey ->
   Maybe ItemName.ItemName ->
   Doc.Doc ->
+  Maybe Text.Text ->
   ConvertM (Maybe (Located.Located Item.Item))
-mkItemM srcSpan parentKey itemName doc =
-  fmap (fmap fst) $ mkItemWithKeyM srcSpan parentKey itemName doc
+mkItemM srcSpan parentKey itemName doc sig =
+  fmap (fmap fst) $ mkItemWithKeyM srcSpan parentKey itemName doc sig
 
 -- | Create an Item and return both the item and its allocated key.
 -- Useful when the key is needed for creating child items.
@@ -95,8 +97,9 @@ mkItemWithKeyM ::
   Maybe ItemKey.ItemKey ->
   Maybe ItemName.ItemName ->
   Doc.Doc ->
+  Maybe Text.Text ->
   ConvertM (Maybe (Located.Located Item.Item, ItemKey.ItemKey))
-mkItemWithKeyM srcSpan parentKey itemName doc =
+mkItemWithKeyM srcSpan parentKey itemName doc sig =
   case Location.fromSrcSpan srcSpan of
     Nothing -> pure Nothing
     Just location -> do
@@ -110,7 +113,8 @@ mkItemWithKeyM srcSpan parentKey itemName doc =
                     { Item.key = key,
                       Item.parentKey = parentKey,
                       Item.name = itemName,
-                      Item.documentation = doc
+                      Item.documentation = doc,
+                      Item.signature = sig
                     }
               },
             key
@@ -286,10 +290,14 @@ mergeItemsByName items =
           firstItem = NonEmpty.head sorted
           -- Concatenate all documentation in source order
           combinedDoc = foldr (Doc.append . Item.documentation . Located.value) Doc.Empty sorted
+          -- Take first non-Nothing signature
+          combinedSig =
+            (Maybe.listToMaybe . Maybe.mapMaybe (Item.signature . Located.value) $ NonEmpty.toList sorted)
           -- Use earliest location, first item's key and parentKey
           mergedItem =
             (Located.value firstItem)
-              { Item.documentation = combinedDoc
+              { Item.documentation = combinedDoc,
+                Item.signature = combinedSig
               }
        in firstItem {Located.value = mergedItem}
 
@@ -439,7 +447,10 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
   Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
   Syntax.DocD {} -> fmap Maybe.maybeToList $ convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc lDecl sig
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractDeclName lDecl) lDecl
+  Syntax.KindSigD _ kindSig ->
+    let sig = Just $ Signature.extractFromKindSig kindSig
+     in fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a signature declaration, handling multi-name signatures.
 -- For signatures like "x, y :: Int", this creates a separate item for each name.
@@ -450,19 +461,22 @@ convertSigDeclM ::
   ConvertM [Located.Located Item.Item]
 convertSigDeclM doc lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
-    fmap Maybe.catMaybes $ traverse (convertSigNameM doc) names
+    let sigText = Signature.extractFromSig sig
+     in fmap Maybe.catMaybes $ traverse (convertSigNameM doc sigText) names
   Syntax.PatSynSig _ names _ ->
-    fmap Maybe.catMaybes $ traverse (convertSigNameM doc) names
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractSigName sig) lDecl
+    let sigText = Signature.extractFromSig sig
+     in fmap Maybe.catMaybes $ traverse (convertSigNameM doc sigText) names
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature into an item.
 -- Uses the individual name's location for accuracy in multi-name signatures.
 convertSigNameM ::
   Doc.Doc ->
+  Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc lName =
-  mkItemM (Annotation.getLocA lName) Nothing (Just $ extractIdPName lName) doc
+convertSigNameM doc sig lName =
+  mkItemM (Annotation.getLocA lName) Nothing (Just $ extractIdPName lName) doc sig
 
 -- | Convert a type/class declaration with documentation.
 convertTyClDeclWithDocM ::
@@ -472,31 +486,32 @@ convertTyClDeclWithDocM ::
   ConvertM [Located.Located Item.Item]
 convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
   Syntax.DataDecl _ _ _ _ dataDefn -> do
-    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     childItems <- convertDataDefnM parentKey dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} -> do
-    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsM parentKey sigs
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) lDecl
+  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
 
 convertDeclSimpleM ::
   Syntax.LHsDecl Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertDeclSimpleM = convertDeclWithDocM Nothing Doc.Empty Nothing
+convertDeclSimpleM = convertDeclWithDocM Nothing Doc.Empty Nothing Nothing
 
 convertDeclWithDocM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
   Maybe ItemName.ItemName ->
+  Maybe Text.Text ->
   Syntax.LHsDecl Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertDeclWithDocM parentKey doc itemName lDecl =
-  mkItemM (Annotation.getLocA lDecl) parentKey itemName doc
+convertDeclWithDocM parentKey doc itemName sig lDecl =
+  mkItemM (Annotation.getLocA lDecl) parentKey itemName doc sig
 
 convertRuleDeclsM ::
   Syntax.RuleDecls Ghc.GhcPs ->
@@ -507,7 +522,7 @@ convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
-  mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty
+  mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing
 
 convertClassSigsM ::
   Maybe ItemKey.ItemKey ->
@@ -520,15 +535,18 @@ convertClassSigM ::
   Syntax.LSig Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
 convertClassSigM parentKey lSig = case SrcLoc.unLoc lSig of
-  Syntax.ClassOpSig _ _ names _ -> fmap Maybe.catMaybes $ traverse (convertIdPM parentKey) names
+  Syntax.ClassOpSig _ _ names _ ->
+    let sig = Signature.extractFromSig (SrcLoc.unLoc lSig)
+     in fmap Maybe.catMaybes $ traverse (convertIdPM parentKey sig) names
   _ -> pure []
 
 convertIdPM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertIdPM parentKey lIdP =
-  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) Doc.Empty
+convertIdPM parentKey sig lIdP =
+  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) Doc.Empty sig
 
 convertFamilyDeclsM ::
   Maybe ItemKey.ItemKey ->
@@ -546,6 +564,7 @@ convertFamilyDeclM parentKey lFamilyDecl =
     parentKey
     (Just $ extractFamilyDeclName (SrcLoc.unLoc lFamilyDecl))
     Doc.Empty
+    Nothing
 
 convertDataDefnM ::
   Maybe ItemKey.ItemKey ->
@@ -594,7 +613,7 @@ convertDerivedTypeM ::
   Syntax.LHsSigType Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertDerivedTypeM parentKey lSigTy =
-  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing (extractDerivedTypeDoc lSigTy)
+  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing (extractDerivedTypeDoc lSigTy) Nothing
 
 dataDefnConsList ::
   Syntax.DataDefnCons a ->
@@ -610,16 +629,18 @@ convertConDeclM ::
 convertConDeclM parentKey lConDecl = do
   let conDecl = SrcLoc.unLoc lConDecl
       conDoc = extractConDeclDoc conDecl
+      conSig = Signature.extractFromConDecl conDecl
   result <-
     mkItemWithKeyM
       (Annotation.getLocA lConDecl)
       parentKey
       (Just $ extractConDeclName conDecl)
       conDoc
+      conSig
   case result of
     Nothing -> pure []
     Just (constructorItem, key) -> do
-      fieldItems <- extractFieldsFromConDeclM (Just key) conDecl
+      fieldItems <- extractFieldsFromConDeclM (Just key) lConDecl conDecl
       pure $ [constructorItem] <> fieldItems
 
 extractConDeclDoc ::
@@ -633,9 +654,10 @@ extractConDeclDoc conDecl = case conDecl of
 
 extractFieldsFromConDeclM ::
   Maybe ItemKey.ItemKey ->
+  Syntax.LConDecl Ghc.GhcPs ->
   Syntax.ConDecl Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-extractFieldsFromConDeclM parentKey conDecl = case conDecl of
+extractFieldsFromConDeclM parentKey _lConDecl conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_args = args} ->
     extractFieldsFromH98DetailsM parentKey args
   Syntax.ConDeclGADT {Syntax.con_g_args = gArgs} ->
@@ -673,19 +695,22 @@ extractFieldItemsFromConDeclFieldM parentKey lField = do
   let field = SrcLoc.unLoc lField
       fieldNames = Syntax.cd_fld_names field
       fieldDoc = maybe Doc.Empty convertLHsDoc (Syntax.cd_fld_doc field)
-  fmap Maybe.catMaybes $ traverse (extractFieldItemM parentKey fieldDoc) fieldNames
+      fieldSig = Just $ Signature.extractFromConDeclField field
+  fmap Maybe.catMaybes $ traverse (extractFieldItemM parentKey fieldDoc fieldSig) fieldNames
 
 extractFieldItemM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Text.Text ->
   Syntax.LFieldOcc Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-extractFieldItemM parentKey doc lFieldOcc =
+extractFieldItemM parentKey doc sig lFieldOcc =
   mkItemM
     (Annotation.getLocA lFieldOcc)
     parentKey
     (Just $ extractFieldOccName lFieldOcc)
     doc
+    sig
 
 -- | Extract name from a top-level declaration.
 extractDeclName :: Syntax.LHsDecl Ghc.GhcPs -> Maybe ItemName.ItemName

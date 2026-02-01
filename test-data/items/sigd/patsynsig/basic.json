@@ -3,6 +3,7 @@
   "assertions": {
     "/items/0/location/line": 1,
     "/items/0/location/column": 42,
-    "/items/0/value/name": "P"
+    "/items/0/value/name": "P",
+    "/items/0/value/signature": "Int -> Maybe Int"
   }
 }

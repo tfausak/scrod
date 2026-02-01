@@ -24,14 +24,20 @@ fromJson value = case value of
       _ -> fmap Just (ItemName.fromJson nameJson)
     docJson <- Helpers.lookupField obj "documentation"
     doc <- Doc.fromJson docJson
-    Right $ Type.MkItem {Type.key = k, Type.parentKey = pk, Type.name = n, Type.documentation = doc}
+    signatureJson <- Helpers.lookupField obj "signature"
+    sig <- case signatureJson of
+      Aeson.Null -> Right Nothing
+      Aeson.String s -> Right (Just s)
+      _ -> Left "signature must be null or a string"
+    Right $ Type.MkItem {Type.key = k, Type.parentKey = pk, Type.name = n, Type.documentation = doc, Type.signature = sig}
   _ -> Left "Item must be an object"
 
 toJson :: Type.Item -> Aeson.Value
-toJson (Type.MkItem k pk n doc) =
+toJson (Type.MkItem k pk n doc sig) =
   Aeson.object
     [ "key" Aeson..= ItemKey.toJson k,
       "parentKey" Aeson..= maybe Aeson.Null ItemKey.toJson pk,
       "name" Aeson..= maybe Aeson.Null ItemName.toJson n,
-      "documentation" Aeson..= Doc.toJson doc
+      "documentation" Aeson..= Doc.toJson doc,
+      "signature" Aeson..= maybe Aeson.Null Aeson.String sig
     ]

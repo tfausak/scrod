@@ -1,5 +1,6 @@
 module LegendaryChainsaw.TestSuite where
 
+import qualified LegendaryChainsaw.Decimal
 import qualified LegendaryChainsaw.Executable.Config
 import qualified LegendaryChainsaw.Executable.Flag
 import qualified LegendaryChainsaw.Extra.Builder
@@ -17,6 +18,7 @@ import qualified LegendaryChainsaw.Version
 
 testSuite :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 testSuite s = do
+  LegendaryChainsaw.Decimal.spec s
   LegendaryChainsaw.Executable.Config.spec s
   LegendaryChainsaw.Executable.Flag.spec s
   LegendaryChainsaw.Extra.Builder.spec s

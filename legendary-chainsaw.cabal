@@ -47,6 +47,7 @@ library
 
   exposed-modules:
     LegendaryChainsaw
+    LegendaryChainsaw.Decimal
     LegendaryChainsaw.Executable
     LegendaryChainsaw.Executable.Config
     LegendaryChainsaw.Executable.Flag

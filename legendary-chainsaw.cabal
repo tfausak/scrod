@@ -60,6 +60,7 @@ library
     LegendaryChainsaw.Extra.Semigroup
     LegendaryChainsaw.Json.Boolean
     LegendaryChainsaw.Json.Null
+    LegendaryChainsaw.Json.Number
     LegendaryChainsaw.Json.String
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite

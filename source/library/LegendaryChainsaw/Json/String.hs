@@ -76,10 +76,9 @@ encodeChar c = case c of
   '\n' -> Builder.stringUtf8 "\\n"
   '\r' -> Builder.stringUtf8 "\\r"
   '\t' -> Builder.stringUtf8 "\\t"
-  _ | c < '\x20' ->
-      Builder.stringUtf8 "\\u"
-        <> Builder.word16HexFixed (fromIntegral $ fromEnum c)
-    | otherwise -> Builder.charUtf8 c
+  _ -> if c >= ' '
+    then Builder.charUtf8 c
+    else Builder.stringUtf8 "\\u" <> Builder.word16HexFixed (fromIntegral $ fromEnum c)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

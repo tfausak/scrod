@@ -12,6 +12,7 @@ import qualified LegendaryChainsaw.Extra.Read
 import qualified LegendaryChainsaw.Extra.Semigroup
 import qualified LegendaryChainsaw.Json.Boolean
 import qualified LegendaryChainsaw.Json.Null
+import qualified LegendaryChainsaw.Json.Number
 import qualified LegendaryChainsaw.Json.String
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
@@ -30,5 +31,6 @@ testSuite s = do
   LegendaryChainsaw.Extra.Semigroup.spec s
   LegendaryChainsaw.Json.Boolean.spec s
   LegendaryChainsaw.Json.Null.spec s
+  LegendaryChainsaw.Json.Number.spec s
   LegendaryChainsaw.Json.String.spec s
   LegendaryChainsaw.Version.spec s

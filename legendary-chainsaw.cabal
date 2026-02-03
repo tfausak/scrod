@@ -1,0 +1,54 @@
+cabal-version: 3.12
+name: legendary-chainsaw
+version: 0.2026.2.3
+
+source-repository head
+  location: https://github.com/tfausak/legendary-chainsaw
+  type: git
+
+flag pedantic
+  default: False
+  manual: True
+
+common library
+  build-depends: base ^>=4.22.0
+  ghc-options:
+    -Weverything
+    -Wno-implicit-prelude
+    -Wno-missing-export-lists
+    -Wno-missing-safe-haskell-mode
+    -Wno-prepositive-qualified-module
+    -Wno-safe
+
+  if flag(pedantic)
+    ghc-options: -Werror
+
+common executable
+  import: library
+  build-depends: legendary-chainsaw
+  ghc-options:
+    -rtsopts
+    -threaded
+
+library
+  import: library
+  autogen-modules: PackageInfo_legendary_chainsaw
+  exposed-modules:
+    LegendaryChainsaw
+    LegendaryChainsaw.Executable
+    LegendaryChainsaw.TestSuite
+    LegendaryChainsaw.Version
+
+  hs-source-dirs: source/library
+  other-modules: PackageInfo_legendary_chainsaw
+
+test-suite legendary-chainsaw-test-suite
+  import: executable
+  hs-source-dirs: source/test-suite
+  main-is: Main.hs
+  type: exitcode-stdio-1.0
+
+executable legendary-chainsaw
+  import: executable
+  hs-source-dirs: source/executable
+  main-is: Main.hs

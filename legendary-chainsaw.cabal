@@ -16,6 +16,7 @@ common library
     -Weverything
     -Wno-all-missed-specialisations
     -Wno-implicit-prelude
+    -Wno-missing-deriving-strategies
     -Wno-missing-export-lists
     -Wno-missing-kind-signatures
     -Wno-missing-role-annotations
@@ -38,11 +39,17 @@ library
   import: library
   autogen-modules: PackageInfo_legendary_chainsaw
   build-depends:
+    bytestring ^>=0.12.2,
+    parsec ^>=3.1.18,
     template-haskell ^>=2.24.0
 
   exposed-modules:
     LegendaryChainsaw
     LegendaryChainsaw.Executable
+    LegendaryChainsaw.Extra.Builder
+    LegendaryChainsaw.Extra.Either
+    LegendaryChainsaw.Extra.Parsec
+    LegendaryChainsaw.Json.Null
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite
     LegendaryChainsaw.Version

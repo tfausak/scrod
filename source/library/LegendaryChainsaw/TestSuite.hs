@@ -15,6 +15,8 @@ import qualified LegendaryChainsaw.Json.Array
 import qualified LegendaryChainsaw.Json.Boolean
 import qualified LegendaryChainsaw.Json.Null
 import qualified LegendaryChainsaw.Json.Number
+import qualified LegendaryChainsaw.Json.Object
+import qualified LegendaryChainsaw.Json.Pair
 import qualified LegendaryChainsaw.Json.String
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
@@ -36,5 +38,7 @@ testSuite s = do
   LegendaryChainsaw.Json.Boolean.spec s
   LegendaryChainsaw.Json.Null.spec s
   LegendaryChainsaw.Json.Number.spec s
+  LegendaryChainsaw.Json.Object.spec s
+  LegendaryChainsaw.Json.Pair.spec s
   LegendaryChainsaw.Json.String.spec s
   LegendaryChainsaw.Version.spec s

@@ -54,6 +54,7 @@ library
     LegendaryChainsaw.Extra.Maybe
     LegendaryChainsaw.Extra.Parsec
     LegendaryChainsaw.Extra.Read
+    LegendaryChainsaw.Json.Boolean
     LegendaryChainsaw.Json.Null
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite

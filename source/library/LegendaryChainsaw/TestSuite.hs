@@ -7,6 +7,7 @@ import qualified LegendaryChainsaw.Extra.Either
 import qualified LegendaryChainsaw.Extra.Maybe
 import qualified LegendaryChainsaw.Extra.Parsec
 import qualified LegendaryChainsaw.Extra.Read
+import qualified LegendaryChainsaw.Json.Boolean
 import qualified LegendaryChainsaw.Json.Null
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
@@ -20,5 +21,6 @@ testSuite s = do
   LegendaryChainsaw.Extra.Maybe.spec s
   LegendaryChainsaw.Extra.Parsec.spec s
   LegendaryChainsaw.Extra.Read.spec s
+  LegendaryChainsaw.Json.Boolean.spec s
   LegendaryChainsaw.Json.Null.spec s
   LegendaryChainsaw.Version.spec s

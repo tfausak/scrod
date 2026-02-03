@@ -7,6 +7,7 @@ import qualified Data.ByteString.Builder as Builder
 import qualified LegendaryChainsaw.Decimal as Decimal
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
+import qualified LegendaryChainsaw.Extra.Read as Read
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
@@ -20,49 +21,44 @@ decode = do
   intPart <- decodeInt
   (fracPart, fracExp) <- decodeFrac
   expPart <- decodeExp
-
-  let scale :: Integer
-      scale = 10 ^ abs fracExp
-      combinedMantissa = sign (intPart * scale + fracPart)
-      combinedExp = fracExp + expPart
-  pure . MkNumber $ Decimal.mkDecimal combinedMantissa combinedExp
+  pure . MkNumber $ Decimal.mkDecimal
+    (sign $ intPart * (10 ^ abs fracExp) + fracPart)
+    (fracExp + expPart)
 
 decodeSign :: Parsec.Stream s m Char => Parsec.ParsecT s u m (Integer -> Integer)
 decodeSign = Parsec.option id (negate <$ Parsec.char '-')
 
 decodeInt :: Parsec.Stream s m Char => Parsec.ParsecT s u m Integer
 decodeInt = Parsec.choice
-  [ Parsec.try $ do
-      _ <- Parsec.char '0'
-      Parsec.notFollowedBy Parsec.digit
-      pure 0
+  [ 0 <$ Parsec.char '0' <* Parsec.notFollowedBy Parsec.digit
   , do
       first <- Parsec.satisfy $ \ c -> c >= '1' && c <= '9'
       rest <- Parsec.many Parsec.digit
-      pure . read $ first : rest
+      maybe (fail "invalid integer") pure . Read.readM $ first : rest
   ]
 
 decodeFrac :: Parsec.Stream s m Char => Parsec.ParsecT s u m (Integer, Integer)
 decodeFrac = Parsec.option (0, 0) $ do
-  _ <- Parsec.char '.'
-  digits <- Parsec.many1 Parsec.digit
-  let fracValue = read digits :: Integer
-  let fracExp :: Integer
-      fracExp = negate . fromIntegral $ length digits
-  pure (fracValue, fracExp)
+  digits <- Parsec.char '.' *> Parsec.many1 Parsec.digit
+  fracValue <- maybe (fail "invalid fraction") pure $ Read.readM digits
+  pure (fracValue, negate . fromIntegral $ length digits)
 
 decodeExp :: Parsec.Stream s m Char => Parsec.ParsecT s u m Integer
 decodeExp = Parsec.option 0 $ do
   _ <- Parsec.oneOf "eE"
-  expSign <- Parsec.option id ((id <$ Parsec.char '+') Parsec.<|> (negate <$ Parsec.char '-'))
+  expSign <- Parsec.option id $ Parsec.choice
+    [ id <$ Parsec.char '+'
+    , negate <$ Parsec.char '-'
+    ]
   expDigits <- Parsec.many1 Parsec.digit
-  pure . expSign . read $ expDigits
+  maybe (fail "invalid exponent") (pure . expSign) $ Read.readM expDigits
 
 encode :: Number -> Builder.Builder
-encode (MkNumber decimal) =
-  let m = Decimal.mantissa decimal
-      e = Decimal.exponent decimal
-  in Builder.stringUtf8 (show m) <> Builder.char8 'e' <> Builder.stringUtf8 (show e)
+encode n =
+  let d = unwrap n
+  in Builder.integerDec (Decimal.mantissa d)
+    <> Builder.charUtf8 'e'
+    <> Builder.integerDec (Decimal.exponent d)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

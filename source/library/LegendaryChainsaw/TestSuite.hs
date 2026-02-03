@@ -6,10 +6,12 @@ import qualified LegendaryChainsaw.Executable.Flag
 import qualified LegendaryChainsaw.Extra.Builder
 import qualified LegendaryChainsaw.Extra.Either
 import qualified LegendaryChainsaw.Extra.Maybe
+import qualified LegendaryChainsaw.Extra.Monoid
 import qualified LegendaryChainsaw.Extra.Ord
 import qualified LegendaryChainsaw.Extra.Parsec
 import qualified LegendaryChainsaw.Extra.Read
 import qualified LegendaryChainsaw.Extra.Semigroup
+import qualified LegendaryChainsaw.Json.Array
 import qualified LegendaryChainsaw.Json.Boolean
 import qualified LegendaryChainsaw.Json.Null
 import qualified LegendaryChainsaw.Json.Number
@@ -25,10 +27,12 @@ testSuite s = do
   LegendaryChainsaw.Extra.Builder.spec s
   LegendaryChainsaw.Extra.Either.spec s
   LegendaryChainsaw.Extra.Maybe.spec s
+  LegendaryChainsaw.Extra.Monoid.spec s
   LegendaryChainsaw.Extra.Ord.spec s
   LegendaryChainsaw.Extra.Parsec.spec s
   LegendaryChainsaw.Extra.Read.spec s
   LegendaryChainsaw.Extra.Semigroup.spec s
+  LegendaryChainsaw.Json.Array.spec s
   LegendaryChainsaw.Json.Boolean.spec s
   LegendaryChainsaw.Json.Null.spec s
   LegendaryChainsaw.Json.Number.spec s

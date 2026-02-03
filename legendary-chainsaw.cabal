@@ -16,6 +16,7 @@ common library
     -Weverything
     -Wno-all-missed-specialisations
     -Wno-implicit-prelude
+    -Wno-missed-specialisations
     -Wno-missing-deriving-strategies
     -Wno-missing-export-lists
     -Wno-missing-kind-signatures
@@ -54,10 +55,12 @@ library
     LegendaryChainsaw.Extra.Builder
     LegendaryChainsaw.Extra.Either
     LegendaryChainsaw.Extra.Maybe
+    LegendaryChainsaw.Extra.Monoid
     LegendaryChainsaw.Extra.Ord
     LegendaryChainsaw.Extra.Parsec
     LegendaryChainsaw.Extra.Read
     LegendaryChainsaw.Extra.Semigroup
+    LegendaryChainsaw.Json.Array
     LegendaryChainsaw.Json.Boolean
     LegendaryChainsaw.Json.Null
     LegendaryChainsaw.Json.Number

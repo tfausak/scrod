@@ -67,6 +67,7 @@ library
     LegendaryChainsaw.Json.Object
     LegendaryChainsaw.Json.Pair
     LegendaryChainsaw.Json.String
+    LegendaryChainsaw.Json.Value
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite
     LegendaryChainsaw.Version

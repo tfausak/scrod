@@ -18,6 +18,7 @@ import qualified LegendaryChainsaw.Json.Number
 import qualified LegendaryChainsaw.Json.Object
 import qualified LegendaryChainsaw.Json.Pair
 import qualified LegendaryChainsaw.Json.String
+import qualified LegendaryChainsaw.Json.Value
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
 
@@ -41,4 +42,5 @@ testSuite s = do
   LegendaryChainsaw.Json.Object.spec s
   LegendaryChainsaw.Json.Pair.spec s
   LegendaryChainsaw.Json.String.spec s
+  LegendaryChainsaw.Json.Value.spec s
   LegendaryChainsaw.Version.spec s

@@ -31,30 +31,30 @@ encode b = Semigroup.around (Builder.charUtf8 '{') (Builder.charUtf8 '}')
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
-  let pair :: String -> a -> Pair.Pair a
-      pair = Pair.MkPair . String.MkString . Text.pack
+  let object :: [(String, a)] -> Object a
+      object = MkObject . fmap (\ (n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
 
   Spec.named s 'decode $ do
     let p :: Parsec.Stream t m Char => Parsec.ParsecT t u m Prelude.String
         p = Parsec.many1 Parsec.digit
 
     Spec.it s "succeeds with an empty object" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{}") . Just $ MkObject []
+      Spec.assertEq s (Parsec.parseString (decode p) "{}") . Just $ object []
 
     Spec.it s "succeeds with an empty object with blank space" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{ }") . Just $ MkObject []
+      Spec.assertEq s (Parsec.parseString (decode p) "{ }") . Just $ object []
 
     Spec.it s "succeeds with a single pair" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{\"a\":1}") . Just $ MkObject [pair "a" "1"]
+      Spec.assertEq s (Parsec.parseString (decode p) "{\"a\":1}") . Just $ object [("a", "1")]
 
     Spec.it s "succeeds with a single pair with blank space" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{ \"a\":1 }") . Just $ MkObject [pair "a" "1"]
+      Spec.assertEq s (Parsec.parseString (decode p) "{ \"a\":1 }") . Just $ object [("a", "1")]
 
     Spec.it s "succeeds with multiple pairs" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{\"a\":1,\"b\":2}") . Just $ MkObject [pair "a" "1", pair "b" "2"]
+      Spec.assertEq s (Parsec.parseString (decode p) "{\"a\":1,\"b\":2}") . Just $ object [("a", "1"), ("b", "2")]
 
     Spec.it s "succeeds with multiple pairs with blank space" $ do
-      Spec.assertEq s (Parsec.parseString (decode p) "{ \"a\":1 , \"b\":2 }") . Just $ MkObject [pair "a" "1", pair "b" "2"]
+      Spec.assertEq s (Parsec.parseString (decode p) "{ \"a\":1 , \"b\":2 }") . Just $ object [("a", "1"), ("b", "2")]
 
     Spec.it s "fails with leading comma" $ do
       Spec.assertEq s (Parsec.parseString (decode p) "{,\"a\":1}") Nothing
@@ -75,8 +75,7 @@ spec s = do
       Spec.assertEq s (Builder.toString . encode b $ MkObject []) "{}"
 
     Spec.it s "encodes single pair" $ do
-      Spec.assertEq s (Builder.toString . encode b $ MkObject [pair "a" 1]) "{\"a\":1}"
+      Spec.assertEq s (Builder.toString . encode b $ object [("a", 1)]) "{\"a\":1}"
 
     Spec.it s "encodes multiple pairs" $ do
-      Spec.assertEq s (Builder.toString . encode b $ MkObject [pair "a" 1, pair "b" 2]) "{\"a\":1,\"b\":2}"
-
+      Spec.assertEq s (Builder.toString . encode b $ object [("a", 1), ("b", 2)]) "{\"a\":1,\"b\":2}"

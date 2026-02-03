@@ -2,12 +2,11 @@
 
 module LegendaryChainsaw.Extra.Parsec where
 
-import qualified Data.Functor.Identity as Identity
 import qualified LegendaryChainsaw.Extra.Either as Either
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
-parseString :: Parsec.ParsecT String () Identity.Identity a -> String -> Maybe a
+parseString :: Parsec.Parsec String () a -> String -> Maybe a
 parseString p = Either.hush . Parsec.parse p ""
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()

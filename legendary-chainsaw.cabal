@@ -14,11 +14,15 @@ common library
   build-depends: base ^>=4.22.0
   ghc-options:
     -Weverything
+    -Wno-all-missed-specialisations
     -Wno-implicit-prelude
     -Wno-missing-export-lists
+    -Wno-missing-kind-signatures
+    -Wno-missing-role-annotations
     -Wno-missing-safe-haskell-mode
     -Wno-prepositive-qualified-module
     -Wno-safe
+    -Wno-unsafe
 
   if flag(pedantic)
     ghc-options: -Werror
@@ -33,9 +37,13 @@ common executable
 library
   import: library
   autogen-modules: PackageInfo_legendary_chainsaw
+  build-depends:
+    template-haskell ^>=2.24.0
+
   exposed-modules:
     LegendaryChainsaw
     LegendaryChainsaw.Executable
+    LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite
     LegendaryChainsaw.Version
 
@@ -44,6 +52,11 @@ library
 
 test-suite legendary-chainsaw-test-suite
   import: executable
+  build-depends:
+    transformers ^>=0.6.1,
+    tasty ^>=1.5.3,
+    tasty-hunit ^>=0.10.2,
+
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   type: exitcode-stdio-1.0

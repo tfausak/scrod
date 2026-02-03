@@ -1,4 +1,5 @@
+import qualified GHC.Stack as Stack
 import qualified LegendaryChainsaw
 
-main :: IO ()
+main :: Stack.HasCallStack => IO ()
 main = LegendaryChainsaw.executable

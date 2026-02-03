@@ -40,15 +40,20 @@ library
   autogen-modules: PackageInfo_legendary_chainsaw
   build-depends:
     bytestring ^>=0.12.2,
+    exceptions ^>=0.10.11,
     parsec ^>=3.1.18,
     template-haskell ^>=2.24.0
 
   exposed-modules:
     LegendaryChainsaw
     LegendaryChainsaw.Executable
+    LegendaryChainsaw.Executable.Config
+    LegendaryChainsaw.Executable.Flag
     LegendaryChainsaw.Extra.Builder
     LegendaryChainsaw.Extra.Either
+    LegendaryChainsaw.Extra.Maybe
     LegendaryChainsaw.Extra.Parsec
+    LegendaryChainsaw.Extra.Read
     LegendaryChainsaw.Json.Null
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite

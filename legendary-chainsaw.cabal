@@ -70,6 +70,7 @@ library
   exposed-modules:
     LegendaryChainsaw
     LegendaryChainsaw.Convert.FromHaddock
+    LegendaryChainsaw.Convert.ToJson
     LegendaryChainsaw.Core.Category
     LegendaryChainsaw.Core.Column
     LegendaryChainsaw.Core.Doc

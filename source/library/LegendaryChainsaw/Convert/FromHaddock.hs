@@ -76,15 +76,15 @@ convertDoc doc = case doc of
   Haddock.DocAName s -> Doc.AName $ Text.pack s
   Haddock.DocProperty s -> Doc.Property $ Text.pack s
   Haddock.DocExamples es ->
-    Doc.Examples
-      $ fmap
-          ( \e ->
-              Example.MkExample
-                { Example.expression = Text.pack $ Haddock.exampleExpression e,
-                  Example.result = Text.pack <$> Haddock.exampleResult e
-                }
-          )
-          es
+    Doc.Examples $
+      fmap
+        ( \e ->
+            Example.MkExample
+              { Example.expression = Text.pack $ Haddock.exampleExpression e,
+                Example.result = Text.pack <$> Haddock.exampleResult e
+              }
+        )
+        es
   Haddock.DocHeader h ->
     Doc.Header
       Header.MkHeader

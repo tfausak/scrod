@@ -27,6 +27,45 @@ data Value
   | Object (Object.Object Value)
   deriving (Eq, Ord, Show)
 
+null :: Value
+null = Null Null.MkNull
+
+optional :: (a -> Value) -> Maybe a -> Value
+optional = maybe LegendaryChainsaw.Json.Value.null
+
+boolean :: Bool -> Value
+boolean = Boolean . Boolean.MkBoolean
+
+number :: Integer -> Integer -> Value
+number m = Number . Number.MkNumber . Decimal.mkDecimal m
+
+integer :: Integer -> Value
+integer = flip number 0
+
+integral :: (Integral a) => a -> Value
+integral = integer . toInteger
+
+text :: Text.Text -> Value
+text = String . String.MkString
+
+string :: String -> Value
+string = text . Text.pack
+
+array :: [Value] -> Value
+array = Array . Array.MkArray
+
+arrayOf :: (a -> Value) -> [a] -> Value
+arrayOf f = array . fmap f
+
+pair :: String -> a -> Pair.Pair a
+pair = Pair.MkPair . String.MkString . Text.pack
+
+object :: [(String, Value)] -> Value
+object = Object . Object.MkObject . fmap (uncurry pair)
+
+tagged :: String -> Value -> Value
+tagged t v = object [("type", string t), ("value", v)]
+
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Value
 decode =
   Parsec.between (Parsec.many Parsec.blank) (Parsec.many Parsec.blank) $
@@ -50,12 +89,7 @@ encode v = case v of
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
-  let null_ = Null Null.MkNull
-      boolean = Boolean . Boolean.MkBoolean
-      number m = Number . Number.MkNumber . Decimal.mkDecimal m
-      string = String . String.MkString . Text.pack
-      array = Array . Array.MkArray
-      object = Object . Object.MkObject . fmap (\(n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
+  let null_ = LegendaryChainsaw.Json.Value.null
 
   Spec.named s 'decode $ do
     Spec.it s "parses null" $ do
@@ -77,7 +111,7 @@ spec s = do
       Spec.assertEq s (Parsec.parseString decode "[]") . Just $ array []
 
     Spec.it s "parses array with values" $ do
-      Spec.assertEq s (Parsec.parseString decode "[1, \"a\", true]") . Just $ array [number 1 0, string "a", Boolean (Boolean.MkBoolean True)]
+      Spec.assertEq s (Parsec.parseString decode "[1, \"a\", true]") . Just $ array [number 1 0, string "a", boolean True]
 
     Spec.it s "parses empty object" $ do
       Spec.assertEq s (Parsec.parseString decode "{}") . Just $ object []

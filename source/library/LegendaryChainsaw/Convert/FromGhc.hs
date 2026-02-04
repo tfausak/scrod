@@ -3,12 +3,12 @@
 module LegendaryChainsaw.Convert.FromGhc where
 
 import qualified Control.Monad.Trans.State.Strict as State
-import qualified Data.Version
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
+import qualified Data.Version
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
@@ -59,7 +59,7 @@ import qualified Numeric.Natural as Natural
 import qualified PackageInfo_legendary_chainsaw as PackageInfo
 
 -- | State for tracking item keys during conversion.
-data ConversionState = MkConversionState
+newtype ConversionState = MkConversionState
   { nextKey :: Natural.Natural
   }
 
@@ -109,7 +109,7 @@ fromGhc ((language, extensions), lHsModule) = do
 versionFromBase :: Data.Version.Version -> Maybe Version.Version
 versionFromBase v = case Data.Version.versionBranch v of
   [] -> Nothing
-  x : xs -> Just . Version.MkVersion $ fmap fromIntegral $ x NonEmpty.:| xs
+  x : xs -> (Just . Version.MkVersion) . fmap fromIntegral $ x NonEmpty.:| xs
 
 -- | Convert GHC language to our Language type.
 languageFromGhc :: Session.Language -> Language.Language
@@ -219,7 +219,7 @@ warningTxtToWarning :: Warnings.WarningTxt Ghc.GhcPs -> Warning.Warning
 warningTxtToWarning warningTxt =
   Warning.MkWarning
     { Warning.category = categoryFromGhc $ Warnings.warningTxtCategory warningTxt,
-        Warning.value =
+      Warning.value =
         Text.intercalate (Text.singleton '\n')
           . fmap extractMessage
           $ Warnings.warningTxtMessage warningTxt
@@ -227,12 +227,11 @@ warningTxtToWarning warningTxt =
 
 -- | Convert GHC WarningCategory to our Category type.
 categoryFromGhc :: Warnings.WarningCategory -> Category.Category
-categoryFromGhc wc =
+categoryFromGhc =
   Category.MkCategory
     . Text.pack
     . Outputable.showSDocUnsafe
     . Outputable.ppr
-    $ wc
 
 -- | Extract message text from a located doc string.
 extractMessage ::
@@ -431,7 +430,7 @@ extractItemsM lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
       declsWithDocs = associateDocs decls
-  fmap concat $ traverse (uncurry convertDeclWithDocMaybeM) declsWithDocs
+  concat <$> traverse (uncurry convertDeclWithDocMaybeM) declsWithDocs
 
 -- | Associate documentation comments with their target declarations.
 associateDocs ::
@@ -505,12 +504,12 @@ convertDeclWithDocMaybeM ::
 convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
   Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
-  Syntax.DocD {} -> fmap Maybe.maybeToList $ convertDeclSimpleM lDecl
+  Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc lDecl sig
   Syntax.KindSigD _ kindSig ->
     let sig = Just $ extractKindSigSignature kindSig
-     in fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractDeclName lDecl) Nothing lDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.
 convertTyClDeclWithDocM ::
@@ -530,7 +529,7 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
     methodItems <- convertClassSigsM parentKey sigs
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
 
 -- | Convert a signature declaration.
 convertSigDeclM ::
@@ -541,11 +540,11 @@ convertSigDeclM ::
 convertSigDeclM doc lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = extractSigSignature sig
-     in fmap Maybe.catMaybes $ traverse (convertSigNameM doc sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc sigText) names
   Syntax.PatSynSig _ names _ ->
     let sigText = extractSigSignature sig
-     in fmap Maybe.catMaybes $ traverse (convertSigNameM doc sigText) names
-  _ -> fmap Maybe.maybeToList $ convertDeclWithDocM Nothing doc (extractSigName sig) Nothing lDecl
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc sigText) names
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
 convertSigNameM ::
@@ -566,7 +565,7 @@ mkItemM ::
   ItemKind.ItemKind ->
   ConvertM (Maybe (Located.Located Item.Item))
 mkItemM srcSpan parentKey itemName doc sig itemKind =
-  fmap (fmap fst) $ mkItemWithKeyM srcSpan parentKey itemName doc sig itemKind
+  fmap fst <$> mkItemWithKeyM srcSpan parentKey itemName doc sig itemKind
 
 -- | Create an Item and return both the item and its allocated key.
 mkItemWithKeyM ::
@@ -695,7 +694,7 @@ itemKindFromForeignDecl foreignDecl = case foreignDecl of
 convertRuleDeclsM ::
   Syntax.RuleDecls Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-convertRuleDeclsM (Syntax.HsRules _ rules) = fmap Maybe.catMaybes $ traverse convertRuleDeclM rules
+convertRuleDeclsM (Syntax.HsRules _ rules) = Maybe.catMaybes <$> traverse convertRuleDeclM rules
 
 -- | Convert a single rule declaration.
 convertRuleDeclM ::
@@ -719,7 +718,7 @@ convertClassSigM ::
 convertClassSigM parentKey lSig = case SrcLoc.unLoc lSig of
   Syntax.ClassOpSig _ _ names _ ->
     let sig = extractSigSignature $ SrcLoc.unLoc lSig
-     in fmap Maybe.catMaybes $ traverse (convertIdPM parentKey sig) names
+     in Maybe.catMaybes <$> traverse (convertIdPM parentKey sig) names
   _ -> pure []
 
 -- | Convert an identifier with parent key and signature.
@@ -760,7 +759,7 @@ convertDataDefnM ::
   Syntax.HsDataDefn Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
 convertDataDefnM parentKey dataDefn = do
-  conItems <- fmap concat $ traverse (convertConDeclM parentKey) $ dataDefnConsList $ Syntax.dd_cons dataDefn
+  conItems <- concat <$> (traverse (convertConDeclM parentKey) . dataDefnConsList $ Syntax.dd_cons dataDefn)
   derivItems <- convertDerivingClausesM parentKey $ Syntax.dd_derivs dataDefn
   pure $ conItems <> derivItems
 
@@ -793,8 +792,8 @@ convertDerivClauseTysM ::
   Syntax.DerivClauseTys Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
 convertDerivClauseTysM parentKey dct = case dct of
-  Syntax.DctSingle _ lSigTy -> fmap Maybe.maybeToList $ convertDerivedTypeM parentKey lSigTy
-  Syntax.DctMulti _ lSigTys -> fmap Maybe.catMaybes $ traverse (convertDerivedTypeM parentKey) lSigTys
+  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList <$> convertDerivedTypeM parentKey lSigTy
+  Syntax.DctMulti _ lSigTys -> Maybe.catMaybes <$> traverse (convertDerivedTypeM parentKey) lSigTys
 
 -- | Convert a derived type to an item.
 convertDerivedTypeM ::
@@ -853,7 +852,7 @@ extractConDeclDoc conDecl = case conDecl of
 
 -- | Extract signature from a constructor declaration.
 extractConDeclSignature :: Syntax.ConDecl Ghc.GhcPs -> Maybe Text.Text
-extractConDeclSignature conDecl = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ conDecl
+extractConDeclSignature = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
 
 -- | Extract fields from a constructor declaration.
 extractFieldsFromConDeclM ::
@@ -982,7 +981,7 @@ buildMergeMap ::
 buildMergeMap items =
   let namedCandidates =
         Maybe.mapMaybe
-          (\item -> fmap (\n -> (n, item NonEmpty.:| [])) $ Item.name $ Located.value item)
+          (\item -> fmap (\n -> (n, item NonEmpty.:| [])) . Item.name $ Located.value item)
           (filter isMergeCandidate items)
       groups = Map.fromListWith (<>) namedCandidates
    in Map.map mergeItemGroup groups

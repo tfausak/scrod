@@ -20,6 +20,8 @@ import qualified LegendaryChainsaw.Extra.Ord
 import qualified LegendaryChainsaw.Extra.Parsec
 import qualified LegendaryChainsaw.Extra.Read
 import qualified LegendaryChainsaw.Extra.Semigroup
+import qualified LegendaryChainsaw.Ghc.OnOff
+import qualified LegendaryChainsaw.Ghc.Parse
 import qualified LegendaryChainsaw.Json.Array
 import qualified LegendaryChainsaw.Json.Boolean
 import qualified LegendaryChainsaw.Json.Null
@@ -66,6 +68,8 @@ testSuite s = do
   LegendaryChainsaw.Extra.Parsec.spec s
   LegendaryChainsaw.Extra.Read.spec s
   LegendaryChainsaw.Extra.Semigroup.spec s
+  LegendaryChainsaw.Ghc.OnOff.spec s
+  LegendaryChainsaw.Ghc.Parse.spec s
   LegendaryChainsaw.Json.Array.spec s
   LegendaryChainsaw.Json.Boolean.spec s
   LegendaryChainsaw.Json.Null.spec s

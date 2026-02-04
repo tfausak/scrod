@@ -44,7 +44,7 @@ decodeFrac :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m (Integer, Integer
 decodeFrac = Parsec.option (0, 0) $ do
   digits <- Parsec.char '.' *> Parsec.many1 Parsec.digit
   fracValue <- maybe (fail "invalid fraction") pure $ Read.readM digits
-  pure (fracValue, negate . fromIntegral $ length digits)
+  pure (fracValue, negate . toInteger $ length digits)
 
 decodeExp :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 decodeExp = Parsec.option 0 $ do

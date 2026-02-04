@@ -62,8 +62,9 @@ encode :: Number -> Builder.Builder
 encode n =
   let d = unwrap n
    in Builder.integerDec (Decimal.mantissa d)
-        <> Builder.charUtf8 'e'
-        <> Builder.integerDec (Decimal.exponent d)
+        <> if Decimal.exponent d == 0
+          then mempty
+          else Builder.charUtf8 'e' <> Builder.integerDec (Decimal.exponent d)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -118,13 +119,13 @@ spec s = do
 
   Spec.named s 'encode $ do
     Spec.it s "encodes zero" $ do
-      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal 0 0) "0e0"
+      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal 0 0) "0"
 
     Spec.it s "encodes positive integer" $ do
-      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal 123 0) "123e0"
+      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal 123 0) "123"
 
     Spec.it s "encodes negative integer" $ do
-      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal (-123) 0) "-123e0"
+      Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal (-123) 0) "-123"
 
     Spec.it s "encodes with positive exponent" $ do
       Spec.assertEq s (Builder.toString . encode . MkNumber $ Decimal.mkDecimal 123 2) "123e2"

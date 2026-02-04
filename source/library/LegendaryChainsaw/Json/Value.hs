@@ -142,7 +142,7 @@ spec s = do
       Spec.assertEq s (Builder.toString . encode $ boolean False) "false"
 
     Spec.it s "encodes number" $ do
-      Spec.assertEq s (Builder.toString . encode $ number 123 0) "123e0"
+      Spec.assertEq s (Builder.toString . encode $ number 123 0) "123"
 
     Spec.it s "encodes string" $ do
       Spec.assertEq s (Builder.toString . encode $ string "hello") "\"hello\""
@@ -151,13 +151,13 @@ spec s = do
       Spec.assertEq s (Builder.toString . encode $ array []) "[]"
 
     Spec.it s "encodes array with values" $ do
-      Spec.assertEq s (Builder.toString . encode $ array [number 1 0, string "a"]) "[1e0,\"a\"]"
+      Spec.assertEq s (Builder.toString . encode $ array [number 1 0, string "a"]) "[1,\"a\"]"
 
     Spec.it s "encodes empty object" $ do
       Spec.assertEq s (Builder.toString . encode $ object []) "{}"
 
     Spec.it s "encodes object with values" $ do
-      Spec.assertEq s (Builder.toString . encode $ object [("a", number 1 0)]) "{\"a\":1e0}"
+      Spec.assertEq s (Builder.toString . encode $ object [("a", number 1 0)]) "{\"a\":1}"
 
     Spec.it s "encodes nested structure" $ do
-      Spec.assertEq s (Builder.toString . encode $ object [("items", array [number 1 0])]) "{\"items\":[1e0]}"
+      Spec.assertEq s (Builder.toString . encode $ object [("items", array [number 1 0])]) "{\"items\":[1]}"

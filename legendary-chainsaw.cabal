@@ -68,6 +68,40 @@ library
   -- cabal-gild: discover source/library
   exposed-modules:
     LegendaryChainsaw
+    LegendaryChainsaw.Core.Category
+    LegendaryChainsaw.Core.Column
+    LegendaryChainsaw.Core.Doc
+    LegendaryChainsaw.Core.Example
+    LegendaryChainsaw.Core.Export
+    LegendaryChainsaw.Core.ExportIdentifier
+    LegendaryChainsaw.Core.ExportName
+    LegendaryChainsaw.Core.ExportNameKind
+    LegendaryChainsaw.Core.Extension
+    LegendaryChainsaw.Core.Header
+    LegendaryChainsaw.Core.Hyperlink
+    LegendaryChainsaw.Core.Identifier
+    LegendaryChainsaw.Core.Item
+    LegendaryChainsaw.Core.ItemKey
+    LegendaryChainsaw.Core.ItemKind
+    LegendaryChainsaw.Core.ItemName
+    LegendaryChainsaw.Core.Language
+    LegendaryChainsaw.Core.Level
+    LegendaryChainsaw.Core.Line
+    LegendaryChainsaw.Core.Located
+    LegendaryChainsaw.Core.Location
+    LegendaryChainsaw.Core.ModLink
+    LegendaryChainsaw.Core.Module
+    LegendaryChainsaw.Core.ModuleName
+    LegendaryChainsaw.Core.Namespace
+    LegendaryChainsaw.Core.PackageName
+    LegendaryChainsaw.Core.Picture
+    LegendaryChainsaw.Core.Section
+    LegendaryChainsaw.Core.Since
+    LegendaryChainsaw.Core.Subordinates
+    LegendaryChainsaw.Core.Table
+    LegendaryChainsaw.Core.TableCell
+    LegendaryChainsaw.Core.Version
+    LegendaryChainsaw.Core.Warning
     LegendaryChainsaw.Css.AtRule
     LegendaryChainsaw.Css.Block
     LegendaryChainsaw.Css.BlockContent

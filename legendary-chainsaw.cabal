@@ -112,9 +112,9 @@ library
     LegendaryChainsaw.Css.Selector
     LegendaryChainsaw.Css.Stylesheet
     LegendaryChainsaw.Decimal
-    LegendaryChainsaw.Executable
     LegendaryChainsaw.Executable.Config
     LegendaryChainsaw.Executable.Flag
+    LegendaryChainsaw.Executable.Main
     LegendaryChainsaw.Extra.Builder
     LegendaryChainsaw.Extra.Either
     LegendaryChainsaw.Extra.Maybe

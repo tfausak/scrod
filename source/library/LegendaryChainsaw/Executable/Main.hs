@@ -1,4 +1,4 @@
-module LegendaryChainsaw.Executable where
+module LegendaryChainsaw.Executable.Main where
 
 import qualified Control.Monad as Monad
 import qualified Data.Version as Version

@@ -24,6 +24,16 @@ import qualified LegendaryChainsaw.JsonPointer.Pointer
 import qualified LegendaryChainsaw.JsonPointer.Token
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
+import qualified LegendaryChainsaw.Xml.Attribute
+import qualified LegendaryChainsaw.Xml.Comment
+import qualified LegendaryChainsaw.Xml.Content
+import qualified LegendaryChainsaw.Xml.Declaration
+import qualified LegendaryChainsaw.Xml.Document
+import qualified LegendaryChainsaw.Xml.Element
+import qualified LegendaryChainsaw.Xml.Instruction
+import qualified LegendaryChainsaw.Xml.Misc
+import qualified LegendaryChainsaw.Xml.Name
+import qualified LegendaryChainsaw.Xml.Text
 
 testSuite :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 testSuite s = do
@@ -50,3 +60,13 @@ testSuite s = do
   LegendaryChainsaw.JsonPointer.Pointer.spec s
   LegendaryChainsaw.JsonPointer.Token.spec s
   LegendaryChainsaw.Version.spec s
+  LegendaryChainsaw.Xml.Attribute.spec s
+  LegendaryChainsaw.Xml.Comment.spec s
+  LegendaryChainsaw.Xml.Content.spec s
+  LegendaryChainsaw.Xml.Declaration.spec s
+  LegendaryChainsaw.Xml.Document.spec s
+  LegendaryChainsaw.Xml.Element.spec s
+  LegendaryChainsaw.Xml.Instruction.spec s
+  LegendaryChainsaw.Xml.Misc.spec s
+  LegendaryChainsaw.Xml.Name.spec s
+  LegendaryChainsaw.Xml.Text.spec s

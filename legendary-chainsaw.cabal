@@ -88,6 +88,16 @@ library
     LegendaryChainsaw.Spec
     LegendaryChainsaw.TestSuite
     LegendaryChainsaw.Version
+    LegendaryChainsaw.Xml.Attribute
+    LegendaryChainsaw.Xml.Comment
+    LegendaryChainsaw.Xml.Content
+    LegendaryChainsaw.Xml.Declaration
+    LegendaryChainsaw.Xml.Document
+    LegendaryChainsaw.Xml.Element
+    LegendaryChainsaw.Xml.Instruction
+    LegendaryChainsaw.Xml.Misc
+    LegendaryChainsaw.Xml.Name
+    LegendaryChainsaw.Xml.Text
 
   hs-source-dirs: source/library
   other-modules: PackageInfo_legendary_chainsaw

@@ -1,0 +1,104 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
+    needs: meta
+    strategy:
+      matrix:
+        os:
+          - macos
+          - ubuntu
+          - windows
+    steps:
+      - uses: actions/checkout@v6
+      - id: haskell
+        uses: haskell-actions/setup@v2
+        with:
+          ghc-version: 9.14.1
+      - run: mkdir artifact
+      - run: ghc-pkg list
+      - run: cabal sdist --output-dir artifact
+      - run: cabal configure --enable-tests --flags=pedantic --jobs
+      - run: cat cabal.project.local
+      - run: cp cabal.project.local artifact
+      - run: cabal freeze
+      - run: cat cabal.project.freeze
+      - run: cp cabal.project.freeze artifact
+      - run: cabal outdated --v2-freeze-file
+      - uses: actions/cache@v5
+        with:
+          key: ${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+          path: ${{ steps.haskell.outputs.cabal-store }}
+          restore-keys: ${{ runner.os }}-
+      - run: cabal build --only-download
+      - run: cabal build --only-dependencies
+      - run: cabal build
+      - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact
+      - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
+      - run: tar --create --file artifact.tar --verbose artifact
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+          path: artifact.tar
+  cabal:
+    name: Cabal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: cabal check
+  gild:
+    name: Gild
+    runs-on: ubuntu-latest
+    needs: meta
+    steps:
+      - uses: actions/checkout@v6
+      - uses: tfausak/cabal-gild-setup-action@v2
+      - run: cabal-gild --input ${{ needs.meta.outputs.name }}.cabal --mode check
+  hlint:
+    name: HLint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: haskell-actions/hlint-setup@v2
+      - uses: haskell-actions/hlint-run@v2
+        with:
+          fail-on: status
+  meta:
+    name: Meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - id: name
+        run: "echo name=$( grep ^name: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+      - id: version
+        run: "echo version=$( grep ^version: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+      version: ${{ steps.version.outputs.version }}
+  ormolu:
+    name: Ormolu
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: haskell-actions/run-ormolu@v17
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - meta
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+      - run: tar --extract --file artifact.tar --verbose
+      - run: artifact/${{ needs.meta.outputs.name }}-test-suite

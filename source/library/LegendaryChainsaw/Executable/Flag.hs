@@ -22,8 +22,8 @@ fromArguments arguments = do
 
 optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
-  [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help."
-  , GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version."
+  [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
+    GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version."
   ]
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()

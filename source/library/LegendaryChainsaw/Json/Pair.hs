@@ -4,24 +4,24 @@
 module LegendaryChainsaw.Json.Pair where
 
 import qualified Data.ByteString.Builder as Builder
+import qualified Data.Text as Text
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
-import qualified Data.Text as Text
 import qualified LegendaryChainsaw.Json.String as String
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
 data Pair a = MkPair
-  { name :: String.String
-  , value :: a
-  } deriving (Eq, Ord, Show)
+  { name :: String.String,
+    value :: a
+  }
+  deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Pair a)
-decode p = do
-  n <- String.decode <* Parsec.many Parsec.blank
-  _ <- Parsec.char ':' <* Parsec.many Parsec.blank
-  v <- p
-  pure $ MkPair n v
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Pair a)
+decode p =
+  MkPair
+    <$> (String.decode <* Parsec.many Parsec.blank)
+    <*> (Parsec.char ':' *> Parsec.many Parsec.blank *> p)
 
 encode :: (a -> Builder.Builder) -> Pair a -> Builder.Builder
 encode b p = String.encode (name p) <> Builder.charUtf8 ':' <> b (value p)
@@ -32,7 +32,7 @@ spec s = do
       pair = MkPair . String.MkString . Text.pack
 
   Spec.named s 'decode $ do
-    let p :: Parsec.Stream t m Char => Parsec.ParsecT t u m String
+    let p :: (Parsec.Stream t m Char) => Parsec.ParsecT t u m String
         p = Parsec.many1 Parsec.digit
 
     Spec.it s "succeeds with simple pair" $ do
@@ -61,4 +61,3 @@ spec s = do
 
     Spec.it s "encodes simple pair" $ do
       Spec.assertEq s (Builder.toString . encode b $ pair "a" 1) "\"a\":1"
-

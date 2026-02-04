@@ -4,9 +4,9 @@
 module LegendaryChainsaw.Json.String where
 
 import qualified Control.Monad as Monad
+import qualified Data.ByteString.Builder as Builder
 import qualified Data.Text as Text
 import qualified Data.Word as Word
-import qualified Data.ByteString.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Ord as Ord
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
@@ -17,36 +17,40 @@ import qualified Text.Parsec as Parsec
 
 newtype String = MkString
   { unwrap :: Text.Text
-  } deriving (Eq, Ord, Show)
+  }
+  deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m LegendaryChainsaw.Json.String.String
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m LegendaryChainsaw.Json.String.String
 decode = MkString . Text.pack <$> Parsec.between (Parsec.char '"') (Parsec.char '"') (Parsec.many decodeChar)
 
-decodeChar :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
-decodeChar = Parsec.choice
-  [ decodeEscapedChar
-  , decodeUnescapedChar
-  ]
+decodeChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
+decodeChar =
+  Parsec.choice
+    [ decodeEscapedChar,
+      decodeUnescapedChar
+    ]
 
-decodeEscapedChar :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
-decodeEscapedChar = Parsec.choice
-  [ decodeShortEscapedChar
-  , decodeLongEscapedChar
-  ]
+decodeEscapedChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
+decodeEscapedChar =
+  Parsec.choice
+    [ decodeShortEscapedChar,
+      decodeLongEscapedChar
+    ]
 
-decodeShortEscapedChar :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
-decodeShortEscapedChar = Parsec.choice
-  [ '"' <$ Parsec.string' "\\\""
-  , '\\' <$ Parsec.string' "\\\\"
-  , '/' <$ Parsec.string' "\\/"
-  , '\b' <$ Parsec.string' "\\b"
-  , '\f' <$ Parsec.string' "\\f"
-  , '\n' <$ Parsec.string' "\\n"
-  , '\r' <$ Parsec.string' "\\r"
-  , '\t' <$ Parsec.string' "\\t"
-  ]
+decodeShortEscapedChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
+decodeShortEscapedChar =
+  Parsec.choice
+    [ '"' <$ Parsec.string' "\\\"",
+      '\\' <$ Parsec.string' "\\\\",
+      '/' <$ Parsec.string' "\\/",
+      '\b' <$ Parsec.string' "\\b",
+      '\f' <$ Parsec.string' "\\f",
+      '\n' <$ Parsec.string' "\\n",
+      '\r' <$ Parsec.string' "\\r",
+      '\t' <$ Parsec.string' "\\t"
+    ]
 
-decodeLongEscapedChar :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
+decodeLongEscapedChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
 decodeLongEscapedChar = do
   hi <- Parsec.string' "\\u" *> decodeWord16Hex
   if Ord.between 0xd800 0xdbff hi
@@ -56,29 +60,30 @@ decodeLongEscapedChar = do
       pure . toEnum $ 0x10000 + ((fromIntegral hi - 0xd800) * 0x400) + (fromIntegral lo - 0xdc00)
     else pure . toEnum $ fromIntegral hi
 
-decodeWord16Hex :: Parsec.Stream s m Char => Parsec.ParsecT s u m Word.Word16
+decodeWord16Hex :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Word.Word16
 decodeWord16Hex = do
   ds <- Parsec.count 4 Parsec.hexDigit
   maybe (fail "invalid escape") pure . Read.readM $ "0x" <> ds
 
-decodeUnescapedChar :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
-decodeUnescapedChar = Parsec.satisfy $ \ c -> c >= ' ' && c /= '"' && c /= '\\'
+decodeUnescapedChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
+decodeUnescapedChar = Parsec.satisfy $ \c -> c >= ' ' && c /= '"' && c /= '\\'
 
 encode :: LegendaryChainsaw.Json.String.String -> Builder.Builder
 encode = Semigroup.around (Builder.char8 '"') (Builder.char8 '"') . foldMap encodeChar . Text.unpack . unwrap
 
 encodeChar :: Char -> Builder.Builder
 encodeChar c = case c of
-  '"'  -> Builder.stringUtf8 "\\\""
+  '"' -> Builder.stringUtf8 "\\\""
   '\\' -> Builder.stringUtf8 "\\\\"
   '\b' -> Builder.stringUtf8 "\\b"
   '\f' -> Builder.stringUtf8 "\\f"
   '\n' -> Builder.stringUtf8 "\\n"
   '\r' -> Builder.stringUtf8 "\\r"
   '\t' -> Builder.stringUtf8 "\\t"
-  _ -> if c >= ' '
-    then Builder.charUtf8 c
-    else Builder.stringUtf8 "\\u" <> Builder.word16HexFixed (fromIntegral $ fromEnum c)
+  _ ->
+    if c >= ' '
+      then Builder.charUtf8 c
+      else Builder.stringUtf8 "\\u" <> Builder.word16HexFixed (fromIntegral $ fromEnum c)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

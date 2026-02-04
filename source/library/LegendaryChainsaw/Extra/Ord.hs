@@ -4,7 +4,7 @@ module LegendaryChainsaw.Extra.Ord where
 
 import qualified LegendaryChainsaw.Spec as Spec
 
-between :: Ord a => a -> a -> a -> Bool
+between :: (Ord a) => a -> a -> a -> Bool
 between lo hi x = lo <= x && x <= hi
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()

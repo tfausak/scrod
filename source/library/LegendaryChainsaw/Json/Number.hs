@@ -13,52 +13,57 @@ import qualified Text.Parsec as Parsec
 
 newtype Number = MkNumber
   { unwrap :: Decimal.Decimal
-  } deriving (Eq, Ord, Show)
+  }
+  deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m Number
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Number
 decode = do
   sign <- decodeSign
   intPart <- decodeInt
   (fracPart, fracExp) <- decodeFrac
   expPart <- decodeExp
-  pure . MkNumber $ Decimal.mkDecimal
-    (sign $ intPart * (10 ^ abs fracExp) + fracPart)
-    (fracExp + expPart)
+  pure . MkNumber $
+    Decimal.mkDecimal
+      (sign $ intPart * (10 ^ abs fracExp) + fracPart)
+      (fracExp + expPart)
 
-decodeSign :: Parsec.Stream s m Char => Parsec.ParsecT s u m (Integer -> Integer)
+decodeSign :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m (Integer -> Integer)
 decodeSign = Parsec.option id (negate <$ Parsec.char '-')
 
-decodeInt :: Parsec.Stream s m Char => Parsec.ParsecT s u m Integer
-decodeInt = Parsec.choice
-  [ 0 <$ Parsec.char '0' <* Parsec.notFollowedBy Parsec.digit
-  , do
-      first <- Parsec.satisfy $ \ c -> c >= '1' && c <= '9'
-      rest <- Parsec.many Parsec.digit
-      maybe (fail "invalid integer") pure . Read.readM $ first : rest
-  ]
+decodeInt :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
+decodeInt =
+  Parsec.choice
+    [ 0 <$ Parsec.char '0' <* Parsec.notFollowedBy Parsec.digit,
+      do
+        first <- Parsec.satisfy $ \c -> c >= '1' && c <= '9'
+        rest <- Parsec.many Parsec.digit
+        maybe (fail "invalid integer") pure . Read.readM $ first : rest
+    ]
 
-decodeFrac :: Parsec.Stream s m Char => Parsec.ParsecT s u m (Integer, Integer)
+decodeFrac :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m (Integer, Integer)
 decodeFrac = Parsec.option (0, 0) $ do
   digits <- Parsec.char '.' *> Parsec.many1 Parsec.digit
   fracValue <- maybe (fail "invalid fraction") pure $ Read.readM digits
   pure (fracValue, negate . fromIntegral $ length digits)
 
-decodeExp :: Parsec.Stream s m Char => Parsec.ParsecT s u m Integer
+decodeExp :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 decodeExp = Parsec.option 0 $ do
   _ <- Parsec.oneOf "eE"
-  expSign <- Parsec.option id $ Parsec.choice
-    [ id <$ Parsec.char '+'
-    , negate <$ Parsec.char '-'
-    ]
+  expSign <-
+    Parsec.option id $
+      Parsec.choice
+        [ id <$ Parsec.char '+',
+          negate <$ Parsec.char '-'
+        ]
   expDigits <- Parsec.many1 Parsec.digit
   maybe (fail "invalid exponent") (pure . expSign) $ Read.readM expDigits
 
 encode :: Number -> Builder.Builder
 encode n =
   let d = unwrap n
-  in Builder.integerDec (Decimal.mantissa d)
-    <> Builder.charUtf8 'e'
-    <> Builder.integerDec (Decimal.exponent d)
+   in Builder.integerDec (Decimal.mantissa d)
+        <> Builder.charUtf8 'e'
+        <> Builder.integerDec (Decimal.exponent d)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

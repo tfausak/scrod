@@ -13,7 +13,7 @@ data Null
   = MkNull
   deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m Null
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Null
 decode = MkNull <$ Parsec.string' "null"
 
 encode :: Null -> Builder.Builder

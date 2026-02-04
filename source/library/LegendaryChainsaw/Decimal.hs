@@ -6,19 +6,20 @@ import qualified Data.Function as Function
 import qualified LegendaryChainsaw.Spec as Spec
 
 data Decimal = MkDecimal
-  { mantissa :: Integer
-  , exponent :: Integer
-  } deriving (Eq, Ord, Show)
+  { mantissa :: Integer,
+    exponent :: Integer
+  }
+  deriving (Eq, Ord, Show)
 
 mkDecimal :: Integer -> Integer -> Decimal
-mkDecimal = Function.fix $ \ rec m e ->
+mkDecimal = Function.fix $ \rec m e ->
   if m == 0
     then MkDecimal 0 0
     else
       let (q, r) = quotRem m 10
-      in if r == 0
-           then rec q (e + 1)
-           else MkDecimal m e
+       in if r == 0
+            then rec q (e + 1)
+            else MkDecimal m e
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

@@ -5,6 +5,7 @@ module LegendaryChainsaw.Json.Value where
 
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.Text as Text
+import qualified LegendaryChainsaw.Decimal as Decimal
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
 import qualified LegendaryChainsaw.Json.Array as Array
@@ -14,7 +15,6 @@ import qualified LegendaryChainsaw.Json.Number as Number
 import qualified LegendaryChainsaw.Json.Object as Object
 import qualified LegendaryChainsaw.Json.Pair as Pair
 import qualified LegendaryChainsaw.Json.String as String
-import qualified LegendaryChainsaw.Decimal as Decimal
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
@@ -27,16 +27,17 @@ data Value
   | Object (Object.Object Value)
   deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m Value
-decode = Parsec.between (Parsec.many Parsec.blank) (Parsec.many Parsec.blank) $
-  Parsec.choice
-    [ Null <$> Null.decode
-    , Boolean <$> Boolean.decode
-    , Number <$> Number.decode
-    , String <$> String.decode
-    , Array <$> Array.decode decode
-    , Object <$> Object.decode decode
-    ]
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Value
+decode =
+  Parsec.between (Parsec.many Parsec.blank) (Parsec.many Parsec.blank) $
+    Parsec.choice
+      [ Null <$> Null.decode,
+        Boolean <$> Boolean.decode,
+        Number <$> Number.decode,
+        String <$> String.decode,
+        Array <$> Array.decode decode,
+        Object <$> Object.decode decode
+      ]
 
 encode :: Value -> Builder.Builder
 encode v = case v of
@@ -54,7 +55,7 @@ spec s = do
       number m = Number . Number.MkNumber . Decimal.mkDecimal m
       string = String . String.MkString . Text.pack
       array = Array . Array.MkArray
-      object = Object . Object.MkObject . fmap (\ (n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
+      object = Object . Object.MkObject . fmap (\(n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
 
   Spec.named s 'decode $ do
     Spec.it s "parses null" $ do
@@ -126,4 +127,3 @@ spec s = do
 
     Spec.it s "encodes nested structure" $ do
       Spec.assertEq s (Builder.toString . encode $ object [("items", array [number 1 0])]) "{\"items\":[1e0]}"
-

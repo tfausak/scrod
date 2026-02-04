@@ -7,8 +7,8 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.Text as Text
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Monoid as Monoid
-import qualified LegendaryChainsaw.Extra.Semigroup as Semigroup
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
+import qualified LegendaryChainsaw.Extra.Semigroup as Semigroup
 import qualified LegendaryChainsaw.Json.Pair as Pair
 import qualified LegendaryChainsaw.Json.String as String
 import qualified LegendaryChainsaw.Spec as Spec
@@ -16,26 +16,29 @@ import qualified Text.Parsec as Parsec
 
 newtype Object a = MkObject
   { unwrap :: [Pair.Pair a]
-  } deriving (Eq, Ord, Show)
+  }
+  deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Object a)
-decode p = fmap MkObject
-  . Parsec.between (Parsec.char '{' <* Parsec.many Parsec.blank) (Parsec.char '}')
-  $ Parsec.sepBy (Pair.decode p <* Parsec.many Parsec.blank) (Parsec.char ',' <* Parsec.many Parsec.blank)
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Object a)
+decode p =
+  fmap MkObject
+    . Parsec.between (Parsec.char '{' <* Parsec.many Parsec.blank) (Parsec.char '}')
+    $ Parsec.sepBy (Pair.decode p <* Parsec.many Parsec.blank) (Parsec.char ',' <* Parsec.many Parsec.blank)
 
 encode :: (a -> Builder.Builder) -> Object a -> Builder.Builder
-encode b = Semigroup.around (Builder.charUtf8 '{') (Builder.charUtf8 '}')
-  . Monoid.sepBy (Builder.charUtf8 ',')
-  . fmap (Pair.encode b)
-  . unwrap
+encode b =
+  Semigroup.around (Builder.charUtf8 '{') (Builder.charUtf8 '}')
+    . Monoid.sepBy (Builder.charUtf8 ',')
+    . fmap (Pair.encode b)
+    . unwrap
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   let object :: [(String, a)] -> Object a
-      object = MkObject . fmap (\ (n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
+      object = MkObject . fmap (\(n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
 
   Spec.named s 'decode $ do
-    let p :: Parsec.Stream t m Char => Parsec.ParsecT t u m Prelude.String
+    let p :: (Parsec.Stream t m Char) => Parsec.ParsecT t u m Prelude.String
         p = Parsec.many1 Parsec.digit
 
     Spec.it s "succeeds with an empty object" $ do

@@ -7,9 +7,9 @@ import qualified GHC.Stack as Stack
 import qualified Language.Haskell.TH as TH
 
 data Spec m n = MkSpec
-  { assertFailure :: forall x . Stack.HasCallStack => String -> m x
-  , describe :: String -> n () -> n ()
-  , it :: String -> m () -> n ()
+  { assertFailure :: forall x. (Stack.HasCallStack) => String -> m x,
+    describe :: String -> n () -> n (),
+    it :: String -> m () -> n ()
   }
 
 assertEq :: (Stack.HasCallStack, Applicative m, Eq a, Show a) => Spec m n -> a -> a -> m ()

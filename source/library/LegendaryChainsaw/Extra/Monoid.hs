@@ -4,7 +4,7 @@ module LegendaryChainsaw.Extra.Monoid where
 
 import qualified LegendaryChainsaw.Spec as Spec
 
-sepBy :: Monoid a => a -> [a] -> a
+sepBy :: (Monoid a) => a -> [a] -> a
 sepBy s xs = case xs of
   [] -> mempty
   h : t -> h <> foldMap (s <>) t

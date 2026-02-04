@@ -3,8 +3,8 @@
 module LegendaryChainsaw.JsonPointer.Evaluate where
 
 import qualified Data.Function as Function
-import qualified Data.List as List
 import Data.List ((!?))
+import qualified Data.List as List
 import qualified Data.Text as Text
 import qualified LegendaryChainsaw.Decimal as Decimal
 import qualified LegendaryChainsaw.Extra.Read as Read
@@ -26,7 +26,7 @@ import qualified LegendaryChainsaw.Spec as Spec
 -- - For arrays, tokens must be valid non-negative integer indices
 -- - For objects, tokens are matched against member names
 evaluate :: Pointer.Pointer -> Value.Value -> Maybe Value.Value
-evaluate = Function.fix $ \ rec pointer value ->
+evaluate = Function.fix $ \rec pointer value ->
   case Pointer.unwrap pointer of
     [] -> Just value
     token : rest -> do
@@ -53,9 +53,10 @@ stepArray token array = do
 
 -- | Steps into an object using a token as a key.
 stepObject :: Token.Token -> Object.Object a -> Maybe a
-stepObject token = fmap Pair.value
-  . List.find ((== Token.unwrap token) . String.unwrap . Pair.name)
-  . Object.unwrap
+stepObject token =
+  fmap Pair.value
+    . List.find ((== Token.unwrap token) . String.unwrap . Pair.name)
+    . Object.unwrap
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -63,7 +64,7 @@ spec s = do
       number m = Value.Number . Number.MkNumber . Decimal.mkDecimal m
       string = Value.String . String.MkString . Text.pack
       array = Value.Array . Array.MkArray
-      object = Value.Object . Object.MkObject . fmap (\ (n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
+      object = Value.Object . Object.MkObject . fmap (\(n, v) -> Pair.MkPair (String.MkString $ Text.pack n) v)
       pointer = Pointer.MkPointer . fmap (Token.MkToken . Text.pack)
 
   Spec.named s 'evaluate $ do
@@ -114,18 +115,19 @@ spec s = do
       Spec.assertEq s (evaluate (pointer ["foo"]) (string "bar")) Nothing
 
     -- RFC 6901 Section 5 examples
-    let rfc6901Doc = object
-          [ ("foo", array [string "bar", string "baz"])
-          , ("", number 0 0)
-          , ("a/b", number 1 0)
-          , ("c%d", number 2 0)
-          , ("e^f", number 3 0)
-          , ("g|h", number 4 0)
-          , ("i\\j", number 5 0)
-          , ("k\"l", number 6 0)
-          , (" ", number 7 0)
-          , ("m~n", number 8 0)
-          ]
+    let rfc6901Doc =
+          object
+            [ ("foo", array [string "bar", string "baz"]),
+              ("", number 0 0),
+              ("a/b", number 1 0),
+              ("c%d", number 2 0),
+              ("e^f", number 3 0),
+              ("g|h", number 4 0),
+              ("i\\j", number 5 0),
+              ("k\"l", number 6 0),
+              (" ", number 7 0),
+              ("m~n", number 8 0)
+            ]
 
     Spec.it s "RFC 6901: empty pointer returns the whole document" $ do
       Spec.assertEq s (evaluate (pointer []) rfc6901Doc) $ Just rfc6901Doc

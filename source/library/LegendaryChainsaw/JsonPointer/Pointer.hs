@@ -16,12 +16,13 @@ import qualified Text.Parsec as Parsec
 -- An empty list represents the root of the document.
 newtype Pointer = MkPointer
   { unwrap :: [Token.Token]
-  } deriving (Eq, Ord, Show)
+  }
+  deriving (Eq, Ord, Show)
 
 -- | Decodes a JSON Pointer from a string.
 -- Per RFC 6901, a JSON Pointer is either an empty string (root)
 -- or a sequence of reference tokens each prefixed by '/'.
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m Pointer
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Pointer
 decode = MkPointer <$> Parsec.many (Parsec.char '/' *> Token.decode)
 
 -- | Encodes a JSON Pointer to a string.

@@ -7,7 +7,7 @@ import qualified LegendaryChainsaw.Extra.Either as Either
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
-blank :: Parsec.Stream s m Char => Parsec.ParsecT s u m Char
+blank :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
 blank = Parsec.oneOf " \t\n\r"
 
 parseString :: Parsec.Parsec String () a -> String -> Maybe a

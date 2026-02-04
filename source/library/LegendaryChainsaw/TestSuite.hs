@@ -13,15 +13,15 @@ import qualified LegendaryChainsaw.Extra.Read
 import qualified LegendaryChainsaw.Extra.Semigroup
 import qualified LegendaryChainsaw.Json.Array
 import qualified LegendaryChainsaw.Json.Boolean
-import qualified LegendaryChainsaw.JsonPointer.Evaluate
-import qualified LegendaryChainsaw.JsonPointer.Pointer
-import qualified LegendaryChainsaw.JsonPointer.Token
 import qualified LegendaryChainsaw.Json.Null
 import qualified LegendaryChainsaw.Json.Number
 import qualified LegendaryChainsaw.Json.Object
 import qualified LegendaryChainsaw.Json.Pair
 import qualified LegendaryChainsaw.Json.String
 import qualified LegendaryChainsaw.Json.Value
+import qualified LegendaryChainsaw.JsonPointer.Evaluate
+import qualified LegendaryChainsaw.JsonPointer.Pointer
+import qualified LegendaryChainsaw.JsonPointer.Token
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified LegendaryChainsaw.Version
 

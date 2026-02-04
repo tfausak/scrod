@@ -11,12 +11,12 @@ import qualified LegendaryChainsaw.Extra.Maybe as Maybe
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Read as Read
 
-readM :: forall a m . (Stack.HasCallStack, Exception.MonadThrow m, Read a, Typeable.Typeable a) => String -> m a
+readM :: forall a m. (Stack.HasCallStack, Exception.MonadThrow m, Read a, Typeable.Typeable a) => String -> m a
 readM string =
   let proxy = Typeable.Proxy :: Typeable.Proxy a
-  in Either.throw
-    . Maybe.note (userError $ "invalid " <> show (Typeable.typeRep proxy) <> ": " <> show string)
-    $ Read.readMaybe string
+   in Either.throw
+        . Maybe.note (userError $ "invalid " <> show (Typeable.typeRep proxy) <> ": " <> show string)
+        $ Read.readMaybe string
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

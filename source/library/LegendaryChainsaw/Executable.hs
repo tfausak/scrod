@@ -10,13 +10,13 @@ import qualified System.Console.GetOpt as GetOpt
 import qualified System.Environment as Environment
 import qualified System.Exit as Exit
 
-executable :: Stack.HasCallStack => IO ()
+executable :: (Stack.HasCallStack) => IO ()
 executable = do
   name <- Environment.getProgName
   arguments <- Environment.getArgs
   mainWith name arguments
 
-mainWith :: Stack.HasCallStack => String -> [String] -> IO ()
+mainWith :: (Stack.HasCallStack) => String -> [String] -> IO ()
 mainWith name arguments = do
   flags <- Flag.fromArguments arguments
   config <- Config.fromFlags flags

@@ -11,8 +11,9 @@ testTree :: Tasty.TestTree
 testTree = Tasty.testGroup "legendary-chainsaw" . Writer.execWriter $ LegendaryChainsaw.testSuite tasty
 
 tasty :: Spec.Spec IO (Writer.Writer [Tasty.TestTree])
-tasty = Spec.MkSpec
-  { Spec.assertFailure = Unit.assertFailure
-  , Spec.describe = \ s -> Writer.tell . pure . Tasty.testGroup s . Writer.execWriter
-  , Spec.it = \ s -> Writer.tell . pure . Unit.testCase s
-  }
+tasty =
+  Spec.MkSpec
+    { Spec.assertFailure = Unit.assertFailure,
+      Spec.describe = \s -> Writer.tell . pure . Tasty.testGroup s . Writer.execWriter,
+      Spec.it = \s -> Writer.tell . pure . Unit.testCase s
+    }

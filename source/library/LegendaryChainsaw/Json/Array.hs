@@ -6,30 +6,33 @@ module LegendaryChainsaw.Json.Array where
 import qualified Data.ByteString.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Monoid as Monoid
-import qualified LegendaryChainsaw.Extra.Semigroup as Semigroup
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
+import qualified LegendaryChainsaw.Extra.Semigroup as Semigroup
 import qualified LegendaryChainsaw.Spec as Spec
 import qualified Text.Parsec as Parsec
 
 newtype Array a = MkArray
   { unwrap :: [a]
-  } deriving (Eq, Ord, Show)
+  }
+  deriving (Eq, Ord, Show)
 
-decode :: Parsec.Stream s m Char => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Array a)
-decode p = fmap MkArray
-  . Parsec.between (Parsec.char '[' <* Parsec.many Parsec.blank) (Parsec.char ']')
-  $ Parsec.sepBy (p <* Parsec.many Parsec.blank) (Parsec.char ',' <* Parsec.many Parsec.blank)
+decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Array a)
+decode p =
+  fmap MkArray
+    . Parsec.between (Parsec.char '[' <* Parsec.many Parsec.blank) (Parsec.char ']')
+    $ Parsec.sepBy (p <* Parsec.many Parsec.blank) (Parsec.char ',' <* Parsec.many Parsec.blank)
 
 encode :: (a -> Builder.Builder) -> Array a -> Builder.Builder
-encode b = Semigroup.around (Builder.charUtf8 '[') (Builder.charUtf8 ']')
-  . Monoid.sepBy (Builder.charUtf8 ',')
-  . fmap b
-  . unwrap
+encode b =
+  Semigroup.around (Builder.charUtf8 '[') (Builder.charUtf8 ']')
+    . Monoid.sepBy (Builder.charUtf8 ',')
+    . fmap b
+    . unwrap
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'decode $ do
-    let p :: Parsec.Stream t m Char => Parsec.ParsecT t u m String
+    let p :: (Parsec.Stream t m Char) => Parsec.ParsecT t u m String
         p = Parsec.many1 Parsec.digit
 
     Spec.it s "succeeds with an empty array" $ do

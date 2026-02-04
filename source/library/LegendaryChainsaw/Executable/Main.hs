@@ -36,6 +36,6 @@ mainWith name arguments = do
   result <- either fail pure $ Parse.parse input
   module_ <- either fail pure $ FromGhc.fromGhc result
   Builder.hPutBuilder IO.stdout
-    . (<> Builder.char7 '\n')
+    . (<> Builder.charUtf8 '\n')
     . Value.encode
     $ ToJson.toJson module_

@@ -69,7 +69,7 @@ decodeUnescapedChar :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
 decodeUnescapedChar = Parsec.satisfy $ \c -> c >= ' ' && c /= '"' && c /= '\\'
 
 encode :: LegendaryChainsaw.Json.String.String -> Builder.Builder
-encode = Semigroup.around (Builder.char8 '"') (Builder.char8 '"') . foldMap encodeChar . Text.unpack . unwrap
+encode = Semigroup.around (Builder.charUtf8 '"') (Builder.charUtf8 '"') . foldMap encodeChar . Text.unpack . unwrap
 
 encodeChar :: Char -> Builder.Builder
 encodeChar c = case c of

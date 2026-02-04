@@ -31,7 +31,7 @@ encode :: Pointer -> Builder.Builder
 encode = foldMap encodeToken . unwrap
 
 encodeToken :: Token.Token -> Builder.Builder
-encodeToken t = Builder.char8 '/' <> Token.encode t
+encodeToken t = Builder.charUtf8 '/' <> Token.encode t
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

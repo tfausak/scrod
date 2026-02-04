@@ -1,5 +1,14 @@
 module LegendaryChainsaw.TestSuite where
 
+import qualified LegendaryChainsaw.Css.AtRule
+import qualified LegendaryChainsaw.Css.Block
+import qualified LegendaryChainsaw.Css.BlockContent
+import qualified LegendaryChainsaw.Css.Declaration
+import qualified LegendaryChainsaw.Css.Item
+import qualified LegendaryChainsaw.Css.Name
+import qualified LegendaryChainsaw.Css.Rule
+import qualified LegendaryChainsaw.Css.Selector
+import qualified LegendaryChainsaw.Css.Stylesheet
 import qualified LegendaryChainsaw.Decimal
 import qualified LegendaryChainsaw.Executable.Config
 import qualified LegendaryChainsaw.Executable.Flag
@@ -37,6 +46,15 @@ import qualified LegendaryChainsaw.Xml.Text
 
 testSuite :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 testSuite s = do
+  LegendaryChainsaw.Css.AtRule.spec s
+  LegendaryChainsaw.Css.Block.spec s
+  LegendaryChainsaw.Css.BlockContent.spec s
+  LegendaryChainsaw.Css.Declaration.spec s
+  LegendaryChainsaw.Css.Item.spec s
+  LegendaryChainsaw.Css.Name.spec s
+  LegendaryChainsaw.Css.Rule.spec s
+  LegendaryChainsaw.Css.Selector.spec s
+  LegendaryChainsaw.Css.Stylesheet.spec s
   LegendaryChainsaw.Decimal.spec s
   LegendaryChainsaw.Executable.Config.spec s
   LegendaryChainsaw.Executable.Flag.spec s

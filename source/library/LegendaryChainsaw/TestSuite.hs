@@ -13,6 +13,9 @@ import qualified LegendaryChainsaw.Extra.Read
 import qualified LegendaryChainsaw.Extra.Semigroup
 import qualified LegendaryChainsaw.Json.Array
 import qualified LegendaryChainsaw.Json.Boolean
+import qualified LegendaryChainsaw.JsonPointer.Evaluate
+import qualified LegendaryChainsaw.JsonPointer.Pointer
+import qualified LegendaryChainsaw.JsonPointer.Token
 import qualified LegendaryChainsaw.Json.Null
 import qualified LegendaryChainsaw.Json.Number
 import qualified LegendaryChainsaw.Json.Object
@@ -43,4 +46,7 @@ testSuite s = do
   LegendaryChainsaw.Json.Pair.spec s
   LegendaryChainsaw.Json.String.spec s
   LegendaryChainsaw.Json.Value.spec s
+  LegendaryChainsaw.JsonPointer.Evaluate.spec s
+  LegendaryChainsaw.JsonPointer.Pointer.spec s
+  LegendaryChainsaw.JsonPointer.Token.spec s
   LegendaryChainsaw.Version.spec s

@@ -1,5 +1,6 @@
 module LegendaryChainsaw.TestSuite where
 
+import qualified LegendaryChainsaw.Convert.FromGhc
 import qualified LegendaryChainsaw.Convert.FromHaddock
 import qualified LegendaryChainsaw.Css.AtRule
 import qualified LegendaryChainsaw.Css.Block
@@ -49,6 +50,7 @@ import qualified LegendaryChainsaw.Xml.Text
 
 testSuite :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 testSuite s = do
+  LegendaryChainsaw.Convert.FromGhc.spec s
   LegendaryChainsaw.Convert.FromHaddock.spec s
   LegendaryChainsaw.Css.AtRule.spec s
   LegendaryChainsaw.Css.Block.spec s

@@ -63,7 +63,7 @@ toHtml m =
     { Document.prolog =
         [ Misc.Declaration $
             XmlDeclaration.MkDeclaration
-              (XmlName.MkName $ Text.pack "DOCTYPE")
+              (XmlName.MkName $ Text.pack "doctype")
               (Text.pack "html")
         ],
       Document.root =
@@ -95,9 +95,9 @@ headElement m =
           ]
           [],
       Content.Element $
-        Document.element "title" [] [Document.textContent (moduleTitle m)],
+        Document.element "title" [] [Document.text (moduleTitle m)],
       Content.Element $
-        Document.element "style" [] [Document.text stylesheetText]
+        Document.element "style" [] [Document.string stylesheetText]
     ]
 
 bodyElement :: Module.Module -> Element.Element
@@ -119,7 +119,7 @@ headerSection m =
   Document.element
     "header"
     [Document.attribute "class" "module-header"]
-    ( [Content.Element $ Document.element "h1" [] [Document.textContent (moduleTitle m)]]
+    ( [Content.Element $ Document.element "h1" [] [Document.text (moduleTitle m)]]
         <> warningContents (Module.warning m)
         <> moduleDocContents (Module.documentation m)
     )
@@ -137,8 +137,8 @@ warningToHtml (Warning.MkWarning (Category.MkCategory cat) val) =
         Document.element
           "span"
           [Document.attribute "class" "warning-category"]
-          [Document.textContent cat],
-      Document.textContent (Text.pack ": " <> val)
+          [Document.text cat],
+      Document.text (Text.pack ": " <> val)
     ]
 
 moduleDocContents :: Doc.Doc -> [Content.Content Element.Element]
@@ -165,8 +165,8 @@ metadataSection m =
 
 versionItem :: Version.Version -> [Content.Content Element.Element]
 versionItem v =
-  [ Content.Element $ Document.element "dt" [] [Document.text "Version"],
-    Content.Element $ Document.element "dd" [] [Document.textContent (versionToText v)]
+  [ Content.Element $ Document.element "dt" [] [Document.string "Version"],
+    Content.Element $ Document.element "dd" [] [Document.text (versionToText v)]
   ]
 
 versionToText :: Version.Version -> Text.Text
@@ -176,19 +176,19 @@ versionToText (Version.MkVersion parts) =
 languageItem :: Maybe Language.Language -> [Content.Content Element.Element]
 languageItem Nothing = []
 languageItem (Just (Language.MkLanguage lang)) =
-  [ Content.Element $ Document.element "dt" [] [Document.text "Language"],
-    Content.Element $ Document.element "dd" [] [Document.textContent lang]
+  [ Content.Element $ Document.element "dt" [] [Document.string "Language"],
+    Content.Element $ Document.element "dd" [] [Document.text lang]
   ]
 
 sinceItem :: Maybe Since.Since -> [Content.Content Element.Element]
 sinceItem Nothing = []
 sinceItem (Just since) =
-  [ Content.Element $ Document.element "dt" [] [Document.text "Since"],
+  [ Content.Element $ Document.element "dt" [] [Document.string "Since"],
     Content.Element $
       Document.element
         "dd"
         [Document.attribute "class" "since"]
-        [Document.textContent (sinceToText since)]
+        [Document.text (sinceToText since)]
   ]
 
 sinceToText :: Since.Since -> Text.Text
@@ -210,7 +210,7 @@ exportsContents (Just exports) =
       Document.element
         "section"
         [Document.attribute "class" "exports"]
-        ( [Content.Element $ Document.element "h2" [] [Document.text "Exports"]]
+        ( [Content.Element $ Document.element "h2" [] [Document.string "Exports"]]
             <> [ Content.Element $
                    Document.element
                      "ul"
@@ -242,7 +242,7 @@ exportToContents export = case export of
               Document.element
                 "div"
                 [Document.attribute "class" "export-doc-named"]
-                [Document.textContent (Text.pack "\x00a7" <> name)]
+                [Document.text (Text.pack "\x00a7" <> name)]
           ]
     ]
 
@@ -256,7 +256,7 @@ exportIdentifierToHtml (ExportIdentifier.MkExportIdentifier name subs maybeWarni
                Document.element
                  "code"
                  [Document.attribute "class" "export-name"]
-                 ( [Document.textContent (exportNameToText name)]
+                 ( [Document.text (exportNameToText name)]
                      <> subordinatesToContents subs
                  )
            ]
@@ -289,7 +289,7 @@ subordinatesToContents (Just (Subordinates.MkSubordinates wildcard explicit)) =
       allTexts = if wildcard then wildcardText : explicitTexts else explicitTexts
       combined :: Text.Text
       combined = Text.intercalate (Text.pack ", ") allTexts
-   in [Document.textContent (Text.pack "(" <> combined <> Text.pack ")")]
+   in [Document.text (Text.pack "(" <> combined <> Text.pack ")")]
 
 sectionToHtml :: Section.Section -> Element.Element
 sectionToHtml (Section.MkSection (Header.MkHeader level title)) =
@@ -322,7 +322,7 @@ extensionsContents extensions
           Document.element
             "section"
             [Document.attribute "class" "extensions"]
-            ( [Content.Element $ Document.element "h2" [] [Document.text "Extensions"]]
+            ( [Content.Element $ Document.element "h2" [] [Document.string "Extensions"]]
                 <> [ Content.Element $
                        Document.element
                          "div"
@@ -337,8 +337,8 @@ extToContents (Extension.MkExtension name, enabled) =
   let cls :: String
       cls = if enabled then "extension" else "extension extension-disabled"
    in [ Content.Element $
-          Document.element "span" [Document.attribute "class" cls] [Document.textContent name],
-        Document.text " "
+          Document.element "span" [Document.attribute "class" cls] [Document.text name],
+        Document.string " "
       ]
 
 -- Items section
@@ -350,7 +350,7 @@ itemsContents items =
       Document.element
         "section"
         [Document.attribute "class" "items"]
-        ( [Content.Element $ Document.element "h2" [] [Document.text "Declarations"]]
+        ( [Content.Element $ Document.element "h2" [] [Document.string "Declarations"]]
             <> concatMap renderItemWithChildren topLevelItems
         )
   ]
@@ -405,14 +405,14 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     nameContents = case maybeName of
       Nothing -> []
       Just (ItemName.MkItemName n) ->
-        [Content.Element $ Document.element "span" [Document.attribute "class" "item-name"] [Document.textContent n]]
+        [Content.Element $ Document.element "span" [Document.attribute "class" "item-name"] [Document.text n]]
 
     kindElement :: Element.Element
     kindElement =
       Document.element
         "span"
         [Document.attribute "class" "item-kind"]
-        [Document.textContent (Text.pack " [" <> kindToText itemKind <> Text.pack "]")]
+        [Document.text (Text.pack " [" <> kindToText itemKind <> Text.pack "]")]
 
     signatureContents :: [Content.Content Element.Element]
     signatureContents = case maybeSig of
@@ -422,7 +422,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
             Document.element
               "span"
               [Document.attribute "class" "item-signature"]
-              [Document.textContent (Text.pack " :: " <> sig)]
+              [Document.text (Text.pack " :: " <> sig)]
         ]
 
     keyElement :: Element.Element
@@ -430,7 +430,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       Document.element
         "span"
         [Document.attribute "class" "item-key"]
-        [Document.textContent (Text.pack "#" <> Text.pack (show (ItemKey.value key)))]
+        [Document.text (Text.pack "#" <> Text.pack (show (ItemKey.value key)))]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of
@@ -442,7 +442,7 @@ locationElement (Location.MkLocation (Line.MkLine l) (Column.MkColumn c)) =
   Document.element
     "span"
     [Document.attribute "class" "item-location"]
-    [ Document.textContent
+    [ Document.text
         ( Text.pack " (line "
             <> Text.pack (show l)
             <> Text.pack ", col "
@@ -489,7 +489,7 @@ docToContents :: Doc.Doc -> [Content.Content Element.Element]
 docToContents doc = case doc of
   Doc.Empty -> []
   Doc.Append d1 d2 -> docToContents d1 <> docToContents d2
-  Doc.String t -> [Document.textContent t]
+  Doc.String t -> [Document.text t]
   Doc.Paragraph d -> [Content.Element $ Document.element "p" [] (docToContents d)]
   Doc.Identifier i -> [Content.Element (identifierToHtml i)]
   Doc.Module m -> [Content.Element (modLinkToHtml m)]
@@ -532,20 +532,20 @@ docToContents doc = case doc of
   Doc.Hyperlink h -> [Content.Element (hyperlinkToHtml h)]
   Doc.Pic p -> [Content.Element (pictureToHtml p)]
   Doc.MathInline t ->
-    [Content.Element $ Document.element "span" [Document.attribute "class" "math-inline"] [Document.textContent t]]
+    [Content.Element $ Document.element "span" [Document.attribute "class" "math-inline"] [Document.text t]]
   Doc.MathDisplay t ->
-    [Content.Element $ Document.element "div" [Document.attribute "class" "math-display"] [Document.textContent t]]
+    [Content.Element $ Document.element "div" [Document.attribute "class" "math-display"] [Document.text t]]
   Doc.AName t ->
     [Content.Element $ Document.element "a" [Document.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->
-    [Content.Element $ Document.element "pre" [Document.attribute "class" "property"] [Document.textContent t]]
+    [Content.Element $ Document.element "pre" [Document.attribute "class" "property"] [Document.text t]]
   Doc.Examples es -> [Content.Element (examplesToHtml es)]
   Doc.Header h -> [Content.Element (headerToHtml h)]
   Doc.Table t -> [Content.Element (tableToHtml t)]
 
 identifierToHtml :: Identifier.Identifier -> Element.Element
 identifierToHtml (Identifier.MkIdentifier ns val) =
-  Document.element "code" [Document.attribute "class" "identifier"] [Document.textContent (prefix <> val)]
+  Document.element "code" [Document.attribute "class" "identifier"] [Document.text (prefix <> val)]
   where
     prefix :: Text.Text
     prefix = case ns of
@@ -556,12 +556,12 @@ identifierToHtml (Identifier.MkIdentifier ns val) =
 modLinkToHtml :: ModLink.ModLink Doc.Doc -> Element.Element
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =
   Document.element "code" [Document.attribute "class" "module-link"] $
-    maybe [Document.textContent modName] docToContents maybeLabel
+    maybe [Document.text modName] docToContents maybeLabel
 
 hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Element.Element
 hyperlinkToHtml (Hyperlink.MkHyperlink url maybeLabel) =
   Document.element "a" [Document.attribute "href" (Text.unpack url)] $
-    maybe [Document.textContent url] docToContents maybeLabel
+    maybe [Document.text url] docToContents maybeLabel
 
 pictureToHtml :: Picture.Picture -> Element.Element
 pictureToHtml (Picture.MkPicture uri maybeTitle) =
@@ -590,7 +590,7 @@ exampleToContents (Example.MkExample expr results) =
               Document.element
                 "div"
                 [Document.attribute "class" "example-expression"]
-                [Document.textContent expr]
+                [Document.text expr]
           ]
             <> fmap
               ( \r ->
@@ -598,7 +598,7 @@ exampleToContents (Example.MkExample expr results) =
                     Document.element
                       "div"
                       [Document.attribute "class" "example-result"]
-                      [Document.textContent r]
+                      [Document.text r]
               )
               results
         )

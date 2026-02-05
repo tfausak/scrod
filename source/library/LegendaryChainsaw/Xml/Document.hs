@@ -42,11 +42,11 @@ attribute name value =
       Attribute.value = Text.pack value
     }
 
-text :: String -> Content.Content a
-text = Content.Text . Text.pack
+string :: String -> Content.Content a
+string = text . Text.pack
 
-textContent :: Text.Text -> Content.Content a
-textContent = Content.Text
+text :: Text.Text -> Content.Content a
+text = Content.Text
 
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Document
 decode =

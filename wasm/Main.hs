@@ -37,4 +37,5 @@ escapeHtml = concatMap $ \c -> case c of
   '>' -> "&gt;"
   '&' -> "&amp;"
   '"' -> "&quot;"
+  '\'' -> "&#39;"
   _ -> [c]

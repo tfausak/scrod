@@ -1,18 +1,18 @@
 import ghcWasmJsffi from "./ghc_wasm_jsffi.js";
 import { WASI, File, OpenFile, ConsoleStdout } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.4.2/dist/index.js";
 
-var processHaskell;
+let processHaskell;
 
 async function initialize() {
-  var fds = [
+  const fds = [
     new OpenFile(new File([])),
     ConsoleStdout.lineBuffered(function (msg) { console.log(msg); }),
     ConsoleStdout.lineBuffered(function (msg) { console.error(msg); }),
   ];
-  var wasi = new WASI([], [], fds);
+  const wasi = new WASI([], [], fds);
 
-  var exports = null;
-  var exportsProxy = new Proxy(
+  let exports = null;
+  const exportsProxy = new Proxy(
     {},
     {
       get: function (_, property) {
@@ -24,12 +24,20 @@ async function initialize() {
     }
   );
 
-  var jsffi = ghcWasmJsffi(exportsProxy);
+  const jsffi = ghcWasmJsffi(exportsProxy);
 
-  var wasmBuffer = await (
-    await fetch("legendary-chainsaw-wasm.wasm")
-  ).arrayBuffer();
-  var result = await WebAssembly.instantiate(wasmBuffer, {
+  const response = await fetch("legendary-chainsaw-wasm.wasm");
+  if (!response.ok) {
+    throw new Error(
+      "Failed to fetch WASM module (status " +
+        response.status +
+        " " +
+        response.statusText +
+        ")"
+    );
+  }
+  const wasmBuffer = await response.arrayBuffer();
+  const result = await WebAssembly.instantiate(wasmBuffer, {
     wasi_snapshot_preview1: wasi.wasiImport,
     ghc_wasm_jsffi: jsffi,
   });
@@ -48,10 +56,12 @@ initialize().catch(function (e) {
 onmessage = async function (e) {
   if (processHaskell) {
     try {
-      var result = await processHaskell(e.data);
+      const result = await processHaskell(e.data);
       postMessage({ tag: "result", html: result });
     } catch (err) {
       postMessage({ tag: "error", html: err.message });
     }
+  } else {
+    postMessage({ tag: "error", html: "WASM module is not initialized yet." });
   }
 };

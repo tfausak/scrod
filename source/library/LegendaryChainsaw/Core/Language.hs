@@ -3,6 +3,6 @@ module LegendaryChainsaw.Core.Language where
 import qualified Data.Text as Text
 
 newtype Language = MkLanguage
-  { value :: Text.Text
+  { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)

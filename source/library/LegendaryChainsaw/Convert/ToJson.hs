@@ -60,15 +60,15 @@ moduleToJson m =
 
 -- | Convert Version to JSON (newtype with NonEmpty Natural)
 versionToJson :: Version.Version -> Value.Value
-versionToJson = Value.arrayOf Value.integral . NonEmpty.toList . Version.value
+versionToJson = Value.arrayOf Value.integral . NonEmpty.toList . Version.unwrap
 
 -- | Convert Language to JSON (newtype with Text)
 languageToJson :: Language.Language -> Value.Value
-languageToJson = Value.text . Language.value
+languageToJson = Value.text . Language.unwrap
 
 -- | Convert Extension map to JSON
 extensionsToJson :: Map.Map Extension.Extension Bool -> Value.Value
-extensionsToJson = Value.object . fmap (\(k, v) -> (Text.unpack $ Extension.value k, Value.boolean v)) . Map.toList
+extensionsToJson = Value.object . fmap (\(k, v) -> (Text.unpack $ Extension.unwrap k, Value.boolean v)) . Map.toList
 
 -- | Convert Doc to JSON (sum type)
 docToJson :: Doc.Doc -> Value.Value
@@ -114,7 +114,7 @@ locatedToJson f l =
 
 -- | Convert ModuleName to JSON (newtype with Text)
 moduleNameToJson :: ModuleName.ModuleName -> Value.Value
-moduleNameToJson = Value.text . ModuleName.value
+moduleNameToJson = Value.text . ModuleName.unwrap
 
 -- | Convert Warning to JSON (record)
 warningToJson :: Warning.Warning -> Value.Value
@@ -154,19 +154,19 @@ locationToJson loc =
 
 -- | Convert PackageName to JSON (newtype with Text)
 packageNameToJson :: PackageName.PackageName -> Value.Value
-packageNameToJson = Value.text . PackageName.value
+packageNameToJson = Value.text . PackageName.unwrap
 
 -- | Convert Line to JSON (newtype with Natural)
 lineToJson :: Line.Line -> Value.Value
-lineToJson = Value.integral . Line.value
+lineToJson = Value.integral . Line.unwrap
 
 -- | Convert Column to JSON (newtype with Natural)
 columnToJson :: Column.Column -> Value.Value
-columnToJson = Value.integral . Column.value
+columnToJson = Value.integral . Column.unwrap
 
 -- | Convert Category to JSON (newtype with Text)
 categoryToJson :: Category.Category -> Value.Value
-categoryToJson = Value.text . Category.value
+categoryToJson = Value.text . Category.unwrap
 
 -- | Convert Section to JSON (newtype with Header Doc.Doc)
 sectionToJson :: Section.Section -> Value.Value
@@ -184,44 +184,44 @@ exportIdentifierToJson ei =
 
 -- | Convert ItemKey to JSON (newtype with Natural)
 itemKeyToJson :: ItemKey.ItemKey -> Value.Value
-itemKeyToJson = Value.integral . ItemKey.value
+itemKeyToJson = Value.integral . ItemKey.unwrap
 
 -- | Convert ItemKind to JSON (sum type with no payload)
 itemKindToJson :: ItemKind.ItemKind -> Value.Value
 itemKindToJson k = Value.string $ case k of
+  ItemKind.Annotation -> "Annotation"
+  ItemKind.Class -> "Class"
+  ItemKind.ClassInstance -> "ClassInstance"
+  ItemKind.ClassMethod -> "ClassMethod"
+  ItemKind.ClosedTypeFamily -> "ClosedTypeFamily"
+  ItemKind.DataConstructor -> "DataConstructor"
+  ItemKind.DataFamily -> "DataFamily"
+  ItemKind.DataFamilyInstance -> "DataFamilyInstance"
+  ItemKind.DataType -> "DataType"
+  ItemKind.Default -> "Default"
+  ItemKind.DerivedInstance -> "DerivedInstance"
+  ItemKind.FixitySignature -> "FixitySignature"
+  ItemKind.ForeignExport -> "ForeignExport"
+  ItemKind.ForeignImport -> "ForeignImport"
   ItemKind.Function -> "Function"
+  ItemKind.GADTConstructor -> "GADTConstructor"
+  ItemKind.InlineSignature -> "InlineSignature"
+  ItemKind.Newtype -> "Newtype"
+  ItemKind.OpenTypeFamily -> "OpenTypeFamily"
   ItemKind.PatternBinding -> "PatternBinding"
   ItemKind.PatternSynonym -> "PatternSynonym"
-  ItemKind.DataType -> "DataType"
-  ItemKind.Newtype -> "Newtype"
-  ItemKind.TypeData -> "TypeData"
-  ItemKind.TypeSynonym -> "TypeSynonym"
-  ItemKind.DataConstructor -> "DataConstructor"
-  ItemKind.GADTConstructor -> "GADTConstructor"
   ItemKind.RecordField -> "RecordField"
-  ItemKind.Class -> "Class"
-  ItemKind.ClassMethod -> "ClassMethod"
-  ItemKind.ClassInstance -> "ClassInstance"
-  ItemKind.StandaloneDeriving -> "StandaloneDeriving"
-  ItemKind.DerivedInstance -> "DerivedInstance"
-  ItemKind.OpenTypeFamily -> "OpenTypeFamily"
-  ItemKind.ClosedTypeFamily -> "ClosedTypeFamily"
-  ItemKind.DataFamily -> "DataFamily"
-  ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
-  ItemKind.DataFamilyInstance -> "DataFamilyInstance"
-  ItemKind.ForeignImport -> "ForeignImport"
-  ItemKind.ForeignExport -> "ForeignExport"
-  ItemKind.FixitySignature -> "FixitySignature"
-  ItemKind.InlineSignature -> "InlineSignature"
-  ItemKind.SpecialiseSignature -> "SpecialiseSignature"
-  ItemKind.StandaloneKindSig -> "StandaloneKindSig"
   ItemKind.Rule -> "Rule"
-  ItemKind.Default -> "Default"
-  ItemKind.Annotation -> "Annotation"
+  ItemKind.SpecialiseSignature -> "SpecialiseSignature"
+  ItemKind.StandaloneDeriving -> "StandaloneDeriving"
+  ItemKind.StandaloneKindSig -> "StandaloneKindSig"
+  ItemKind.TypeData -> "TypeData"
+  ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
+  ItemKind.TypeSynonym -> "TypeSynonym"
 
 -- | Convert ItemName to JSON (newtype with Text)
 itemNameToJson :: ItemName.ItemName -> Value.Value
-itemNameToJson = Value.text . ItemName.value
+itemNameToJson = Value.text . ItemName.unwrap
 
 -- | Convert ExportName to JSON (record)
 exportNameToJson :: ExportName.ExportName -> Value.Value
@@ -242,15 +242,15 @@ subordinatesToJson s =
 -- | Convert ExportNameKind to JSON (sum type with no payload)
 exportNameKindToJson :: ExportNameKind.ExportNameKind -> Value.Value
 exportNameKindToJson k = Value.string $ case k of
+  ExportNameKind.Module -> "Module"
   ExportNameKind.Pattern -> "Pattern"
   ExportNameKind.Type -> "Type"
-  ExportNameKind.Module -> "Module"
 
 -- | Convert Namespace to JSON (sum type with no payload)
 namespaceToJson :: Namespace.Namespace -> Value.Value
 namespaceToJson ns = Value.string $ case ns of
-  Namespace.Value -> "Value"
   Namespace.Type -> "Type"
+  Namespace.Value -> "Value"
 
 -- | Convert Example to JSON (record)
 exampleToJson :: Example.Example -> Value.Value

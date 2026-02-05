@@ -307,7 +307,7 @@ convertIE lIe = case SrcLoc.unLoc lIe of
         { ExportIdentifier.name =
             ExportName.MkExportName
               { ExportName.kind = Just ExportNameKind.Module,
-                ExportName.name = ModuleName.value . moduleNameFromGhc $ SrcLoc.unLoc lModName
+                ExportName.name = ModuleName.unwrap . moduleNameFromGhc $ SrcLoc.unLoc lModName
               },
           ExportIdentifier.subordinates = Nothing,
           ExportIdentifier.warning = convertExportWarning mLWarning,
@@ -1086,4 +1086,4 @@ spec s = do
 
     Spec.it s "converts extension correctly" $ do
       let ext = extensionFromGhc GhcExtension.Cpp
-      Spec.assertEq s (Extension.value ext) (Text.pack "Cpp")
+      Spec.assertEq s (Extension.unwrap ext) (Text.pack "Cpp")

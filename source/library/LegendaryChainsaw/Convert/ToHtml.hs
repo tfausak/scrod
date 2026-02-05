@@ -373,7 +373,7 @@ itemsContents items =
 
     renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
     renderItemWithChildren li =
-      let k = ItemKey.value (Item.key (Located.value li))
+      let k = ItemKey.unwrap (Item.key (Located.value li))
           children = Map.findWithDefault [] k childrenMap
        in [Content.Element (itemToHtml li)]
             <> if null children
@@ -391,7 +391,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
   Document.element
     "div"
     [ Document.attribute "class" "item",
-      Document.attribute "id" ("item-" <> show (ItemKey.value key))
+      Document.attribute "id" ("item-" <> show (ItemKey.unwrap key))
     ]
     ( nameContents
         <> [Content.Element kindElement]
@@ -430,7 +430,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       Document.element
         "span"
         [Document.attribute "class" "item-key"]
-        [Document.text (Text.pack "#" <> Text.pack (show (ItemKey.value key)))]
+        [Document.text (Text.pack "#" <> Text.pack (show (ItemKey.unwrap key)))]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of

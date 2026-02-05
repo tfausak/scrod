@@ -3,6 +3,6 @@ module LegendaryChainsaw.Core.Column where
 import qualified Numeric.Natural as Natural
 
 newtype Column = MkColumn
-  { value :: Natural.Natural
+  { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)

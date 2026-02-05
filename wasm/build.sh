@@ -31,13 +31,6 @@ if command -v wasm-strip > /dev/null 2>&1; then
   wasm-strip wasm/dist/legendary-chainsaw-wasm.wasm
 fi
 
-if command -v wasm-opt > /dev/null 2>&1; then
-  echo "Running wasm-opt..."
-  wasm-opt -Oz --converge --all-features \
-    wasm/dist/legendary-chainsaw-wasm.wasm \
-    -o wasm/dist/legendary-chainsaw-wasm.wasm
-fi
-
 cp -r wasm/www/* wasm/dist/
 
 echo "Build complete."

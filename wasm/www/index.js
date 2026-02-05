@@ -1,6 +1,6 @@
 "use strict";
 
-var worker = new Worker("worker.js");
+var worker = new Worker("worker.js", { type: "module" });
 var source = document.getElementById("source");
 var output = document.getElementById("output");
 var debounceTimer;

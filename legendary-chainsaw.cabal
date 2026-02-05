@@ -194,7 +194,7 @@ executable legendary-chainsaw
 executable legendary-chainsaw-wasm
   import: library
   build-depends:
-    bytestring ^>=0.12.2,
+    ghc-experimental ^>=9.1401.0,
     legendary-chainsaw,
 
   ghc-options: -no-hs-main

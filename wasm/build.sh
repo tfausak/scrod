@@ -21,9 +21,10 @@ mkdir -p wasm/dist
 
 echo "Running GHC JS post-linker..."
 "$(wasm32-wasi-ghc --print-libdir)"/post-link.mjs \
-  --input "$wasm" \
-  --output wasm/dist/legendary-chainsaw-wasm.wasm
+  -i "$wasm" \
+  -o wasm/dist/ghc_wasm_jsffi.js
 
+cp "$wasm" wasm/dist/legendary-chainsaw-wasm.wasm
 cp wasm/www/* wasm/dist/
 
 echo "Build complete."

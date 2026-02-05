@@ -1,36 +1,58 @@
-"use strict";
-
-// The GHC WASM post-linker generates ghc_wasm_jsffi.js alongside the .wasm
-// file. It exports an initialization function. The exact API depends on the
-// post-linker version. This will need adjustment once the WASM build is
-// working.
-// See: https://github.com/tweag/ormolu/blob/master/ormolu-live/www/worker.js
-
-importScripts("ghc_wasm_jsffi.js");
+import ghcWasmJsffi from "./ghc_wasm_jsffi.js";
+import { WASI, File, OpenFile, ConsoleStdout } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.4.2/dist/index.js";
 
 var processHaskell;
 
 async function initialize() {
-  try {
-    var mod = await WebAssembly.compileStreaming(
-      fetch("legendary-chainsaw-wasm.wasm")
-    );
-    var instance = await initLegendaryChainsaw(mod);
-    processHaskell = instance.exports.processHaskell;
-    postMessage("");
-  } catch (e) {
-    postMessage(
-      '<pre class="error">Failed to load WASM module: ' + e.message + "</pre>"
-    );
-  }
+  var fds = [
+    new OpenFile(new File([])),
+    ConsoleStdout.lineBuffered(function (msg) { console.log(msg); }),
+    ConsoleStdout.lineBuffered(function (msg) { console.error(msg); }),
+  ];
+  var wasi = new WASI([], [], fds);
+
+  var exports = null;
+  var exportsProxy = new Proxy(
+    {},
+    {
+      get: function (_, property) {
+        if (!exports) {
+          throw new Error("WASM exports not initialized");
+        }
+        return exports[property];
+      },
+    }
+  );
+
+  var jsffi = ghcWasmJsffi(exportsProxy);
+
+  var wasmBuffer = await (
+    await fetch("legendary-chainsaw-wasm.wasm")
+  ).arrayBuffer();
+  var result = await WebAssembly.instantiate(wasmBuffer, {
+    wasi_snapshot_preview1: wasi.wasiImport,
+    ghc_wasm_jsffi: jsffi,
+  });
+
+  exports = result.instance.exports;
+  wasi.inst = result.instance;
+
+  result.instance.exports.hs_init(0, 0);
+
+  processHaskell = result.instance.exports.processHaskell;
+  postMessage("");
 }
 
-initialize();
+initialize().catch(function (e) {
+  postMessage(
+    '<pre class="error">Failed to load WASM module: ' + e.message + "</pre>"
+  );
+});
 
-onmessage = function (e) {
+onmessage = async function (e) {
   if (processHaskell) {
     try {
-      var result = processHaskell(e.data);
+      var result = await processHaskell(e.data);
       postMessage(result);
     } catch (err) {
       postMessage('<pre class="error">' + err.message + "</pre>");

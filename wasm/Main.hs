@@ -1,12 +1,16 @@
 module Main where
 
-import qualified Data.ByteString.Builder as Builder
 import qualified GHC.Wasm.Prim as Wasm
 import qualified LegendaryChainsaw.Convert.FromGhc as FromGhc
 import qualified LegendaryChainsaw.Convert.ToHtml as ToHtml
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Ghc.Parse as Parse
 import qualified LegendaryChainsaw.Xml.Document as Xml
+
+-- | Not called at runtime. The WASM reactor module uses -no-hs-main, but GHC
+-- still requires main to be defined.
+main :: IO ()
+main = pure ()
 
 foreign export javascript "processHaskell"
   processHaskell :: Wasm.JSString -> IO Wasm.JSString

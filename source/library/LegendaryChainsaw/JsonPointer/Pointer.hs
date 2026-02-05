@@ -19,6 +19,9 @@ newtype Pointer = MkPointer
   }
   deriving (Eq, Ord, Show)
 
+pointer :: [String] -> Pointer
+pointer = MkPointer . fmap (Token.MkToken . Text.pack)
+
 -- | Decodes a JSON Pointer from a string.
 -- Per RFC 6901, a JSON Pointer is either an empty string (root)
 -- or a sequence of reference tokens each prefixed by '/'.
@@ -35,8 +38,6 @@ encodeToken t = Builder.charUtf8 '/' <> Token.encode t
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
-  let pointer = MkPointer . fmap (Token.MkToken . Text.pack)
-
   Spec.named s 'decode $ do
     Spec.it s "succeeds with empty string (root pointer)" $ do
       Spec.assertEq s (Parsec.parseString decode "") . Just $ pointer []

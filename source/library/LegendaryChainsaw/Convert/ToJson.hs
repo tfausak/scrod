@@ -1,8 +1,11 @@
+{-# LANGUAGE TemplateHaskellQuotes #-}
+
 module LegendaryChainsaw.Convert.ToJson where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified GHC.Stack as Stack
 import qualified LegendaryChainsaw.Core.Category as Category
 import qualified LegendaryChainsaw.Core.Column as Column
 import qualified LegendaryChainsaw.Core.Doc as Doc
@@ -37,7 +40,11 @@ import qualified LegendaryChainsaw.Core.Table as Table
 import qualified LegendaryChainsaw.Core.TableCell as TableCell
 import qualified LegendaryChainsaw.Core.Version as Version
 import qualified LegendaryChainsaw.Core.Warning as Warning
+import qualified LegendaryChainsaw.Extra.Parsec as Parsec
 import qualified LegendaryChainsaw.Json.Value as Json
+import qualified LegendaryChainsaw.JsonPointer.Evaluate as Pointer
+import qualified LegendaryChainsaw.JsonPointer.Pointer as Pointer
+import qualified LegendaryChainsaw.Spec as Spec
 
 -- | Convert a Module to a JSON Json.
 toJson :: Module.Module -> Json.Value
@@ -326,3 +333,138 @@ levelToJson l = Json.integer $ case l of
   Level.Four -> 4
   Level.Five -> 5
   Level.Six -> 6
+
+spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
+spec s = do
+  Spec.named s 'toJson $ do
+    Spec.describe s "version" $ do
+      Spec.it s "defaults to [0]" $ do
+        assertPt s "/version" "[0]" id
+
+      Spec.it s "converts multi-part version" $ do
+        assertPt s "/version" "[1, 23]" $ \m -> m {Module.version = Version.MkVersion $ NonEmpty.fromList [1, 23]}
+
+    Spec.describe s "language" $ do
+      Spec.it s "defaults to null" $ do
+        assertPt s "/language" "null" id
+
+      Spec.it s "converts language name" $ do
+        assertPt s "/language" "\"Haskell98\"" $ \m -> m {Module.language = Just . Language.MkLanguage $ Text.pack "Haskell98"}
+
+    Spec.describe s "extensions" $ do
+      Spec.it s "defaults to empty object" $ do
+        assertPt s "/extensions" "{}" id
+
+      Spec.it s "converts enabled extension" $ do
+        assertPt s "/extensions" "{ \"CPP\": true }" $ \m -> m {Module.extensions = Map.singleton (Extension.MkExtension $ Text.pack "CPP") True}
+
+      Spec.it s "converts disabled extension" $ do
+        assertPt s "/extensions" "{ \"CPP\": false }" $ \m -> m {Module.extensions = Map.singleton (Extension.MkExtension $ Text.pack "CPP") False}
+
+    Spec.describe s "documentation" $ do
+      Spec.it s "defaults to Empty" $ do
+        assertPt s "/documentation/type" "\"Empty\"" id
+
+      Spec.it s "converts String doc" $ do
+        assertPt s "/documentation" "{ \"type\": \"String\", \"value\": \"hello\" }" $ \m -> m {Module.documentation = Doc.String $ Text.pack "hello"}
+
+    Spec.describe s "since" $ do
+      Spec.it s "defaults to null" $ do
+        assertPt s "/since" "null" id
+
+      Spec.it s "converts since with package" $ do
+        assertPt s "/since" "{ \"package\": \"base\", \"version\": [4, 20] }" $ \m ->
+          m
+            { Module.since =
+                Just
+                  Since.MkSince
+                    { Since.package = Just . PackageName.MkPackageName $ Text.pack "base",
+                      Since.version = Version.MkVersion $ NonEmpty.fromList [4, 20]
+                    }
+            }
+
+    Spec.describe s "name" $ do
+      Spec.it s "defaults to null" $ do
+        assertPt s "/name" "null" id
+
+      Spec.it s "converts located module name" $ do
+        assertPt s "/name" "{ \"location\": { \"line\": 1, \"column\": 8 }, \"value\": \"Data.List\" }" $ \m ->
+          m
+            { Module.name =
+                Just
+                  Located.MkLocated
+                    { Located.location =
+                        Location.MkLocation
+                          { Location.line = Line.MkLine 1,
+                            Location.column = Column.MkColumn 8
+                          },
+                      Located.value = ModuleName.MkModuleName $ Text.pack "Data.List"
+                    }
+            }
+
+    Spec.describe s "warning" $ do
+      Spec.it s "defaults to null" $ do
+        assertPt s "/warning" "null" id
+
+      Spec.it s "converts warning" $ do
+        assertPt s "/warning" "{ \"category\": \"deprecated\", \"value\": \"Use foo instead\" }" $ \m ->
+          m
+            { Module.warning =
+                Just
+                  Warning.MkWarning
+                    { Warning.category = Category.MkCategory $ Text.pack "deprecated",
+                      Warning.value = Text.pack "Use foo instead"
+                    }
+            }
+
+    Spec.describe s "exports" $ do
+      Spec.it s "defaults to null" $ do
+        assertPt s "/exports" "null" id
+
+      Spec.it s "converts empty list" $ do
+        assertPt s "/exports" "[]" $ \m -> m {Module.exports = Just []}
+
+    Spec.describe s "items" $ do
+      Spec.it s "defaults to empty array" $ do
+        assertPt s "/items" "[]" id
+
+      Spec.it s "converts item kind" $ do
+        assertPt s "/items/0/value/kind" "\"Function\"" $ \m ->
+          m
+            { Module.items =
+                [ Located.MkLocated
+                    { Located.location =
+                        Location.MkLocation
+                          { Location.line = Line.MkLine 1,
+                            Location.column = Column.MkColumn 1
+                          },
+                      Located.value =
+                        Item.MkItem
+                          { Item.key = ItemKey.MkItemKey 0,
+                            Item.kind = ItemKind.Function,
+                            Item.parentKey = Nothing,
+                            Item.name = Nothing,
+                            Item.documentation = Doc.Empty,
+                            Item.signature = Nothing
+                          }
+                    }
+                ]
+            }
+
+assertPt :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> String -> (Module.Module -> Module.Module) -> m ()
+assertPt s p j f = do
+  pointer <- maybe (Spec.assertFailure s "invalid pointer") pure $ Parsec.parseString Pointer.decode p
+  json <- maybe (Spec.assertFailure s "invalid json") pure $ Parsec.parseString Json.decode j
+  let m =
+        Module.MkModule
+          { Module.version = Version.MkVersion $ pure 0,
+            Module.language = Nothing,
+            Module.extensions = Map.empty,
+            Module.documentation = Doc.Empty,
+            Module.since = Nothing,
+            Module.name = Nothing,
+            Module.warning = Nothing,
+            Module.exports = Nothing,
+            Module.items = []
+          }
+  Spec.assertEq s (Pointer.evaluate pointer . toJson $ f m) $ Just json

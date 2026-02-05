@@ -177,10 +177,10 @@ spec s = do
       Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x1f ") "\" \\u001f \""
 
     Spec.it s "does not escape a two-byte character" $ do
-      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x80 ") "\" \xc2\x80 \""
+      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x80 ") "\" \x80 \""
 
     Spec.it s "does not escape a three-byte character" $ do
-      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x800 ") "\" \xe0\xa0\x80 \""
+      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x800 ") "\" \x800 \""
 
     Spec.it s "does not escape a four-byte character" $ do
-      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x10000 ") "\" \xf0\x90\x80\x80 \""
+      Spec.assertEq s (Builder.toString . encode . MkString $ Text.pack " \x10000 ") "\" \x10000 \""

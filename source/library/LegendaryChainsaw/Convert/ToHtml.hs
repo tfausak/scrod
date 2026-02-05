@@ -97,7 +97,7 @@ headElement m =
       Content.Element $
         Document.element "title" [] [Document.text (moduleTitle m)],
       Content.Element $
-        Document.element "style" [] [Document.string stylesheetText]
+        Document.element "style" [] [Document.text . Builder.toText $ CssStylesheet.encode stylesheet]
     ]
 
 bodyElement :: Module.Module -> Element.Element
@@ -724,9 +724,6 @@ rule selectors declarations =
       (fmap (CssSelector.MkSelector . Text.pack) selectors)
       (fmap (\(p, v) -> CssDeclaration.MkDeclaration (CssName.MkName $ Text.pack p) (Text.pack v) False) declarations)
 
-stylesheetText :: String
-stylesheetText = Builder.toString (CssStylesheet.encode stylesheet)
-
 -- Tests
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -869,6 +866,3 @@ spec s = do
 
     Spec.it s "kindToText returns class for Class" $ do
       Spec.assertEq s (kindToText ItemKind.Class) (Text.pack "class")
-
-    Spec.it s "stylesheet is non-empty" $ do
-      Spec.assertNe s stylesheetText ""

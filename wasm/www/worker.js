@@ -1,5 +1,5 @@
 import ghcWasmJsffi from "./ghc_wasm_jsffi.js";
-import { WASI, File, OpenFile, ConsoleStdout } from "https://cdn.jsdelivr.net/npm/@bjorn3/browser_wasi_shim@0.4.2/dist/index.js";
+import { WASI, File, OpenFile, ConsoleStdout } from "./vendor/browser_wasi_shim/index.js";
 
 let processHaskell;
 

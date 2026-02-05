@@ -25,7 +25,7 @@ echo "Running GHC JS post-linker..."
   -o wasm/dist/ghc_wasm_jsffi.js
 
 cp "$wasm" wasm/dist/legendary-chainsaw-wasm.wasm
-cp wasm/www/* wasm/dist/
+cp -r wasm/www/* wasm/dist/
 
 echo "Build complete."
 echo "Serve with: python3 -m http.server -d wasm/dist"

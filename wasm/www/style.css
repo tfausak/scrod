@@ -46,15 +46,3 @@ body {
 .output-pane {
   padding: 1rem;
 }
-
-.loading {
-  color: #888;
-  font-style: italic;
-}
-
-.error {
-  color: #c00;
-  white-space: pre-wrap;
-  font-family: monospace;
-  font-size: 14px;
-}

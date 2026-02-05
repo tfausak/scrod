@@ -102,3 +102,16 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
       - run: tar --extract --file artifact.tar --verbose
       - run: artifact/${{ needs.meta.outputs.name }}-test-suite
+  wasm:
+    name: WASM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - run: nix shell 'gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org' -c wasm32-wasi-cabal update
+      - run: nix shell 'gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org' -c wasm/build.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: wasm-dist
+          path: wasm/dist/

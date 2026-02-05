@@ -22,6 +22,10 @@ flag pedantic
   default: False
   manual: True
 
+flag wasm
+  default: False
+  manual: True
+
 common library
   build-depends: base ^>=4.22.0
   default-language: Haskell2010
@@ -186,3 +190,16 @@ executable legendary-chainsaw
   import: executable
   hs-source-dirs: source/executable
   main-is: Main.hs
+
+executable legendary-chainsaw-wasm
+  import: library
+  build-depends:
+    bytestring ^>=0.12.2,
+    legendary-chainsaw,
+
+  ghc-options: -no-hs-main
+  hs-source-dirs: wasm
+  main-is: Main.hs
+
+  if !flag(wasm)
+    buildable: False

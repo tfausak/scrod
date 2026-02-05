@@ -1,0 +1,49 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  height: 100vh;
+  font-family: system-ui, sans-serif;
+}
+
+.pane {
+  width: 50%;
+  height: 100%;
+  overflow: auto;
+}
+
+.input-pane {
+  border-right: 1px solid #ccc;
+}
+
+.input-pane textarea {
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  border: none;
+  outline: none;
+  resize: none;
+  font-family: monospace;
+  font-size: 14px;
+  tab-size: 2;
+}
+
+.output-pane {
+  padding: 1rem;
+}
+
+.loading {
+  color: #888;
+  font-style: italic;
+}
+
+.error {
+  color: #c00;
+  white-space: pre-wrap;
+  font-family: monospace;
+  font-size: 14px;
+}

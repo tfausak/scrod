@@ -8,7 +8,8 @@ import qualified LegendaryChainsaw.Spec as Spec
 import qualified System.Console.GetOpt as GetOpt
 
 data Flag
-  = Help (Maybe String)
+  = Format String
+  | Help (Maybe String)
   | Version (Maybe String)
   deriving (Eq, Ord, Show)
 
@@ -23,7 +24,8 @@ fromArguments arguments = do
 optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
-    GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version."
+    GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
+    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html)."
   ]
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -37,6 +39,16 @@ spec s = do
 
     Spec.it s "fails with an unexpected argument" $ do
       Spec.assertEq s (fromArguments ["x"]) Nothing
+
+    Spec.describe s "format" $ do
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--format=json"]) $ Just [Format "json"]
+
+      Spec.it s "works with html" $ do
+        Spec.assertEq s (fromArguments ["--format=html"]) $ Just [Format "html"]
+
+      Spec.it s "fails with no argument" $ do
+        Spec.assertEq s (fromArguments ["--format"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with no argument" $ do

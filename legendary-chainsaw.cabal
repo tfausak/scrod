@@ -120,6 +120,7 @@ library
     LegendaryChainsaw.Decimal
     LegendaryChainsaw.Executable.Config
     LegendaryChainsaw.Executable.Flag
+    LegendaryChainsaw.Executable.Format
     LegendaryChainsaw.Executable.Main
     LegendaryChainsaw.Extra.Builder
     LegendaryChainsaw.Extra.Either

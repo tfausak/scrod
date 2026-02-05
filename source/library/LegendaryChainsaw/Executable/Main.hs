@@ -5,12 +5,15 @@ import qualified Data.ByteString.Builder as Builder
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
 import qualified LegendaryChainsaw.Convert.FromGhc as FromGhc
+import qualified LegendaryChainsaw.Convert.ToHtml as ToHtml
 import qualified LegendaryChainsaw.Convert.ToJson as ToJson
 import qualified LegendaryChainsaw.Executable.Config as Config
 import qualified LegendaryChainsaw.Executable.Flag as Flag
+import qualified LegendaryChainsaw.Executable.Format as Format
 import qualified LegendaryChainsaw.Ghc.Parse as Parse
-import qualified LegendaryChainsaw.Json.Value as Value
+import qualified LegendaryChainsaw.Json.Value as Json
 import qualified LegendaryChainsaw.Version as Version
+import qualified LegendaryChainsaw.Xml.Document as Xml
 import qualified System.Console.GetOpt as GetOpt
 import qualified System.Environment as Environment
 import qualified System.Exit as Exit
@@ -35,7 +38,9 @@ mainWith name arguments = do
   input <- getContents
   result <- either fail pure $ Parse.parse input
   module_ <- either fail pure $ FromGhc.fromGhc result
+  let encoder = case Config.format config of
+        Format.Json -> Json.encode . ToJson.toJson
+        Format.Html -> Xml.encode . ToHtml.toHtml
   Builder.hPutBuilder IO.stdout
     . (<> Builder.charUtf8 '\n')
-    . Value.encode
-    $ ToJson.toJson module_
+    $ encoder module_

@@ -15,6 +15,7 @@ import qualified LegendaryChainsaw.Css.Stylesheet
 import qualified LegendaryChainsaw.Decimal
 import qualified LegendaryChainsaw.Executable.Config
 import qualified LegendaryChainsaw.Executable.Flag
+import qualified LegendaryChainsaw.Executable.Format
 import qualified LegendaryChainsaw.Extra.Builder
 import qualified LegendaryChainsaw.Extra.Either
 import qualified LegendaryChainsaw.Extra.Maybe
@@ -65,6 +66,7 @@ testSuite s = do
   LegendaryChainsaw.Css.Stylesheet.spec s
   LegendaryChainsaw.Decimal.spec s
   LegendaryChainsaw.Executable.Config.spec s
+  LegendaryChainsaw.Executable.Format.spec s
   LegendaryChainsaw.Executable.Flag.spec s
   LegendaryChainsaw.Extra.Builder.spec s
   LegendaryChainsaw.Extra.Either.spec s

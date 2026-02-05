@@ -72,6 +72,7 @@ library
     LegendaryChainsaw
     LegendaryChainsaw.Convert.FromGhc
     LegendaryChainsaw.Convert.FromHaddock
+    LegendaryChainsaw.Convert.ToHtml
     LegendaryChainsaw.Convert.ToJson
     LegendaryChainsaw.Core.Category
     LegendaryChainsaw.Core.Column

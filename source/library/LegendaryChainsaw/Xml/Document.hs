@@ -8,6 +8,7 @@ import qualified Data.Text as Text
 import qualified LegendaryChainsaw.Extra.Builder as Builder
 import qualified LegendaryChainsaw.Extra.Parsec as Parsec
 import qualified LegendaryChainsaw.Spec as Spec
+import qualified LegendaryChainsaw.Xml.Attribute as Attribute
 import qualified LegendaryChainsaw.Xml.Comment as Comment
 import qualified LegendaryChainsaw.Xml.Content as Content
 import qualified LegendaryChainsaw.Xml.Declaration as Declaration
@@ -25,6 +26,27 @@ data Document = MkDocument
     root :: Element.Element
   }
   deriving (Eq, Ord, Show)
+
+element :: String -> [Attribute.Attribute] -> [Content.Content Element.Element] -> Element.Element
+element name attributes contents =
+  Element.MkElement
+    { Element.name = Name.MkName $ Text.pack name,
+      Element.attributes = attributes,
+      Element.contents = contents
+    }
+
+attribute :: String -> String -> Attribute.Attribute
+attribute name value =
+  Attribute.MkAttribute
+    { Attribute.name = Name.MkName $ Text.pack name,
+      Attribute.value = Text.pack value
+    }
+
+text :: String -> Content.Content a
+text = Content.Text . Text.pack
+
+textContent :: Text.Text -> Content.Content a
+textContent = Content.Text
 
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Document
 decode =

@@ -7,12 +7,15 @@ var debounceTimer;
 var ready = false;
 
 worker.onmessage = function (e) {
-  if (!ready) {
+  var msg = e.data;
+  if (msg.tag === "ready") {
     ready = true;
     output.innerHTML = "";
-    return;
+  } else if (msg.tag === "result") {
+    output.innerHTML = msg.html;
+  } else if (msg.tag === "error") {
+    output.innerHTML = '<pre class="error">' + msg.html + "</pre>";
   }
-  output.innerHTML = e.data;
 };
 
 worker.onerror = function (e) {

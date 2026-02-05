@@ -35,27 +35,23 @@ async function initialize() {
   });
 
   exports = result.instance.exports;
-  wasi.inst = result.instance;
-
-  result.instance.exports.hs_init(0, 0);
+  wasi.initialize(result.instance);
 
   processHaskell = result.instance.exports.processHaskell;
-  postMessage("");
+  postMessage({ tag: "ready" });
 }
 
 initialize().catch(function (e) {
-  postMessage(
-    '<pre class="error">Failed to load WASM module: ' + e.message + "</pre>"
-  );
+  postMessage({ tag: "error", html: "Failed to load WASM module: " + e.message });
 });
 
 onmessage = async function (e) {
   if (processHaskell) {
     try {
       var result = await processHaskell(e.data);
-      postMessage(result);
+      postMessage({ tag: "result", html: result });
     } catch (err) {
-      postMessage('<pre class="error">' + err.message + "</pre>");
+      postMessage({ tag: "error", html: err.message });
     }
   }
 };

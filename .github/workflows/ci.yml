@@ -109,8 +109,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/nix-installer-action@v21
       - uses: DeterminateSystems/magic-nix-cache-action@v13
-      - run: nix shell 'gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org' 'nixpkgs#wabt' -c wasm32-wasi-cabal update
-      - run: nix shell 'gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org' 'nixpkgs#wabt' -c wasm/build.sh
+      - run: wasm/nix-shell.sh wasm32-wasi-cabal update
+      - run: wasm/nix-shell.sh wasm/build.sh
       - uses: actions/upload-artifact@v6
         with:
           name: wasm-dist

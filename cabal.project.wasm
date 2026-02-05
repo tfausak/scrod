@@ -6,4 +6,4 @@ with-hc-pkg: wasm32-wasi-ghc-pkg
 flags: +wasm
 
 package legendary-chainsaw
-  ghc-options: -no-hs-main -optl-mexec-model=reactor
+  ghc-options: -no-hs-main -optl-mexec-model=reactor -optl-Wl,--strip-debug -optl-Wl,--compress-relocations

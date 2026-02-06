@@ -2,6 +2,7 @@
   "customizations": {
     "vscode": {
       "extensions": [
+        "github.vscode-github-actions",
         "mkhl.direnv",
         "taylorfausak.purple-yolk"
       ]
@@ -13,6 +14,5 @@
     }
   },
   "image": "mcr.microsoft.com/devcontainers/base:alpine",
-  "onCreateCommand": "nix-env -iA nixpkgs.direnv",
-  "postCreateCommand": "direnv allow && direnv exec . cabal update"
+  "onCreateCommand": "nix-env -iA nixpkgs.direnv"
 }

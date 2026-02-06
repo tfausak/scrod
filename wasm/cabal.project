@@ -1,9 +1,11 @@
 packages: .
-
 with-compiler: wasm32-wasi-ghc
 with-hc-pkg: wasm32-wasi-ghc-pkg
-
 flags: +wasm
 
 package legendary-chainsaw
-  ghc-options: -no-hs-main -optl-mexec-model=reactor -optl-Wl,--strip-debug -optl-Wl,--compress-relocations
+  ghc-options:
+    -no-hs-main
+    -optl-mexec-model=reactor
+    "-optl-Wl,--strip-debug"
+    "-optl-Wl,--compress-relocations"

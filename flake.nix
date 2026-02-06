@@ -26,6 +26,7 @@
               ghc-wasm-meta.packages.${system}.default
               pkgs.cabal-install
               pkgs.fzf
+              pkgs.gh
               pkgs.haskell.compiler.native-bignum.ghc9141
               pkgs.haskellPackages.cabal-gild
               pkgs.hlint
@@ -33,6 +34,7 @@
               pkgs.nixfmt
               pkgs.ormolu
               pkgs.ripgrep
+              pkgs.shellcheck
               pkgs.wabt
             ];
           };

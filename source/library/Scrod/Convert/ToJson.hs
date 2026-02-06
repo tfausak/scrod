@@ -996,6 +996,27 @@ spec s = do
                   ]
               }
 
+      Spec.it s "converts RecordField kind" $ do
+        assertPointers
+          s
+          [("/items/0/value/kind", "\"RecordField\"")]
+          $ \m ->
+            m
+              { Module.items =
+                  [ located
+                      1
+                      1
+                      Item.MkItem
+                        { Item.key = ItemKey.MkItemKey 0,
+                          Item.kind = ItemKind.RecordField,
+                          Item.parentKey = Nothing,
+                          Item.name = Nothing,
+                          Item.documentation = Doc.Empty,
+                          Item.signature = Nothing
+                        }
+                  ]
+              }
+
       Spec.it s "converts item with parentKey" $ do
         assertPointers
           s

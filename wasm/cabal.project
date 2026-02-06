@@ -3,7 +3,7 @@ with-compiler: wasm32-wasi-ghc
 with-hc-pkg: wasm32-wasi-ghc-pkg
 flags: +wasm
 
-package legendary-chainsaw
+package scrod
   ghc-options:
     -no-hs-main
     -optl-mexec-model=reactor

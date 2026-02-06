@@ -1,11 +1,11 @@
 module Main where
 
 import qualified GHC.Wasm.Prim as Wasm
-import qualified LegendaryChainsaw.Convert.FromGhc as FromGhc
-import qualified LegendaryChainsaw.Convert.ToHtml as ToHtml
-import qualified LegendaryChainsaw.Extra.Builder as Builder
-import qualified LegendaryChainsaw.Ghc.Parse as Parse
-import qualified LegendaryChainsaw.Xml.Document as Xml
+import qualified Scrod.Convert.FromGhc as FromGhc
+import qualified Scrod.Convert.ToHtml as ToHtml
+import qualified Scrod.Extra.Builder as Builder
+import qualified Scrod.Ghc.Parse as Parse
+import qualified Scrod.Xml.Document as Xml
 
 -- | Not called at runtime. The WASM reactor module uses -no-hs-main, but GHC
 -- still requires main to be defined.

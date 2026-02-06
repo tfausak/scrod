@@ -1,6 +1,6 @@
 import qualified Control.Monad.Trans.Writer as Writer
-import qualified LegendaryChainsaw
-import qualified LegendaryChainsaw.Spec as Spec
+import qualified Scrod
+import qualified Scrod.Spec as Spec
 import qualified Test.Tasty as Tasty
 import qualified Test.Tasty.HUnit as Unit
 
@@ -8,7 +8,7 @@ main :: IO ()
 main = Tasty.defaultMain testTree
 
 testTree :: Tasty.TestTree
-testTree = Tasty.testGroup "legendary-chainsaw" . Writer.execWriter $ LegendaryChainsaw.testSuite tasty
+testTree = Tasty.testGroup "scrod" . Writer.execWriter $ Scrod.testSuite tasty
 
 tasty :: Spec.Spec IO (Writer.Writer [Tasty.TestTree])
 tasty =

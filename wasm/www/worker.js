@@ -26,7 +26,7 @@ async function initialize() {
 
   const jsffi = ghcWasmJsffi(exportsProxy);
 
-  const response = await fetch("legendary-chainsaw-wasm.wasm");
+  const response = await fetch("scrod-wasm.wasm");
   if (!response.ok) {
     throw new Error(
       "Failed to fetch WASM module (status " +

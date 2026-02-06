@@ -34,7 +34,6 @@
               pkgs.nixfmt
               pkgs.ormolu
               pkgs.ripgrep
-              pkgs.shellcheck
               pkgs.wabt
             ];
           };

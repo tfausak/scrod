@@ -6,12 +6,12 @@ cd "$(dirname "$0")/.."
 echo "Building WASM executable..."
 wasm32-wasi-cabal build \
   --project-file=wasm/cabal.project \
-  exe:legendary-chainsaw-wasm
+  exe:scrod-wasm
 
 echo "Locating WASM binary..."
-wasm=$(find dist-newstyle -name "legendary-chainsaw-wasm.wasm" -type f | head -n 1)
+wasm=$(find dist-newstyle -name "scrod-wasm.wasm" -type f | head -n 1)
 if [ -z "$wasm" ]; then
-  echo "Error: could not find legendary-chainsaw-wasm.wasm" >&2
+  echo "Error: could not find scrod-wasm.wasm" >&2
   exit 1
 fi
 echo "Found: $wasm"
@@ -24,11 +24,11 @@ echo "Running GHC JS post-linker..."
   -i "$wasm" \
   -o wasm/dist/ghc_wasm_jsffi.js
 
-cp "$wasm" wasm/dist/legendary-chainsaw-wasm.wasm
+cp "$wasm" wasm/dist/scrod-wasm.wasm
 
 if command -v wasm-strip > /dev/null 2>&1; then
   echo "Running wasm-strip..."
-  wasm-strip wasm/dist/legendary-chainsaw-wasm.wasm
+  wasm-strip wasm/dist/scrod-wasm.wasm
 fi
 
 cp -r wasm/www/* wasm/dist/

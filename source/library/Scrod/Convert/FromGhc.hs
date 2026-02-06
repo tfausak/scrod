@@ -866,22 +866,58 @@ extractFieldsFromConDeclM parentKey conDecl = case conDecl of
     extractFieldsFromGADTDetailsM parentKey gArgs
 
 -- | Extract fields from H98-style constructor details.
--- Note: Field extraction for GHC 9.14+ requires different API usage.
--- This is a simplified version that does not extract individual fields.
 extractFieldsFromH98DetailsM ::
   Maybe ItemKey.ItemKey ->
   Syntax.HsConDeclH98Details Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-extractFieldsFromH98DetailsM _ _ = pure []
+extractFieldsFromH98DetailsM parentKey details = case details of
+  Syntax.PrefixCon _ -> pure []
+  Syntax.InfixCon _ _ -> pure []
+  Syntax.RecCon lFields -> convertConDeclFieldsM parentKey (SrcLoc.unLoc lFields)
 
 -- | Extract fields from GADT-style constructor details.
--- Note: Field extraction for GHC 9.14+ requires different API usage.
--- This is a simplified version that does not extract individual fields.
 extractFieldsFromGADTDetailsM ::
   Maybe ItemKey.ItemKey ->
   Syntax.HsConDeclGADTDetails Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-extractFieldsFromGADTDetailsM _ _ = pure []
+extractFieldsFromGADTDetailsM parentKey details = case details of
+  Syntax.PrefixConGADT _ _ -> pure []
+  Syntax.RecConGADT _ lFields -> convertConDeclFieldsM parentKey (SrcLoc.unLoc lFields)
+
+-- | Convert a list of record fields.
+convertConDeclFieldsM ::
+  Maybe ItemKey.ItemKey ->
+  [Syntax.LHsConDeclRecField Ghc.GhcPs] ->
+  ConvertM [Located.Located Item.Item]
+convertConDeclFieldsM parentKey = fmap concat . traverse (convertConDeclFieldM parentKey)
+
+-- | Convert a single record field declaration to items (one per field name).
+convertConDeclFieldM ::
+  Maybe ItemKey.ItemKey ->
+  Syntax.LHsConDeclRecField Ghc.GhcPs ->
+  ConvertM [Located.Located Item.Item]
+convertConDeclFieldM parentKey lField =
+  let recField = SrcLoc.unLoc lField
+      fieldSpec = Syntax.cdrf_spec recField
+      doc = maybe Doc.Empty convertLHsDoc $ Syntax.cdf_doc fieldSpec
+      sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ Syntax.cdf_type fieldSpec
+   in Maybe.catMaybes <$> traverse (convertFieldNameM parentKey doc sig) (Syntax.cdrf_names recField)
+
+-- | Convert a single field name to an item.
+convertFieldNameM ::
+  Maybe ItemKey.ItemKey ->
+  Doc.Doc ->
+  Maybe Text.Text ->
+  Syntax.LFieldOcc Ghc.GhcPs ->
+  ConvertM (Maybe (Located.Located Item.Item))
+convertFieldNameM parentKey doc sig lFieldOcc =
+  mkItemM
+    (Annotation.getLocA lFieldOcc)
+    parentKey
+    (Just $ extractFieldOccName lFieldOcc)
+    doc
+    sig
+    ItemKind.RecordField
 
 -- | Extract declaration name.
 extractDeclName :: Syntax.LHsDecl Ghc.GhcPs -> Maybe ItemName.ItemName

@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -euo pipefail
+#!/usr/bin/env sh
+set -o errexit -o xtrace
 
 ref="${1:-2f86b49dce50916e2984029c535321e34b234229}"
 url="https://esm.sh/gh/haskell-wasm/browser_wasi_shim@$ref/es2022/browser_wasi_shim.mjs"

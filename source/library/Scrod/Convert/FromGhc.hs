@@ -27,6 +27,8 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Unit.Module.Warnings as Warnings
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
+import qualified Numeric.Natural as Natural
+import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromHaddock as FromHaddock
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
@@ -55,8 +57,6 @@ import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
 import qualified Scrod.Spec as Spec
-import qualified Numeric.Natural as Natural
-import qualified PackageInfo_scrod as PackageInfo
 
 -- | State for tracking item keys during conversion.
 newtype ConversionState = MkConversionState

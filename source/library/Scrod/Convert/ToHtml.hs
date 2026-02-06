@@ -5,6 +5,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
+import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Doc as Doc
@@ -54,7 +55,6 @@ import qualified Scrod.Xml.Document as Xml
 import qualified Scrod.Xml.Element as Element
 import qualified Scrod.Xml.Misc as Misc
 import qualified Scrod.Xml.Name as XmlName
-import qualified Numeric.Natural as Natural
 
 -- | Convert a Module to a complete HTML document.
 toHtml :: Module.Module -> Xml.Document

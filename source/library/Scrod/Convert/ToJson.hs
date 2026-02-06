@@ -7,6 +7,7 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified GHC.Stack as Stack
+import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Doc as Doc
@@ -46,7 +47,6 @@ import qualified Scrod.Json.Value as Json
 import qualified Scrod.JsonPointer.Evaluate as Pointer
 import qualified Scrod.JsonPointer.Pointer as Pointer
 import qualified Scrod.Spec as Spec
-import qualified Numeric.Natural as Natural
 
 -- | Convert a Module to a JSON Json.
 toJson :: Module.Module -> Json.Value

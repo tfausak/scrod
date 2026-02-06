@@ -3,8 +3,8 @@
 module Scrod.Version where
 
 import qualified Data.Version as Version
-import qualified Scrod.Spec as Spec
 import qualified PackageInfo_scrod as PackageInfo
+import qualified Scrod.Spec as Spec
 
 version :: Version.Version
 version = PackageInfo.version

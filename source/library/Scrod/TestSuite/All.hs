@@ -1,4 +1,4 @@
-module Scrod.TestSuite where
+module Scrod.TestSuite.All where
 
 import qualified Scrod.Convert.FromGhc
 import qualified Scrod.Convert.FromHaddock

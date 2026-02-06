@@ -116,3 +116,21 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
           path: wasm/dist/
+      - uses: actions/upload-pages-artifact@v4
+        if: github.event_name == 'push'
+        with:
+          path: wasm/dist/
+  github-pages:
+    name: GitHub Pages
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: wasm
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

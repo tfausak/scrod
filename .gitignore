@@ -1,4 +1,6 @@
+/.direnv/
 /.vscode/
+/a.out
 /cabal.project.*
 /dist-newstyle/
 /wasm/dist/

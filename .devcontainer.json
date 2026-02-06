@@ -1,3 +1,18 @@
 {
-  "image": "benz0li/ghc-musl:9.14.1-int-native"
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "mkhl.direnv",
+        "taylorfausak.purple-yolk"
+      ]
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/nix:1": {
+      "extraNixConfig": "experimental-features = nix-command flakes"
+    }
+  },
+  "image": "mcr.microsoft.com/devcontainers/base:alpine",
+  "onCreateCommand": "nix-env -iA nixpkgs.direnv",
+  "postCreateCommand": "direnv allow && direnv exec . cabal update"
 }

@@ -21,6 +21,9 @@ worker.onmessage = function (e) {
   if (msg.tag === "ready") {
     ready = true;
     shadow.innerHTML = "";
+    if (source.value) {
+      worker.postMessage(source.value);
+    }
   } else if (msg.tag === "result") {
     shadow.innerHTML = msg.html;
   } else if (msg.tag === "error") {
@@ -32,11 +35,41 @@ worker.onerror = function (e) {
   showError("Worker error: " + e.message);
 };
 
+function encodeHash(text) {
+  return btoa(new TextEncoder().encode(text).reduce(function (s, b) {
+    return s + String.fromCharCode(b);
+  }, ""));
+}
+
+function decodeHash(hash) {
+  return new TextDecoder().decode(
+    Uint8Array.from(atob(hash), function (c) { return c.charCodeAt(0); })
+  );
+}
+
+function updateHash() {
+  if (source.value) {
+    history.replaceState(null, "", "#" + encodeHash(source.value));
+  } else {
+    history.replaceState(null, "", location.pathname);
+  }
+}
+
 source.addEventListener("input", function () {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () {
+    updateHash();
     if (ready) {
       worker.postMessage(source.value);
     }
   }, 300);
 });
+
+// Load content from URL hash on startup
+if (location.hash.length > 1) {
+  try {
+    source.value = decodeHash(location.hash.slice(1));
+  } catch (e) {
+    // ignore invalid hash
+  }
+}

@@ -51,8 +51,8 @@ import qualified Scrod.Xml.Misc
 import qualified Scrod.Xml.Name
 import qualified Scrod.Xml.Text
 
-testSuite :: (Monad m, Monad n) => Spec.Spec m n -> n ()
-testSuite s = do
+spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
+spec s = do
   Scrod.Convert.FromGhc.spec s
   Scrod.Convert.FromHaddock.spec s
   Scrod.Convert.ToHtml.spec s

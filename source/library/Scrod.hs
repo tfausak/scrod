@@ -1,6 +1,6 @@
 module Scrod
-  ( Scrod.Executable.Main.executable,
-    Scrod.TestSuite.testSuite,
+  ( Scrod.Executable.Main.defaultMain,
+    Scrod.TestSuite.spec,
     Scrod.Version.version,
   )
 where

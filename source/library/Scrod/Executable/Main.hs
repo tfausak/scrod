@@ -19,8 +19,8 @@ import qualified System.Environment as Environment
 import qualified System.Exit as Exit
 import qualified System.IO as IO
 
-executable :: (Stack.HasCallStack) => IO ()
-executable = do
+defaultMain :: (Stack.HasCallStack) => IO ()
+defaultMain = do
   name <- Environment.getProgName
   arguments <- Environment.getArgs
   mainWith name arguments

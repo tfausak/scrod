@@ -8,7 +8,7 @@ main :: IO ()
 main = Tasty.defaultMain testTree
 
 testTree :: Tasty.TestTree
-testTree = Tasty.testGroup "scrod" . Writer.execWriter $ Scrod.testSuite tasty
+testTree = Tasty.testGroup "scrod" . Writer.execWriter $ Scrod.spec tasty
 
 tasty :: Spec.Spec IO (Writer.Writer [Tasty.TestTree])
 tasty =

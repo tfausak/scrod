@@ -1,6 +1,5 @@
 module Scrod.TestSuite.All where
 
-import qualified Scrod.Convert.FromGhc
 import qualified Scrod.Convert.FromHaddock
 import qualified Scrod.Convert.ToHtml
 import qualified Scrod.Convert.ToJson
@@ -54,7 +53,6 @@ import qualified Scrod.Xml.Text
 
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
-  Scrod.Convert.FromGhc.spec s
   Scrod.Convert.FromHaddock.spec s
   Scrod.Convert.ToHtml.spec s
   Scrod.Convert.ToJson.spec s

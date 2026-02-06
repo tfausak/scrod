@@ -9,6 +9,7 @@ ghc-options: -Wall
 -}
 
 import qualified Control.Monad as Monad
+import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified System.Directory as Directory
 import qualified System.Exit as Exit
@@ -24,7 +25,7 @@ main = do
     ["build", "--project-file=wasm/cabal.project", "exe:scrod-wasm"]
 
   putStrLn "Locating WASM binary..."
-  wasm <- trim <$> Process.readProcess "find" ["dist-newstyle", "-name", "scrod-wasm.wasm", "-type", "f"] ""
+  wasm <- firstResult <$> Process.readProcess "find" ["dist-newstyle", "-name", "scrod-wasm.wasm", "-type", "f", "-print0"] ""
   Monad.when (null wasm) $ do
     IO.hPutStrLn IO.stderr "Error: could not find scrod-wasm.wasm"
     Exit.exitFailure
@@ -52,5 +53,8 @@ main = do
   putStrLn "Build complete."
   putStrLn "Serve with: python3 -m http.server -d wasm/dist"
 
+firstResult :: String -> String
+firstResult = takeWhile (/= '\0')
+
 trim :: String -> String
-trim = List.dropWhileEnd (== '\n')
+trim = List.dropWhileEnd Char.isSpace . List.dropWhile Char.isSpace

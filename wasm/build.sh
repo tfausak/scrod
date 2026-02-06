@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 echo "Building WASM executable..."
 wasm32-wasi-cabal build \
-  --project-file=cabal.project.wasm \
+  --project-file=wasm/cabal.project \
   exe:legendary-chainsaw-wasm
 
 echo "Locating WASM binary..."

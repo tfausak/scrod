@@ -109,7 +109,6 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/nix-installer-action@v21
-      - uses: DeterminateSystems/magic-nix-cache-action@v13
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command wasm/build.sh
       - uses: actions/upload-artifact@v6

@@ -1114,6 +1114,7 @@ updateParentKey keyRemapping locatedItem =
                     val {Item.parentKey = Just newPk}
                 }
 
+-- TODO: Move into `Scrod.TestSuite.Integration`.
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'fromGhc $ do

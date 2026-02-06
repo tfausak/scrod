@@ -336,6 +336,7 @@ levelToJson l = Json.integer $ case l of
   Level.Five -> 5
   Level.Six -> 6
 
+-- TODO: Move into `Scrod.TestSuite.Integration`.
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'toJson $ do

@@ -8,6 +8,7 @@
     - default: false
     - name:
         - FlexibleContexts
+        - MultilineStrings
         - RankNTypes
         - ScopedTypeVariables
         - TemplateHaskellQuotes

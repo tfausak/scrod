@@ -119,6 +119,7 @@ convertTableCell cell =
       TableCell.contents = convertDoc $ Haddock.tableCellContents cell
     }
 
+-- TODO: Leave these here, but create a set of similar tests in `Scrod.TestSuite.Integration`.
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'fromHaddock $ do

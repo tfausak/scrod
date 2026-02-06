@@ -3,6 +3,7 @@
 module Scrod.Convert.FromGhc where
 
 import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -56,6 +57,7 @@ import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
+import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Spec as Spec
 
 -- | State for tracking item keys during conversion.
@@ -523,10 +525,10 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
     let parentKey = fmap (Item.key . Located.value) parentItem
     childItems <- convertDataDefnM parentKey dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
-  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats} -> do
+  Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
     parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
-    methodItems <- convertClassSigsM parentKey sigs
+    methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
@@ -703,32 +705,42 @@ convertRuleDeclM ::
 convertRuleDeclM lRuleDecl =
   mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing ItemKind.Rule
 
--- | Convert class signatures.
-convertClassSigsM ::
+-- | Convert class signatures with associated documentation.
+convertClassSigsWithDocsM ::
   Maybe ItemKey.ItemKey ->
   [Syntax.LSig Ghc.GhcPs] ->
+  [Hs.LDocDecl Ghc.GhcPs] ->
   ConvertM [Located.Located Item.Item]
-convertClassSigsM parentKey = fmap concat . traverse (convertClassSigM parentKey)
+convertClassSigsWithDocsM parentKey sigs docs =
+  let sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) sigs
+      docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
+      allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
+      sigsWithDocs = associateDocs allDecls
+   in concat <$> traverse (uncurry (convertClassDeclWithDocM parentKey)) sigsWithDocs
 
--- | Convert a single class signature.
-convertClassSigM ::
+-- | Convert a class body declaration with associated documentation.
+convertClassDeclWithDocM ::
   Maybe ItemKey.ItemKey ->
-  Syntax.LSig Ghc.GhcPs ->
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-convertClassSigM parentKey lSig = case SrcLoc.unLoc lSig of
-  Syntax.ClassOpSig _ _ names _ ->
-    let sig = extractSigSignature $ SrcLoc.unLoc lSig
-     in Maybe.catMaybes <$> traverse (convertIdPM parentKey sig) names
+convertClassDeclWithDocM parentKey doc lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.SigD _ sig -> case sig of
+    Syntax.ClassOpSig _ _ names _ ->
+      let sigText = extractSigSignature sig
+       in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc sigText) names
+    _ -> pure []
   _ -> pure []
 
--- | Convert an identifier with parent key and signature.
+-- | Convert an identifier with parent key, documentation, and signature.
 convertIdPM ::
   Maybe ItemKey.ItemKey ->
+  Doc.Doc ->
   Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
-convertIdPM parentKey sig lIdP =
-  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) Doc.Empty sig ItemKind.ClassMethod
+convertIdPM parentKey doc sig lIdP =
+  mkItemM (Annotation.getLocA lIdP) parentKey (Just $ extractIdPName lIdP) doc sig ItemKind.ClassMethod
 
 -- | Convert family declarations.
 convertFamilyDeclsM ::
@@ -1123,3 +1135,13 @@ spec s = do
     Spec.it s "converts extension correctly" $ do
       let ext = extensionFromGhc GhcExtension.Cpp
       Spec.assertEq s (Extension.unwrap ext) (Text.pack "Cpp")
+
+    Spec.it s "extracts documentation on class methods" $ do
+      let result = do
+            parsed <- Parse.parse "class C a where\n  -- | x\n  m :: a"
+            module_ <- fromGhc parsed
+            let methods = filter (\i -> Item.kind (Located.value i) == ItemKind.ClassMethod) $ Module.items module_
+            case methods of
+              [item] -> Right $ Item.documentation (Located.value item)
+              _ -> Left "expected exactly one class method"
+      Spec.assertEq s result (Right (Doc.Paragraph (Doc.String (Text.pack "x"))))

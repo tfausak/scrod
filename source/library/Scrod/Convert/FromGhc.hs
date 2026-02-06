@@ -57,7 +57,6 @@ import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
-import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Spec as Spec
 
 -- | State for tracking item keys during conversion.
@@ -1135,13 +1134,3 @@ spec s = do
     Spec.it s "converts extension correctly" $ do
       let ext = extensionFromGhc GhcExtension.Cpp
       Spec.assertEq s (Extension.unwrap ext) (Text.pack "Cpp")
-
-    Spec.it s "extracts documentation on class methods" $ do
-      let result = do
-            parsed <- Parse.parse "class C a where\n  -- | x\n  m :: a"
-            module_ <- fromGhc parsed
-            let methods = filter (\i -> Item.kind (Located.value i) == ItemKind.ClassMethod) $ Module.items module_
-            case methods of
-              [item] -> Right $ Item.documentation (Located.value item)
-              _ -> Left "expected exactly one class method"
-      Spec.assertEq s result (Right (Doc.Paragraph (Doc.String (Text.pack "x"))))

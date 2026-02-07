@@ -879,6 +879,45 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/signature", "\"L2 :: K2\"")
         ]
 
+    Spec.it s "data constructor with arg doc" $ do
+      check
+        s
+        """
+        data T2
+          = C2
+            Int -- ^ arg doc
+            Bool
+        """
+        [ ("/items/1/value/name", "\"C2\""),
+          ("/items/1/value/signature", "\"C2 Int Bool\"")
+        ]
+
+    Spec.it s "data constructor GADT with arg doc" $ do
+      check
+        s
+        """
+        data T3 where
+          C3 ::
+            Int -- ^ arg doc
+            -> T3
+        """
+        [ ("/items/1/value/name", "\"C3\""),
+          ("/items/1/value/signature", "\"C3 :: Int -> T3\"")
+        ]
+
+    Spec.it s "data constructor with record field doc" $ do
+      check
+        s
+        """
+        data T4 = C4
+          { -- | field doc
+            f4 :: Int
+          }
+        """
+        [ ("/items/1/value/name", "\"C4\""),
+          ("/items/1/value/signature", "\"C4 {f4 :: Int}\"")
+        ]
+
     Spec.it s "type data" $ do
       check s "type data L" [("/items/0/value/kind", "\"TypeData\"")]
 

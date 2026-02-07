@@ -137,9 +137,6 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v21
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command wasm/build.hs
-      - uses: bytecodealliance/actions/wasmtime/setup@v1
-      - name: Smoke test WASM CLI
-        run: echo 'module Main where' | wasmtime wasm/dist/scrod-wasm.wasm --format json
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm

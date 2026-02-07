@@ -1,8 +1,6 @@
 module Scrod.TestSuite.All where
 
 import qualified Scrod.Convert.FromHaddock
-import qualified Scrod.Convert.ToHtml
-import qualified Scrod.Convert.ToJson
 import qualified Scrod.Css.AtRule
 import qualified Scrod.Css.Block
 import qualified Scrod.Css.BlockContent
@@ -54,8 +52,6 @@ import qualified Scrod.Xml.Text
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Scrod.Convert.FromHaddock.spec s
-  Scrod.Convert.ToHtml.spec s
-  Scrod.Convert.ToJson.spec s
   Scrod.Css.AtRule.spec s
   Scrod.Css.Block.spec s
   Scrod.Css.BlockContent.spec s

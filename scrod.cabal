@@ -126,6 +126,7 @@ library
     Scrod.Executable.Flag
     Scrod.Executable.Format
     Scrod.Executable.Main
+    Scrod.Executable.Style
     Scrod.Extra.Builder
     Scrod.Extra.Either
     Scrod.Extra.Maybe

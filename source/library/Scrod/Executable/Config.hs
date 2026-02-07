@@ -7,12 +7,14 @@ import qualified Control.Monad.Catch as Exception
 import qualified GHC.Stack as Stack
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
+import qualified Scrod.Executable.Style as Style
 import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
 
 data Config = MkConfig
   { format :: Format.Format,
     help :: Bool,
+    style :: Style.Style,
     version :: Bool
   }
   deriving (Eq, Ord, Show)
@@ -30,6 +32,9 @@ applyFlag config flag = case flag of
     Just string -> do
       bool <- Read.readM string
       pure config {help = bool}
+  Flag.Style string -> do
+    sty <- Style.fromString string
+    pure config {style = sty}
   Flag.Version maybeString -> case maybeString of
     Nothing -> pure config {version = True}
     Just string -> do
@@ -41,6 +46,7 @@ initial =
   MkConfig
     { format = Format.Json,
       help = False,
+      style = Style.None,
       version = False
     }
 
@@ -78,3 +84,19 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Help $ Just "invalid"]) Nothing
+
+    Spec.describe s "style" $ do
+      Spec.it s "defaults to none" $ do
+        Spec.assertEq s (fromFlags []) $ Just initial
+
+      Spec.it s "works with none" $ do
+        Spec.assertEq s (fromFlags [Flag.Style "none"]) $ Just initial
+
+      Spec.it s "works with bird" $ do
+        Spec.assertEq s (fromFlags [Flag.Style "bird"]) $ Just initial {style = Style.Bird}
+
+      Spec.it s "works with latex" $ do
+        Spec.assertEq s (fromFlags [Flag.Style "latex"]) $ Just initial {style = Style.Latex}
+
+      Spec.it s "fails with invalid style" $ do
+        Spec.assertEq s (fromFlags [Flag.Style "invalid"]) Nothing

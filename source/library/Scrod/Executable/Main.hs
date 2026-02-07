@@ -10,6 +10,7 @@ import qualified Scrod.Convert.ToJson as ToJson
 import qualified Scrod.Executable.Config as Config
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
+import qualified Scrod.Executable.Style as ExecStyle
 import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Ghc.Unlit as Unlit
 import qualified Scrod.Json.Value as Json
@@ -37,7 +38,11 @@ mainWith name arguments = do
     putStrLn $ Version.showVersion Version.version
     Exit.exitSuccess
   input <- getContents
-  result <- either fail pure $ Parse.parse (Unlit.preprocess input)
+  let preprocessed = case Config.style config of
+        ExecStyle.None -> input
+        ExecStyle.Bird -> Unlit.unlit Unlit.Bird input
+        ExecStyle.Latex -> Unlit.unlit Unlit.Latex input
+  result <- either fail pure $ Parse.parse preprocessed
   module_ <- either fail pure $ FromGhc.fromGhc result
   let encoder = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson

@@ -147,6 +147,7 @@ library
     Scrod.Ghc.Uninitialized
     Scrod.Ghc.UnitId
     Scrod.Ghc.UnitSettings
+    Scrod.Ghc.Unlit
     Scrod.Json.Array
     Scrod.Json.Boolean
     Scrod.Json.Null

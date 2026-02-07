@@ -10,6 +10,7 @@ import qualified System.Console.GetOpt as GetOpt
 data Flag
   = Format String
   | Help (Maybe String)
+  | Style String
   | Version (Maybe String)
   deriving (Eq, Ord, Show)
 
@@ -25,7 +26,8 @@ optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
-    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html)."
+    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
+    GetOpt.Option [] ["style"] (GetOpt.ReqArg Style "STYLE") "Sets the input style (bird or latex) for Literate Haskell."
   ]
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -49,6 +51,16 @@ spec s = do
 
       Spec.it s "fails with no argument" $ do
         Spec.assertEq s (fromArguments ["--format"]) Nothing
+
+    Spec.describe s "style" $ do
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--style=bird"]) $ Just [Style "bird"]
+
+      Spec.it s "works with latex" $ do
+        Spec.assertEq s (fromArguments ["--style=latex"]) $ Just [Style "latex"]
+
+      Spec.it s "fails with no argument" $ do
+        Spec.assertEq s (fromArguments ["--style"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with no argument" $ do

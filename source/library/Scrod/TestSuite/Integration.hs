@@ -11,6 +11,7 @@ import qualified Scrod.Convert.ToJson as ToJson
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Ghc.Parse as Parse
+import qualified Scrod.Ghc.Unlit as Unlit
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.JsonPointer.Evaluate as Pointer
 import qualified Scrod.JsonPointer.Pointer as Pointer
@@ -1469,6 +1470,63 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "literate" $ do
+    Spec.describe s "bird" $ do
+      Spec.it s "works with a simple declaration" $ do
+        checkLiterate
+          s
+          Unlit.Bird
+          "> x = 0"
+          [ ("/items/0/value/kind", "\"Function\""),
+            ("/items/0/value/name", "\"x\"")
+          ]
+
+      Spec.it s "works with comments and code" $ do
+        checkLiterate
+          s
+          Unlit.Bird
+          "This is a comment.\n\n> x = 0"
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/location/line", "3")
+          ]
+
+      Spec.it s "works with a module declaration" $ do
+        checkLiterate
+          s
+          Unlit.Bird
+          "> module M where\n>\n> x = 0"
+          [ ("/name/value", "\"M\""),
+            ("/items/0/value/name", "\"x\"")
+          ]
+
+    Spec.describe s "latex" $ do
+      Spec.it s "works with a simple declaration" $ do
+        checkLiterate
+          s
+          Unlit.Latex
+          "\\begin{code}\nx = 0\n\\end{code}"
+          [ ("/items/0/value/kind", "\"Function\""),
+            ("/items/0/value/name", "\"x\"")
+          ]
+
+      Spec.it s "works with text and code" $ do
+        checkLiterate
+          s
+          Unlit.Latex
+          "This is text.\n\\begin{code}\nx = 0\n\\end{code}"
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/location/line", "3")
+          ]
+
+      Spec.it s "works with a module declaration" $ do
+        checkLiterate
+          s
+          Unlit.Latex
+          "\\begin{code}\nmodule M where\n\nx = 0\n\\end{code}"
+          [ ("/name/value", "\"M\""),
+            ("/items/0/value/name", "\"x\"")
+          ]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s input assertions = do
   parsed <- either (Spec.assertFailure s) pure $ Parse.parse input
@@ -1489,3 +1547,6 @@ check s input assertions = do
           "expected " <> maybe "(nothing)" (Builder.toString . Json.encode) expected,
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
+
+checkLiterate :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> Unlit.Style -> String -> [(String, String)] -> m ()
+checkLiterate s sty input = check s (Unlit.unlit sty input)

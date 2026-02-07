@@ -24,6 +24,7 @@ import qualified Scrod.Extra.Read
 import qualified Scrod.Extra.Semigroup
 import qualified Scrod.Ghc.OnOff
 import qualified Scrod.Ghc.Parse
+import qualified Scrod.Ghc.Unlit
 import qualified Scrod.Json.Array
 import qualified Scrod.Json.Boolean
 import qualified Scrod.Json.Null
@@ -75,6 +76,7 @@ spec s = do
   Scrod.Extra.Semigroup.spec s
   Scrod.Ghc.OnOff.spec s
   Scrod.Ghc.Parse.spec s
+  Scrod.Ghc.Unlit.spec s
   Scrod.Json.Array.spec s
   Scrod.Json.Boolean.spec s
   Scrod.Json.Null.spec s

@@ -11,7 +11,16 @@
     <label for="source" class="sr-only">Haskell source code</label>
     <textarea id="source" placeholder="Enter Haskell source..." spellcheck="false"></textarea>
   </div>
-  <div class="pane output-pane" id="output" role="region" aria-live="polite" aria-label="Output"></div>
+  <div class="pane output-pane">
+    <div class="toolbar">
+      <label for="format" class="sr-only">Output format</label>
+      <select id="format">
+        <option value="html" selected>HTML</option>
+        <option value="json">JSON</option>
+      </select>
+    </div>
+    <div id="output" role="region" aria-live="polite" aria-label="Output"></div>
+  </div>
   <script src="index.js"></script>
 </body>
 </html>

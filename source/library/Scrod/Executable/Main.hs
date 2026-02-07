@@ -36,11 +36,15 @@ mainWith name arguments = do
     putStrLn $ Version.showVersion Version.version
     Exit.exitSuccess
   input <- getContents
-  result <- either fail pure $ Parse.parse input
-  module_ <- either fail pure $ FromGhc.fromGhc result
-  let encoder = case Config.format config of
-        Format.Json -> Json.encode . ToJson.toJson
-        Format.Html -> Xml.encode . ToHtml.toHtml
+  output <- either fail pure $ runPipeline (Config.format config) input
   Builder.hPutBuilder IO.stdout
     . (<> Builder.charUtf8 '\n')
-    $ encoder module_
+    $ output
+
+runPipeline :: Format.Format -> String -> Either String Builder.Builder
+runPipeline format source = do
+  result <- Parse.parse source
+  module_ <- FromGhc.fromGhc result
+  pure $ case format of
+    Format.Json -> Json.encode $ ToJson.toJson module_
+    Format.Html -> Xml.encode $ ToHtml.toHtml module_

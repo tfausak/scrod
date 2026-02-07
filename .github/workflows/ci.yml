@@ -89,6 +89,32 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: haskell-actions/run-ormolu@v17
+  smoke:
+    name: Smoke test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}-latest
+    needs:
+      - build
+      - meta
+    strategy:
+      matrix:
+        os:
+          - macos
+          - ubuntu
+          - windows
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+      - run: tar --extract --file artifact.tar --verbose
+      - name: Smoke test with empty input
+        run: echo | artifact/${{ needs.meta.outputs.name }}
+        shell: bash
+      - name: Smoke test with JSON format
+        run: echo 'module Main where' | artifact/${{ needs.meta.outputs.name }} --format json
+        shell: bash
+      - name: Smoke test with HTML format
+        run: echo 'module Main where' | artifact/${{ needs.meta.outputs.name }} --format html
+        shell: bash
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -111,6 +137,9 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v21
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command wasm/build.hs
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+      - name: Smoke test WASM CLI
+        run: echo 'module Main where' | wasmtime wasm/dist/scrod-wasm.wasm --format json
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm

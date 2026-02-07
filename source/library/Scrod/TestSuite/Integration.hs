@@ -483,10 +483,6 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "defaults to null" $ do
       check s "" [("/since", "null")]
 
-    Spec.it s "" $ do
-      -- TODO: Needs tests once `extractModuleSince` is implemented.
-      pure ()
-
   Spec.describe s "name" $ do
     Spec.it s "defaults to null" $ do
       check s "" [("/name", "null")]
@@ -805,334 +801,322 @@ spec s = Spec.describe s "integration" $ do
             ("/items/0/value/signature", "\"x :: Int\"")
           ]
 
-    do
-      -- TODO: The tests in this section are pretty bare bones. They could be
-      -- expanded to check more properties and more variants. Each `it` could
-      -- probably become a `describe` with multiple tests for each item kind.
-      -- Also the input parses but might not compile. It would be nice to have
-      -- input that actually compiles.
+    Spec.it s "open type family" $ do
+      check s "type family A" [("/items/0/value/kind", "\"OpenTypeFamily\"")]
 
-      Spec.it s "open type family" $ do
-        check s "type family A" [("/items/0/value/kind", "\"OpenTypeFamily\"")]
+    Spec.it s "closed type family" $ do
+      check s "type family B where" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
 
-      Spec.it s "closed type family" $ do
-        check s "type family B where" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
+    Spec.it s "closed type family with instance" $ do
+      check s "type family C where D = E" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
 
-      Spec.it s "closed type family with instance" $ do
-        -- TODO: This data instance should create an item.
-        check s "type family C where D = E" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
+    Spec.it s "data family" $ do
+      check s "data family F" [("/items/0/value/kind", "\"DataFamily\"")]
 
-      Spec.it s "data family" $ do
-        check s "data family F" [("/items/0/value/kind", "\"DataFamily\"")]
+    Spec.it s "type synonym" $ do
+      check s "type G = ()" [("/items/0/value/kind", "\"TypeSynonym\"")]
 
-      Spec.it s "type synonym" $ do
-        check s "type G = ()" [("/items/0/value/kind", "\"TypeSynonym\"")]
+    Spec.it s "data" $ do
+      check s "data H" [("/items/0/value/kind", "\"DataType\"")]
 
-      Spec.it s "data" $ do
-        check s "data H" [("/items/0/value/kind", "\"DataType\"")]
+    Spec.it s "data constructor" $ do
+      check
+        s
+        "data I = J"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"DataConstructor\"")
+        ]
 
-      Spec.it s "data constructor" $ do
+    Spec.it s "data constructor GADT" $ do
+      check
+        s
+        "data K where L :: K"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"GADTConstructor\"")
+        ]
+
+    Spec.it s "type data" $ do
+      check s "type data L" [("/items/0/value/kind", "\"TypeData\"")]
+
+    Spec.it s "type data constructor" $ do
+      check
+        s
+        "type data M = N"
+        [ ("/items/0/value/kind", "\"TypeData\""),
+          ("/items/1/value/kind", "\"DataConstructor\"")
+        ]
+
+    Spec.it s "type data constructor GADT" $ do
+      check
+        s
+        "type data O where P :: O"
+        [ ("/items/0/value/kind", "\"TypeData\""),
+          ("/items/1/value/kind", "\"GADTConstructor\"")
+        ]
+
+    Spec.it s "newtype" $ do
+      check
+        s
+        "newtype Q = R ()"
+        [ ("/items/0/value/kind", "\"Newtype\""),
+          ("/items/1/value/kind", "\"DataConstructor\"")
+        ]
+
+    Spec.it s "record field" $ do
+      check
+        s
+        "data S = T { u :: () }"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/2/value/kind", "\"RecordField\"")
+        ]
+
+    Spec.it s "record field GADT" $ do
+      check
+        s
+        "data V where W :: { x :: () } -> V"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"GADTConstructor\""),
+          ("/items/2/value/kind", "\"RecordField\"")
+        ]
+
+    Spec.it s "class" $ do
+      check s "class Y" [("/items/0/value/kind", "\"Class\"")]
+
+    Spec.it s "class instance" $ do
+      check s "instance Z" [("/items/0/value/kind", "\"ClassInstance\"")]
+
+    Spec.it s "data instance" $ do
+      check s "data instance A" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+
+    Spec.it s "data instance constructor" $ do
+      check s "data instance B = C" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+
+    Spec.it s "data instance constructor GADT" $ do
+      check s "data instance D where E :: D" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+
+    Spec.it s "newtype instance" $ do
+      check s "newtype instance F = G" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+
+    Spec.it s "newtype instance GADT" $ do
+      check s "newtype instance H where I :: H" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+
+    Spec.it s "type instance" $ do
+      check s "type instance J = K" [("/items/0/value/kind", "\"TypeFamilyInstance\"")]
+
+    Spec.it s "standalone deriving" $ do
+      check s "deriving instance L" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+
+    Spec.it s "standalone deriving stock" $ do
+      check s "deriving stock instance M" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+
+    Spec.it s "standalone deriving newtype" $ do
+      check s "deriving newtype instance N" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+
+    Spec.it s "standalone deriving anyclass" $ do
+      check s "deriving anyclass instance O" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+
+    Spec.it s "standalone deriving via" $ do
+      check s "deriving via P instance Q" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+
+    Spec.it s "data deriving" $ do
+      check
+        s
+        "data R deriving S"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"DerivedInstance\"")
+        ]
+
+    Spec.it s "data GADT deriving" $ do
+      check s "data T where deriving U" []
+
+    Spec.it s "type data deriving" $ do
+      check s "type data V deriving W" []
+
+    Spec.it s "type data GADT deriving" $ do
+      check s "type data X where deriving Y" []
+
+    Spec.it s "newtype deriving" $ do
+      check s "newtype Z = A deriving B" []
+
+    Spec.it s "newtype GADT deriving" $ do
+      check s "newtype C where D :: C deriving D" []
+
+    Spec.it s "function" $ do
+      check s "e f = ()" []
+
+    Spec.it s "infix function" $ do
+      check s "g `h` i = ()" []
+
+    Spec.it s "infix operator" $ do
+      check s "j % k = ()" []
+
+    Spec.it s "prefix operator" $ do
+      check s "(&) = ()" []
+
+    Spec.it s "strict variable" $ do
+      check s "!l = ()" []
+
+    Spec.it s "lazy pattern" $ do
+      check s "~m = ()" []
+
+    Spec.it s "as pattern" $ do
+      check s "n@o = ()" []
+
+    Spec.it s "parenthesized pattern" $ do
+      check s "(p) = ()" []
+
+    Spec.it s "bang pattern" $ do
+      check s "(!q) = ()" []
+
+    Spec.it s "list pattern" $ do
+      check s "[r] = ()" []
+
+    Spec.it s "tuple pattern" $ do
+      check s "(s, t) = ()" []
+
+    Spec.it s "anonymous sum pattern" $ do
+      check s "{-# language UnboxedSums #-} (# u | #) = ()" []
+
+    Spec.it s "prefix constructor pattern" $ do
+      check s "Just v = ()" []
+
+    Spec.it s "record constructor pattern" $ do
+      check s "W { x = y } = ()" []
+
+    Spec.it s "punned record pattern" $ do
+      check s "Z { a } = ()" []
+
+    Spec.it s "wild card record pattern" $ do
+      check s "B { .. } = ()" []
+
+    Spec.it s "infix constructor pattern" $ do
+      check s "(c : d) = ()" []
+
+    Spec.it s "view pattern" $ do
+      check s "(e -> f) = ()" []
+
+    Spec.it s "splice pattern" $ do
+      check s "{-# language TemplateHaskell #-} $( g ) = ()" []
+
+    Spec.it s "literal pattern" $ do
+      check s "'h' = ()" []
+
+    Spec.it s "natural pattern" $ do
+      check s "0 = ()" []
+
+    Spec.it s "n+k pattern" $ do
+      check s "{-# language NPlusKPatterns #-} (i + 1) = ()" []
+
+    Spec.it s "signature pattern" $ do
+      check s "(j :: K) = ()" []
+
+    Spec.it s "bidirectional pattern synonym" $ do
+      check s "{-# language PatternSynonyms #-} pattern L = ()" []
+
+    Spec.it s "unidirectional pattern synonym" $ do
+      check s "{-# language PatternSynonyms #-} pattern M <- ()" []
+
+    Spec.it s "explicitly bidirectional pattern synonym" $ do
+      check s "{-# language PatternSynonyms #-} pattern N <- () where N = ()" []
+
+    Spec.it s "type signature" $ do
+      check s "o :: ()" []
+
+    Spec.it s "pattern type signature" $ do
+      check s "{-# language PatternSynonyms #-} pattern P :: ()" []
+
+    Spec.describe s "method signature" $ do
+      Spec.it s "works" $ do
         check
           s
-          "data I = J"
-          [ ("/items/0/value/kind", "\"DataType\""),
-            ("/items/1/value/kind", "\"DataConstructor\"")
+          """
+          class C a where
+            m :: a
+          """
+          [ ("/items/0/value/key", "0"),
+            ("/items/0/value/kind", "\"Class\""),
+            ("/items/1/value/key", "1"),
+            ("/items/1/value/kind", "\"ClassMethod\""),
+            ("/items/1/value/parentKey", "0"),
+            ("/items/1/value/signature", "\"m :: a\"")
           ]
 
-      Spec.it s "data constructor GADT" $ do
+      Spec.it s "works with documentation" $ do
         check
           s
-          "data K where L :: K"
-          [ ("/items/0/value/kind", "\"DataType\""),
-            ("/items/1/value/kind", "\"GADTConstructor\"")
+          """
+          class C a where
+            -- | d
+            m :: a
+          """
+          [ ("/items/1/value/documentation/type", "\"Paragraph\""),
+            ("/items/1/value/documentation/value/type", "\"String\""),
+            ("/items/1/value/documentation/value/value", "\"d\"")
           ]
 
-      Spec.it s "type data" $ do
-        check s "type data L" [("/items/0/value/kind", "\"TypeData\"")]
-
-      Spec.it s "type data constructor" $ do
-        check
-          s
-          "type data M = N"
-          [ ("/items/0/value/kind", "\"TypeData\""),
-            ("/items/1/value/kind", "\"DataConstructor\"")
-          ]
-
-      Spec.it s "type data constructor GADT" $ do
-        check
-          s
-          "type data O where P :: O"
-          [ ("/items/0/value/kind", "\"TypeData\""),
-            ("/items/1/value/kind", "\"GADTConstructor\"")
-          ]
-
-      Spec.it s "newtype" $ do
-        check
-          s
-          "newtype Q = R ()"
-          [ ("/items/0/value/kind", "\"Newtype\""),
-            ("/items/1/value/kind", "\"DataConstructor\"")
-          ]
-
-      Spec.it s "record field" $ do
-        check
-          s
-          "data S = T { u :: () }"
-          [ ("/items/0/value/kind", "\"DataType\""),
-            ("/items/1/value/kind", "\"DataConstructor\""),
-            ("/items/2/value/kind", "\"RecordField\"")
-          ]
-
-      Spec.it s "record field GADT" $ do
-        check
-          s
-          "data V where W :: { x :: () } -> V"
-          [ ("/items/0/value/kind", "\"DataType\""),
-            ("/items/1/value/kind", "\"GADTConstructor\""),
-            ("/items/2/value/kind", "\"RecordField\"")
-          ]
+    Spec.it s "default method signature" $ do
+      check s "class S where default t :: ()" []
 
-      Spec.it s "class" $ do
-        check s "class Y" [("/items/0/value/kind", "\"Class\"")]
+    Spec.it s "fixity" $ do
+      check s "infixl 5 +" []
 
-      Spec.it s "class instance" $ do
-        check s "instance Z" [("/items/0/value/kind", "\"ClassInstance\"")]
+    Spec.it s "inline pragma" $ do
+      check s "{-# inline i #-}" []
 
-      Spec.it s "data instance" $ do
-        check s "data instance A" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+    Spec.it s "inline pragma with phase control" $ do
+      check s "{-# inline [1] j #-}" []
 
-      Spec.it s "data instance constructor" $ do
-        -- TODO: This constructor should create an item.
-        check s "data instance B = C" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+    Spec.it s "inline pragma with inverted phase control" $ do
+      check s "{-# inline [~2] k #-}" []
 
-      Spec.it s "data instance constructor GADT" $ do
-        -- TODO: This constructor should create an item.
-        check s "data instance D where E :: D" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+    Spec.it s "noinline pragma" $ do
+      check s "{-# noinline l #-}" []
 
-      Spec.it s "newtype instance" $ do
-        -- TODO: This constructor should create an item.
-        check s "newtype instance F = G" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+    Spec.it s "specialize pragma" $ do
+      check s "{-# specialize j :: () #-}" []
 
-      Spec.it s "newtype instance GADT" $ do
-        -- TODO: This constructor should create an item.
-        check s "newtype instance H where I :: H" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+    Spec.it s "specialize instance pragma" $ do
+      check s "{-# specialize instance K #-}" []
 
-      Spec.it s "type instance" $ do
-        check s "type instance J = K" [("/items/0/value/kind", "\"TypeFamilyInstance\"")]
+    Spec.it s "minimal pragma" $ do
+      check s "{-# minimal l #-}" []
 
-      Spec.it s "standalone deriving" $ do
-        check s "deriving instance L" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+    Spec.it s "set cost center pragma" $ do
+      check s "{-# scc m #-}" []
 
-      Spec.it s "standalone deriving stock" $ do
-        check s "deriving stock instance M" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+    Spec.it s "complete pragma" $ do
+      check s "{-# complete N #-}" []
 
-      Spec.it s "standalone deriving newtype" $ do
-        check s "deriving newtype instance N" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+    Spec.it s "standalone kind signature" $ do
+      check s "type O :: ()" []
 
-      Spec.it s "standalone deriving anyclass" $ do
-        check s "deriving anyclass instance O" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+    Spec.it s "default declaration" $ do
+      check s "default ()" []
 
-      Spec.it s "standalone deriving via" $ do
-        check s "deriving via P instance Q" [("/items/0/value/kind", "\"StandaloneDeriving\"")]
+    Spec.it s "foreign import" $ do
+      check s "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" []
 
-      Spec.it s "data deriving" $ do
-        check
-          s
-          "data R deriving S"
-          [ ("/items/0/value/kind", "\"DataType\""),
-            ("/items/1/value/kind", "\"DerivedInstance\"")
-          ]
+    Spec.it s "warning pragma" $ do
+      check s "{-# warning x \"\" #-}" []
 
-      Spec.it s "data GADT deriving" $ do
-        check s "data T where deriving U" []
+    Spec.it s "value annotation" $ do
+      check s "{-# ann x () #-}" []
 
-      Spec.it s "type data deriving" $ do
-        check s "type data V deriving W" []
+    Spec.it s "type annotation" $ do
+      check s "{-# ann type X () #-}" []
 
-      Spec.it s "type data GADT deriving" $ do
-        check s "type data X where deriving Y" []
+    Spec.it s "module annotation" $ do
+      check s "{-# ann module () #-}" []
 
-      Spec.it s "newtype deriving" $ do
-        check s "newtype Z = A deriving B" []
+    Spec.it s "rules pragma" $ do
+      check s "{-# rules \"q\" x = () #-}" []
 
-      Spec.it s "newtype GADT deriving" $ do
-        check s "newtype C where D :: C deriving D" []
+    Spec.it s "splice declaration" $ do
+      check s "{-# language TemplateHaskellQuotes #-} $( x )" []
 
-      Spec.it s "function" $ do
-        check s "e f = ()" []
-
-      Spec.it s "infix function" $ do
-        check s "g `h` i = ()" []
-
-      Spec.it s "infix operator" $ do
-        check s "j % k = ()" []
-
-      Spec.it s "prefix operator" $ do
-        check s "(&) = ()" []
-
-      Spec.it s "strict variable" $ do
-        check s "!l = ()" []
-
-      Spec.it s "lazy pattern" $ do
-        check s "~m = ()" []
-
-      Spec.it s "as pattern" $ do
-        check s "n@o = ()" []
-
-      Spec.it s "parenthesized pattern" $ do
-        check s "(p) = ()" []
-
-      Spec.it s "bang pattern" $ do
-        check s "(!q) = ()" []
-
-      Spec.it s "list pattern" $ do
-        check s "[r] = ()" []
-
-      Spec.it s "tuple pattern" $ do
-        check s "(s, t) = ()" []
-
-      Spec.it s "anonymous sum pattern" $ do
-        check s "{-# language UnboxedSums #-} (# u | #) = ()" []
-
-      Spec.it s "prefix constructor pattern" $ do
-        check s "Just v = ()" []
-
-      Spec.it s "record constructor pattern" $ do
-        check s "W { x = y } = ()" []
-
-      Spec.it s "punned record pattern" $ do
-        check s "Z { a } = ()" []
-
-      Spec.it s "wild card record pattern" $ do
-        check s "B { .. } = ()" []
-
-      Spec.it s "infix constructor pattern" $ do
-        check s "(c : d) = ()" []
-
-      Spec.it s "view pattern" $ do
-        check s "(e -> f) = ()" []
-
-      Spec.it s "splice pattern" $ do
-        check s "{-# language TemplateHaskell #-} $( g ) = ()" []
-
-      Spec.it s "literal pattern" $ do
-        check s "'h' = ()" []
-
-      Spec.it s "natural pattern" $ do
-        check s "0 = ()" []
-
-      Spec.it s "n+k pattern" $ do
-        check s "{-# language NPlusKPatterns #-} (i + 1) = ()" []
-
-      Spec.it s "signature pattern" $ do
-        check s "(j :: K) = ()" []
-
-      Spec.it s "bidirectional pattern synonym" $ do
-        check s "{-# language PatternSynonyms #-} pattern L = ()" []
-
-      Spec.it s "unidirectional pattern synonym" $ do
-        check s "{-# language PatternSynonyms #-} pattern M <- ()" []
-
-      Spec.it s "explicitly bidirectional pattern synonym" $ do
-        check s "{-# language PatternSynonyms #-} pattern N <- () where N = ()" []
-
-      Spec.it s "type signature" $ do
-        check s "o :: ()" []
-
-      Spec.it s "pattern type signature" $ do
-        check s "{-# language PatternSynonyms #-} pattern P :: ()" []
-
-      Spec.describe s "method signature" $ do
-        Spec.it s "works" $ do
-          check
-            s
-            """
-            class C a where
-              m :: a
-            """
-            [ ("/items/0/value/key", "0"),
-              ("/items/0/value/kind", "\"Class\""),
-              ("/items/1/value/key", "1"),
-              ("/items/1/value/kind", "\"ClassMethod\""),
-              ("/items/1/value/parentKey", "0"),
-              ("/items/1/value/signature", "\"m :: a\"")
-            ]
-
-        Spec.it s "works with documentation" $ do
-          check
-            s
-            """
-            class C a where
-              -- | d
-              m :: a
-            """
-            [ ("/items/1/value/documentation/type", "\"Paragraph\""),
-              ("/items/1/value/documentation/value/type", "\"String\""),
-              ("/items/1/value/documentation/value/value", "\"d\"")
-            ]
-
-      Spec.it s "default method signature" $ do
-        check s "class S where default t :: ()" []
-
-      Spec.it s "fixity" $ do
-        check s "infixl 5 +" []
-
-      Spec.it s "inline pragma" $ do
-        check s "{-# inline i #-}" []
-
-      Spec.it s "inline pragma with phase control" $ do
-        check s "{-# inline [1] j #-}" []
-
-      Spec.it s "inline pragma with inverted phase control" $ do
-        check s "{-# inline [~2] k #-}" []
-
-      Spec.it s "noinline pragma" $ do
-        check s "{-# noinline l #-}" []
-
-      Spec.it s "specialize pragma" $ do
-        check s "{-# specialize j :: () #-}" []
-
-      Spec.it s "specialize instance pragma" $ do
-        check s "{-# specialize instance K #-}" []
-
-      Spec.it s "minimal pragma" $ do
-        check s "{-# minimal l #-}" []
-
-      Spec.it s "set cost center pragma" $ do
-        check s "{-# scc m #-}" []
-
-      Spec.it s "complete pragma" $ do
-        check s "{-# complete N #-}" []
-
-      Spec.it s "standalone kind signature" $ do
-        check s "type O :: ()" []
-
-      Spec.it s "default declaration" $ do
-        check s "default ()" []
-
-      Spec.it s "foreign import" $ do
-        check s "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" []
-
-      Spec.it s "warning pragma" $ do
-        check s "{-# warning x \"\" #-}" []
-
-      Spec.it s "value annotation" $ do
-        check s "{-# ann x () #-}" []
-
-      Spec.it s "type annotation" $ do
-        check s "{-# ann type X () #-}" []
-
-      Spec.it s "module annotation" $ do
-        check s "{-# ann module () #-}" []
-
-      Spec.it s "rules pragma" $ do
-        check s "{-# rules \"q\" x = () #-}" []
-
-      Spec.it s "splice declaration" $ do
-        check s "{-# language TemplateHaskellQuotes #-} $( x )" []
-
-      Spec.it s "role annotation" $ do
-        check s "type role R nominal" []
+    Spec.it s "role annotation" $ do
+      check s "type role R nominal" []
 
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s input assertions = do

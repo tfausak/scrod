@@ -521,6 +521,7 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
   Syntax.KindSigD _ kindSig ->
     let sig = Just $ extractKindSigSignature kindSig
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
+  Syntax.InstD _ inst -> convertInstDeclWithDocM doc lDecl inst
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.
@@ -530,6 +531,13 @@ convertTyClDeclWithDocM ::
   Syntax.TyClDecl Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
 convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
+  Syntax.FamDecl _ famDecl -> case Syntax.fdInfo famDecl of
+    Syntax.ClosedTypeFamily (Just eqns) -> do
+      parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+      let parentKey = fmap (Item.key . Located.value) parentItem
+      eqnItems <- convertTyFamInstEqnsM parentKey eqns
+      pure $ Maybe.maybeToList parentItem <> eqnItems
+    _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
   Syntax.DataDecl _ _ _ _ dataDefn -> do
     parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
@@ -542,6 +550,20 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+
+-- | Convert an instance declaration with documentation.
+convertInstDeclWithDocM ::
+  Doc.Doc ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.InstDecl Ghc.GhcPs ->
+  ConvertM [Located.Located Item.Item]
+convertInstDeclWithDocM doc lDecl inst = case inst of
+  Syntax.DataFamInstD _ dataFamInst -> do
+    parentItem <- convertDeclWithDocM Nothing doc (extractInstDeclName inst) Nothing lDecl
+    let parentKey = fmap (Item.key . Located.value) parentItem
+    childItems <- convertDataDefnM parentKey (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
+    pure $ Maybe.maybeToList parentItem <> childItems
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractInstDeclName inst) Nothing lDecl
 
 -- | Convert a signature declaration.
 convertSigDeclM ::
@@ -780,6 +802,31 @@ convertFamilyDeclM parentKey lFamilyDecl =
         Doc.Empty
         Nothing
         itemKind
+
+-- | Convert type family instance equations.
+convertTyFamInstEqnsM ::
+  Maybe ItemKey.ItemKey ->
+  [Syntax.LTyFamInstEqn Ghc.GhcPs] ->
+  ConvertM [Located.Located Item.Item]
+convertTyFamInstEqnsM parentKey = fmap Maybe.catMaybes . traverse (convertTyFamInstEqnM parentKey)
+
+-- | Convert a single type family instance equation.
+convertTyFamInstEqnM ::
+  Maybe ItemKey.ItemKey ->
+  Syntax.LTyFamInstEqn Ghc.GhcPs ->
+  ConvertM (Maybe (Located.Located Item.Item))
+convertTyFamInstEqnM parentKey lEqn =
+  let eqn = SrcLoc.unLoc lEqn
+      sig = Just . Text.pack . Outputable.showSDocUnsafe $ extractTyFamInstEqnSig eqn
+   in mkItemM (Annotation.getLocA lEqn) parentKey Nothing Doc.Empty sig ItemKind.TypeFamilyInstance
+
+-- | Pretty-print a type family instance equation.
+extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
+extractTyFamInstEqnSig eqn =
+  Outputable.ppr (Syntax.feqn_tycon eqn)
+    Outputable.<+> Outputable.hsep (Outputable.ppr <$> Syntax.feqn_pats eqn)
+    Outputable.<+> Outputable.text "="
+    Outputable.<+> Outputable.ppr (Syntax.feqn_rhs eqn)
 
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::

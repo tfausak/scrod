@@ -824,7 +824,13 @@ spec s = Spec.describe s "integration" $ do
       check s "type family B where" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
 
     Spec.it s "closed type family with instance" $ do
-      check s "type family C where D = E" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
+      check
+        s
+        "type family C where D = E"
+        [ ("/items/0/value/kind", "\"ClosedTypeFamily\""),
+          ("/items/1/value/kind", "\"TypeFamilyInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "data family" $ do
       check s "data family F" [("/items/0/value/kind", "\"DataFamily\"")]
@@ -973,16 +979,40 @@ spec s = Spec.describe s "integration" $ do
       check s "data instance A" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
 
     Spec.it s "data instance constructor" $ do
-      check s "data instance B = C" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+      check
+        s
+        "data instance B = C"
+        [ ("/items/0/value/kind", "\"DataFamilyInstance\""),
+          ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "data instance constructor GADT" $ do
-      check s "data instance D where E :: D" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+      check
+        s
+        "data instance D where E :: D"
+        [ ("/items/0/value/kind", "\"DataFamilyInstance\""),
+          ("/items/1/value/kind", "\"GADTConstructor\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "newtype instance" $ do
-      check s "newtype instance F = G" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+      check
+        s
+        "newtype instance F = G"
+        [ ("/items/0/value/kind", "\"DataFamilyInstance\""),
+          ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "newtype instance GADT" $ do
-      check s "newtype instance H where I :: H" [("/items/0/value/kind", "\"DataFamilyInstance\"")]
+      check
+        s
+        "newtype instance H where I :: H"
+        [ ("/items/0/value/kind", "\"DataFamilyInstance\""),
+          ("/items/1/value/kind", "\"GADTConstructor\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "type instance" $ do
       check s "type instance J = K" [("/items/0/value/kind", "\"TypeFamilyInstance\"")]

@@ -711,11 +711,17 @@ convertClassSigsWithDocsM ::
   [Hs.LDocDecl Ghc.GhcPs] ->
   ConvertM [Located.Located Item.Item]
 convertClassSigsWithDocsM parentKey sigs docs =
-  let sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) sigs
+  let classOpSigs = filter isClassOpSig sigs
+      sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) classOpSigs
       docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
       allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
       sigsWithDocs = associateDocs allDecls
    in concat <$> traverse (uncurry (convertClassDeclWithDocM parentKey)) sigsWithDocs
+  where
+    isClassOpSig :: Syntax.LSig Ghc.GhcPs -> Bool
+    isClassOpSig lSig = case SrcLoc.unLoc lSig of
+      Syntax.ClassOpSig {} -> True
+      _ -> False
 
 -- | Convert a class body declaration with associated documentation.
 convertClassDeclWithDocM ::

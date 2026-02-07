@@ -880,7 +880,10 @@ extractConDeclDoc conDecl = case conDecl of
 
 -- | Extract signature from a constructor declaration.
 extractConDeclSignature :: Syntax.ConDecl Ghc.GhcPs -> Maybe Text.Text
-extractConDeclSignature = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
+extractConDeclSignature conDecl =
+  Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ case conDecl of
+    c@Syntax.ConDeclH98 {} -> c {Syntax.con_doc = Nothing}
+    c@Syntax.ConDeclGADT {} -> c {Syntax.con_doc = Nothing}
 
 -- | Extract fields from a constructor declaration.
 extractFieldsFromConDeclM ::

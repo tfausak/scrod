@@ -843,12 +843,40 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind", "\"DataConstructor\"")
         ]
 
+    Spec.it s "data constructor with doc" $ do
+      check
+        s
+        "data I2 = {- | x -} J2"
+        [ ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/1/value/name", "\"J2\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/value", "\"x \""),
+          ("/items/1/value/signature", "\"J2\"")
+        ]
+
     Spec.it s "data constructor GADT" $ do
       check
         s
         "data K where L :: K"
         [ ("/items/0/value/kind", "\"DataType\""),
           ("/items/1/value/kind", "\"GADTConstructor\"")
+        ]
+
+    Spec.it s "data constructor GADT with doc" $ do
+      check
+        s
+        """
+        data K2 where
+          -- | d
+          L2 :: K2
+        """
+        [ ("/items/1/value/kind", "\"GADTConstructor\""),
+          ("/items/1/value/name", "\"L2\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/value", "\"d\""),
+          ("/items/1/value/signature", "\"L2 :: K2\"")
         ]
 
     Spec.it s "type data" $ do

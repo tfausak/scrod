@@ -91,13 +91,14 @@ fromGhc ::
   Either String Module.Module
 fromGhc ((language, extensions), lHsModule) = do
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
+  let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
   Right
     Module.MkModule
       { Module.version = version,
         Module.language = languageFromGhc <$> language,
         Module.extensions = extensionsToMap extensions,
-        Module.documentation = extractModuleDocumentation lHsModule,
-        Module.since = extractModuleSince lHsModule,
+        Module.documentation = moduleDocumentation,
+        Module.since = moduleSince,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = extractModuleExports lHsModule,
@@ -174,13 +175,20 @@ locationFromSrcSpan srcSpan = case srcSpan of
         }
   SrcLoc.UnhelpfulSpan _ -> Nothing
 
--- | Extract module documentation from the parsed module.
-extractModuleDocumentation ::
+-- | Extract module documentation and @since information from the parsed module.
+-- Parses the Haddock MetaDoc once and extracts both the Doc and Since.
+extractModuleDocAndSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Doc.Doc
-extractModuleDocumentation =
-  maybe Doc.Empty parseDoc
-    . extractRawDocString
+  (Doc.Doc, Maybe Since.Since)
+extractModuleDocAndSince lHsModule =
+  case extractRawDocString lHsModule of
+    Nothing -> (Doc.Empty, Nothing)
+    Just rawDocString ->
+      let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
+          metaDoc = Haddock.parseParas Nothing rawDocString
+          doc = FromHaddock.fromHaddock $ Haddock._doc metaDoc
+          since = Haddock._metaSince (Haddock._meta metaDoc) >>= metaSinceToSince
+       in (doc, since)
 
 -- | Extract raw documentation string from the module header.
 extractRawDocString ::
@@ -193,18 +201,6 @@ extractRawDocString lHsModule = do
   let hsDoc = SrcLoc.unLoc lHsDoc
       hsDocString = HsDoc.hsDocString hsDoc
   Just $ DocString.renderHsDocString hsDocString
-
--- | Extract @since information from module documentation.
-extractModuleSince ::
-  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
-  Maybe Since.Since
-extractModuleSince lHsModule = do
-  rawDocString <- extractRawDocString lHsModule
-  let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
-      metaDoc = Haddock.parseParas Nothing rawDocString
-      meta = Haddock._meta metaDoc
-  metaSince <- Haddock._metaSince meta
-  metaSinceToSince metaSince
 
 -- | Convert a Haddock MetaSince to a Scrod Since.
 metaSinceToSince :: Haddock.MetaSince -> Maybe Since.Since

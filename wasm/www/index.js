@@ -99,17 +99,15 @@ format.addEventListener("change", function () {
 if (location.hash.length > 1) {
   try {
     var hash = location.hash.slice(1);
-    if (hash.indexOf("=") === -1) {
-      // Legacy format: bare base64-encoded source
-      source.value = decodeHash(hash);
-    } else {
-      var params = new URLSearchParams(hash);
-      if (params.has("input")) {
-        source.value = decodeHash(params.get("input"));
-      }
+    var params = new URLSearchParams(hash);
+    if (params.has("input")) {
+      source.value = decodeHash(params.get("input"));
       if (params.has("format")) {
         format.value = params.get("format");
       }
+    } else {
+      // Legacy format: bare base64-encoded source
+      source.value = decodeHash(hash);
     }
   } catch (e) {
     // ignore invalid hash

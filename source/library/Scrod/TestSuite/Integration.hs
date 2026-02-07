@@ -483,6 +483,22 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "defaults to null" $ do
       check s "" [("/since", "null")]
 
+    Spec.it s "works with a version" $ do
+      check
+        s
+        "-- | Docs\n--\n-- @since 1.2.3\nmodule M where"
+        [ ("/since/package", "null"),
+          ("/since/version", "[1,2,3]")
+        ]
+
+    Spec.it s "works with a package and version" $ do
+      check
+        s
+        "-- | Docs\n--\n-- @since base-4.16.0\nmodule M where"
+        [ ("/since/package", "\"base\""),
+          ("/since/version", "[4,16,0]")
+        ]
+
   Spec.describe s "name" $ do
     Spec.it s "defaults to null" $ do
       check s "" [("/name", "null")]

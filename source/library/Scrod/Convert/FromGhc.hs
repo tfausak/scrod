@@ -49,6 +49,7 @@ import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Location as Location
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
+import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Section as Section
 import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Subordinates as Subordinates
@@ -194,12 +195,29 @@ extractRawDocString lHsModule = do
   Just $ DocString.renderHsDocString hsDocString
 
 -- | Extract @since information from module documentation.
--- Note: Full @since extraction requires parsing Haddock metadata which is
--- not fully supported in all haddock-library versions. Returns Nothing for now.
 extractModuleSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Maybe Since.Since
-extractModuleSince _ = Nothing
+extractModuleSince lHsModule = do
+  rawDocString <- extractRawDocString lHsModule
+  let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
+      metaDoc = Haddock.parseParas Nothing rawDocString
+      meta = Haddock._meta metaDoc
+  metaSince <- Haddock._metaSince meta
+  metaSinceToSince metaSince
+
+-- | Convert a Haddock MetaSince to a Scrod Since.
+metaSinceToSince :: Haddock.MetaSince -> Maybe Since.Since
+metaSinceToSince metaSince = do
+  versionNE <- NonEmpty.nonEmpty $ Haddock.sinceVersion metaSince
+  Just
+    Since.MkSince
+      { Since.package =
+          PackageName.MkPackageName . Text.pack
+            <$> Haddock.sincePackage metaSince,
+        Since.version =
+          Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
+      }
 
 -- | Extract module deprecation warning.
 extractModuleWarning ::

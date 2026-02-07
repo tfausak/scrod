@@ -4,15 +4,20 @@ import qualified GHC.Wasm.Prim as Wasm
 import qualified Scrod.Convert.FromGhc as FromGhc
 import qualified Scrod.Convert.ToHtml as ToHtml
 import qualified Scrod.Convert.ToJson as ToJson
+import qualified Scrod.Executable.Main as Executable
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Xml.Document as Xml
 
--- | Not called at runtime. The WASM reactor module uses -no-hs-main, but GHC
--- still requires main to be defined.
 main :: IO ()
-main = pure ()
+main = Executable.defaultMain
+
+foreign export javascript "cliMain"
+  cliMain :: IO ()
+
+cliMain :: IO ()
+cliMain = main
 
 foreign export javascript "processHaskell"
   processHaskell :: Wasm.JSString -> Wasm.JSString -> IO Wasm.JSString

@@ -1042,8 +1042,34 @@ spec s = Spec.describe s "integration" $ do
       Spec.it s "pattern type signature" $ do
         check s "{-# language PatternSynonyms #-} pattern P :: ()" []
 
-      Spec.it s "method signature" $ do
-        check s "class Q where r :: ()" []
+      Spec.describe s "method signature" $ do
+        Spec.it s "works" $ do
+          check
+            s
+            """
+            class C a where
+              m :: a
+            """
+            [ ("/items/0/value/key", "0"),
+              ("/items/0/value/kind", "\"Class\""),
+              ("/items/1/value/key", "1"),
+              ("/items/1/value/kind", "\"ClassMethod\""),
+              ("/items/1/value/parentKey", "0"),
+              ("/items/1/value/signature", "\"m :: a\"")
+            ]
+
+        Spec.it s "works with documentation" $ do
+          check
+            s
+            """
+            class C a where
+              -- | d
+              m :: a
+            """
+            [ ("/items/1/value/documentation/type", "\"Paragraph\""),
+              ("/items/1/value/documentation/value/type", "\"String\""),
+              ("/items/1/value/documentation/value/value", "\"d\"")
+            ]
 
       Spec.it s "default method signature" $ do
         check s "class S where default t :: ()" []

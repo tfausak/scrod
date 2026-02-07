@@ -843,12 +843,79 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind", "\"DataConstructor\"")
         ]
 
+    Spec.it s "data constructor with doc" $ do
+      check
+        s
+        "data I2 = {- | x -} J2"
+        [ ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/1/value/name", "\"J2\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/value", "\"x \""),
+          ("/items/1/value/signature", "\"J2\"")
+        ]
+
     Spec.it s "data constructor GADT" $ do
       check
         s
         "data K where L :: K"
         [ ("/items/0/value/kind", "\"DataType\""),
           ("/items/1/value/kind", "\"GADTConstructor\"")
+        ]
+
+    Spec.it s "data constructor GADT with doc" $ do
+      check
+        s
+        """
+        data K2 where
+          -- | d
+          L2 :: K2
+        """
+        [ ("/items/1/value/kind", "\"GADTConstructor\""),
+          ("/items/1/value/name", "\"L2\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/value", "\"d\""),
+          ("/items/1/value/signature", "\"L2 :: K2\"")
+        ]
+
+    Spec.it s "data constructor with arg doc" $ do
+      check
+        s
+        """
+        data T2
+          = C2
+            Int -- ^ arg doc
+            Bool
+        """
+        [ ("/items/1/value/name", "\"C2\""),
+          ("/items/1/value/signature", "\"C2 Int Bool\"")
+        ]
+
+    Spec.it s "data constructor GADT with arg doc" $ do
+      check
+        s
+        """
+        data T3 where
+          C3 ::
+            Int -- ^ arg doc
+            -> T3
+        """
+        [ ("/items/1/value/name", "\"C3\""),
+          ("/items/1/value/signature", "\"C3 :: Int -> T3\"")
+        ]
+
+    Spec.it s "data constructor with record field doc" $ do
+      check
+        s
+        """
+        data T4 = C4
+          { -- | field doc
+            f4 :: Int
+          }
+        """
+        [ ("/items/1/value/name", "\"C4\""),
+          ("/items/1/value/signature", "\"C4 {f4 :: Int}\"")
         ]
 
     Spec.it s "type data" $ do

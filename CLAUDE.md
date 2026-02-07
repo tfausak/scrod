@@ -20,7 +20,7 @@ cabal run scrod -- --format html     # run CLI (reads stdin)
 ### WASM build (requires Nix devshell)
 
 ```bash
-nix develop --command wasm/build.sh
+nix develop --command wasm/build.hs
 ```
 
 ### Linting and formatting (CI checks all of these)
@@ -29,7 +29,6 @@ nix develop --command wasm/build.sh
 hlint source/                                        # lint Haskell
 ormolu --mode check $(find source -name "*.hs")      # check formatting
 cabal-gild --input scrod.cabal --mode check          # check .cabal formatting
-shellcheck wasm/*.sh                                 # lint shell scripts
 cabal check                                          # validate .cabal file
 ```
 

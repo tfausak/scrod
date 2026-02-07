@@ -6,6 +6,7 @@ import qualified Scrod.Convert.ToHtml as ToHtml
 import qualified Scrod.Convert.ToJson as ToJson
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Ghc.Parse as Parse
+import qualified Scrod.Ghc.Unlit as Unlit
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Xml.Document as Xml
 
@@ -27,7 +28,7 @@ processHaskell formatStr input = do
 
 pipeline :: String -> String -> Either String String
 pipeline format source = do
-  result <- Parse.parse source
+  result <- Parse.parse (Unlit.preprocess source)
   module_ <- FromGhc.fromGhc result
   pure . Builder.toString $ case format of
     "json" -> Json.encode $ ToJson.toJson module_

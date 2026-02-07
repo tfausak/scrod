@@ -37,8 +37,7 @@ mainWith name arguments = do
     putStrLn $ Version.showVersion Version.version
     Exit.exitSuccess
   input <- getContents
-  let source = maybe id Unlit.unlit (Config.style config) input
-  result <- either fail pure $ Parse.parse source
+  result <- either fail pure $ Parse.parse (Unlit.preprocess input)
   module_ <- either fail pure $ FromGhc.fromGhc result
   let encoder = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson

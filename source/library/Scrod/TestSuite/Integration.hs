@@ -1473,27 +1473,24 @@ spec s = Spec.describe s "integration" $ do
   Spec.describe s "literate" $ do
     Spec.describe s "bird" $ do
       Spec.it s "works with a simple declaration" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Bird
           "> x = 0"
           [ ("/items/0/value/kind", "\"Function\""),
             ("/items/0/value/name", "\"x\"")
           ]
 
       Spec.it s "works with comments and code" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Bird
           "This is a comment.\n\n> x = 0"
           [ ("/items/0/value/name", "\"x\""),
             ("/items/0/location/line", "3")
           ]
 
       Spec.it s "works with a module declaration" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Bird
           "> module M where\n>\n> x = 0"
           [ ("/name/value", "\"M\""),
             ("/items/0/value/name", "\"x\"")
@@ -1501,27 +1498,24 @@ spec s = Spec.describe s "integration" $ do
 
     Spec.describe s "latex" $ do
       Spec.it s "works with a simple declaration" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Latex
           "\\begin{code}\nx = 0\n\\end{code}"
           [ ("/items/0/value/kind", "\"Function\""),
             ("/items/0/value/name", "\"x\"")
           ]
 
       Spec.it s "works with text and code" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Latex
           "This is text.\n\\begin{code}\nx = 0\n\\end{code}"
           [ ("/items/0/value/name", "\"x\""),
             ("/items/0/location/line", "3")
           ]
 
       Spec.it s "works with a module declaration" $ do
-        checkLiterate
+        checkPreprocess
           s
-          Unlit.Latex
           "\\begin{code}\nmodule M where\n\nx = 0\n\\end{code}"
           [ ("/name/value", "\"M\""),
             ("/items/0/value/name", "\"x\"")
@@ -1548,5 +1542,5 @@ check s input assertions = do
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
 
-checkLiterate :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> Unlit.Style -> String -> [(String, String)] -> m ()
-checkLiterate s sty input = check s (Unlit.unlit sty input)
+checkPreprocess :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
+checkPreprocess s input = check s (Unlit.preprocess input)

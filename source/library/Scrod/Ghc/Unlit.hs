@@ -2,9 +2,7 @@
 
 module Scrod.Ghc.Unlit where
 
-import qualified Control.Monad.Catch as Exception
 import qualified Data.List as List
-import qualified GHC.Stack as Stack
 import qualified Scrod.Spec as Spec
 
 data Style
@@ -12,11 +10,20 @@ data Style
   | Latex
   deriving (Eq, Ord, Show)
 
-fromString :: (Stack.HasCallStack, Exception.MonadThrow m) => String -> m Style
-fromString string = case string of
-  "bird" -> pure Bird
-  "latex" -> pure Latex
-  _ -> Exception.throwM . userError $ "invalid style: " <> show string
+detect :: String -> Maybe Style
+detect input
+  | elem "\\begin{code}" ls = Just Latex
+  | any isBirdLine ls = Just Bird
+  | otherwise = Nothing
+  where
+    ls = lines' input
+    isBirdLine line = case line of
+      '>' : ' ' : _ -> True
+      ['>'] -> True
+      _ -> False
+
+preprocess :: String -> String
+preprocess input = maybe id unlit (detect input) input
 
 unlit :: Style -> String -> String
 unlit style = case style of
@@ -59,15 +66,24 @@ unlines' = List.intercalate "\n"
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
-  Spec.named s 'fromString $ do
-    Spec.it s "parses bird" $ do
-      Spec.assertEq s (fromString "bird") $ Just Bird
+  Spec.named s 'detect $ do
+    Spec.it s "returns nothing for regular haskell" $ do
+      Spec.assertEq s (detect "x = 1") Nothing
 
-    Spec.it s "parses latex" $ do
-      Spec.assertEq s (fromString "latex") $ Just Latex
+    Spec.it s "returns nothing for empty input" $ do
+      Spec.assertEq s (detect "") Nothing
 
-    Spec.it s "fails with invalid input" $ do
-      Spec.assertEq s (fromString "invalid") Nothing
+    Spec.it s "detects bird style" $ do
+      Spec.assertEq s (detect "> x = 1") $ Just Bird
+
+    Spec.it s "detects bird style with blank code line" $ do
+      Spec.assertEq s (detect ">") $ Just Bird
+
+    Spec.it s "detects latex style" $ do
+      Spec.assertEq s (detect "\\begin{code}\nx = 1\n\\end{code}") $ Just Latex
+
+    Spec.it s "prefers latex when both markers present" $ do
+      Spec.assertEq s (detect "> x = 1\n\\begin{code}\ny = 2\n\\end{code}") $ Just Latex
 
   Spec.named s 'unlit $ do
     Spec.describe s "bird" $ do

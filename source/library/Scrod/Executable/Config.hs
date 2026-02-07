@@ -8,13 +8,11 @@ import qualified GHC.Stack as Stack
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
 import qualified Scrod.Extra.Read as Read
-import qualified Scrod.Ghc.Unlit as Unlit
 import qualified Scrod.Spec as Spec
 
 data Config = MkConfig
   { format :: Format.Format,
     help :: Bool,
-    style :: Maybe Unlit.Style,
     version :: Bool
   }
   deriving (Eq, Ord, Show)
@@ -32,9 +30,6 @@ applyFlag config flag = case flag of
     Just string -> do
       bool <- Read.readM string
       pure config {help = bool}
-  Flag.Style string -> do
-    sty <- Unlit.fromString string
-    pure config {style = Just sty}
   Flag.Version maybeString -> case maybeString of
     Nothing -> pure config {version = True}
     Just string -> do
@@ -46,7 +41,6 @@ initial =
   MkConfig
     { format = Format.Json,
       help = False,
-      style = Nothing,
       version = False
     }
 
@@ -68,19 +62,6 @@ spec s = do
 
       Spec.it s "fails with invalid format" $ do
         Spec.assertEq s (fromFlags [Flag.Format "invalid"]) Nothing
-
-    Spec.describe s "style" $ do
-      Spec.it s "defaults to nothing" $ do
-        Spec.assertEq s (style <$> fromFlags []) $ Just Nothing
-
-      Spec.it s "works with bird" $ do
-        Spec.assertEq s (fromFlags [Flag.Style "bird"]) $ Just initial {style = Just Unlit.Bird}
-
-      Spec.it s "works with latex" $ do
-        Spec.assertEq s (fromFlags [Flag.Style "latex"]) $ Just initial {style = Just Unlit.Latex}
-
-      Spec.it s "fails with invalid style" $ do
-        Spec.assertEq s (fromFlags [Flag.Style "invalid"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with nothing" $ do

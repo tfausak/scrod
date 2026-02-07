@@ -50,18 +50,19 @@ async function initialize() {
 }
 
 initialize().catch(function (e) {
-  postMessage({ tag: "error", html: "Failed to load WASM module: " + e.message });
+  postMessage({ tag: "error", message: "Failed to load WASM module: " + e.message });
 });
 
 onmessage = async function (e) {
   if (processHaskell) {
     try {
-      const result = await processHaskell(e.data);
-      postMessage({ tag: "result", html: result });
+      const msg = e.data;
+      const result = await processHaskell(msg.format, msg.source);
+      postMessage({ tag: "result", value: result, format: msg.format });
     } catch (err) {
-      postMessage({ tag: "error", html: err.message });
+      postMessage({ tag: "error", message: err.message });
     }
   } else {
-    postMessage({ tag: "error", html: "WASM module is not initialized yet." });
+    postMessage({ tag: "error", message: "WASM module is not initialized yet." });
   }
 };

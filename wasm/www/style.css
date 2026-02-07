@@ -44,5 +44,24 @@ body {
 }
 
 .output-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid #ccc;
+  flex-shrink: 0;
+}
+
+.toolbar select {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  padding: 2px 4px;
+}
+
+#output {
+  flex: 1;
+  overflow: auto;
   padding: 1rem;
 }

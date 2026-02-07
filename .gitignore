@@ -1,6 +1,8 @@
+/.claude/
 /.direnv/
 /.vscode/
 /a.out
 /cabal.project.*
+/CLAUDE.md
 /dist-newstyle/
 /wasm/dist/

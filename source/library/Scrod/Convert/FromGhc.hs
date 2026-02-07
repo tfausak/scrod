@@ -882,8 +882,44 @@ extractConDeclDoc conDecl = case conDecl of
 extractConDeclSignature :: Syntax.ConDecl Ghc.GhcPs -> Maybe Text.Text
 extractConDeclSignature conDecl =
   Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ case conDecl of
-    c@Syntax.ConDeclH98 {} -> c {Syntax.con_doc = Nothing}
-    c@Syntax.ConDeclGADT {} -> c {Syntax.con_doc = Nothing}
+    c@Syntax.ConDeclH98 {} ->
+      c
+        { Syntax.con_doc = Nothing,
+          Syntax.con_args = stripH98DetailsDocs (Syntax.con_args c)
+        }
+    c@Syntax.ConDeclGADT {} ->
+      c
+        { Syntax.con_doc = Nothing,
+          Syntax.con_g_args = stripGADTDetailsDocs (Syntax.con_g_args c)
+        }
+
+-- | Strip documentation from H98 constructor details.
+stripH98DetailsDocs ::
+  Syntax.HsConDeclH98Details Ghc.GhcPs ->
+  Syntax.HsConDeclH98Details Ghc.GhcPs
+stripH98DetailsDocs details = case details of
+  Syntax.PrefixCon fields -> Syntax.PrefixCon (fmap stripFieldDoc fields)
+  Syntax.InfixCon l r -> Syntax.InfixCon (stripFieldDoc l) (stripFieldDoc r)
+  Syntax.RecCon lFields -> Syntax.RecCon (fmap (fmap (fmap stripRecFieldDoc)) lFields)
+
+-- | Strip documentation from GADT constructor details.
+stripGADTDetailsDocs ::
+  Syntax.HsConDeclGADTDetails Ghc.GhcPs ->
+  Syntax.HsConDeclGADTDetails Ghc.GhcPs
+stripGADTDetailsDocs details = case details of
+  Syntax.PrefixConGADT x fields -> Syntax.PrefixConGADT x (fmap stripFieldDoc fields)
+  Syntax.RecConGADT x lFields -> Syntax.RecConGADT x (fmap (fmap (fmap stripRecFieldDoc)) lFields)
+
+-- | Strip documentation from a constructor field.
+stripFieldDoc :: Syntax.HsConDeclField Ghc.GhcPs -> Syntax.HsConDeclField Ghc.GhcPs
+stripFieldDoc f@Syntax.CDF {} = f {Syntax.cdf_doc = Nothing}
+
+-- | Strip documentation from a record field.
+stripRecFieldDoc ::
+  Syntax.HsConDeclRecField Ghc.GhcPs ->
+  Syntax.HsConDeclRecField Ghc.GhcPs
+stripRecFieldDoc f@Syntax.HsConDeclRecField {} =
+  f {Syntax.cdrf_spec = stripFieldDoc (Syntax.cdrf_spec f)}
 
 -- | Extract fields from a constructor declaration.
 extractFieldsFromConDeclM ::

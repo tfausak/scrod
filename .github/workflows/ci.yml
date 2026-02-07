@@ -114,7 +114,7 @@ jobs:
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
-          path: wasm/dist/
+          path: wasm/dist/scrod-wasm.wasm
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name == 'push'
         with:

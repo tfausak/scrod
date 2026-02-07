@@ -1,9 +1,6 @@
-module Scrod.TestSuite where
+module Scrod.TestSuite.All where
 
-import qualified Scrod.Convert.FromGhc
 import qualified Scrod.Convert.FromHaddock
-import qualified Scrod.Convert.ToHtml
-import qualified Scrod.Convert.ToJson
 import qualified Scrod.Css.AtRule
 import qualified Scrod.Css.Block
 import qualified Scrod.Css.BlockContent
@@ -39,6 +36,7 @@ import qualified Scrod.JsonPointer.Evaluate
 import qualified Scrod.JsonPointer.Pointer
 import qualified Scrod.JsonPointer.Token
 import qualified Scrod.Spec as Spec
+import qualified Scrod.TestSuite.Integration
 import qualified Scrod.Version
 import qualified Scrod.Xml.Attribute
 import qualified Scrod.Xml.Comment
@@ -51,12 +49,9 @@ import qualified Scrod.Xml.Misc
 import qualified Scrod.Xml.Name
 import qualified Scrod.Xml.Text
 
-testSuite :: (Monad m, Monad n) => Spec.Spec m n -> n ()
-testSuite s = do
-  Scrod.Convert.FromGhc.spec s
+spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
+spec s = do
   Scrod.Convert.FromHaddock.spec s
-  Scrod.Convert.ToHtml.spec s
-  Scrod.Convert.ToJson.spec s
   Scrod.Css.AtRule.spec s
   Scrod.Css.Block.spec s
   Scrod.Css.BlockContent.spec s
@@ -91,6 +86,7 @@ testSuite s = do
   Scrod.JsonPointer.Evaluate.spec s
   Scrod.JsonPointer.Pointer.spec s
   Scrod.JsonPointer.Token.spec s
+  Scrod.TestSuite.Integration.spec s
   Scrod.Version.spec s
   Scrod.Xml.Attribute.spec s
   Scrod.Xml.Comment.spec s

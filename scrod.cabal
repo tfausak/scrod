@@ -159,7 +159,8 @@ library
     Scrod.JsonPointer.Pointer
     Scrod.JsonPointer.Token
     Scrod.Spec
-    Scrod.TestSuite
+    Scrod.TestSuite.All
+    Scrod.TestSuite.Integration
     Scrod.Version
     Scrod.Xml.Attribute
     Scrod.Xml.Comment

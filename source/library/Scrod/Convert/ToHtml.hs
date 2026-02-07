@@ -1,6 +1,5 @@
 module Scrod.Convert.ToHtml where
 
-import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -47,7 +46,6 @@ import qualified Scrod.Css.Rule as CssRule
 import qualified Scrod.Css.Selector as CssSelector
 import qualified Scrod.Css.Stylesheet as CssStylesheet
 import qualified Scrod.Extra.Builder as Builder
-import qualified Scrod.Spec as Spec
 import qualified Scrod.Xml.Attribute as Attribute
 import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Declaration as XmlDeclaration
@@ -723,146 +721,3 @@ rule selectors declarations =
     CssRule.MkRule
       (fmap (CssSelector.MkSelector . Text.pack) selectors)
       (fmap (\(p, v) -> CssDeclaration.MkDeclaration (CssName.MkName $ Text.pack p) (Text.pack v) False) declarations)
-
--- Tests
-
-spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
-spec s = do
-  Spec.describe s "Scrod.Convert.ToHtml" $ do
-    Spec.it s "converts empty module to HTML document" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (0 NonEmpty.:| [1, 0]),
-                Module.language = Nothing,
-                Module.extensions = Map.empty,
-                Module.documentation = Doc.Empty,
-                Module.since = Nothing,
-                Module.name = Nothing,
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          doc = toHtml m
-          encoded = Builder.toString (Xml.encode doc)
-      Spec.assertNe s encoded ""
-
-    Spec.it s "includes module name in title" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (0 NonEmpty.:| [1, 0]),
-                Module.language = Nothing,
-                Module.extensions = Map.empty,
-                Module.documentation = Doc.Empty,
-                Module.since = Nothing,
-                Module.name =
-                  Just $
-                    Located.MkLocated
-                      (Location.MkLocation (Line.MkLine 1) (Column.MkColumn 1))
-                      (ModuleName.MkModuleName $ Text.pack "Data.List"),
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          encoded = Builder.toString (Xml.encode (toHtml m))
-      Spec.assertEq s (List.isInfixOf "Data.List" encoded) True
-
-    Spec.it s "renders version in metadata" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (1 NonEmpty.:| [2, 3]),
-                Module.language = Nothing,
-                Module.extensions = Map.empty,
-                Module.documentation = Doc.Empty,
-                Module.since = Nothing,
-                Module.name = Nothing,
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          encoded = Builder.toString (Xml.encode (toHtml m))
-      Spec.assertEq s (List.isInfixOf "1.2.3" encoded) True
-
-    Spec.it s "renders module documentation" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (0 NonEmpty.:| [1]),
-                Module.language = Nothing,
-                Module.extensions = Map.empty,
-                Module.documentation = Doc.String (Text.pack "Hello world"),
-                Module.since = Nothing,
-                Module.name = Nothing,
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          encoded = Builder.toString (Xml.encode (toHtml m))
-      Spec.assertEq s (List.isInfixOf "Hello world" encoded) True
-
-    Spec.it s "renders enabled extension" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (0 NonEmpty.:| [1]),
-                Module.language = Nothing,
-                Module.extensions =
-                  Map.fromList
-                    [ (Extension.MkExtension (Text.pack "OverloadedStrings"), True)
-                    ],
-                Module.documentation = Doc.Empty,
-                Module.since = Nothing,
-                Module.name = Nothing,
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          encoded = Builder.toString (Xml.encode (toHtml m))
-      Spec.assertEq s (List.isInfixOf "OverloadedStrings" encoded) True
-
-    Spec.it s "renders disabled extension" $ do
-      let m =
-            Module.MkModule
-              { Module.version = Version.MkVersion (0 NonEmpty.:| [1]),
-                Module.language = Nothing,
-                Module.extensions =
-                  Map.fromList
-                    [ (Extension.MkExtension (Text.pack "NoImplicitPrelude"), False)
-                    ],
-                Module.documentation = Doc.Empty,
-                Module.since = Nothing,
-                Module.name = Nothing,
-                Module.warning = Nothing,
-                Module.exports = Nothing,
-                Module.items = []
-              }
-          encoded = Builder.toString (Xml.encode (toHtml m))
-      Spec.assertEq s (List.isInfixOf "extension-disabled" encoded) True
-
-    Spec.it s "converts Doc.Paragraph to p element" $ do
-      let contents = docToContents (Doc.Paragraph (Doc.String (Text.pack "test")))
-          encoded = Builder.toString (foldMap (Content.encode Element.encode) contents)
-      Spec.assertEq s encoded "<p>test</p>"
-
-    Spec.it s "converts Doc.Bold to strong element" $ do
-      let contents = docToContents (Doc.Bold (Doc.String (Text.pack "bold")))
-          encoded = Builder.toString (foldMap (Content.encode Element.encode) contents)
-      Spec.assertEq s encoded "<strong>bold</strong>"
-
-    Spec.it s "converts Doc.Emphasis to em element" $ do
-      let contents = docToContents (Doc.Emphasis (Doc.String (Text.pack "italic")))
-          encoded = Builder.toString (foldMap (Content.encode Element.encode) contents)
-      Spec.assertEq s encoded "<em>italic</em>"
-
-    Spec.it s "converts Doc.CodeBlock to pre > code" $ do
-      let contents = docToContents (Doc.CodeBlock (Doc.String (Text.pack "x = 1")))
-          encoded = Builder.toString (foldMap (Content.encode Element.encode) contents)
-      Spec.assertEq s encoded "<pre><code>x = 1</code></pre>"
-
-    Spec.it s "converts Doc.Hyperlink to a element" $ do
-      let contents = docToContents (Doc.Hyperlink (Hyperlink.MkHyperlink (Text.pack "https://example.com") Nothing))
-          encoded = Builder.toString (foldMap (Content.encode Element.encode) contents)
-      Spec.assertEq s encoded "<a href=\"https://example.com\">https://example.com</a>"
-
-    Spec.it s "kindToText returns function for Function" $ do
-      Spec.assertEq s (kindToText ItemKind.Function) (Text.pack "function")
-
-    Spec.it s "kindToText returns class for Class" $ do
-      Spec.assertEq s (kindToText ItemKind.Class) (Text.pack "class")

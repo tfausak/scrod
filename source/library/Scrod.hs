@@ -1,10 +1,10 @@
 module Scrod
-  ( Scrod.Executable.Main.executable,
-    Scrod.TestSuite.testSuite,
+  ( Scrod.Executable.Main.defaultMain,
+    Scrod.TestSuite.All.spec,
     Scrod.Version.version,
   )
 where
 
 import qualified Scrod.Executable.Main
-import qualified Scrod.TestSuite
+import qualified Scrod.TestSuite.All
 import qualified Scrod.Version

@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskellQuotes #-}
-
 module Scrod.Convert.FromGhc where
 
 import qualified Control.Monad.Trans.State.Strict as State
@@ -57,7 +55,6 @@ import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
-import qualified Scrod.Spec as Spec
 
 -- | State for tracking item keys during conversion.
 newtype ConversionState = MkConversionState
@@ -1130,13 +1127,3 @@ updateParentKey keyRemapping locatedItem =
                 { Located.value =
                     val {Item.parentKey = Just newPk}
                 }
-
-spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
-spec s = do
-  Spec.named s 'fromGhc $ do
-    Spec.it s "converts language correctly" $ do
-      Spec.assertEq s (languageFromGhc Session.Haskell98) (Language.MkLanguage $ Text.pack "Haskell98")
-
-    Spec.it s "converts extension correctly" $ do
-      let ext = extensionFromGhc GhcExtension.Cpp
-      Spec.assertEq s (Extension.unwrap ext) (Text.pack "Cpp")

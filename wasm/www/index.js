@@ -65,12 +65,13 @@ function decodeHash(hash) {
 }
 
 function updateHash() {
-  var params = "input=" + encodeHash(source.value);
-  if (format.value !== "html") {
-    params = "format=" + format.value + "&" + params;
-  }
   if (source.value) {
-    history.replaceState(null, "", "#" + params);
+    var params = new URLSearchParams();
+    if (format.value !== "html") {
+      params.set("format", format.value);
+    }
+    params.set("input", encodeHash(source.value));
+    history.replaceState(null, "", "#" + params.toString());
   } else {
     history.replaceState(null, "", location.pathname);
   }
@@ -103,7 +104,10 @@ if (location.hash.length > 1) {
     if (params.has("input")) {
       source.value = decodeHash(params.get("input"));
       if (params.has("format")) {
-        format.value = params.get("format");
+        var hashFormat = params.get("format");
+        if (hashFormat === "html" || hashFormat === "json") {
+          format.value = hashFormat;
+        }
       }
     } else {
       // Legacy format: bare base64-encoded source

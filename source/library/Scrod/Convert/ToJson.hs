@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Text as Text
 import qualified GHC.Stack as Stack
 import qualified Numeric.Natural as Natural
+import qualified Scrod.Convert.FromGhc as FromGhc
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Doc as Doc
@@ -43,6 +44,7 @@ import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Extra.Parsec as Parsec
+import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.JsonPointer.Evaluate as Pointer
 import qualified Scrod.JsonPointer.Pointer as Pointer
@@ -1106,6 +1108,15 @@ spec s = do
                   ]
               }
 
+      Spec.it s "extracts documentation on class methods" $ do
+        assertSourcePointers
+          s
+          [ ("/items/1/value/kind", "\"ClassMethod\""),
+            ("/items/1/value/name", "\"m\""),
+            ("/items/1/value/documentation/type", "\"Paragraph\"")
+          ]
+          "class C a where\n  -- | x\n  m :: a"
+
 assertPointers :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [(String, String)] -> (Module.Module -> Module.Module) -> m ()
 assertPointers s pjs f = do
   let m =
@@ -1122,6 +1133,15 @@ assertPointers s pjs f = do
                 Module.exports = Nothing,
                 Module.items = []
               }
+  Monad.forM_ pjs $ \(p, j) -> do
+    pointer <- maybe (Spec.assertFailure s $ "invalid pointer: " <> show p) pure $ Parsec.parseString Pointer.decode p
+    json <- maybe (Spec.assertFailure s $ "invalid json: " <> show j) pure $ Parsec.parseString Json.decode j
+    Spec.assertEq s (Pointer.evaluate pointer m) $ Just json
+
+assertSourcePointers :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [(String, String)] -> String -> m ()
+assertSourcePointers s pjs source = do
+  module_ <- either (Spec.assertFailure s) pure $ FromGhc.fromGhc =<< Parse.parse source
+  let m = toJson module_
   Monad.forM_ pjs $ \(p, j) -> do
     pointer <- maybe (Spec.assertFailure s $ "invalid pointer: " <> show p) pure $ Parsec.parseString Pointer.decode p
     json <- maybe (Spec.assertFailure s $ "invalid json: " <> show j) pure $ Parsec.parseString Json.decode j

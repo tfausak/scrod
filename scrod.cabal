@@ -198,7 +198,6 @@ executable scrod-wasm
     ghc-experimental ^>=9.1401.0,
     scrod,
 
-  ghc-options: -no-hs-main
   hs-source-dirs: wasm
   main-is: Main.hs
 

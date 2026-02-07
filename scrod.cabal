@@ -126,6 +126,7 @@ library
     Scrod.Executable.Flag
     Scrod.Executable.Format
     Scrod.Executable.Main
+    Scrod.Executable.Style
     Scrod.Extra.Builder
     Scrod.Extra.Either
     Scrod.Extra.Maybe
@@ -147,6 +148,7 @@ library
     Scrod.Ghc.Uninitialized
     Scrod.Ghc.UnitId
     Scrod.Ghc.UnitSettings
+    Scrod.Ghc.Unlit
     Scrod.Json.Array
     Scrod.Json.Boolean
     Scrod.Json.Null

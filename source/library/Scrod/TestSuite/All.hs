@@ -14,6 +14,7 @@ import qualified Scrod.Decimal
 import qualified Scrod.Executable.Config
 import qualified Scrod.Executable.Flag
 import qualified Scrod.Executable.Format
+import qualified Scrod.Executable.Style
 import qualified Scrod.Extra.Builder
 import qualified Scrod.Extra.Either
 import qualified Scrod.Extra.Maybe
@@ -24,6 +25,7 @@ import qualified Scrod.Extra.Read
 import qualified Scrod.Extra.Semigroup
 import qualified Scrod.Ghc.OnOff
 import qualified Scrod.Ghc.Parse
+import qualified Scrod.Ghc.Unlit
 import qualified Scrod.Json.Array
 import qualified Scrod.Json.Boolean
 import qualified Scrod.Json.Null
@@ -65,6 +67,7 @@ spec s = do
   Scrod.Executable.Config.spec s
   Scrod.Executable.Format.spec s
   Scrod.Executable.Flag.spec s
+  Scrod.Executable.Style.spec s
   Scrod.Extra.Builder.spec s
   Scrod.Extra.Either.spec s
   Scrod.Extra.Maybe.spec s
@@ -75,6 +78,7 @@ spec s = do
   Scrod.Extra.Semigroup.spec s
   Scrod.Ghc.OnOff.spec s
   Scrod.Ghc.Parse.spec s
+  Scrod.Ghc.Unlit.spec s
   Scrod.Json.Array.spec s
   Scrod.Json.Boolean.spec s
   Scrod.Json.Null.spec s

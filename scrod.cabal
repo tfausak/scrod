@@ -211,3 +211,9 @@ executable scrod-wasm
 
   hs-source-dirs: wasm
   main-is: wasm.hs
+
+executable scrod-wasi
+  import: wasm
+  ghc-options: -optl-mexec-model=command
+  hs-source-dirs: wasm
+  main-is: wasi.hs

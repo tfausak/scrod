@@ -121,6 +121,7 @@ jobs:
         if: github.event_name == 'push'
         with:
           path: wasm/dist/
+      - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build scrod-wasi
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

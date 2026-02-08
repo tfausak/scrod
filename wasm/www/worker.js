@@ -30,10 +30,10 @@ async function initialize() {
   if (!response.ok) {
     throw new Error(
       "Failed to fetch WASM module (status " +
-        response.status +
-        " " +
-        response.statusText +
-        ")"
+      response.status +
+      " " +
+      response.statusText +
+      ")"
     );
   }
   const wasmBuffer = await response.arrayBuffer();
@@ -57,7 +57,8 @@ onmessage = async function (e) {
   if (processHaskell) {
     try {
       const msg = e.data;
-      const result = await processHaskell(msg.format, msg.source);
+      const args = ["--format=" + msg.format];
+      const result = await processHaskell(args, msg.source);
       postMessage({ tag: "result", value: result, format: msg.format });
     } catch (err) {
       postMessage({ tag: "error", message: err.message });

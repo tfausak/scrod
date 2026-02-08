@@ -12,49 +12,46 @@ import qualified Control.Monad as Monad
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified System.Directory as Directory
-import qualified System.Exit as Exit
 import qualified System.FilePath as FilePath
-import qualified System.IO as IO
 import qualified System.Process as Process
 
 main :: IO ()
 main = do
-  putStrLn "Building WASM executable..."
-  Process.callProcess
-    "wasm32-wasi-cabal"
-    ["build", "--project-file=wasm/cabal.project", "exe:scrod-wasm"]
+  putStrLn "starting"
 
-  putStrLn "Locating WASM binary..."
-  wasm <- firstResult <$> Process.readProcess "find" ["dist-newstyle", "-name", "scrod-wasm.wasm", "-type", "f", "-print0"] ""
-  Monad.when (null wasm) $ do
-    IO.hPutStrLn IO.stderr "Error: could not find scrod-wasm.wasm"
-    Exit.exitFailure
-  putStrLn $ "Found: " <> wasm
+  putStrLn "building"
+  Process.callProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "build", "scrod-wasm"]
+  putStrLn "built"
 
-  putStrLn "Assembling dist directory..."
+  putStrLn "finding"
+  wasm <- trim <$> Process.readProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "list-bin", "scrod-wasm"] ""
+  putStrLn "found"
+
+  putStrLn "copying assets"
   let dist = FilePath.joinPath ["wasm", "dist"]
   Directory.createDirectoryIfMissing True dist
+  Process.callProcess "cp" ["--recursive", "wasm/www/.", dist]
+  putStrLn "copied assets"
 
-  putStrLn "Running GHC JS post-linker..."
+  putStrLn "running post linker"
   libdir <- trim <$> Process.readProcess "wasm32-wasi-ghc" ["--print-libdir"] ""
   Process.callProcess
     (FilePath.combine libdir "post-link.mjs")
     ["--input", wasm, "--output", FilePath.combine dist "ghc_wasm_jsffi.js"]
+  putStrLn "ran post linker"
 
-  Directory.copyFile wasm (FilePath.combine dist "scrod-wasm.wasm")
+  putStrLn "copying wasm"
+  let target = FilePath.combine dist "scrod-wasm.wasm"
+  Directory.copyFile wasm target
+  putStrLn "copied wasm"
 
-  wasmStrip <- Directory.findExecutable "wasm-strip"
-  Monad.forM_ wasmStrip $ \exe -> do
-    putStrLn "Running wasm-strip..."
-    Process.callProcess exe [FilePath.combine dist "scrod-wasm.wasm"]
+  maybeWasmStrip <- Directory.findExecutable "wasm-strip"
+  Monad.forM_ maybeWasmStrip $ \wasmStrip -> do
+    putStrLn "stripping wasm"
+    Process.callProcess wasmStrip [target]
+    putStrLn "stripped wasm"
 
-  Process.callProcess "cp" ["--recursive", "wasm/www/.", dist]
-
-  putStrLn "Build complete."
-  putStrLn "Serve with: python3 -m http.server -d wasm/dist"
-
-firstResult :: String -> String
-firstResult = takeWhile (/= '\0')
+  putStrLn "done"
 
 trim :: String -> String
 trim = List.dropWhileEnd Char.isSpace . List.dropWhile Char.isSpace

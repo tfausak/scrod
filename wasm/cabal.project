@@ -5,6 +5,7 @@ flags: +wasm
 
 package scrod
   ghc-options:
+    -no-hs-main
     -optl-mexec-model=reactor
     "-optl-Wl,--strip-debug"
     "-optl-Wl,--compress-relocations"

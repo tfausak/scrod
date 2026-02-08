@@ -1,6 +1,9 @@
 module Scrod.Executable.Main where
 
 import qualified Control.Monad as Monad
+import qualified Control.Monad.Catch as Exception
+import qualified Control.Monad.Trans.Class as Trans
+import qualified Control.Monad.Trans.Except as ExceptT
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
@@ -16,35 +19,34 @@ import qualified Scrod.Version as Version
 import qualified Scrod.Xml.Document as Xml
 import qualified System.Console.GetOpt as GetOpt
 import qualified System.Environment as Environment
-import qualified System.Exit as Exit
 import qualified System.IO as IO
 
 defaultMain :: (Stack.HasCallStack) => IO ()
 defaultMain = do
   name <- Environment.getProgName
   arguments <- Environment.getArgs
-  mainWith name arguments
+  result <- mainWith name arguments getContents
+  either putStr (Builder.hPutBuilder IO.stdout) result
 
-mainWith :: (Stack.HasCallStack) => String -> [String] -> IO ()
-mainWith name arguments = do
-  flags <- Flag.fromArguments arguments
-  config <- Config.fromFlags flags
-  Monad.when (Config.help config) $ do
-    putStr $ GetOpt.usageInfo name Flag.optDescrs
-    Exit.exitSuccess
-  Monad.when (Config.version config) $ do
-    putStrLn $ Version.showVersion Version.version
-    Exit.exitSuccess
-  input <- getContents
-  output <- either fail pure $ runPipeline (Config.format config) input
-  Builder.hPutBuilder IO.stdout
-    . (<> Builder.charUtf8 '\n')
-    $ output
-
-runPipeline :: Format.Format -> String -> Either String Builder.Builder
-runPipeline format source = do
-  result <- Parse.parse source
-  module_ <- FromGhc.fromGhc result
-  pure $ case format of
-    Format.Json -> Json.encode $ ToJson.toJson module_
-    Format.Html -> Xml.encode $ ToHtml.toHtml module_
+mainWith ::
+  (Stack.HasCallStack, Exception.MonadThrow m) =>
+  String ->
+  [String] ->
+  m String ->
+  m (Either String Builder.Builder)
+mainWith name arguments myGetContents = ExceptT.runExceptT $ do
+  flags <- Trans.lift $ Flag.fromArguments arguments
+  config <- Trans.lift $ Config.fromFlags flags
+  Monad.when (Config.help config)
+    . ExceptT.throwE
+    $ GetOpt.usageInfo name Flag.optDescrs
+  Monad.when (Config.version config)
+    . ExceptT.throwE
+    $ Version.showVersion Version.version <> "\n"
+  contents <- Trans.lift myGetContents
+  result <- ExceptT.except $ Parse.parse contents
+  module_ <- ExceptT.except $ FromGhc.fromGhc result
+  let convert = case Config.format config of
+        Format.Json -> Json.encode . ToJson.toJson
+        Format.Html -> Xml.encode . ToHtml.toHtml
+  pure $ convert module_ <> Builder.charUtf8 '\n'

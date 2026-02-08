@@ -56,6 +56,13 @@ common executable
     -rtsopts
     -threaded
 
+common wasm
+  import: library
+  build-depends: scrod
+
+  if !flag(wasm)
+    buildable: False
+
 library
   import: library
   autogen-modules: PackageInfo_scrod
@@ -193,13 +200,17 @@ executable scrod
   main-is: Main.hs
 
 executable scrod-wasm
-  import: library
-  build-depends:
-    ghc-experimental ^>=9.1401.0,
-    scrod,
+  import: wasm
+  build-depends: ghc-experimental ^>=9.1401.0
+  ghc-options:
+    -no-hs-main
+    -optl-mexec-model=reactor
 
   hs-source-dirs: wasm
-  main-is: Main.hs
+  main-is: Wasm.hs
 
-  if !flag(wasm)
-    buildable: False
+executable scrod-wasi
+  import: wasm
+  ghc-options: -optl-mexec-model=command
+  hs-source-dirs: wasm
+  main-is: Wasi.hs

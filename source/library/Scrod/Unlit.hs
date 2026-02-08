@@ -26,7 +26,7 @@ unlit input = do
               Blank -> go rest Blank False hasCode ("" : acc)
               Bird -> do
                 Monad.when (prev == Comment) $ Left "bird track adjacent to comment"
-                go rest Bird False True (drop 1 line : acc)
+                go rest Bird False True ((' ' : drop 1 line) : acc)
               BeginCode -> go rest BeginCode True True ("" : acc)
               EndCode -> Left "unexpected \\end{code}"
               Comment -> do
@@ -68,10 +68,10 @@ spec s = do
       Spec.assertEq s (unlit "\\begin{code}\n\\end{code}") $ Right "\n\n"
 
     Spec.it s "works with bird style" $ do
-      Spec.assertEq s (unlit "> x = 0") $ Right " x = 0\n"
+      Spec.assertEq s (unlit "> x = 0") $ Right "  x = 0\n"
 
     Spec.it s "works with bird style without space" $ do
-      Spec.assertEq s (unlit ">x = 0") $ Right "x = 0\n"
+      Spec.assertEq s (unlit ">x = 0") $ Right " x = 0\n"
 
     Spec.it s "works with latex style" $ do
       Spec.assertEq s (unlit "\\begin{code}\nx = 0\n\\end{code}") $ Right "\nx = 0\n\n"
@@ -81,13 +81,13 @@ spec s = do
         Spec.assertEq s (unlit "before\n> x = 0") $ Left "bird track adjacent to comment"
 
       Spec.it s "works with blank before bird" $ do
-        Spec.assertEq s (unlit "before\n\n> x = 0") $ Right "\n\n x = 0\n"
+        Spec.assertEq s (unlit "before\n\n> x = 0") $ Right "\n\n  x = 0\n"
 
       Spec.it s "fails with comment after bird" $ do
         Spec.assertEq s (unlit "> x = 0\nafter") $ Left "bird track adjacent to comment"
 
       Spec.it s "works with blank after bird" $ do
-        Spec.assertEq s (unlit "> x = 0\n\nafter") $ Right " x = 0\n\n\n"
+        Spec.assertEq s (unlit "> x = 0\n\nafter") $ Right "  x = 0\n\n\n"
 
     Spec.describe s "latex blocks" $ do
       Spec.it s "fails with unclosed begin" $ do
@@ -120,4 +120,4 @@ spec s = do
       Spec.assertEq s (unlit "\\BEGIN{CODE}\nx = 0\n\\END{CODE}") $ Right "\nx = 0\n\n"
 
     Spec.it s "converts comment lines to blank lines" $ do
-      Spec.assertEq s (unlit "comment\n\n> x = 0\n\ncomment") $ Right "\n\n x = 0\n\n\n"
+      Spec.assertEq s (unlit "comment\n\n> x = 0\n\ncomment") $ Right "\n\n  x = 0\n\n\n"

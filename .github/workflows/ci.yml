@@ -126,7 +126,7 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
           path: artifact.tar
-      - run: echo | wasmtime artifact/${{ needs.meta.outputs.name }}-wasi.wasm
+      - run: echo | nix develop --command wasmtime artifact/${{ needs.meta.outputs.name }}-wasi.wasm
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

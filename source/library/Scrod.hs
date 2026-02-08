@@ -1,5 +1,6 @@
 module Scrod
   ( Scrod.Executable.Main.defaultMain,
+    Scrod.Executable.Main.mainWith,
     Scrod.TestSuite.All.spec,
     Scrod.Version.version,
   )

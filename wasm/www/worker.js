@@ -57,7 +57,7 @@ onmessage = async function (e) {
   if (processHaskell) {
     try {
       const msg = e.data;
-      const result = await processHaskell(msg.format, msg.source);
+      const result = await processHaskell(['--format', msg.format], msg.source);
       postMessage({ tag: "result", value: result, format: msg.format });
     } catch (err) {
       postMessage({ tag: "error", message: err.message });

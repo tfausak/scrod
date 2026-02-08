@@ -49,6 +49,7 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
           path: artifact.tar
       - run: echo | artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }}
+        shell: bash
   cabal:
     name: Cabal
     runs-on: ubuntu-latest

@@ -4,6 +4,7 @@ import qualified Control.Monad as Monad
 import qualified Control.Monad.Catch as Exception
 import qualified Control.Monad.Trans.Class as Trans
 import qualified Control.Monad.Trans.Except as ExceptT
+import qualified Data.Bifunctor as Bifunctor
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
@@ -13,6 +14,7 @@ import qualified Scrod.Convert.ToJson as ToJson
 import qualified Scrod.Executable.Config as Config
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
+import qualified Scrod.Extra.Either as Either
 import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Version as Version
@@ -44,8 +46,8 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
     . ExceptT.throwE
     $ Version.showVersion Version.version <> "\n"
   contents <- Trans.lift myGetContents
-  result <- ExceptT.except $ Parse.parse contents
-  module_ <- ExceptT.except $ FromGhc.fromGhc result
+  result <- Either.throw . Bifunctor.first userError $ Parse.parse contents
+  module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson
         Format.Html -> Xml.encode . ToHtml.toHtml

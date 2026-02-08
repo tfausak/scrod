@@ -118,15 +118,15 @@ jobs:
         with:
           path: wasm/dist/
       - run: mkdir artifact
-      - run: cp wasm/dist/scrod-wasm.wasm artifact
-      - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build scrod-wasi
-      - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin scrod-wasi ) artifact
+      - run: cp wasm/dist/${{ needs.meta.outputs.name }}-wasm.wasm artifact
+      - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
+      - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
           path: artifact.tar
-      - run: echo | wasmtime artifact/scrod-wasi.wasm
+      - run: echo | wasmtime artifact/${{ needs.meta.outputs.name }}-wasi.wasm
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

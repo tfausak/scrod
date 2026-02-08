@@ -145,6 +145,23 @@ jobs:
         if: github.event_name == 'push'
         with:
           path: wasm/dist/
+  wasm-smoke:
+    name: WASM smoke test
+    runs-on: ubuntu-latest
+    needs:
+      - meta
+      - wasm
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
+      - uses: bytecodealliance/actions/wasmtime/setup@v1
+      - name: Smoke test with empty input
+        run: echo | wasmtime run --env PWD=/ --dir / scrod-wasm.wasm
+      - name: Smoke test with JSON format
+        run: echo 'module Main where' | wasmtime run --env PWD=/ --dir / scrod-wasm.wasm -- --format json
+      - name: Smoke test with HTML format
+        run: echo 'module Main where' | wasmtime run --env PWD=/ --dir / scrod-wasm.wasm -- --format html
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

@@ -59,6 +59,9 @@ common executable
 common wasm
   import: library
   build-depends: scrod
+  ghc-options:
+    "-optl-Wl,--strip-debug"
+    "-optl-Wl,--compress-relocations"
 
   if !flag(wasm)
     buildable: False
@@ -202,6 +205,9 @@ executable scrod
 executable scrod-wasm
   import: wasm
   build-depends: ghc-experimental ^>=9.1401.0
-  ghc-options: -no-hs-main
+  ghc-options:
+    -no-hs-main
+    -optl-mexec-model=reactor
+
   hs-source-dirs: wasm
   main-is: Main.hs

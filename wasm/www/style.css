@@ -54,7 +54,8 @@ body {
   flex-shrink: 0;
 }
 
-.toolbar select {
+.toolbar select,
+.toolbar label {
   font-family: system-ui, sans-serif;
   font-size: 14px;
   padding: 2px 4px;

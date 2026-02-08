@@ -10,6 +10,7 @@ import qualified System.Console.GetOpt as GetOpt
 data Flag
   = Format String
   | Help (Maybe String)
+  | Unlit (Maybe String)
   | Version (Maybe String)
   deriving (Eq, Ord, Show)
 
@@ -25,7 +26,8 @@ optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
-    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html)."
+    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
+    GetOpt.Option [] ["unlit"] (GetOpt.OptArg Unlit "BOOL") "Enables literate Haskell unlitting."
   ]
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -56,6 +58,13 @@ spec s = do
 
       Spec.it s "works with an argument" $ do
         Spec.assertEq s (fromArguments ["--help="]) $ Just [Help $ Just ""]
+
+    Spec.describe s "unlit" $ do
+      Spec.it s "works with no argument" $ do
+        Spec.assertEq s (fromArguments ["--unlit"]) $ Just [Unlit Nothing]
+
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--unlit="]) $ Just [Unlit $ Just ""]
 
     Spec.describe s "version" $ do
       Spec.it s "works with no argument" $ do

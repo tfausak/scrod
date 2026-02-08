@@ -1468,6 +1468,59 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "unlit" $ do
+    Spec.it s "works with bird style" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "\n> x = 0\n"
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind", "\"Function\"")
+        ]
+
+    Spec.it s "works with latex style" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "\\begin{code}\nx = 0\n\\end{code}"
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind", "\"Function\"")
+        ]
+
+    Spec.it s "works with module declaration in bird style" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "\n> module M where\n\n> x = 0\n"
+        [ ("/name/value", "\"M\""),
+          ("/items/0/value/name", "\"x\"")
+        ]
+
+    Spec.it s "works with module declaration in latex style" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "\\begin{code}\nmodule M where\nx = 0\n\\end{code}"
+        [ ("/name/value", "\"M\""),
+          ("/items/0/value/name", "\"x\"")
+        ]
+
+    Spec.it s "works with mixed styles" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "\n>x = 0\n\n\\begin{code}\ny = 1\n\\end{code}"
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1/value/name", "\"y\"")
+        ]
+
+    Spec.it s "preserves line numbers" $ do
+      checkWith
+        s
+        ["--unlit"]
+        "comment\n\n> x = 0\n"
+        [("/items/0/location/line", "3")]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 

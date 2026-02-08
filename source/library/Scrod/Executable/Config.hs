@@ -13,6 +13,7 @@ import qualified Scrod.Spec as Spec
 data Config = MkConfig
   { format :: Format.Format,
     help :: Bool,
+    unlit :: Bool,
     version :: Bool
   }
   deriving (Eq, Ord, Show)
@@ -30,6 +31,11 @@ applyFlag config flag = case flag of
     Just string -> do
       bool <- Read.readM string
       pure config {help = bool}
+  Flag.Unlit maybeString -> case maybeString of
+    Nothing -> pure config {unlit = True}
+    Just string -> do
+      bool <- Read.readM string
+      pure config {unlit = bool}
   Flag.Version maybeString -> case maybeString of
     Nothing -> pure config {version = True}
     Just string -> do
@@ -41,6 +47,7 @@ initial =
   MkConfig
     { format = Format.Json,
       help = False,
+      unlit = False,
       version = False
     }
 
@@ -62,6 +69,19 @@ spec s = do
 
       Spec.it s "fails with invalid format" $ do
         Spec.assertEq s (fromFlags [Flag.Format "invalid"]) Nothing
+
+    Spec.describe s "unlit" $ do
+      Spec.it s "works with nothing" $ do
+        Spec.assertEq s (fromFlags [Flag.Unlit Nothing]) $ Just initial {unlit = True}
+
+      Spec.it s "works with just false" $ do
+        Spec.assertEq s (fromFlags [Flag.Unlit $ Just "False"]) $ Just initial
+
+      Spec.it s "works with just true" $ do
+        Spec.assertEq s (fromFlags [Flag.Unlit $ Just "True"]) $ Just initial {unlit = True}
+
+      Spec.it s "fails with just invalid" $ do
+        Spec.assertEq s (fromFlags [Flag.Unlit $ Just "invalid"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with nothing" $ do

@@ -113,15 +113,19 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v21
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command wasm/build.hs
-      - uses: actions/upload-artifact@v6
-        with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
-          path: wasm/dist/scrod-wasm.wasm
       - uses: actions/upload-pages-artifact@v4
         if: github.event_name == 'push'
         with:
           path: wasm/dist/
+      - run: mkdir artifact
+      - run: cp wasm/dist/scrod-wasm.wasm artifact
       - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build scrod-wasi
+      - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin scrod-wasi ) artifact
+      - run: tar --create --file artifact.tar --verbose artifact
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
+          path: artifact.tar
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

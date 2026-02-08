@@ -1,27 +1,30 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang='en-US'>
+
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset='utf-8'>
+  <meta name='viewport' content='initial-scale = 1, width = device-width'>
   <title>Scrod</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel='stylesheet' href='style.css'>
 </head>
+
 <body>
-  <div class="pane input-pane">
-    <label for="source" class="sr-only">Haskell source code</label>
-    <textarea id="source" placeholder="Enter Haskell source..." spellcheck="false"></textarea>
+  <div class='pane input-pane'>
+    <label for='source' class='sr-only'>Haskell source code</label>
+    <textarea id='source' placeholder='Enter Haskell source...' spellcheck='false'></textarea>
   </div>
-  <div class="pane output-pane">
-    <div class="toolbar">
-      <label for="format" class="sr-only">Output format</label>
-      <select id="format">
-        <option value="html" selected>HTML</option>
-        <option value="json">JSON</option>
+  <div class='pane output-pane'>
+    <div class='toolbar'>
+      <label for='format' class='sr-only'>Output format</label>
+      <select id='format'>
+        <option value='html' selected>HTML</option>
+        <option value='json'>JSON</option>
       </select>
-      <label><input type="checkbox" id="unlit"> Literate</label>
+      <label><input type='checkbox' id='unlit'> Literate</label>
     </div>
-    <div id="output" role="region" aria-live="polite" aria-label="Output"></div>
+    <div id='output' role='region' aria-live='polite' aria-label='Output'></div>
   </div>
-  <script src="index.js"></script>
+  <script src='index.js'></script>
 </body>
+
 </html>

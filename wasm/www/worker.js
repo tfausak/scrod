@@ -1,5 +1,5 @@
-import ghcWasmJsffi from "./ghc_wasm_jsffi.js";
-import { WASI, File, OpenFile, ConsoleStdout } from "./vendor/browser_wasi_shim/index.js";
+import ghcWasmJsffi from './ghc_wasm_jsffi.js';
+import { WASI, File, OpenFile, ConsoleStdout } from './vendor/browser_wasi_shim/index.js';
 
 let processHaskell;
 
@@ -17,7 +17,7 @@ async function initialize() {
     {
       get: function (_, property) {
         if (!exports) {
-          throw new Error("WASM exports not initialized");
+          throw new Error('WASM exports not initialized');
         }
         return exports[property];
       },
@@ -26,14 +26,10 @@ async function initialize() {
 
   const jsffi = ghcWasmJsffi(exportsProxy);
 
-  const response = await fetch("scrod-wasm.wasm");
+  const response = await fetch('scrod-wasm.wasm');
   if (!response.ok) {
     throw new Error(
-      "Failed to fetch WASM module (status " +
-        response.status +
-        " " +
-        response.statusText +
-        ")"
+      `Failed to fetch WASM module (status ${response.status} ${response.statusText})`
     );
   }
   const wasmBuffer = await response.arrayBuffer();
@@ -46,11 +42,11 @@ async function initialize() {
   wasi.initialize(result.instance);
 
   processHaskell = result.instance.exports.processHaskell;
-  postMessage({ tag: "ready" });
+  postMessage({ tag: 'ready' });
 }
 
 initialize().catch(function (e) {
-  postMessage({ tag: "error", message: "Failed to load WASM module: " + e.message });
+  postMessage({ tag: 'error', message: 'Failed to load WASM module: ' + e.message });
 });
 
 onmessage = async function (e) {
@@ -60,11 +56,11 @@ onmessage = async function (e) {
       const args = ['--format', msg.format];
       if (msg.unlit) args.push('--unlit');
       const result = await processHaskell(args, msg.source);
-      postMessage({ tag: "result", value: result, format: msg.format });
+      postMessage({ tag: 'result', value: result, format: msg.format });
     } catch (err) {
-      postMessage({ tag: "error", message: err.message });
+      postMessage({ tag: 'error', message: err.message });
     }
   } else {
-    postMessage({ tag: "error", message: "WASM module is not initialized yet." });
+    postMessage({ tag: 'error', message: 'WASM module is not initialized yet.' });
   }
 };

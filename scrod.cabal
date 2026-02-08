@@ -210,4 +210,4 @@ executable scrod-wasm
     -optl-mexec-model=reactor
 
   hs-source-dirs: wasm
-  main-is: Main.hs
+  main-is: wasm.hs

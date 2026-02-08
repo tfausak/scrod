@@ -1469,10 +1469,13 @@ spec s = Spec.describe s "integration" $ do
         []
 
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
-check s input assertions = do
+check s = checkWith s []
+
+checkWith :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> [(String, String)] -> m ()
+checkWith s arguments input assertions = do
   result <-
     either (Spec.assertFailure s . Exception.displayException) pure
-      . Main.mainWith "scrod-test-suite" []
+      . Main.mainWith "scrod-test-suite" arguments
       $ pure input
   module_ <- either (Spec.assertFailure s) pure result
   json <-

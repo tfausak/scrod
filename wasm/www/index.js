@@ -81,8 +81,38 @@ function updateHash() {
   }
 }
 
+function isUrl(text) {
+  try {
+    var url = new URL(text);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
+function fetchUrl(url) {
+  shadow.innerHTML = '<p style="color: #888; font-style: italic">Fetching URL...</p>';
+  fetch(url).then(function (response) {
+    if (!response.ok) {
+      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+    }
+    return response.text();
+  }).then(function (text) {
+    source.value = text;
+    updateHash();
+    process();
+  }).catch(function (err) {
+    showError('Failed to fetch URL: ' + err.message);
+  });
+}
+
 function process() {
   if (ready) {
+    var trimmed = source.value.trim();
+    if (isUrl(trimmed)) {
+      fetchUrl(trimmed);
+      return;
+    }
     worker.postMessage({ source: source.value, format: format.value, literate: literate.checked });
   }
 }

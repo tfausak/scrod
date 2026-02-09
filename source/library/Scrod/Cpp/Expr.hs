@@ -6,46 +6,41 @@ module Scrod.Cpp.Expr where
 import qualified Data.Char as Char
 import qualified Data.Functor as Functor
 import qualified Data.Map.Strict as Map
+import qualified Scrod.Cpp.Directive as Directive
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Expr as Expr
 
 evaluate :: Map.Map String String -> String -> Either String Integer
 evaluate defines input =
-  case Parsec.parse (spaces *> expression defines <* Parsec.eof) "" input of
+  case Parsec.parse (Directive.spaces *> expression defines <* Parsec.eof) "" input of
     Left err -> Left $ show err
     Right (Left msg) -> Left msg
     Right (Right n) -> Right n
-
-spaces :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m ()
-spaces = Parsec.skipMany (Parsec.oneOf " \t")
-
-lexeme :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m a
-lexeme p = p <* spaces
 
 expression :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
 expression defines = Expr.buildExpressionParser operatorTable (term defines)
 
 operatorTable :: (Parsec.Stream s m Char) => Expr.OperatorTable s u m (Either String Integer)
 operatorTable =
-  [ [ Expr.Infix (lexeme (Parsec.try $ Parsec.char '*') Functor.$> liftA2 (*)) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.char '/') Functor.$> checkedDiv) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.char '%') Functor.$> checkedMod) Expr.AssocLeft
+  [ [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '*') Functor.$> liftA2 (*)) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '/') Functor.$> checkedDiv) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '%') Functor.$> checkedMod) Expr.AssocLeft
     ],
-    [ Expr.Infix (lexeme (Parsec.try $ Parsec.char '+') Functor.$> liftA2 (+)) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.char '-') Functor.$> liftA2 (-)) Expr.AssocLeft
+    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '+') Functor.$> liftA2 (+)) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '-') Functor.$> liftA2 (-)) Expr.AssocLeft
     ],
-    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "<=") Functor.$> liftA2 (boolOp (<=))) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.string ">=") Functor.$> liftA2 (boolOp (>=))) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.string "<") Functor.$> liftA2 (boolOp (<))) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.string ">") Functor.$> liftA2 (boolOp (>))) Expr.AssocLeft
+    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "<=") Functor.$> liftA2 (boolOp (<=))) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string ">=") Functor.$> liftA2 (boolOp (>=))) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "<") Functor.$> liftA2 (boolOp (<))) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string ">") Functor.$> liftA2 (boolOp (>))) Expr.AssocLeft
     ],
-    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "==") Functor.$> liftA2 (boolOp (==))) Expr.AssocLeft,
-      Expr.Infix (lexeme (Parsec.try $ Parsec.string "!=") Functor.$> liftA2 (boolOp (/=))) Expr.AssocLeft
+    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "==") Functor.$> liftA2 (boolOp (==))) Expr.AssocLeft,
+      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "!=") Functor.$> liftA2 (boolOp (/=))) Expr.AssocLeft
     ],
-    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "&&") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 && b /= 0))) Expr.AssocLeft
+    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "&&") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 && b /= 0))) Expr.AssocLeft
     ],
-    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "||") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 || b /= 0))) Expr.AssocLeft
+    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "||") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 || b /= 0))) Expr.AssocLeft
     ]
   ]
 
@@ -53,23 +48,23 @@ term :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u 
 term defines =
   Parsec.choice
     [ do
-        _ <- lexeme $ Parsec.char '!'
+        _ <- Directive.lexeme $ Parsec.char '!'
         n <- term defines
         pure $ fmap (\v -> if v == 0 then 1 else 0) n,
       do
-        _ <- lexeme $ Parsec.char '-'
+        _ <- Directive.lexeme $ Parsec.char '-'
         n <- term defines
         pure $ fmap negate n,
       do
-        _ <- lexeme $ Parsec.char '+'
+        _ <- Directive.lexeme $ Parsec.char '+'
         term defines,
-      Right <$> lexeme intLiteral,
-      Right <$> lexeme (definedExpr defines),
-      Right <$> lexeme (identifier defines),
+      Right <$> Directive.lexeme intLiteral,
+      Right <$> Directive.lexeme (definedExpr defines),
+      Right <$> Directive.lexeme (identifier defines),
       do
-        _ <- lexeme $ Parsec.char '('
+        _ <- Directive.lexeme $ Parsec.char '('
         n <- expression defines
-        _ <- lexeme $ Parsec.char ')'
+        _ <- Directive.lexeme $ Parsec.char ')'
         pure n
     ]
 
@@ -102,13 +97,13 @@ decLiteral = do
 definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 definedExpr defines = do
   _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
-  spaces
+  Directive.spaces
   parenned <-
     Parsec.optionMaybe . Parsec.try $ do
       _ <- Parsec.char '('
-      spaces
+      Directive.spaces
       n <- identName
-      spaces
+      Directive.spaces
       _ <- Parsec.char ')'
       pure n
   case parenned of

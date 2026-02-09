@@ -3,6 +3,7 @@
 
 module Scrod.Cpp.Directive where
 
+import qualified Control.Monad as Monad
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
@@ -21,11 +22,22 @@ data Directive
 parse :: String -> Maybe Directive
 parse = either (const Nothing) Just . Parsec.parse directive ""
 
+space :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Char
+space = Parsec.oneOf " \t"
+
+spaces :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m ()
+spaces = Parsec.skipMany space
+
+spaces1 :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m ()
+spaces1 = Parsec.skipMany1 space
+
+lexeme :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m a
+lexeme = (<* spaces)
+
 directive :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Directive
 directive = do
-  Parsec.skipMany (Parsec.oneOf " \t")
-  _ <- Parsec.char '#'
-  Parsec.skipMany (Parsec.oneOf " \t")
+  spaces
+  Monad.void . lexeme $ Parsec.char '#'
   keyword <- Parsec.many Parsec.letter
   case keyword of
     "if" -> If <$> rest
@@ -34,27 +46,18 @@ directive = do
     "elif" -> Elif <$> rest
     "else" -> pure Else
     "endif" -> pure Endif
-    "define" -> do
-      n <- name
-      Define n <$> value
+    "define" -> Define <$> name <*> value
     "undef" -> Undef <$> name
     _ -> pure Other
 
 name :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
-name = do
-  Parsec.skipMany1 (Parsec.oneOf " \t")
-  Parsec.many1 (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
+name = spaces1 *> Parsec.many1 (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
 
 rest :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
-rest = do
-  Parsec.skipMany1 (Parsec.oneOf " \t")
-  Parsec.many Parsec.anyChar
+rest = spaces1 *> Parsec.many Parsec.anyChar
 
 value :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m (Maybe String)
-value =
-  Parsec.optionMaybe $ do
-    Parsec.skipMany1 (Parsec.oneOf " \t")
-    Parsec.many1 Parsec.anyChar
+value = Parsec.optionMaybe $ spaces1 *> Parsec.many1 Parsec.anyChar
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

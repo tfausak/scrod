@@ -880,8 +880,13 @@ convertDerivedTypeM parentKey lSigTy =
 
 -- | Extract name from a derived type.
 extractDerivedTypeName :: Syntax.LHsSigType Ghc.GhcPs -> Maybe ItemName.ItemName
-extractDerivedTypeName =
-  Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
+extractDerivedTypeName lSigTy =
+  let sigTy = SrcLoc.unLoc lSigTy
+      bodyTy = SrcLoc.unLoc $ Syntax.sig_body sigTy
+      ty = case bodyTy of
+        Syntax.HsDocTy _ lTy _ -> SrcLoc.unLoc lTy
+        _ -> bodyTy
+   in Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ ty
 
 -- | Extract documentation from a derived type.
 extractDerivedTypeDoc :: Syntax.LHsSigType Ghc.GhcPs -> Doc.Doc

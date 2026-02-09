@@ -54,7 +54,7 @@ onmessage = async function (e) {
     try {
       const msg = e.data;
       const args = ['--format', msg.format];
-      if (msg.unlit) args.push('--unlit');
+      if (msg.literate) args.push('--literate');
       const result = await processHaskell(args, msg.source);
       postMessage({ tag: 'result', value: result, format: msg.format });
     } catch (err) {

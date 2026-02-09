@@ -10,7 +10,7 @@ import qualified System.Console.GetOpt as GetOpt
 data Flag
   = Format String
   | Help (Maybe String)
-  | Unlit (Maybe String)
+  | Literate (Maybe String)
   | Version (Maybe String)
   deriving (Eq, Ord, Show)
 
@@ -27,7 +27,7 @@ optDescrs =
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
     GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
-    GetOpt.Option [] ["unlit"] (GetOpt.OptArg Unlit "BOOL") "Enables literate Haskell unlitting."
+    GetOpt.Option [] ["literate"] (GetOpt.OptArg Literate "BOOL") "Treats the input as Literate Haskell."
   ]
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -59,12 +59,12 @@ spec s = do
       Spec.it s "works with an argument" $ do
         Spec.assertEq s (fromArguments ["--help="]) $ Just [Help $ Just ""]
 
-    Spec.describe s "unlit" $ do
+    Spec.describe s "literate" $ do
       Spec.it s "works with no argument" $ do
-        Spec.assertEq s (fromArguments ["--unlit"]) $ Just [Unlit Nothing]
+        Spec.assertEq s (fromArguments ["--literate"]) $ Just [Literate Nothing]
 
       Spec.it s "works with an argument" $ do
-        Spec.assertEq s (fromArguments ["--unlit="]) $ Just [Unlit $ Just ""]
+        Spec.assertEq s (fromArguments ["--literate="]) $ Just [Literate $ Just ""]
 
     Spec.describe s "version" $ do
       Spec.it s "works with no argument" $ do

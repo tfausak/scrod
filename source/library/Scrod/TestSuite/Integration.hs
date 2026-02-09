@@ -1468,19 +1468,19 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
-  Spec.describe s "unlit" $ do
+  Spec.describe s "literate" $ do
     Spec.describe s "bird" $ do
       Spec.it s "works" $ do
         checkWith
           s
-          ["--unlit"]
+          ["--literate"]
           "> x = 0"
           [("/items/0/value/name", "\"x\"")]
 
       Spec.it s "preserves line numbers" $ do
         checkWith
           s
-          ["--unlit"]
+          ["--literate"]
           """
           comment
 
@@ -1492,7 +1492,7 @@ spec s = Spec.describe s "integration" $ do
       Spec.it s "works" $ do
         checkWith
           s
-          ["--unlit"]
+          ["--literate"]
           """
           \\begin{code}
           x = 0
@@ -1503,7 +1503,7 @@ spec s = Spec.describe s "integration" $ do
       Spec.it s "preserves line numbers" $ do
         checkWith
           s
-          ["--unlit"]
+          ["--literate"]
           """
           \\begin{code}
           x = 0
@@ -1514,7 +1514,7 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with bird then latex" $ do
       checkWith
         s
-        ["--unlit"]
+        ["--literate"]
         """
         > x = 0
 
@@ -1529,7 +1529,7 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with latex then bird" $ do
       checkWith
         s
-        ["--unlit"]
+        ["--literate"]
         """
         \\begin{code}
           x = 0

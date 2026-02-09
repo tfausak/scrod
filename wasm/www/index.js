@@ -4,7 +4,7 @@ const worker = new Worker('worker.js', { type: 'module' });
 const source = document.getElementById('source');
 const output = document.getElementById('output');
 const format = document.getElementById('format');
-const unlit = document.getElementById('unlit');
+const literate = document.getElementById('literate');
 const shadow = output.attachShadow({ mode: 'open' });
 shadow.innerHTML = '<p style="color: #888; font-style: italic">Loading WASM module...</p>';
 let debounceTimer;
@@ -71,8 +71,8 @@ function updateHash() {
     if (format.value !== 'html') {
       params.set('format', format.value);
     }
-    if (unlit.checked) {
-      params.set('unlit', 'true');
+    if (literate.checked) {
+      params.set('literate', 'true');
     }
     params.set('input', encodeHash(source.value));
     history.replaceState(null, '', `#${params.toString()}`);
@@ -83,7 +83,7 @@ function updateHash() {
 
 function process() {
   if (ready) {
-    worker.postMessage({ source: source.value, format: format.value, unlit: unlit.checked });
+    worker.postMessage({ source: source.value, format: format.value, literate: literate.checked });
   }
 }
 
@@ -100,7 +100,7 @@ format.addEventListener('change', function () {
   process();
 });
 
-unlit.addEventListener('change', function () {
+literate.addEventListener('change', function () {
   updateHash();
   process();
 });
@@ -118,8 +118,8 @@ if (location.hash.length > 1) {
           format.value = hashFormat;
         }
       }
-      if (params.get('unlit') === 'true') {
-        unlit.checked = true;
+      if (params.get('literate') === 'true') {
+        literate.checked = true;
       }
     } else {
       // Legacy format: bare base64-encoded source

@@ -48,7 +48,7 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
     $ Version.showVersion Version.version <> "\n"
   contents <- Trans.lift myGetContents
   source <-
-    if Config.unlit config
+    if Config.literate config
       then Either.throw . Bifunctor.first userError $ Unlit.unlit contents
       else pure contents
   result <- Either.throw . Bifunctor.first userError $ Parse.parse source

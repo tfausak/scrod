@@ -145,20 +145,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - working-directory: vscode
+      - working-directory: extra/vscode
         run: npm ci
-      - working-directory: vscode
+      - working-directory: extra/vscode
         run: npm run copy-wasm
-      - working-directory: vscode
+      - working-directory: extra/vscode
         run: npm run lint
-      - working-directory: vscode
+      - working-directory: extra/vscode
         run: npm run build
-      - working-directory: vscode
+      - working-directory: extra/vscode
         run: npx vsce package --allow-missing-repository
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode
-          path: vscode/*.vsix
+          path: extra/vscode/*.vsix
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

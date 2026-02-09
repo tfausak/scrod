@@ -41,7 +41,7 @@ cabal check                                          # validate .cabal file
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
 - `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
 - `wasm/` — WASM/WASI entry points and build script
-- `vscode/` — VSCode extension for live documentation preview
+- `extra/vscode/` — VSCode extension for live documentation preview
 
 ### Key module groups
 

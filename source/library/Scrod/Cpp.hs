@@ -48,7 +48,10 @@ go ls state acc = case ls of
         go rest state' ("" : acc)
 
 isActive :: State -> Bool
-isActive state = case stack state of
+isActive = isActiveStack . stack
+
+isActiveStack :: [Branch] -> Bool
+isActiveStack bs = case bs of
   [] -> True
   Active : _ -> True
   _ -> False
@@ -76,12 +79,8 @@ processDirective state dir = case dir of
     (_, True : _) -> Left "unexpected #elif after #else"
     (Active : rest, e : es) ->
       Right state {stack = Done : rest, seenElse = e : es}
-    (Inactive : rest, e : es) -> do
-      let parentActive = case rest of
-            [] -> True
-            Active : _ -> True
-            _ -> False
-      if parentActive
+    (Inactive : rest, e : es) ->
+      if isActiveStack rest
         then do
           val <- Expr.evaluate (defines state) expr
           let branch = if val /= 0 then Active else Inactive
@@ -95,12 +94,8 @@ processDirective state dir = case dir of
     (_, True : _) -> Left "unexpected #else after #else"
     (Active : rest, _ : es) ->
       Right state {stack = Done : rest, seenElse = True : es}
-    (Inactive : rest, _ : es) -> do
-      let parentActive = case rest of
-            [] -> True
-            Active : _ -> True
-            _ -> False
-      if parentActive
+    (Inactive : rest, _ : es) ->
+      if isActiveStack rest
         then Right state {stack = Active : rest, seenElse = True : es}
         else Right state {stack = Inactive : rest, seenElse = True : es}
     (Done : _, _ : es) ->

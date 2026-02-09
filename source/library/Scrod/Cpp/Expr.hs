@@ -5,6 +5,7 @@ module Scrod.Cpp.Expr where
 
 import qualified Data.Bool as Bool
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import qualified Scrod.Cpp.Directive as Directive
 import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
@@ -107,17 +108,17 @@ definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.Parse
 definedExpr defines = do
   _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
   Directive.spaces
-  parenned <-
-    Parsec.optionMaybe $
-      Parsec.between
-        (Directive.lexeme $ Parsec.char '(')
-        (Directive.lexeme $ Parsec.char ')')
-        identName
-  case parenned of
-    Just n -> pure $ if Map.member n defines then 1 else 0
-    Nothing -> do
-      n <- identName
-      pure $ if Map.member n defines then 1 else 0
+  n <-
+    Directive.lexeme $
+      Parsec.choice
+        [ Parsec.try
+            . Parsec.between
+              (Directive.lexeme $ Parsec.char '(')
+              (Parsec.char ')')
+            $ Directive.lexeme identName,
+          identName
+        ]
+  pure . boolToInt $ Map.member n defines
 
 identName :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
 identName = do
@@ -130,14 +131,11 @@ identifier defines = do
   n <- identName
   -- Handle undefined function-like macro calls: NAME(...) -> 0
   mParen <- Parsec.optionMaybe $ Parsec.char '(' *> consumeBalancedParens 1
-  case mParen of
-    Just () -> pure 0
-    Nothing ->
-      case Map.lookup n defines of
-        Nothing -> pure 0
-        Just v -> case reads v of
-          [(i, "")] -> pure i
-          _ -> pure 0
+  pure $ case mParen of
+    Just () -> 0
+    Nothing -> Maybe.fromMaybe 0 $ do
+      x <- Map.lookup n defines
+      Read.readM x
 
 consumeBalancedParens :: (Parsec.Stream s m Char) => Int -> Parsec.ParsecT s u m ()
 consumeBalancedParens depth = case depth of

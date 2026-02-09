@@ -1,68 +1,61 @@
 import * as vscode from "vscode";
 import * as path from "path";
-import { WasmEngine } from "./wasmEngine";
+import { loadWasmEngine } from "./wasmEngine";
 
-const panels = new Map<string, vscode.WebviewPanel>();
-const timers = new Map<string, ReturnType<typeof setTimeout>>();
-let engine: WasmEngine;
+let engine: Promise<(source: string, literate: boolean) => Promise<string>>;
+let panel: vscode.WebviewPanel | undefined;
+let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
-  engine = new WasmEngine(context.extensionPath);
+  engine = loadWasmEngine(context.extensionPath);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("scrod.openPreview", () => {
-      const editor = vscode.window.activeTextEditor;
-      if (editor) openPreview(editor.document);
+      if (panel) {
+        panel.reveal(vscode.ViewColumn.Beside, true);
+      } else {
+        panel = vscode.window.createWebviewPanel(
+          "scrodPreview",
+          "Scrod Preview",
+          { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+          { retainContextWhenHidden: true }
+        );
+        panel.onDidDispose(() => {
+          panel = undefined;
+          clearTimeout(debounceTimer);
+        });
+      }
+      scheduleUpdate();
     }),
-    vscode.workspace.onDidChangeTextDocument((e) =>
-      scheduleUpdate(e.document)
-    ),
-    vscode.workspace.onDidSaveTextDocument((doc) => scheduleUpdate(doc))
+    vscode.window.onDidChangeActiveTextEditor(() => scheduleUpdate()),
+    vscode.workspace.onDidChangeTextDocument(() => scheduleUpdate()),
+    vscode.workspace.onDidSaveTextDocument(() => scheduleUpdate())
   );
 }
 
 export function deactivate(): void {}
 
-function openPreview(document: vscode.TextDocument): void {
-  const key = document.uri.toString();
-  const existing = panels.get(key);
-  if (existing) {
-    existing.reveal(vscode.ViewColumn.Beside, true);
-    return;
-  }
-
-  const panel = vscode.window.createWebviewPanel(
-    "scrodPreview",
-    `Preview: ${path.basename(document.fileName)}`,
-    vscode.ViewColumn.Beside,
-    { retainContextWhenHidden: true }
-  );
-  panels.set(key, panel);
-  panel.onDidDispose(() => {
-    panels.delete(key);
-    clearTimeout(timers.get(key));
-    timers.delete(key);
-  });
-
-  update(panel, document);
+function isHaskell(doc: vscode.TextDocument): boolean {
+  return doc.languageId === "haskell" || doc.languageId === "literate haskell";
 }
 
-function scheduleUpdate(document: vscode.TextDocument): void {
-  const key = document.uri.toString();
-  const panel = panels.get(key);
+function scheduleUpdate(): void {
   if (!panel) return;
-
-  clearTimeout(timers.get(key));
-  timers.set(key, setTimeout(() => update(panel, document), 300));
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || !isHaskell(editor.document)) return;
+    update(editor.document);
+  }, 300);
 }
 
-async function update(
-  panel: vscode.WebviewPanel,
-  document: vscode.TextDocument
-): Promise<void> {
+async function update(document: vscode.TextDocument): Promise<void> {
+  if (!panel) return;
+  panel.title = `Preview: ${path.basename(document.fileName)}`;
   const literate = document.fileName.endsWith(".lhs");
   try {
-    panel.webview.html = await engine.process(document.getText(), literate);
+    const process = await engine;
+    panel.webview.html = await process(document.getText(), literate);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message

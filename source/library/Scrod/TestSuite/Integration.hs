@@ -68,6 +68,9 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with ghc options" $ do
       check s "{-# options_ghc -XCPP #-}" [("/extensions/Cpp", "true")]
 
+    Spec.it s "works with optimization flags" $ do
+      check s "{-# options_ghc -O #-}" [("/items", "[]")]
+
     Spec.it s "works with two extensions in one pragma" $ do
       check
         s

@@ -154,6 +154,8 @@ jobs:
       - working-directory: vscode
         run: npm run copy-wasm
       - working-directory: vscode
+        run: npm run lint
+      - working-directory: vscode
         run: npm run build
       - working-directory: vscode
         run: npx vsce package --allow-missing-repository

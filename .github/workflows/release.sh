@@ -30,11 +30,13 @@ do
       rm -rf artifact
       continue
       ;;
+    vscode)
+      cp "$dir"/*.vsix .
+      continue
+      ;;
     *) echo "unknown platform: $platform" >&2; exit 1 ;;
   esac
   tar --extract --file "$dir/artifact.tar"
   tar --create --gzip --file "${name}-${version}-${platform}.tar.gz" -C artifact "$file"
   rm -rf artifact
 done
-
-cp "${name}-${sha}-vscode"/*.vsix .

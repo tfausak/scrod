@@ -113,13 +113,13 @@ jobs:
       - uses: actions/checkout@v6
       - uses: DeterminateSystems/nix-installer-action@v21
       - run: nix develop --command wasm32-wasi-cabal update
-      - run: nix develop --command wasm/build.hs
+      - run: nix develop --command extra/wasm/build.hs
       - run: mkdir artifact
-      - run: cp wasm/dist/${{ needs.meta.outputs.name }}-wasm.wasm artifact
-      - run: cp wasm/dist/ghc_wasm_jsffi.js artifact
+      - run: cp extra/wasm/dist/${{ needs.meta.outputs.name }}-wasm.wasm artifact
+      - run: cp extra/wasm/dist/ghc_wasm_jsffi.js artifact
       - run: cp extra/github-pages/vendor/browser_wasi_shim.js artifact
-      - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
-      - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
+      - run: nix develop --command wasm32-wasi-cabal --project-file=extra/wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
+      - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=extra/wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
@@ -138,10 +138,10 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
-      - run: mkdir -p wasm/dist/vendor
-      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm wasm/dist/
-      - run: cp artifact/ghc_wasm_jsffi.js wasm/dist/
-      - run: cp extra/github-pages/vendor/browser_wasi_shim.js wasm/dist/vendor/
+      - run: mkdir -p extra/wasm/dist/vendor
+      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/
+      - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
+      - run: cp extra/github-pages/vendor/browser_wasi_shim.js extra/wasm/dist/vendor/
       - uses: actions/setup-node@v4
         with:
           node-version: 22

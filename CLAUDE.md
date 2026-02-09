@@ -20,7 +20,7 @@ cabal run scrod -- --format html     # run CLI (reads stdin)
 ### WASM build (requires Nix devshell)
 
 ```bash
-nix develop --command wasm/build.hs
+nix develop --command extra/wasm/build.hs
 ```
 
 ### Linting and formatting (CI checks all of these)
@@ -40,7 +40,7 @@ cabal check                                          # validate .cabal file
 - `source/executable/` — CLI entry point
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
 - `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
-- `wasm/` — WASM/WASI entry points and build script
+- `extra/wasm/` — WASM/WASI entry points and build script
 - `extra/vscode/` — VSCode extension for live documentation preview
 
 ### Key module groups

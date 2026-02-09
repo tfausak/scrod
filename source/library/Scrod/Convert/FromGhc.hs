@@ -876,7 +876,17 @@ convertDerivedTypeM ::
   Syntax.LHsSigType Ghc.GhcPs ->
   ConvertM (Maybe (Located.Located Item.Item))
 convertDerivedTypeM parentKey lSigTy =
-  mkItemM (Annotation.getLocA lSigTy) parentKey Nothing (extractDerivedTypeDoc lSigTy) Nothing ItemKind.DerivedInstance
+  mkItemM (Annotation.getLocA lSigTy) parentKey (extractDerivedTypeName lSigTy) (extractDerivedTypeDoc lSigTy) Nothing ItemKind.DerivedInstance
+
+-- | Extract name from a derived type.
+extractDerivedTypeName :: Syntax.LHsSigType Ghc.GhcPs -> Maybe ItemName.ItemName
+extractDerivedTypeName lSigTy =
+  let sigTy = SrcLoc.unLoc lSigTy
+      bodyTy = SrcLoc.unLoc $ Syntax.sig_body sigTy
+      ty = case bodyTy of
+        Syntax.HsDocTy _ lTy _ -> SrcLoc.unLoc lTy
+        _ -> bodyTy
+   in Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ ty
 
 -- | Extract documentation from a derived type.
 extractDerivedTypeDoc :: Syntax.LHsSigType Ghc.GhcPs -> Doc.Doc
@@ -1040,6 +1050,7 @@ extractDeclName lDecl = case SrcLoc.unLoc lDecl of
   Syntax.ValD _ bind -> extractBindName bind
   Syntax.SigD _ sig -> extractSigName sig
   Syntax.InstD _ inst -> extractInstDeclName inst
+  Syntax.DerivD _ derivDecl -> extractDerivDeclName derivDecl
   Syntax.KindSigD _ kindSig -> Just $ extractStandaloneKindSigName kindSig
   _ -> Nothing
 
@@ -1099,6 +1110,17 @@ extractInstDeclName inst = Just $ case inst of
   Syntax.TyFamInstD _ tyFamInst ->
     ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
       tyFamInst
+
+-- | Extract name from a standalone deriving declaration.
+extractDerivDeclName :: Syntax.DerivDecl Ghc.GhcPs -> Maybe ItemName.ItemName
+extractDerivDeclName =
+  Just
+    . ItemName.MkItemName
+    . Text.pack
+    . Outputable.showSDocUnsafe
+    . Outputable.ppr
+    . Syntax.hswc_body
+    . Syntax.deriv_type
 
 -- | Extract name from a constructor declaration.
 extractConDeclName :: Syntax.ConDecl Ghc.GhcPs -> ItemName.ItemName

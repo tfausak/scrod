@@ -31,11 +31,8 @@ main = do
   wasm <- trim <$> Process.readProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "list-bin", "scrod-wasm"] ""
   putStrLn "found"
 
-  putStrLn "copying assets"
   let dist = FilePath.joinPath ["wasm", "dist"]
   Directory.createDirectoryIfMissing True dist
-  Process.callProcess "cp" ["--recursive", "web/.", dist]
-  putStrLn "copied assets"
 
   putStrLn "running post linker"
   libdir <- trim <$> Process.readProcess "wasm32-wasi-ghc" ["--print-libdir"] ""

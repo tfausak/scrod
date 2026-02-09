@@ -90,26 +90,34 @@ function isUrl(text) {
   }
 }
 
+let fetchController = null;
+
 function fetchUrl(url) {
+  if (fetchController) {
+    fetchController.abort();
+  }
+  fetchController = new AbortController();
   shadow.innerHTML = '<p style="color: #888; font-style: italic">Fetching URL...</p>';
-  fetch(url).then(function (response) {
+  fetch(url, { signal: fetchController.signal }).then(function (response) {
     if (!response.ok) {
-      throw new Error('HTTP ' + response.status + ' ' + response.statusText);
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
     return response.text();
   }).then(function (text) {
     source.value = text;
     updateHash();
-    process();
+    process(true);
   }).catch(function (err) {
-    showError('Failed to fetch URL: ' + err.message);
+    if (err.name !== 'AbortError') {
+      showError(`Failed to fetch URL: ${err.message}`);
+    }
   });
 }
 
-function process() {
+function process(skipUrlDetection) {
   if (ready) {
     var trimmed = source.value.trim();
-    if (isUrl(trimmed)) {
+    if (!skipUrlDetection && isUrl(trimmed)) {
       fetchUrl(trimmed);
       return;
     }
@@ -120,8 +128,13 @@ function process() {
 source.addEventListener('input', function () {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () {
-    updateHash();
-    process();
+    var trimmed = source.value.trim();
+    if (isUrl(trimmed)) {
+      process();
+    } else {
+      updateHash();
+      process();
+    }
   }, 300);
 });
 

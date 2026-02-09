@@ -1108,9 +1108,14 @@ extractInstDeclName inst = Just $ case inst of
 
 -- | Extract name from a standalone deriving declaration.
 extractDerivDeclName :: Syntax.DerivDecl Ghc.GhcPs -> Maybe ItemName.ItemName
-extractDerivDeclName derivDecl =
-  Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . Syntax.hswc_body $
-    Syntax.deriv_type derivDecl
+extractDerivDeclName =
+  Just
+    . ItemName.MkItemName
+    . Text.pack
+    . Outputable.showSDocUnsafe
+    . Outputable.ppr
+    . Syntax.hswc_body
+    . Syntax.deriv_type
 
 -- | Extract name from a constructor declaration.
 extractConDeclName :: Syntax.ConDecl Ghc.GhcPs -> ItemName.ItemName

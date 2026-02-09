@@ -84,20 +84,21 @@ mulExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try (Parsec.char '*' Functor.$> (*))
-          Parsec.<|> Parsec.try (Parsec.char '/' Functor.$> safeDiv)
-          Parsec.<|> Parsec.try (Parsec.char '%' Functor.$> safeMod)
+        Parsec.try (Parsec.char '*')
+          Parsec.<|> Parsec.try (Parsec.char '/')
+          Parsec.<|> Parsec.try (Parsec.char '%')
     r <- unaryExpr defines
     pure (op, r)
-  pure $ foldl (\a (op, b) -> op a b) l rs
+  applyMulOps l rs
 
-safeDiv :: Integer -> Integer -> Integer
-safeDiv _ 0 = 0
-safeDiv a b = div a b
-
-safeMod :: Integer -> Integer -> Integer
-safeMod _ 0 = 0
-safeMod a b = mod a b
+applyMulOps :: (Monad m) => Integer -> [(Char, Integer)] -> Parsec.ParsecT s u m Integer
+applyMulOps acc [] = pure acc
+applyMulOps acc ((op, b) : rest) = case op of
+  '*' -> applyMulOps (acc * b) rest
+  '/' | b == 0 -> fail "division by zero in #if"
+  '/' -> applyMulOps (div acc b) rest
+  _ | b == 0 -> fail "division by zero in #if"
+  _ -> applyMulOps (mod acc b) rest
 
 unaryExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 unaryExpr defines =
@@ -280,11 +281,15 @@ spec s = do
     Spec.it s "evaluates subtraction without spaces" $ do
       Spec.assertEq s (evaluate Map.empty "5-3") $ Right 2
 
-    Spec.it s "handles division by zero" $ do
-      Spec.assertEq s (evaluate Map.empty "1/0") $ Right 0
+    Spec.it s "fails on division by zero" $ do
+      case evaluate Map.empty "1/0" of
+        Left _ -> pure ()
+        Right _ -> Spec.assertFailure s "expected failure on division by zero"
 
-    Spec.it s "handles modulo by zero" $ do
-      Spec.assertEq s (evaluate Map.empty "1%0") $ Right 0
+    Spec.it s "fails on modulo by zero" $ do
+      case evaluate Map.empty "1%0" of
+        Left _ -> pure ()
+        Right _ -> Spec.assertFailure s "expected failure on modulo by zero"
 
     Spec.it s "treats identifiers starting with defined as identifiers" $ do
       Spec.assertEq s (evaluate (Map.singleton "definedFoo" "5") "definedFoo") $ Right 5

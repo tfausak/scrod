@@ -8,12 +8,14 @@ import qualified Data.Functor as Functor
 import qualified Data.Map.Strict as Map
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
+import qualified Text.Parsec.Expr as Expr
 
 evaluate :: Map.Map String String -> String -> Either String Integer
 evaluate defines input =
-  case Parsec.parse (spaces *> expr defines <* Parsec.eof) "" input of
+  case Parsec.parse (spaces *> expression defines <* Parsec.eof) "" input of
     Left err -> Left $ show err
-    Right n -> Right n
+    Right (Left msg) -> Left msg
+    Right (Right n) -> Right n
 
 spaces :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m ()
 spaces = Parsec.skipMany (Parsec.oneOf " \t")
@@ -21,122 +23,66 @@ spaces = Parsec.skipMany (Parsec.oneOf " \t")
 lexeme :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m a
 lexeme p = p <* spaces
 
-expr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-expr = orExpr
+expression :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
+expression defines = Expr.buildExpressionParser operatorTable (term defines)
 
-orExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-orExpr defines = do
-  l <- andExpr defines
-  rs <- Parsec.many $ do
-    _ <- lexeme $ Parsec.try (Parsec.string "||")
-    andExpr defines
-  pure $ foldl (\a b -> if a /= 0 || b /= 0 then 1 else 0) l rs
+operatorTable :: (Parsec.Stream s m Char) => Expr.OperatorTable s u m (Either String Integer)
+operatorTable =
+  [ [ Expr.Infix (lexeme (Parsec.try $ Parsec.char '*') Functor.$> liftA2 (*)) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.char '/') Functor.$> checkedDiv) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.char '%') Functor.$> checkedMod) Expr.AssocLeft
+    ],
+    [ Expr.Infix (lexeme (Parsec.try $ Parsec.char '+') Functor.$> liftA2 (+)) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.char '-') Functor.$> liftA2 (-)) Expr.AssocLeft
+    ],
+    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "<=") Functor.$> liftA2 (boolOp (<=))) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.string ">=") Functor.$> liftA2 (boolOp (>=))) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.string "<") Functor.$> liftA2 (boolOp (<))) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.string ">") Functor.$> liftA2 (boolOp (>))) Expr.AssocLeft
+    ],
+    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "==") Functor.$> liftA2 (boolOp (==))) Expr.AssocLeft,
+      Expr.Infix (lexeme (Parsec.try $ Parsec.string "!=") Functor.$> liftA2 (boolOp (/=))) Expr.AssocLeft
+    ],
+    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "&&") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 && b /= 0))) Expr.AssocLeft
+    ],
+    [ Expr.Infix (lexeme (Parsec.try $ Parsec.string "||") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 || b /= 0))) Expr.AssocLeft
+    ]
+  ]
 
-andExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-andExpr defines = do
-  l <- eqExpr defines
-  rs <- Parsec.many $ do
-    _ <- lexeme $ Parsec.try (Parsec.string "&&")
-    eqExpr defines
-  pure $ foldl (\a b -> if a /= 0 && b /= 0 then 1 else 0) l rs
-
-eqExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-eqExpr defines = do
-  l <- relExpr defines
-  rs <- Parsec.many $ do
-    op <-
-      lexeme $
-        Parsec.choice
-          [ Parsec.try (Parsec.string "==" Functor.$> (==)),
-            Parsec.try (Parsec.string "!=" Functor.$> (/=))
-          ]
-    r <- relExpr defines
-    pure (op, r)
-  pure $ foldl (\a (op, b) -> boolToInt $ op a b) l rs
-
-relExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-relExpr defines = do
-  l <- addExpr defines
-  rs <- Parsec.many $ do
-    op <-
-      lexeme $
-        Parsec.choice
-          [ Parsec.try (Parsec.string "<=" Functor.$> (<=)),
-            Parsec.try (Parsec.string ">=" Functor.$> (>=)),
-            Parsec.try (Parsec.string "<" Functor.$> (<)),
-            Parsec.try (Parsec.string ">" Functor.$> (>))
-          ]
-    r <- addExpr defines
-    pure (op, r)
-  pure $ foldl (\a (op, b) -> boolToInt $ op a b) l rs
-
-addExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-addExpr defines = do
-  l <- mulExpr defines
-  rs <- Parsec.many $ do
-    op <-
-      lexeme $
-        Parsec.choice
-          [ Parsec.try (Parsec.char '+' Functor.$> (+)),
-            Parsec.try (Parsec.char '-' Functor.$> (-))
-          ]
-    r <- mulExpr defines
-    pure (op, r)
-  pure $ foldl (\a (op, b) -> op a b) l rs
-
-mulExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-mulExpr defines = do
-  l <- unaryExpr defines
-  rs <- Parsec.many $ do
-    op <-
-      lexeme $
-        Parsec.choice
-          [ Parsec.try (Parsec.char '*'),
-            Parsec.try (Parsec.char '/'),
-            Parsec.try (Parsec.char '%')
-          ]
-    r <- unaryExpr defines
-    pure (op, r)
-  applyMulOps l rs
-
-applyMulOps :: (Monad m) => Integer -> [(Char, Integer)] -> Parsec.ParsecT s u m Integer
-applyMulOps acc [] = pure acc
-applyMulOps acc ((op, b) : rest) = case op of
-  '*' -> applyMulOps (acc * b) rest
-  '/' | b == 0 -> fail "division by zero in #if"
-  '/' -> applyMulOps (div acc b) rest
-  _ | b == 0 -> fail "division by zero in #if"
-  _ -> applyMulOps (mod acc b) rest
-
-unaryExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-unaryExpr defines =
+term :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
+term defines =
   Parsec.choice
     [ do
         _ <- lexeme $ Parsec.char '!'
-        n <- unaryExpr defines
-        pure $ if n == 0 then 1 else 0,
+        n <- term defines
+        pure $ fmap (\v -> if v == 0 then 1 else 0) n,
       do
         _ <- lexeme $ Parsec.char '-'
-        n <- unaryExpr defines
-        pure $ negate n,
+        n <- term defines
+        pure $ fmap negate n,
       do
         _ <- lexeme $ Parsec.char '+'
-        unaryExpr defines,
-      primary defines
-    ]
-
-primary :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
-primary defines =
-  Parsec.choice
-    [ lexeme intLiteral,
-      lexeme $ definedExpr defines,
-      lexeme $ identifier defines,
+        term defines,
+      Right <$> lexeme intLiteral,
+      Right <$> lexeme (definedExpr defines),
+      Right <$> lexeme (identifier defines),
       do
         _ <- lexeme $ Parsec.char '('
-        n <- expr defines
+        n <- expression defines
         _ <- lexeme $ Parsec.char ')'
         pure n
     ]
+
+checkedDiv :: Either String Integer -> Either String Integer -> Either String Integer
+checkedDiv _ (Right 0) = Left "division by zero in #if"
+checkedDiv a b = liftA2 div a b
+
+checkedMod :: Either String Integer -> Either String Integer -> Either String Integer
+checkedMod _ (Right 0) = Left "division by zero in #if"
+checkedMod a b = liftA2 mod a b
+
+boolOp :: (Integer -> Integer -> Bool) -> Integer -> Integer -> Integer
+boolOp f a b = boolToInt (f a b)
 
 intLiteral :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 intLiteral = Parsec.choice [Parsec.try hexLiteral, decLiteral]

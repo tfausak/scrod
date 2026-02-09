@@ -138,10 +138,9 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
-      - run: mkdir -p extra/wasm/dist/vendor
+      - run: mkdir -p extra/wasm/dist
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/
       - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
-      - run: cp extra/github-pages/vendor/browser_wasi_shim.js extra/wasm/dist/vendor/
       - uses: actions/setup-node@v4
         with:
           node-version: 22

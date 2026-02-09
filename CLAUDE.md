@@ -37,10 +37,10 @@ cabal check                                          # validate .cabal file
 ### Source layout
 
 - `source/library/` — all library code under `Scrod.*` modules
-- `source/executable/` — CLI entry point
+- `source/executables/` — CLI, WASM, and WASI entry points
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
 - `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
-- `extra/wasm/` — WASM/WASI entry points and build script
+- `extra/wasm/` — WASM cross-compilation build script and cabal project file
 - `extra/vscode/` — VSCode extension for live documentation preview
 
 ### Key module groups

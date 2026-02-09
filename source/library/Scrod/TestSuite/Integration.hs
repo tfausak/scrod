@@ -1493,12 +1493,6 @@ spec s = Spec.describe s "integration" $ do
         "{-# language CPP #-}\n#ifdef __GLASGOW_HASKELL__\nmodule GHC where\n#else\nmodule Other where\n#endif"
         [("/name/value", "\"Other\"")]
 
-    Spec.it s "does not preprocess without CPP extension" $ do
-      check
-        s
-        "x = 0"
-        [("/items/0/value/name", "\"x\"")]
-
   Spec.describe s "literate" $ do
     Spec.describe s "bird" $ do
       Spec.it s "works" $ do

@@ -103,7 +103,7 @@ processDirective state dir = case dir of
         then Right state {stack = Active : rest, seenElse = True : es}
         else Right state {stack = Inactive : rest, seenElse = True : es}
     (Done : _, _ : es) ->
-      Right state {stack = Done : stack state, seenElse = True : es}
+      Right state {stack = stack state, seenElse = True : es}
     (_, []) -> Left "unexpected #else without matching #if"
   Directive.Endif -> case (stack state, seenElse state) of
     ([], _) -> Left "unexpected #endif without matching #if"
@@ -165,6 +165,9 @@ spec s = do
 
     Spec.it s "fails with elif after else" $ do
       Spec.assertEq s (cpp "#if 0\n#else\n#elif 1\n#endif") $ Left "unexpected #elif after #else"
+
+    Spec.it s "handles else after elif" $ do
+      Spec.assertEq s (cpp "#if 1\nkeep\n#elif 0\nskip\n#else\nskip\n#endif") $ Right "\nkeep\n\n\n\n\n\n"
 
     Spec.it s "preserves line count" $ do
       Spec.assertEq s (length . lines <$> cpp "#if 1\nline2\nline3\n#endif\nline5") $ Right 5

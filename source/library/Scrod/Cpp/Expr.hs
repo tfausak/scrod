@@ -72,8 +72,8 @@ addExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try ((Parsec.char '+' *> Parsec.notFollowedBy Parsec.digit) Functor.$> (+))
-          Parsec.<|> Parsec.try ((Parsec.char '-' *> Parsec.notFollowedBy Parsec.digit) Functor.$> (-))
+        Parsec.try (Parsec.char '+' Functor.$> (+))
+          Parsec.<|> Parsec.try (Parsec.char '-' Functor.$> (-))
     r <- mulExpr defines
     pure (op, r)
   pure $ foldl (\a (op, b) -> op a b) l rs
@@ -85,11 +85,19 @@ mulExpr defines = do
     op <-
       lexeme $
         Parsec.try (Parsec.char '*' Functor.$> (*))
-          Parsec.<|> Parsec.try (Parsec.char '/' Functor.$> div)
-          Parsec.<|> Parsec.try (Parsec.char '%' Functor.$> mod)
+          Parsec.<|> Parsec.try (Parsec.char '/' Functor.$> safeDiv)
+          Parsec.<|> Parsec.try (Parsec.char '%' Functor.$> safeMod)
     r <- unaryExpr defines
     pure (op, r)
   pure $ foldl (\a (op, b) -> op a b) l rs
+
+safeDiv :: Integer -> Integer -> Integer
+safeDiv _ 0 = 0
+safeDiv a b = div a b
+
+safeMod :: Integer -> Integer -> Integer
+safeMod _ 0 = 0
+safeMod a b = mod a b
 
 unaryExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 unaryExpr defines =
@@ -138,7 +146,7 @@ decLiteral = do
 
 definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 definedExpr defines = do
-  _ <- Parsec.try $ Parsec.string "defined"
+  _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.alphaNum Parsec.<|> Parsec.char '_')
   spaces
   parenned <-
     Parsec.optionMaybe . Parsec.try $ do
@@ -265,6 +273,21 @@ spec s = do
 
     Spec.it s "handles undefined function-like macro call" $ do
       Spec.assertEq s (evaluate Map.empty "MIN_VERSION_base(4,16,0)") $ Right 0
+
+    Spec.it s "evaluates addition without spaces" $ do
+      Spec.assertEq s (evaluate Map.empty "1+2") $ Right 3
+
+    Spec.it s "evaluates subtraction without spaces" $ do
+      Spec.assertEq s (evaluate Map.empty "5-3") $ Right 2
+
+    Spec.it s "handles division by zero" $ do
+      Spec.assertEq s (evaluate Map.empty "1/0") $ Right 0
+
+    Spec.it s "handles modulo by zero" $ do
+      Spec.assertEq s (evaluate Map.empty "1%0") $ Right 0
+
+    Spec.it s "treats identifiers starting with defined as identifiers" $ do
+      Spec.assertEq s (evaluate (Map.singleton "definedFoo" "5") "definedFoo") $ Right 5
 
     Spec.it s "fails on empty expression" $ do
       case evaluate Map.empty "" of

@@ -157,6 +157,10 @@ jobs:
         run: npm run build
       - working-directory: vscode
         run: npx vsce package --allow-missing-repository
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode
+          path: vscode/*.vsix
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'
@@ -181,6 +185,7 @@ jobs:
     needs:
       - build
       - meta
+      - vscode
       - wasm
     permissions:
       contents: write
@@ -190,6 +195,7 @@ jobs:
         with:
           pattern: ${{ needs.meta.outputs.name }}-${{ github.sha }}-*
       - run: .github/workflows/release.sh ${{ needs.meta.outputs.name }} ${{ needs.meta.outputs.version }} ${{ github.sha }}
+      - run: cp ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode/*.vsix .
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz
+        run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz *.vsix

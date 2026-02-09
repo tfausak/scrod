@@ -19,6 +19,10 @@ main :: IO ()
 main = do
   putStrLn "starting"
 
+  putStrLn "updating"
+  Process.callProcess "wasm32-wasi-cabal" ["update"]
+  putStrLn "updated"
+
   putStrLn "building"
   Process.callProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "build", "scrod-wasm"]
   putStrLn "built"

@@ -120,6 +120,8 @@ jobs:
           path: wasm/dist/
       - run: mkdir artifact
       - run: cp wasm/dist/${{ needs.meta.outputs.name }}-wasm.wasm artifact
+      - run: cp wasm/dist/ghc_wasm_jsffi.js artifact
+      - run: cp wasm/dist/vendor/browser_wasi_shim.js artifact
       - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
       - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
@@ -128,6 +130,33 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
           path: artifact.tar
       - run: echo | nix develop --command wasmtime artifact/${{ needs.meta.outputs.name }}-wasi.wasm
+  vscode:
+    name: VSCode
+    runs-on: ubuntu-latest
+    needs:
+      - meta
+      - wasm
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
+      - run: tar --extract --file artifact.tar
+      - run: mkdir -p wasm/dist/vendor
+      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm wasm/dist/scrod-wasm.wasm
+      - run: cp artifact/ghc_wasm_jsffi.js wasm/dist/
+      - run: cp artifact/browser_wasi_shim.js wasm/dist/vendor/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - working-directory: vscode
+        run: npm ci
+      - working-directory: vscode
+        run: npm run copy-wasm
+      - working-directory: vscode
+        run: npm run build
+      - working-directory: vscode
+        run: npx vsce package --allow-missing-repository
   github-pages:
     name: GitHub Pages
     if: github.event_name == 'push'

@@ -25,7 +25,7 @@ do
     Windows) platform=win32; file="${name}.exe" ;;
     wasm)
       tar --extract --file "$dir/artifact.tar"
-      tar --create --gzip --file "${name}-${version}-wasm.tar.gz" -C artifact "${name}-wasm.wasm"
+      tar --create --gzip --file "${name}-${version}-wasm.tar.gz" -C artifact "${name}-wasm.wasm" ghc_wasm_jsffi.js browser_wasi_shim.js
       tar --create --gzip --file "${name}-${version}-wasi.tar.gz" -C artifact "${name}-wasi.wasm"
       rm -rf artifact
       continue

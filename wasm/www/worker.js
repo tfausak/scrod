@@ -1,5 +1,5 @@
 import ghcWasmJsffi from './ghc_wasm_jsffi.js';
-import { WASI, File, OpenFile, ConsoleStdout } from './vendor/browser_wasi_shim/index.js';
+import { WASI, File, OpenFile, ConsoleStdout } from './vendor/browser_wasi_shim.js';
 
 let scrod;
 

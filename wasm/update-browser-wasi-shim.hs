@@ -8,7 +8,6 @@ build-depends:
 ghc-options: -Wall
 -}
 
-import qualified Control.Monad as Monad
 import qualified Data.Maybe as Maybe
 import qualified System.Directory as Directory
 import qualified System.Environment as Environment
@@ -22,11 +21,7 @@ main = do
         "https://esm.sh/gh/haskell-wasm/browser_wasi_shim@"
           <> ref
           <> "/es2022/browser_wasi_shim.mjs"
-  let dest = FilePath.joinPath ["wasm", "www", "vendor", "browser_wasi_shim"]
+  let dest = FilePath.joinPath ["wasm", "www", "vendor"]
   Directory.createDirectoryIfMissing True dest
-  entries <- Directory.listDirectory dest
-  Monad.forM_ entries $ \entry ->
-    Monad.when ("js" `FilePath.isExtensionOf` entry) $
-      Directory.removeFile (FilePath.combine dest entry)
-  Process.callProcess "curl" ["--fail", "--silent", "--show-error", "--location", url, "--output", FilePath.combine dest "index.js"]
+  Process.callProcess "curl" ["--fail", "--silent", "--show-error", "--location", url, "--output", FilePath.combine dest "browser_wasi_shim.js"]
   putStrLn $ "Updated browser_wasi_shim to " <> ref

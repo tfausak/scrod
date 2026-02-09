@@ -41,7 +41,7 @@
   "scripts": {
     "build": "node esbuild.js",
     "watch": "node esbuild.js --watch",
-    "copy-wasm": "cp ../wasm/dist/ghc_wasm_jsffi.js wasm/ghc_wasm_jsffi.mjs && cp ../wasm/dist/scrod-wasm.wasm wasm/ && cp ../wasm/www/vendor/browser_wasi_shim/index.js wasm/browser_wasi_shim.mjs",
+    "copy-wasm": "cp ../wasm/dist/ghc_wasm_jsffi.js wasm/ghc_wasm_jsffi.mjs && cp ../wasm/dist/scrod-wasm.wasm wasm/ && cp ../wasm/dist/vendor/browser_wasi_shim.js wasm/browser_wasi_shim.mjs",
     "package": "npm run copy-wasm && npm run build && vsce package",
     "lint": "tsc --noEmit"
   },

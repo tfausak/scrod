@@ -3,10 +3,10 @@
 
 module Scrod.Cpp.Expr where
 
-import qualified Data.Char as Char
-import qualified Data.Functor as Functor
+import qualified Data.Bool as Bool
 import qualified Data.Map.Strict as Map
 import qualified Scrod.Cpp.Directive as Directive
+import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Expr as Expr
@@ -19,30 +19,40 @@ evaluate defines input =
     Right (Right n) -> Right n
 
 expression :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
-expression defines = Expr.buildExpressionParser operatorTable (term defines)
+expression = Expr.buildExpressionParser operatorTable . term
 
 operatorTable :: (Parsec.Stream s m Char) => Expr.OperatorTable s u m (Either String Integer)
 operatorTable =
-  [ [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '*') Functor.$> liftA2 (*)) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '/') Functor.$> checkedDiv) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '%') Functor.$> checkedMod) Expr.AssocLeft
+  [ [ infixL "*" $ liftA2 (*),
+      infixL "/" checkedDiv,
+      infixL "%" checkedMod
     ],
-    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '+') Functor.$> liftA2 (+)) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.char '-') Functor.$> liftA2 (-)) Expr.AssocLeft
+    [ infixL "+" $ liftA2 (+),
+      infixL "-" $ liftA2 (-)
     ],
-    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "<=") Functor.$> liftA2 (boolOp (<=))) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string ">=") Functor.$> liftA2 (boolOp (>=))) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "<") Functor.$> liftA2 (boolOp (<))) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string ">") Functor.$> liftA2 (boolOp (>))) Expr.AssocLeft
+    [ infixL "<=" $ liftA2 (boolOp (<=)),
+      infixL ">=" $ liftA2 (boolOp (>=)),
+      infixL "<" $ liftA2 (boolOp (<)),
+      infixL ">" $ liftA2 (boolOp (>))
     ],
-    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "==") Functor.$> liftA2 (boolOp (==))) Expr.AssocLeft,
-      Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "!=") Functor.$> liftA2 (boolOp (/=))) Expr.AssocLeft
+    [ infixL "==" $ liftA2 (boolOp (==)),
+      infixL "!=" $ liftA2 (boolOp (/=))
     ],
-    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "&&") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 && b /= 0))) Expr.AssocLeft
+    [ infixL "&&" $ liftA2 (\a b -> boolToInt (a /= 0 && b /= 0))
     ],
-    [ Expr.Infix (Directive.lexeme (Parsec.try $ Parsec.string "||") Functor.$> liftA2 (\a b -> boolToInt (a /= 0 || b /= 0))) Expr.AssocLeft
+    [ infixL "||" $ liftA2 (\a b -> boolToInt (a /= 0 || b /= 0))
     ]
   ]
+
+infixL ::
+  (Parsec.Stream s m Char) =>
+  String ->
+  (Either String Integer -> Either String Integer -> Either String Integer) ->
+  Expr.Operator s u m (Either String Integer)
+infixL s f =
+  Expr.Infix
+    (f <$ Directive.lexeme (Parsec.string' s))
+    Expr.AssocLeft
 
 term :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
 term defines =
@@ -50,7 +60,7 @@ term defines =
     [ do
         _ <- Directive.lexeme $ Parsec.char '!'
         n <- term defines
-        pure $ fmap (\v -> if v == 0 then 1 else 0) n,
+        pure $ fmap (boolToInt . (== 0)) n,
       do
         _ <- Directive.lexeme $ Parsec.char '-'
         n <- term defines
@@ -61,23 +71,22 @@ term defines =
       Right <$> Directive.lexeme intLiteral,
       Right <$> Directive.lexeme (definedExpr defines),
       Right <$> Directive.lexeme (identifier defines),
-      do
-        _ <- Directive.lexeme $ Parsec.char '('
-        n <- expression defines
-        _ <- Directive.lexeme $ Parsec.char ')'
-        pure n
+      Parsec.between (Directive.lexeme $ Parsec.char '(') (Directive.lexeme $ Parsec.char ')') $
+        expression defines
     ]
 
 checkedDiv :: Either String Integer -> Either String Integer -> Either String Integer
-checkedDiv _ (Right 0) = Left "division by zero in #if"
-checkedDiv a b = liftA2 div a b
+checkedDiv a b = case b of
+  Right 0 -> Left "division by zero in #if"
+  _ -> liftA2 div a b
 
 checkedMod :: Either String Integer -> Either String Integer -> Either String Integer
-checkedMod _ (Right 0) = Left "division by zero in #if"
-checkedMod a b = liftA2 mod a b
+checkedMod a b = case b of
+  Right 0 -> Left "division by zero in #if"
+  _ -> liftA2 mod a b
 
 boolOp :: (Integer -> Integer -> Bool) -> Integer -> Integer -> Integer
-boolOp f a b = boolToInt (f a b)
+boolOp f x = boolToInt . f x
 
 intLiteral :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 intLiteral = Parsec.choice [Parsec.try hexLiteral, decLiteral]
@@ -87,25 +96,23 @@ hexLiteral = do
   _ <- Parsec.char '0'
   _ <- Parsec.oneOf "xX"
   digits <- Parsec.many1 Parsec.hexDigit
-  pure $ foldl (\acc d -> acc * 16 + fromIntegral (Char.digitToInt d)) 0 digits
+  maybe (fail "invalid hexadecimal literal") pure . Read.readM $ "0x" <> digits
 
 decLiteral :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 decLiteral = do
   digits <- Parsec.many1 Parsec.digit
-  pure $ read digits
+  maybe (fail "invalid decimal literal") pure $ Read.readM digits
 
 definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 definedExpr defines = do
   _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
   Directive.spaces
   parenned <-
-    Parsec.optionMaybe . Parsec.try $ do
-      _ <- Parsec.char '('
-      Directive.spaces
-      n <- identName
-      Directive.spaces
-      _ <- Parsec.char ')'
-      pure n
+    Parsec.optionMaybe $
+      Parsec.between
+        (Directive.lexeme $ Parsec.char '(')
+        (Directive.lexeme $ Parsec.char ')')
+        identName
   case parenned of
     Just n -> pure $ if Map.member n defines then 1 else 0
     Nothing -> do
@@ -122,9 +129,7 @@ identifier :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.Parsec
 identifier defines = do
   n <- identName
   -- Handle undefined function-like macro calls: NAME(...) -> 0
-  mParen <- Parsec.optionMaybe . Parsec.try $ do
-    _ <- Parsec.char '('
-    consumeBalancedParens 1
+  mParen <- Parsec.optionMaybe $ Parsec.char '(' *> consumeBalancedParens 1
   case mParen of
     Just () -> pure 0
     Nothing ->
@@ -135,16 +140,17 @@ identifier defines = do
           _ -> pure 0
 
 consumeBalancedParens :: (Parsec.Stream s m Char) => Int -> Parsec.ParsecT s u m ()
-consumeBalancedParens 0 = pure ()
-consumeBalancedParens depth = do
-  c <- Parsec.anyChar
-  case c of
-    '(' -> consumeBalancedParens (depth + 1)
-    ')' -> consumeBalancedParens (depth - 1)
-    _ -> consumeBalancedParens depth
+consumeBalancedParens depth = case depth of
+  0 -> pure ()
+  _ -> do
+    c <- Parsec.anyChar
+    case c of
+      '(' -> consumeBalancedParens (depth + 1)
+      ')' -> consumeBalancedParens (depth - 1)
+      _ -> consumeBalancedParens depth
 
 boolToInt :: Bool -> Integer
-boolToInt b = if b then 1 else 0
+boolToInt = Bool.bool 0 1
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

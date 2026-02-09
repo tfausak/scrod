@@ -35,16 +35,17 @@ cpp input = do
   Right $ unlines (reverse outputLines)
 
 go :: [String] -> State -> [String] -> Either String [String]
-go [] state acc =
-  if null (stack state)
-    then Right acc
-    else Left "unterminated #if"
-go (line : rest) state acc =
-  case Directive.parse line of
-    Nothing -> go rest state (keepOrBlank state line : acc)
-    Just dir -> do
-      state' <- processDirective state dir
-      go rest state' ("" : acc)
+go ls state acc = case ls of
+  [] ->
+    if null (stack state)
+      then Right acc
+      else Left "unterminated #if"
+  line : rest ->
+    case Directive.parse line of
+      Nothing -> go rest state (keepOrBlank state line : acc)
+      Just dir -> do
+        state' <- processDirective state dir
+        go rest state' ("" : acc)
 
 isActive :: State -> Bool
 isActive state = case stack state of

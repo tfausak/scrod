@@ -17,6 +17,7 @@ import qualified Scrod.Executable.Format as Format
 import qualified Scrod.Extra.Either as Either
 import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
+import qualified Scrod.Unlit as Unlit
 import qualified Scrod.Version as Version
 import qualified Scrod.Xml.Document as Xml
 import qualified System.Console.GetOpt as GetOpt
@@ -46,7 +47,11 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
     . ExceptT.throwE
     $ Version.showVersion Version.version <> "\n"
   contents <- Trans.lift myGetContents
-  result <- Either.throw . Bifunctor.first userError $ Parse.parse contents
+  source <-
+    if Config.literate config
+      then Either.throw . Bifunctor.first userError $ Unlit.unlit contents
+      else pure contents
+  result <- Either.throw . Bifunctor.first userError $ Parse.parse source
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson

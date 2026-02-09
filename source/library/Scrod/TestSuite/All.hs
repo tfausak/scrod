@@ -37,6 +37,7 @@ import qualified Scrod.JsonPointer.Pointer
 import qualified Scrod.JsonPointer.Token
 import qualified Scrod.Spec as Spec
 import qualified Scrod.TestSuite.Integration
+import qualified Scrod.Unlit
 import qualified Scrod.Version
 import qualified Scrod.Xml.Attribute
 import qualified Scrod.Xml.Comment
@@ -87,6 +88,7 @@ spec s = do
   Scrod.JsonPointer.Pointer.spec s
   Scrod.JsonPointer.Token.spec s
   Scrod.TestSuite.Integration.spec s
+  Scrod.Unlit.spec s
   Scrod.Version.spec s
   Scrod.Xml.Attribute.spec s
   Scrod.Xml.Comment.spec s

@@ -4,13 +4,12 @@
 module Scrod.TestSuite.Integration where
 
 import qualified Control.Monad as Monad
+import qualified Control.Monad.Catch as Exception
 import qualified Data.List as List
 import qualified GHC.Stack as Stack
-import qualified Scrod.Convert.FromGhc as FromGhc
-import qualified Scrod.Convert.ToJson as ToJson
+import qualified Scrod.Executable.Main as Main
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Parsec as Parsec
-import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.JsonPointer.Evaluate as Pointer
 import qualified Scrod.JsonPointer.Pointer as Pointer
@@ -1469,11 +1468,94 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "literate" $ do
+    Spec.describe s "bird" $ do
+      Spec.it s "works" $ do
+        checkWith
+          s
+          ["--literate"]
+          "> x = 0"
+          [("/items/0/value/name", "\"x\"")]
+
+      Spec.it s "preserves line numbers" $ do
+        checkWith
+          s
+          ["--literate"]
+          """
+          comment
+
+          > x = 0
+          """
+          [("/items/0/location/line", "3")]
+
+    Spec.describe s "latex" $ do
+      Spec.it s "works" $ do
+        checkWith
+          s
+          ["--literate"]
+          """
+          \\begin{code}
+          x = 0
+          \\end{code}
+          """
+          [("/items/0/value/name", "\"x\"")]
+
+      Spec.it s "preserves line numbers" $ do
+        checkWith
+          s
+          ["--literate"]
+          """
+          \\begin{code}
+          x = 0
+          \\end{code}
+          """
+          [("/items/0/location/line", "2")]
+
+    Spec.it s "works with bird then latex" $ do
+      checkWith
+        s
+        ["--literate"]
+        """
+        > x = 0
+
+        \\begin{code}
+          y = 1
+        \\end{code}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1/value/name", "\"y\"")
+        ]
+
+    Spec.it s "works with latex then bird" $ do
+      checkWith
+        s
+        ["--literate"]
+        """
+        \\begin{code}
+          x = 0
+        \\end{code}
+
+        > y = 1
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1/value/name", "\"y\"")
+        ]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
-check s input assertions = do
-  parsed <- either (Spec.assertFailure s) pure $ Parse.parse input
-  module_ <- either (Spec.assertFailure s) pure $ FromGhc.fromGhc parsed
-  let json = ToJson.toJson module_
+check s = checkWith s []
+
+checkWith :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> [(String, String)] -> m ()
+checkWith s arguments input assertions = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" arguments
+      $ pure input
+  module_ <- either (Spec.assertFailure s) pure result
+  json <-
+    maybe (Spec.assertFailure s "impossible") pure
+      . Parsec.parseString Json.decode
+      $ Builder.toString module_
+
   Monad.forM_ assertions $ \(p, j) -> do
     pointer <- maybe (Spec.assertFailure s "invalid pointer") pure $ Parsec.parseString Pointer.decode p
     expected <-

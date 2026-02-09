@@ -5,11 +5,11 @@ import qualified Scrod.Extra.Builder as Builder
 main :: IO ()
 main = error "required by ghc but ignored by wasm"
 
-foreign export javascript "processHaskell"
-  processHaskell :: Wasm.JSVal -> Wasm.JSString -> IO Wasm.JSString
+foreign export javascript "scrod"
+  scrod :: Wasm.JSVal -> Wasm.JSString -> IO Wasm.JSString
 
-processHaskell :: Wasm.JSVal -> Wasm.JSString -> IO Wasm.JSString
-processHaskell rawArguments input = do
+scrod :: Wasm.JSVal -> Wasm.JSString -> IO Wasm.JSString
+scrod rawArguments input = do
   size <- jsArrayLength rawArguments
   arguments <- traverse (fmap Wasm.fromJSString . jsArrayIndex rawArguments) [0 .. size - 1]
   result <-

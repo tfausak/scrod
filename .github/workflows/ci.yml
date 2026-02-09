@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: {}
 jobs:
   build:
     name: Build on ${{ matrix.os }}
@@ -144,3 +145,22 @@ jobs:
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
+  release:
+    name: Release
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - meta
+      - wasm
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: ${{ needs.meta.outputs.name }}-${{ github.sha }}-*
+      - run: .github/workflows/release.sh ${{ needs.meta.outputs.name }} ${{ needs.meta.outputs.version }} ${{ github.sha }}
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz

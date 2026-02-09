@@ -63,7 +63,7 @@ There are two kinds of tests:
 
 ### WASM web app
 
-The WASM build exports a `processHaskell` function via JavaScript FFI. The web frontend runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
+The WASM build exports a `scrod` function via JavaScript FFI. The web frontend runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
 
 ## Code Conventions
 

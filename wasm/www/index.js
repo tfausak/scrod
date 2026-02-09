@@ -81,8 +81,46 @@ function updateHash() {
   }
 }
 
-function process() {
+function isUrl(text) {
+  try {
+    var url = new URL(text);
+    return url.protocol === 'http:' || url.protocol === 'https:';
+  } catch (e) {
+    return false;
+  }
+}
+
+let fetchController = null;
+
+function fetchUrl(url) {
+  if (fetchController) {
+    fetchController.abort();
+  }
+  fetchController = new AbortController();
+  shadow.innerHTML = '<p style="color: #888; font-style: italic">Fetching URL...</p>';
+  fetch(url, { signal: fetchController.signal }).then(function (response) {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+    return response.text();
+  }).then(function (text) {
+    source.value = text;
+    updateHash();
+    process(true);
+  }).catch(function (err) {
+    if (err.name !== 'AbortError') {
+      showError(`Failed to fetch URL: ${err.message}`);
+    }
+  });
+}
+
+function process(skipUrlDetection) {
   if (ready) {
+    var trimmed = source.value.trim();
+    if (!skipUrlDetection && isUrl(trimmed)) {
+      fetchUrl(trimmed);
+      return;
+    }
     worker.postMessage({ source: source.value, format: format.value, literate: literate.checked });
   }
 }

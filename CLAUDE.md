@@ -39,7 +39,7 @@ cabal check                                          # validate .cabal file
 - `source/library/` — all library code under `Scrod.*` modules
 - `source/executable/` — CLI entry point
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
-- `web/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
+- `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
 - `wasm/` — WASM/WASI entry points and build script
 - `vscode/` — VSCode extension for live documentation preview
 
@@ -65,7 +65,7 @@ There are two kinds of tests:
 
 ### WASM web app
 
-The WASM build exports a `scrod` function via JavaScript FFI. The web frontend source lives in `web/` and runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
+The WASM build exports a `scrod` function via JavaScript FFI. The web frontend source lives in `extra/github-pages/` and runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
 
 ## Code Conventions
 

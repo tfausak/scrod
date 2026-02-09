@@ -117,7 +117,7 @@ jobs:
       - run: mkdir artifact
       - run: cp wasm/dist/${{ needs.meta.outputs.name }}-wasm.wasm artifact
       - run: cp wasm/dist/ghc_wasm_jsffi.js artifact
-      - run: cp web/vendor/browser_wasi_shim.js artifact
+      - run: cp extra/github-pages/vendor/browser_wasi_shim.js artifact
       - run: nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
       - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
@@ -141,7 +141,7 @@ jobs:
       - run: mkdir -p wasm/dist/vendor
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm wasm/dist/
       - run: cp artifact/ghc_wasm_jsffi.js wasm/dist/
-      - run: cp web/vendor/browser_wasi_shim.js wasm/dist/vendor/
+      - run: cp extra/github-pages/vendor/browser_wasi_shim.js wasm/dist/vendor/
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -182,8 +182,8 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
       - run: mkdir dist
-      - run: cp web/index.html web/index.js web/worker.js web/style.css dist/
-      - run: cp -r web/vendor dist/
+      - run: cp extra/github-pages/index.html extra/github-pages/index.js extra/github-pages/worker.js extra/github-pages/style.css dist/
+      - run: cp -r extra/github-pages/vendor dist/
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm dist/scrod-wasm.wasm
       - run: cp artifact/ghc_wasm_jsffi.js dist/
       - uses: actions/upload-pages-artifact@v4

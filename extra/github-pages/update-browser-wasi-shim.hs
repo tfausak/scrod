@@ -21,7 +21,7 @@ main = do
         "https://esm.sh/gh/haskell-wasm/browser_wasi_shim@"
           <> ref
           <> "/es2022/browser_wasi_shim.mjs"
-  let dest = FilePath.joinPath ["web", "vendor"]
+  let dest = FilePath.joinPath ["extra", "github-pages", "vendor"]
   Directory.createDirectoryIfMissing True dest
   Process.callProcess "curl" ["--fail", "--silent", "--show-error", "--location", url, "--output", FilePath.combine dest "browser_wasi_shim.js"]
   putStrLn $ "Updated browser_wasi_shim to " <> ref

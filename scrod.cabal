@@ -122,6 +122,9 @@ library
     Scrod.Core.TableCell
     Scrod.Core.Version
     Scrod.Core.Warning
+    Scrod.Cpp
+    Scrod.Cpp.Directive
+    Scrod.Cpp.Expr
     Scrod.Css.AtRule
     Scrod.Css.Block
     Scrod.Css.BlockContent

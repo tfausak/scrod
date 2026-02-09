@@ -46,8 +46,10 @@ eqExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try (Parsec.string "==" Functor.$> (==))
-          Parsec.<|> Parsec.try (Parsec.string "!=" Functor.$> (/=))
+        Parsec.choice
+          [ Parsec.try (Parsec.string "==" Functor.$> (==)),
+            Parsec.try (Parsec.string "!=" Functor.$> (/=))
+          ]
     r <- relExpr defines
     pure (op, r)
   pure $ foldl (\a (op, b) -> boolToInt $ op a b) l rs
@@ -58,10 +60,12 @@ relExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try (Parsec.string "<=" Functor.$> (<=))
-          Parsec.<|> Parsec.try (Parsec.string ">=" Functor.$> (>=))
-          Parsec.<|> Parsec.try (Parsec.string "<" Functor.$> (<))
-          Parsec.<|> Parsec.try (Parsec.string ">" Functor.$> (>))
+        Parsec.choice
+          [ Parsec.try (Parsec.string "<=" Functor.$> (<=)),
+            Parsec.try (Parsec.string ">=" Functor.$> (>=)),
+            Parsec.try (Parsec.string "<" Functor.$> (<)),
+            Parsec.try (Parsec.string ">" Functor.$> (>))
+          ]
     r <- addExpr defines
     pure (op, r)
   pure $ foldl (\a (op, b) -> boolToInt $ op a b) l rs
@@ -72,8 +76,10 @@ addExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try (Parsec.char '+' Functor.$> (+))
-          Parsec.<|> Parsec.try (Parsec.char '-' Functor.$> (-))
+        Parsec.choice
+          [ Parsec.try (Parsec.char '+' Functor.$> (+)),
+            Parsec.try (Parsec.char '-' Functor.$> (-))
+          ]
     r <- mulExpr defines
     pure (op, r)
   pure $ foldl (\a (op, b) -> op a b) l rs
@@ -84,9 +90,11 @@ mulExpr defines = do
   rs <- Parsec.many $ do
     op <-
       lexeme $
-        Parsec.try (Parsec.char '*')
-          Parsec.<|> Parsec.try (Parsec.char '/')
-          Parsec.<|> Parsec.try (Parsec.char '%')
+        Parsec.choice
+          [ Parsec.try (Parsec.char '*'),
+            Parsec.try (Parsec.char '/'),
+            Parsec.try (Parsec.char '%')
+          ]
     r <- unaryExpr defines
     pure (op, r)
   applyMulOps l rs
@@ -131,7 +139,7 @@ primary defines =
     ]
 
 intLiteral :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
-intLiteral = Parsec.try hexLiteral Parsec.<|> decLiteral
+intLiteral = Parsec.choice [Parsec.try hexLiteral, decLiteral]
 
 hexLiteral :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Integer
 hexLiteral = do
@@ -147,7 +155,7 @@ decLiteral = do
 
 definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 definedExpr defines = do
-  _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.alphaNum Parsec.<|> Parsec.char '_')
+  _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
   spaces
   parenned <-
     Parsec.optionMaybe . Parsec.try $ do
@@ -165,8 +173,8 @@ definedExpr defines = do
 
 identName :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
 identName = do
-  c <- Parsec.letter Parsec.<|> Parsec.char '_'
-  cs <- Parsec.many (Parsec.alphaNum Parsec.<|> Parsec.char '_')
+  c <- Parsec.choice [Parsec.letter, Parsec.char '_']
+  cs <- Parsec.many (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
   pure (c : cs)
 
 identifier :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer

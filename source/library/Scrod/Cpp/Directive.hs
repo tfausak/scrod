@@ -43,7 +43,7 @@ directive = do
 name :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
 name = do
   Parsec.skipMany1 (Parsec.oneOf " \t")
-  Parsec.many1 (Parsec.alphaNum Parsec.<|> Parsec.char '_')
+  Parsec.many1 (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
 
 rest :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
 rest = do

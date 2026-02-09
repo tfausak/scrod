@@ -1468,6 +1468,31 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "cpp" $ do
+    Spec.it s "works with simple ifdef" $ do
+      check
+        s
+        "{-# language CPP #-}\n#define MY_FLAG\n#ifdef MY_FLAG\nmodule M where\n#endif"
+        [("/name/value", "\"M\"")]
+
+    Spec.it s "works with undefined macro" $ do
+      check
+        s
+        "{-# language CPP #-}\n#ifdef UNDEFINED\nmodule M where\n#endif"
+        [("/name", "null")]
+
+    Spec.it s "preserves line numbers" $ do
+      check
+        s
+        "{-# language CPP #-}\n#ifdef FOO\nimport Fake\n#endif\nx = 0"
+        [("/items/0/location/line", "5")]
+
+    Spec.it s "uses else branch for undefined macros" $ do
+      check
+        s
+        "{-# language CPP #-}\n#ifdef __GLASGOW_HASKELL__\nmodule GHC where\n#else\nmodule Other where\n#endif"
+        [("/name/value", "\"Other\"")]
+
   Spec.describe s "literate" $ do
     Spec.describe s "bird" $ do
       Spec.it s "works" $ do

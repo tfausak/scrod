@@ -20,6 +20,7 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Logger as Logger
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Hs
+import qualified Scrod.Cpp as Cpp
 import qualified Scrod.Ghc.ArchOS as ArchOS
 import qualified Scrod.Ghc.DynFlags as DynFlags
 import qualified Scrod.Ghc.OnOff as OnOff
@@ -35,12 +36,18 @@ parse ::
       SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
     )
 parse string = do
-  let stringBuffer = StringBuffer.stringToStringBuffer string
-  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions stringBuffer
-  let parserOpts = ParserOpts.fromExtensions $ uncurry resolveExtensions languageAndExtensions
+  let originalStringBuffer = StringBuffer.stringToStringBuffer string
+  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions originalStringBuffer
+  let extensions = uncurry resolveExtensions languageAndExtensions
+  source <-
+    if EnumSet.member Extension.Cpp extensions
+      then Cpp.cpp string
+      else Right string
+  let modifiedStringBuffer = StringBuffer.stringToStringBuffer source
+  let parserOpts = ParserOpts.fromExtensions extensions
   let fastString = FastString.fsLit interactiveFilePath
   let realSrcLoc = SrcLoc.mkRealSrcLoc fastString 1 1
-  let pState = Lexer.initParserState parserOpts stringBuffer realSrcLoc
+  let pState = Lexer.initParserState parserOpts modifiedStringBuffer realSrcLoc
   case Lexer.unP Parser.parseModule pState of
     Lexer.PFailed newPState -> Left . Outputable.showSDocUnsafe . Outputable.ppr $ Lexer.getPsErrorMessages newPState
     Lexer.POk _ lHsModule -> pure (languageAndExtensions, lHsModule)

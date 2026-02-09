@@ -1,6 +1,9 @@
 module Scrod.TestSuite.All where
 
 import qualified Scrod.Convert.FromHaddock
+import qualified Scrod.Cpp
+import qualified Scrod.Cpp.Directive
+import qualified Scrod.Cpp.Expr
 import qualified Scrod.Css.AtRule
 import qualified Scrod.Css.Block
 import qualified Scrod.Css.BlockContent
@@ -53,6 +56,9 @@ import qualified Scrod.Xml.Text
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Scrod.Convert.FromHaddock.spec s
+  Scrod.Cpp.spec s
+  Scrod.Cpp.Directive.spec s
+  Scrod.Cpp.Expr.spec s
   Scrod.Css.AtRule.spec s
   Scrod.Css.Block.spec s
   Scrod.Css.BlockContent.spec s

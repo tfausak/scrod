@@ -1,7 +1,7 @@
 import ghcWasmJsffi from './ghc_wasm_jsffi.js';
 import { WASI, File, OpenFile, ConsoleStdout } from './vendor/browser_wasi_shim/index.js';
 
-let processHaskell;
+let scrod;
 
 async function initialize() {
   const fds = [
@@ -41,7 +41,7 @@ async function initialize() {
   exports = result.instance.exports;
   wasi.initialize(result.instance);
 
-  processHaskell = result.instance.exports.processHaskell;
+  scrod = result.instance.exports.scrod;
   postMessage({ tag: 'ready' });
 }
 
@@ -50,12 +50,12 @@ initialize().catch(function (e) {
 });
 
 onmessage = async function (e) {
-  if (processHaskell) {
+  if (scrod) {
     try {
       const msg = e.data;
       const args = ['--format', msg.format];
       if (msg.literate) args.push('--literate');
-      const result = await processHaskell(args, msg.source);
+      const result = await scrod(args, msg.source);
       postMessage({ tag: 'result', value: result, format: msg.format });
     } catch (err) {
       postMessage({ tag: 'error', message: err.message });

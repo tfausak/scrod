@@ -128,13 +128,8 @@ function process(skipUrlDetection) {
 source.addEventListener('input', function () {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () {
-    var trimmed = source.value.trim();
-    if (isUrl(trimmed)) {
-      process();
-    } else {
-      updateHash();
-      process();
-    }
+    updateHash();
+    process();
   }, 300);
 });
 

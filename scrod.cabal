@@ -203,7 +203,7 @@ test-suite scrod-test-suite
 
 executable scrod
   import: executable
-  hs-source-dirs: source/executable
+  hs-source-dirs: source/executables/scrod
   main-is: Main.hs
 
 executable scrod-wasm
@@ -213,11 +213,11 @@ executable scrod-wasm
     -no-hs-main
     -optl-mexec-model=reactor
 
-  hs-source-dirs: wasm
-  main-is: wasm.hs
+  hs-source-dirs: source/executables/scrod-wasm
+  main-is: Main.hs
 
 executable scrod-wasi
   import: wasm
   ghc-options: -optl-mexec-model=command
-  hs-source-dirs: wasm
-  main-is: wasi.hs
+  hs-source-dirs: source/executables/scrod-wasi
+  main-is: Main.hs

@@ -1062,7 +1062,9 @@ spec s = Spec.describe s "integration" $ do
         data L
         deriving instance Show L
         """
-        [("/items/1/value/kind", "\"StandaloneDeriving\"")]
+        [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
+          ("/items/1/value/name", "\"Show L\"")
+        ]
 
     Spec.it s "standalone deriving stock" $ do
       check
@@ -1072,7 +1074,9 @@ spec s = Spec.describe s "integration" $ do
         data M
         deriving stock instance Show M
         """
-        [("/items/1/value/kind", "\"StandaloneDeriving\"")]
+        [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
+          ("/items/1/value/name", "\"Show M\"")
+        ]
 
     Spec.it s "standalone deriving newtype" $ do
       check
@@ -1082,7 +1086,9 @@ spec s = Spec.describe s "integration" $ do
         newtype N = MkN Int
         deriving newtype instance Show N
         """
-        [("/items/2/value/kind", "\"StandaloneDeriving\"")]
+        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+          ("/items/2/value/name", "\"Show N\"")
+        ]
 
     Spec.it s "standalone deriving anyclass" $ do
       check
@@ -1093,7 +1099,9 @@ spec s = Spec.describe s "integration" $ do
         data W2
         deriving anyclass instance O W2
         """
-        [("/items/2/value/kind", "\"StandaloneDeriving\"")]
+        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+          ("/items/2/value/name", "\"O W2\"")
+        ]
 
     Spec.it s "standalone deriving via" $ do
       check
@@ -1103,14 +1111,17 @@ spec s = Spec.describe s "integration" $ do
         newtype P = MkP Int
         deriving via Int instance Show P
         """
-        [("/items/2/value/kind", "\"StandaloneDeriving\"")]
+        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+          ("/items/2/value/name", "\"Show P\"")
+        ]
 
     Spec.it s "data deriving" $ do
       check
         s
         "data R deriving Show"
         [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"DerivedInstance\"")
+          ("/items/1/value/kind", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\"")
         ]
 
     Spec.it s "data GADT deriving" $ do

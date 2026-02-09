@@ -36,3 +36,5 @@ do
   tar --create --gzip --file "${name}-${version}-${platform}.tar.gz" -C artifact "$file"
   rm -rf artifact
 done
+
+cp "${name}-${sha}-vscode"/*.vsix .

@@ -143,7 +143,7 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
       - run: mkdir -p wasm/dist/vendor
-      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm wasm/dist/scrod-wasm.wasm
+      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm wasm/dist/
       - run: cp artifact/ghc_wasm_jsffi.js wasm/dist/
       - run: cp artifact/browser_wasi_shim.js wasm/dist/vendor/
       - uses: actions/setup-node@v4
@@ -195,7 +195,6 @@ jobs:
         with:
           pattern: ${{ needs.meta.outputs.name }}-${{ github.sha }}-*
       - run: .github/workflows/release.sh ${{ needs.meta.outputs.name }} ${{ needs.meta.outputs.version }} ${{ github.sha }}
-      - run: cp ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode/*.vsix .
       - env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz *.vsix

@@ -34,7 +34,7 @@ main = do
   putStrLn "copying assets"
   let dist = FilePath.joinPath ["wasm", "dist"]
   Directory.createDirectoryIfMissing True dist
-  Process.callProcess "cp" ["--recursive", "wasm/www/.", dist]
+  Process.callProcess "cp" ["--recursive", "web/.", dist]
   putStrLn "copied assets"
 
   putStrLn "running post linker"

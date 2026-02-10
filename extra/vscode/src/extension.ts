@@ -70,8 +70,18 @@ export function activate(context: vscode.ExtensionContext): void {
 
 export function deactivate(): void {}
 
+function extname(doc: vscode.TextDocument): string {
+  return path.extname(doc.fileName).toLowerCase();
+}
+
 function isHaskell(doc: vscode.TextDocument): boolean {
-  return doc.languageId === "haskell" || doc.languageId === "literate haskell";
+  const ext = extname(doc);
+  return (
+    doc.languageId === "haskell" ||
+    doc.languageId === "literate haskell" ||
+    ext === ".hs" ||
+    ext === ".lhs"
+  );
 }
 
 function immediateUpdate(document: vscode.TextDocument | undefined): void {
@@ -93,7 +103,8 @@ function scheduleUpdate(document: vscode.TextDocument): void {
 async function update(document: vscode.TextDocument): Promise<void> {
   if (!panel) return;
   panel.title = `Preview: ${path.basename(document.fileName)}`;
-  const literate = document.fileName.endsWith(".lhs");
+  const literate =
+    document.languageId === "literate haskell" || extname(document) === ".lhs";
   let html: string;
   try {
     const process = await engine;

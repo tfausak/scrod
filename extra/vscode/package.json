@@ -21,6 +21,16 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "haskell",
+        "extensions": [".hs"]
+      },
+      {
+        "id": "literate haskell",
+        "extensions": [".lhs"]
+      }
+    ],
     "commands": [
       {
         "command": "scrod.openPreview",
@@ -32,7 +42,7 @@
       "editor/title": [
         {
           "command": "scrod.openPreview",
-          "when": "editorLangId == haskell || editorLangId == 'literate haskell'",
+          "when": "editorLangId == haskell || editorLangId == 'literate haskell' || resourceExtname == .hs || resourceExtname == .lhs",
           "group": "navigation"
         }
       ]

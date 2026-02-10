@@ -1181,15 +1181,16 @@ extractParentTypeText tyClDecl = case tyClDecl of
 -- Returns 'Nothing' if there are no type variables.
 extractTyClDeclTyVars :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractTyClDeclTyVars tyClDecl = case tyClDecl of
-  Syntax.DataDecl {Syntax.tcdTyVars = tyVars} ->
-    case Syntax.hsQTvExplicit tyVars of
-      [] -> Nothing
-      tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
-  Syntax.ClassDecl {Syntax.tcdTyVars = tyVars} ->
-    case Syntax.hsQTvExplicit tyVars of
-      [] -> Nothing
-      tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
+  Syntax.DataDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
+  Syntax.ClassDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
   _ -> Nothing
+
+-- | Pretty-print explicit type variable binders as text.
+-- Returns 'Nothing' if the list is empty.
+tyVarsToText :: Syntax.LHsQTyVars Ghc.GhcPs -> Maybe Text.Text
+tyVarsToText tyVars = case Syntax.hsQTvExplicit tyVars of
+  [] -> Nothing
+  tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract name from a family declaration.
 extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName

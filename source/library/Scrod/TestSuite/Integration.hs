@@ -909,6 +909,15 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"a\"")
         ]
 
+    Spec.it s "data with multiple type variables" $ do
+      check
+        s
+        "data E a b"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"E\""),
+          ("/items/0/value/signature", "\"a b\"")
+        ]
+
     Spec.it s "newtype with type variable" $ do
       check
         s

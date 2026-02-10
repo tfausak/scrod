@@ -20,7 +20,7 @@ cabal run scrod -- --format html     # run CLI (reads stdin)
 ### WASM build (requires Nix devshell)
 
 ```bash
-nix develop --command wasm/build.hs
+nix develop --command extra/wasm/build.hs
 ```
 
 ### Linting and formatting (CI checks all of these)
@@ -37,9 +37,11 @@ cabal check                                          # validate .cabal file
 ### Source layout
 
 - `source/library/` — all library code under `Scrod.*` modules
-- `source/executable/` — CLI entry point
+- `source/executables/` — CLI, WASM, and WASI entry points
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
-- `wasm/` — WASM entry point (`Main.hs`), build script, and web frontend (`www/`)
+- `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
+- `extra/wasm/` — WASM cross-compilation build script and cabal project file
+- `extra/vscode/` — VSCode extension for live documentation preview
 
 ### Key module groups
 
@@ -63,7 +65,7 @@ There are two kinds of tests:
 
 ### WASM web app
 
-The WASM build exports a `scrod` function via JavaScript FFI. The web frontend runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
+The WASM build exports a `scrod` function via JavaScript FFI. The web frontend source lives in `extra/github-pages/` and runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.
 
 ## Code Conventions
 

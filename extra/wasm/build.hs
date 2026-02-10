@@ -19,19 +19,20 @@ main :: IO ()
 main = do
   putStrLn "starting"
 
+  putStrLn "updating"
+  Process.callProcess "wasm32-wasi-cabal" ["update"]
+  putStrLn "updated"
+
   putStrLn "building"
-  Process.callProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "build", "scrod-wasm"]
+  Process.callProcess "wasm32-wasi-cabal" ["--project-file=extra/wasm/cabal.project", "build", "scrod-wasm"]
   putStrLn "built"
 
   putStrLn "finding"
-  wasm <- trim <$> Process.readProcess "wasm32-wasi-cabal" ["--project-file=wasm/cabal.project", "list-bin", "scrod-wasm"] ""
+  wasm <- trim <$> Process.readProcess "wasm32-wasi-cabal" ["--project-file=extra/wasm/cabal.project", "list-bin", "scrod-wasm"] ""
   putStrLn "found"
 
-  putStrLn "copying assets"
-  let dist = FilePath.joinPath ["wasm", "dist"]
+  let dist = FilePath.joinPath ["extra", "wasm", "dist"]
   Directory.createDirectoryIfMissing True dist
-  Process.callProcess "cp" ["--recursive", "wasm/www/.", dist]
-  putStrLn "copied assets"
 
   putStrLn "running post linker"
   libdir <- trim <$> Process.readProcess "wasm32-wasi-ghc" ["--print-libdir"] ""

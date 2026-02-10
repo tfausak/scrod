@@ -14,6 +14,7 @@ data Config = MkConfig
   { format :: Format.Format,
     help :: Bool,
     literate :: Bool,
+    signature :: Bool,
     version :: Bool
   }
   deriving (Eq, Ord, Show)
@@ -36,6 +37,11 @@ applyFlag config flag = case flag of
     Just string -> do
       bool <- Read.readM string
       pure config {literate = bool}
+  Flag.Signature maybeString -> case maybeString of
+    Nothing -> pure config {signature = True}
+    Just string -> do
+      bool <- Read.readM string
+      pure config {signature = bool}
   Flag.Version maybeString -> case maybeString of
     Nothing -> pure config {version = True}
     Just string -> do
@@ -48,6 +54,7 @@ initial =
     { format = Format.Json,
       help = False,
       literate = False,
+      signature = False,
       version = False
     }
 
@@ -82,6 +89,19 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Literate $ Just "invalid"]) Nothing
+
+    Spec.describe s "signature" $ do
+      Spec.it s "works with nothing" $ do
+        Spec.assertEq s (fromFlags [Flag.Signature Nothing]) $ Just initial {signature = True}
+
+      Spec.it s "works with just false" $ do
+        Spec.assertEq s (fromFlags [Flag.Signature $ Just "False"]) $ Just initial
+
+      Spec.it s "works with just true" $ do
+        Spec.assertEq s (fromFlags [Flag.Signature $ Just "True"]) $ Just initial {signature = True}
+
+      Spec.it s "fails with just invalid" $ do
+        Spec.assertEq s (fromFlags [Flag.Signature $ Just "invalid"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with nothing" $ do

@@ -52,6 +52,7 @@ moduleToJson m =
       ("extensions", extensionsToJson $ Module.extensions m),
       ("documentation", docToJson $ Module.documentation m),
       ("since", Json.optional sinceToJson $ Module.since m),
+      ("signature", Json.boolean $ Module.signature m),
       ("name", Json.optional (locatedToJson moduleNameToJson) $ Module.name m),
       ("warning", Json.optional warningToJson $ Module.warning m),
       ("exports", Json.optional (Json.arrayOf exportToJson) $ Module.exports m),

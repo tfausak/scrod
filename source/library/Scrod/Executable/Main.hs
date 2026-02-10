@@ -51,8 +51,9 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
     if Config.literate config
       then Either.throw . Bifunctor.first userError $ Unlit.unlit contents
       else pure contents
-  result <- Either.throw . Bifunctor.first userError $ Parse.parse source
-  module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc result
+  let isSignature = Config.signature config
+  result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature source
+  module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson
         Format.Html -> Xml.encode . ToHtml.toHtml

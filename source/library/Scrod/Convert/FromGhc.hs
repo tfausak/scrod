@@ -87,11 +87,12 @@ runConvert = flip State.evalState initialState
 
 -- | Convert a parsed GHC module to the internal 'Module' type.
 fromGhc ::
+  Bool ->
   ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension]),
     SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
   ) ->
   Either String Module.Module
-fromGhc ((language, extensions), lHsModule) = do
+fromGhc isSignature ((language, extensions), lHsModule) = do
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
   Right
@@ -101,6 +102,7 @@ fromGhc ((language, extensions), lHsModule) = do
         Module.extensions = extensionsToMap extensions,
         Module.documentation = moduleDocumentation,
         Module.since = moduleSince,
+        Module.signature = isSignature,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = extractModuleExports lHsModule,

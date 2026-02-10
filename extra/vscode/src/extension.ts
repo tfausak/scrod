@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { loadWasmEngine } from "./wasmEngine";
 
-let engine: Promise<(source: string, literate: boolean) => Promise<string>>;
+let engine: Promise<(source: string, literate: boolean, signature: boolean) => Promise<string>>;
 let panel: vscode.WebviewPanel | undefined;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
@@ -84,7 +84,9 @@ function isHaskell(doc: vscode.TextDocument): boolean {
     doc.languageId === "haskell" ||
     doc.languageId === "literate haskell" ||
     ext === ".hs" ||
-    ext === ".lhs"
+    ext === ".lhs" ||
+    ext === ".hsig" ||
+    ext === ".lhsig"
   );
 }
 
@@ -108,12 +110,14 @@ async function update(document: vscode.TextDocument): Promise<void> {
   if (!panel) return;
   previewDocumentUri = document.uri;
   panel.title = `Preview: ${path.basename(document.fileName)}`;
+  const ext = extname(document);
   const literate =
-    document.languageId === "literate haskell" || extname(document) === ".lhs";
+    document.languageId === "literate haskell" || ext === ".lhs" || ext === ".lhsig";
+  const isSignature = ext === ".hsig" || ext === ".lhsig";
   let html: string;
   try {
     const process = await engine;
-    html = await process(document.getText(), literate);
+    html = await process(document.getText(), literate, isSignature);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message

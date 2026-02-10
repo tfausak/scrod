@@ -124,7 +124,10 @@ headerSection :: Module.Module -> Element.Element
 headerSection m =
   Xml.element
     "header"
-    ( [Xml.attribute "class" "module-header"]
+    ( [ Xml.attribute
+          "class"
+          (if Module.signature m then "module-header signature-header" else "module-header")
+      ]
         <> foldMap (\(Located.MkLocated loc _) -> [lineAttribute loc]) (Module.name m)
     )
     ( [Content.Element $ Xml.element "h1" [] [Xml.text (moduleTitle m)]]

@@ -25,11 +25,17 @@ export function activate(context: vscode.ExtensionContext): void {
           clearTimeout(debounceTimer);
         });
       }
-      immediateUpdate();
+      immediateUpdate(vscode.window.activeTextEditor?.document);
     }),
-    vscode.window.onDidChangeActiveTextEditor(() => immediateUpdate()),
-    vscode.workspace.onDidChangeTextDocument(() => scheduleUpdate()),
-    vscode.workspace.onDidSaveTextDocument(() => immediateUpdate())
+    vscode.window.onDidChangeActiveTextEditor((editor) =>
+      immediateUpdate(editor?.document)
+    ),
+    vscode.workspace.onDidChangeTextDocument((event) =>
+      scheduleUpdate(event.document)
+    ),
+    vscode.workspace.onDidSaveTextDocument((document) =>
+      immediateUpdate(document)
+    )
   );
 }
 
@@ -39,21 +45,19 @@ function isHaskell(doc: vscode.TextDocument): boolean {
   return doc.languageId === "haskell" || doc.languageId === "literate haskell";
 }
 
-function immediateUpdate(): void {
+function immediateUpdate(document: vscode.TextDocument | undefined): void {
   if (!panel) return;
   clearTimeout(debounceTimer);
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || !isHaskell(editor.document)) return;
-  update(editor.document);
+  if (!document || !isHaskell(document)) return;
+  update(document);
 }
 
-function scheduleUpdate(): void {
+function scheduleUpdate(document: vscode.TextDocument): void {
   if (!panel) return;
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor || !isHaskell(editor.document)) return;
-    update(editor.document);
+    if (!isHaskell(document)) return;
+    update(document);
   }, 300);
 }
 

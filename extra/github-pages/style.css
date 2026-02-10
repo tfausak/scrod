@@ -82,10 +82,13 @@ body {
   border-radius: 3px;
 }
 
-.file-label {
-  display: inline-block;
+.file-button {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  padding: 2px 4px;
   cursor: pointer;
   background: var(--app-input-bg);
+  color: var(--app-text);
   border: 1px solid var(--app-border);
   border-radius: 3px;
   margin-left: 0.5rem;

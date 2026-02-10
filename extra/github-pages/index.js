@@ -6,6 +6,7 @@ var output = document.getElementById('output');
 var format = document.getElementById('format');
 var literate = document.getElementById('literate');
 var theme = document.getElementById('theme');
+var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
 var dropOverlay = document.getElementById('drop-overlay');
 var shadow = output.attachShadow({ mode: 'open' });
@@ -217,6 +218,9 @@ function loadFile(file) {
     updateHash();
     process(true);
   };
+  reader.onerror = function () {
+    showError('Failed to read file: ' + (reader.error ? reader.error.message : file.name));
+  };
   reader.readAsText(file);
 }
 
@@ -242,6 +246,10 @@ theme.addEventListener('change', function () {
   applyTheme(theme.value);
 });
 
+fileButton.addEventListener('click', function () {
+  fileInput.click();
+});
+
 fileInput.addEventListener('change', function () {
   if (fileInput.files.length > 0) {
     loadFile(fileInput.files[0]);
@@ -252,7 +260,17 @@ fileInput.addEventListener('change', function () {
 // Drag and drop support
 var dragCounter = 0;
 
+function hasFiles(e) {
+  return e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.indexOf('Files') !== -1;
+}
+
+function hideOverlay() {
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+}
+
 document.addEventListener('dragenter', function (e) {
+  if (!hasFiles(e)) return;
   e.preventDefault();
   dragCounter++;
   if (dragCounter === 1) {
@@ -261,24 +279,29 @@ document.addEventListener('dragenter', function (e) {
 });
 
 document.addEventListener('dragleave', function (e) {
+  if (!hasFiles(e)) return;
   e.preventDefault();
-  dragCounter--;
+  dragCounter = Math.max(0, dragCounter - 1);
   if (dragCounter === 0) {
     dropOverlay.classList.remove('active');
   }
 });
 
 document.addEventListener('dragover', function (e) {
+  if (!hasFiles(e)) return;
   e.preventDefault();
 });
 
 document.addEventListener('drop', function (e) {
   e.preventDefault();
-  dragCounter = 0;
-  dropOverlay.classList.remove('active');
+  hideOverlay();
   if (e.dataTransfer.files.length > 0) {
     loadFile(e.dataTransfer.files[0]);
   }
+});
+
+document.addEventListener('dragend', function () {
+  hideOverlay();
 });
 
 // Load saved theme preference

@@ -71,7 +71,12 @@ export function activate(context: vscode.ExtensionContext): void {
 export function deactivate(): void {}
 
 function isHaskell(doc: vscode.TextDocument): boolean {
-  return doc.languageId === "haskell" || doc.languageId === "literate haskell";
+  return (
+    doc.languageId === "haskell" ||
+    doc.languageId === "literate haskell" ||
+    doc.fileName.endsWith(".hs") ||
+    doc.fileName.endsWith(".lhs")
+  );
 }
 
 function immediateUpdate(document: vscode.TextDocument | undefined): void {

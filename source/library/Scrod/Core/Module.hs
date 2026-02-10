@@ -19,11 +19,11 @@ data Module = MkModule
     extensions :: Map.Map Extension.Extension Bool,
     documentation :: Doc.Doc,
     since :: Maybe Since.Since,
+    signature :: Bool,
     name :: Maybe (Located.Located ModuleName.ModuleName),
     warning :: Maybe Warning.Warning,
     exports :: Maybe [Export.Export],
     imports :: [Import.Import],
-    signature :: Bool,
     items :: [Located.Located Item.Item]
   }
   deriving (Eq, Ord, Show)

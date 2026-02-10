@@ -102,11 +102,11 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.extensions = extensionsToMap extensions,
         Module.documentation = moduleDocumentation,
         Module.since = moduleSince,
+        Module.signature = isSignature,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = extractModuleExports lHsModule,
         Module.imports = extractModuleImports lHsModule,
-        Module.signature = isSignature,
         Module.items = extractItems lHsModule
       }
 

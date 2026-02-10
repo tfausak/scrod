@@ -11,14 +11,14 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | XML Name (used for elements, attributes, and instructions)
--- Must be non-empty, starts with NameStartChar, then any number of NameChar
+-- | XML Name (used for elements, attributes, and instructions). Must be
+-- non-empty, starts with 'isNameStartChar', then any number of 'isNameChar'.
 newtype Name = MkName
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
 
--- | NameStartChar: letter, underscore, or colon (simplified)
+-- | NameStartChar: letter, underscore, or colon (simplified).
 isNameStartChar :: Char -> Bool
 isNameStartChar c =
   Char.isAsciiUpper c
@@ -26,7 +26,7 @@ isNameStartChar c =
     || c == '_'
     || c == ':'
 
--- | NameChar: NameStartChar plus digits, hyphen, period
+-- | NameChar: 'isNameStartChar' plus digits, hyphen, period.
 isNameChar :: Char -> Bool
 isNameChar c =
   isNameStartChar c

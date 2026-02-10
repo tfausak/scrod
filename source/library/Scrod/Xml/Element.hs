@@ -15,9 +15,8 @@ import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Name as Name
 import qualified Text.Parsec as Parsec
 
--- | XML Element
--- <name attr="value">content</name>
--- Can be self-closing: <name />
+-- | XML Element, like @\<name attr="value">content\</name>@. Can be
+-- self-closing: @\<name />@.
 data Element = MkElement
   { name :: Name.Name,
     attributes :: [Attribute.Attribute],

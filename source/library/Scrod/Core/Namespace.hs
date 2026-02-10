@@ -2,8 +2,8 @@ module Scrod.Core.Namespace where
 
 -- | The namespace qualification for an identifier.
 data Namespace
-  = -- | v'identifier' syntax
+  = -- | @v'identifier'@ syntax
     Value
-  | -- | t'identifier' syntax
+  | -- | @t'identifier'@ syntax
     Type
   deriving (Eq, Ord, Show)

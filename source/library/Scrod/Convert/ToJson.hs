@@ -39,11 +39,10 @@ import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Json.Value as Json
 
--- | Convert a Module to a JSON Json.
+-- | See 'moduleToJson'.
 toJson :: Module.Module -> Json.Value
 toJson = moduleToJson
 
--- | Convert Module to JSON (record)
 moduleToJson :: Module.Module -> Json.Value
 moduleToJson m =
   Json.object
@@ -58,19 +57,15 @@ moduleToJson m =
       ("items", Json.arrayOf (locatedToJson itemToJson) $ Module.items m)
     ]
 
--- | Convert Version to JSON (newtype with NonEmpty Natural)
 versionToJson :: Version.Version -> Json.Value
 versionToJson = Json.arrayOf Json.integral . NonEmpty.toList . Version.unwrap
 
--- | Convert Language to JSON (newtype with Text)
 languageToJson :: Language.Language -> Json.Value
 languageToJson = Json.text . Language.unwrap
 
--- | Convert Extension map to JSON
 extensionsToJson :: Map.Map Extension.Extension Bool -> Json.Value
 extensionsToJson = Json.object . fmap (\(k, v) -> (Text.unpack $ Extension.unwrap k, Json.boolean v)) . Map.toList
 
--- | Convert Doc to JSON (sum type)
 docToJson :: Doc.Doc -> Json.Value
 docToJson doc = case doc of
   Doc.Empty -> Json.tagged "Empty" Json.null
@@ -96,7 +91,6 @@ docToJson doc = case doc of
   Doc.Header h -> Json.tagged "Header" $ headerToJson docToJson h
   Doc.Table t -> Json.tagged "Table" $ tableToJson docToJson t
 
--- | Convert Since to JSON (record)
 sinceToJson :: Since.Since -> Json.Value
 sinceToJson s =
   Json.object
@@ -104,7 +98,6 @@ sinceToJson s =
       ("version", versionToJson $ Since.version s)
     ]
 
--- | Convert Located to JSON (record with type parameter)
 locatedToJson :: (a -> Json.Value) -> Located.Located a -> Json.Value
 locatedToJson f l =
   Json.object
@@ -112,11 +105,9 @@ locatedToJson f l =
       ("value", f $ Located.value l)
     ]
 
--- | Convert ModuleName to JSON (newtype with Text)
 moduleNameToJson :: ModuleName.ModuleName -> Json.Value
 moduleNameToJson = Json.text . ModuleName.unwrap
 
--- | Convert Warning to JSON (record)
 warningToJson :: Warning.Warning -> Json.Value
 warningToJson w =
   Json.object
@@ -124,7 +115,6 @@ warningToJson w =
       ("value", Json.text $ Warning.value w)
     ]
 
--- | Convert Export to JSON (sum type)
 exportToJson :: Export.Export -> Json.Value
 exportToJson e = case e of
   Export.Identifier ei -> Json.tagged "Identifier" $ exportIdentifierToJson ei
@@ -132,7 +122,6 @@ exportToJson e = case e of
   Export.Doc d -> Json.tagged "Doc" $ docToJson d
   Export.DocNamed t -> Json.tagged "DocNamed" $ Json.text t
 
--- | Convert Item to JSON (record)
 itemToJson :: Item.Item -> Json.Value
 itemToJson i =
   Json.object
@@ -144,7 +133,6 @@ itemToJson i =
       ("signature", Json.optional Json.text $ Item.signature i)
     ]
 
--- | Convert Location to JSON (record)
 locationToJson :: Location.Location -> Json.Value
 locationToJson loc =
   Json.object
@@ -152,27 +140,21 @@ locationToJson loc =
       ("column", columnToJson $ Location.column loc)
     ]
 
--- | Convert PackageName to JSON (newtype with Text)
 packageNameToJson :: PackageName.PackageName -> Json.Value
 packageNameToJson = Json.text . PackageName.unwrap
 
--- | Convert Line to JSON (newtype with Natural)
 lineToJson :: Line.Line -> Json.Value
 lineToJson = Json.integral . Line.unwrap
 
--- | Convert Column to JSON (newtype with Natural)
 columnToJson :: Column.Column -> Json.Value
 columnToJson = Json.integral . Column.unwrap
 
--- | Convert Category to JSON (newtype with Text)
 categoryToJson :: Category.Category -> Json.Value
 categoryToJson = Json.text . Category.unwrap
 
--- | Convert Section to JSON (newtype with Header Doc.Doc)
 sectionToJson :: Section.Section -> Json.Value
 sectionToJson = headerToJson docToJson . Section.header
 
--- | Convert ExportIdentifier to JSON (record)
 exportIdentifierToJson :: ExportIdentifier.ExportIdentifier -> Json.Value
 exportIdentifierToJson ei =
   Json.object
@@ -182,11 +164,9 @@ exportIdentifierToJson ei =
       ("doc", Json.optional docToJson $ ExportIdentifier.doc ei)
     ]
 
--- | Convert ItemKey to JSON (newtype with Natural)
 itemKeyToJson :: ItemKey.ItemKey -> Json.Value
 itemKeyToJson = Json.integral . ItemKey.unwrap
 
--- | Convert ItemKind to JSON (sum type with no payload)
 itemKindToJson :: ItemKind.ItemKind -> Json.Value
 itemKindToJson k = Json.string $ case k of
   ItemKind.Annotation -> "Annotation"
@@ -219,11 +199,9 @@ itemKindToJson k = Json.string $ case k of
   ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
   ItemKind.TypeSynonym -> "TypeSynonym"
 
--- | Convert ItemName to JSON (newtype with Text)
 itemNameToJson :: ItemName.ItemName -> Json.Value
 itemNameToJson = Json.text . ItemName.unwrap
 
--- | Convert ExportName to JSON (record)
 exportNameToJson :: ExportName.ExportName -> Json.Value
 exportNameToJson en =
   Json.object
@@ -231,7 +209,6 @@ exportNameToJson en =
       ("name", Json.text $ ExportName.name en)
     ]
 
--- | Convert Subordinates to JSON (record)
 subordinatesToJson :: Subordinates.Subordinates -> Json.Value
 subordinatesToJson s =
   Json.object
@@ -239,20 +216,17 @@ subordinatesToJson s =
       ("explicit", Json.arrayOf exportNameToJson $ Subordinates.explicit s)
     ]
 
--- | Convert ExportNameKind to JSON (sum type with no payload)
 exportNameKindToJson :: ExportNameKind.ExportNameKind -> Json.Value
 exportNameKindToJson k = Json.string $ case k of
   ExportNameKind.Module -> "Module"
   ExportNameKind.Pattern -> "Pattern"
   ExportNameKind.Type -> "Type"
 
--- | Convert Namespace to JSON (sum type with no payload)
 namespaceToJson :: Namespace.Namespace -> Json.Value
 namespaceToJson ns = Json.string $ case ns of
   Namespace.Type -> "Type"
   Namespace.Value -> "Value"
 
--- | Convert Example to JSON (record)
 exampleToJson :: Example.Example -> Json.Value
 exampleToJson ex =
   Json.object
@@ -260,7 +234,6 @@ exampleToJson ex =
       ("result", Json.arrayOf Json.text $ Example.result ex)
     ]
 
--- | Convert Header to JSON (record with type parameter)
 headerToJson :: (doc -> Json.Value) -> Header.Header doc -> Json.Value
 headerToJson f h =
   Json.object
@@ -268,7 +241,6 @@ headerToJson f h =
       ("title", f $ Header.title h)
     ]
 
--- | Convert Hyperlink to JSON (record with type parameter)
 hyperlinkToJson :: (doc -> Json.Value) -> Hyperlink.Hyperlink doc -> Json.Value
 hyperlinkToJson f h =
   Json.object
@@ -276,7 +248,6 @@ hyperlinkToJson f h =
       ("label", Json.optional f $ Hyperlink.label h)
     ]
 
--- | Convert Identifier to JSON (record)
 identifierToJson :: Identifier.Identifier -> Json.Value
 identifierToJson i =
   Json.object
@@ -284,7 +255,6 @@ identifierToJson i =
       ("value", Json.text $ Identifier.value i)
     ]
 
--- | Convert ModLink to JSON (record with type parameter)
 modLinkToJson :: (doc -> Json.Value) -> ModLink.ModLink doc -> Json.Value
 modLinkToJson f ml =
   Json.object
@@ -292,7 +262,6 @@ modLinkToJson f ml =
       ("label", Json.optional f $ ModLink.label ml)
     ]
 
--- | Convert Picture to JSON (record)
 pictureToJson :: Picture.Picture -> Json.Value
 pictureToJson p =
   Json.object
@@ -300,7 +269,6 @@ pictureToJson p =
       ("title", Json.optional Json.text $ Picture.title p)
     ]
 
--- | Convert Table to JSON (record with type parameter)
 tableToJson :: (doc -> Json.Value) -> Table.Table doc -> Json.Value
 tableToJson f t =
   Json.object
@@ -308,7 +276,6 @@ tableToJson f t =
       ("bodyRows", Json.arrayOf (Json.arrayOf $ cellToJson f) $ Table.bodyRows t)
     ]
 
--- | Convert Cell to JSON (record with type parameter)
 cellToJson :: (doc -> Json.Value) -> TableCell.Cell doc -> Json.Value
 cellToJson f c =
   Json.object
@@ -317,7 +284,6 @@ cellToJson f c =
       ("contents", f $ TableCell.contents c)
     ]
 
--- | Convert Level to JSON (sum type with no payload)
 levelToJson :: Level.Level -> Json.Value
 levelToJson l = Json.integer $ case l of
   Level.One -> 1

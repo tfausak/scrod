@@ -11,15 +11,15 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Name (used for property names and at-rule names)
--- Must be non-empty, starts with letter, hyphen, or underscore
--- Continues with letters, digits, hyphens, or underscores
+-- | CSS Name (used for property names and at-rule names). Must be non-empty,
+-- starts with letter, hyphen, or underscore. Continues with letters, digits,
+-- hyphens, or underscores.
 newtype Name = MkName
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
 
--- | NameStartChar: letter, hyphen, or underscore
+-- | NameStartChar: letter, hyphen, or underscore.
 isNameStartChar :: Char -> Bool
 isNameStartChar c =
   Char.isAsciiUpper c
@@ -27,7 +27,7 @@ isNameStartChar c =
     || c == '-'
     || c == '_'
 
--- | NameChar: letter, digit, hyphen, or underscore
+-- | NameChar: 'isNameStartChar' plus digits.
 isNameChar :: Char -> Bool
 isNameChar c =
   isNameStartChar c

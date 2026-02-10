@@ -14,8 +14,7 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Style Rule
--- selectors { declarations }
+-- | CSS Style Rule like @selectors { declarations }@.
 data Rule = MkRule
   { selectors :: [Selector.Selector],
     declarations :: [Declaration.Declaration]

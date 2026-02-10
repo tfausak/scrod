@@ -12,8 +12,7 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS At-Rule
--- @name prelude { block } or @name prelude;
+-- | CSS At-Rule like @\@name prelude { block }@ or @\@name prelude;@.
 -- Parameterized by item type for nested rules.
 data AtRule a = MkAtRule
   { name :: Name.Name,
@@ -22,7 +21,7 @@ data AtRule a = MkAtRule
   }
   deriving (Eq, Ord, Show)
 
--- | Decode an at-rule, parameterized by item decoder (for nested rules)
+-- | Decode an at-rule, parameterized by item decoder (for nested rules).
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (AtRule a)
 decode itemParser = do
   _ <- Parsec.char '@'
@@ -36,11 +35,11 @@ decode itemParser = do
     Just _ -> pure ()
   pure $ MkAtRule n (Text.strip p) b
 
--- | Decode prelude - everything up to { or ;
+-- | Decode prelude - everything up to @{@ or @;@.
 decodePrelude :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Text.Text
 decodePrelude = Text.pack <$> Parsec.many (Parsec.satisfy $ \c -> c /= '{' && c /= ';')
 
--- | Encode an at-rule, parameterized by item encoder
+-- | Encode an at-rule, parameterized by item encoder.
 encode :: (a -> Builder.Builder) -> AtRule a -> Builder.Builder
 encode encodeItem ar =
   Builder.charUtf8 '@'

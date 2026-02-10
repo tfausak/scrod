@@ -12,16 +12,16 @@ import qualified Scrod.Xml.Comment as Comment
 import qualified Scrod.Xml.Text as XmlText
 import qualified Text.Parsec as Parsec
 
--- | XML Content (what can appear inside an element)
--- Parameterized by element type to avoid circular dependencies.
--- Element.hs uses Content Element.
+-- | XML Content (what can appear inside an element). Parameterized by element
+-- type to avoid circular dependencies. "Scrod.Xml.Element" uses @'Content'
+-- Element@.
 data Content a
   = Comment Comment.Comment
   | Element a
   | Text Text.Text
   deriving (Eq, Ord, Show)
 
--- | Decode content, parameterized by element decoder
+-- | Decode content, parameterized by element decoder.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Content a)
 decode elementParser =
   Parsec.choice
@@ -30,7 +30,7 @@ decode elementParser =
       Text <$> decodeText
     ]
 
--- | Decode non-empty text content
+-- | Decode non-empty text content.
 decodeText :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Text.Text
 decodeText = do
   t <- XmlText.decode
@@ -38,7 +38,7 @@ decodeText = do
     then fail "empty text"
     else pure t
 
--- | Encode content, parameterized by element encoder
+-- | Encode content, parameterized by element encoder.
 encode :: (a -> Builder.Builder) -> Content a -> Builder.Builder
 encode encodeElement c = case c of
   Comment comment -> Comment.encode comment

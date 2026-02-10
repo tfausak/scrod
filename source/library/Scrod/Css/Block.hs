@@ -13,14 +13,14 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Block (contents of { ... })
--- Parameterized by item type to avoid circular dependencies.
+-- | CSS Block (contents of @{ ... }@). Parameterized by item type to avoid
+-- circular dependencies.
 newtype Block a = MkBlock
   { contents :: [BlockContent.BlockContent a]
   }
   deriving (Eq, Ord, Show)
 
--- | Decode a block { ... }, parameterized by item decoder
+-- | Decode a block @{ ... }@, parameterized by item decoder.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (Block a)
 decode itemParser = do
   _ <- Parsec.char '{'
@@ -29,7 +29,7 @@ decode itemParser = do
   _ <- Parsec.char '}'
   pure $ MkBlock cs
 
--- | Encode a block, parameterized by item encoder
+-- | Encode a block, parameterized by item encoder.
 encode :: (a -> Builder.Builder) -> Block a -> Builder.Builder
 encode encodeItem (MkBlock cs) =
   Builder.charUtf8 '{'

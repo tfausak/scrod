@@ -18,8 +18,7 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Stylesheet
--- A list of top-level items (style rules and at-rules)
+-- | CSS Stylesheet. A list of top-level items (style rules and at-rules).
 newtype Stylesheet = MkStylesheet
   { items :: [Item.Item]
   }

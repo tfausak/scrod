@@ -10,15 +10,15 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Selector (kept as opaque text)
--- We don't parse selector internals - just capture the text.
+-- | CSS Selector (kept as opaque text). We don't parse selector internals -
+-- just capture the text.
 newtype Selector = MkSelector
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
 
--- | Decode a selector - everything up to comma or opening brace
--- Trims leading and trailing whitespace
+-- | Decode a selector - everything up to comma or opening brace. Trims leading
+-- and trailing whitespace.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Selector
 decode = do
   chars <- Parsec.many1 . Parsec.satisfy $ \c -> c /= ',' && c /= '{'

@@ -22,7 +22,7 @@ data ItemKind
     GADTConstructor
   | -- | Record field
     RecordField
-  | -- | Type class: @class C a where@
+  | -- | Type class: @class C a@
     Class
   | -- | Class method signature
     ClassMethod

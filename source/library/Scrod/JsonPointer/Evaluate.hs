@@ -16,12 +16,12 @@ import qualified Scrod.JsonPointer.Pointer as Pointer
 import qualified Scrod.JsonPointer.Token as Token
 import qualified Scrod.Spec as Spec
 
--- | Evaluates a JSON Pointer against a JSON Value.
--- Returns Nothing if the path does not exist or is invalid.
--- Per RFC 6901:
--- - An empty pointer returns the document itself
--- - For arrays, tokens must be valid non-negative integer indices
--- - For objects, tokens are matched against member names
+-- | Evaluates a JSON Pointer against a JSON Value. Returns 'Nothing' if the
+-- path does not exist or is invalid. Per RFC 6901:
+--
+-- - An empty pointer returns the document itself.
+-- - For arrays, tokens must be valid non-negative integer indices.
+-- - For objects, tokens are matched against member names.
 evaluate :: Pointer.Pointer -> Value.Value -> Maybe Value.Value
 evaluate = Function.fix $ \rec pointer value ->
   case Pointer.unwrap pointer of
@@ -37,10 +37,11 @@ step token value = case value of
   Value.Object object -> stepObject token object
   _ -> Nothing
 
--- | Steps into an array using a token as an index.
--- Per RFC 6901, array indices must be:
--- - Non-negative integers
--- - Either "0" or not starting with "0" (no leading zeros)
+-- | Steps into an array using a token as an index. Per RFC 6901, array indices
+-- must be:
+--
+-- - Non-negative integers.
+-- - Either "0" or not starting with "0" (no leading zeros).
 stepArray :: Token.Token -> Array.Array a -> Maybe a
 stepArray token array = do
   index <- case Text.unpack $ Token.unwrap token of

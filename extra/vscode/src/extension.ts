@@ -141,17 +141,22 @@ function syncScroll(editor: vscode.TextEditor): void {
 
 async function gotoLocation(line: number, col: number): Promise<void> {
   if (!previewDocumentUri) return;
-  const editor = vscode.window.visibleTextEditors.find(
+  const existing = vscode.window.visibleTextEditors.find(
     (e) => e.document.uri.toString() === previewDocumentUri?.toString()
   );
-  if (!editor) return;
+  const document = existing
+    ? existing.document
+    : await vscode.workspace.openTextDocument(previewDocumentUri);
+  const editor = await vscode.window.showTextDocument(
+    document,
+    existing?.viewColumn
+  );
   const position = new vscode.Position(line - 1, col - 1);
   editor.selection = new vscode.Selection(position, position);
   editor.revealRange(
     new vscode.Range(position, position),
     vscode.TextEditorRevealType.InCenterIfOutsideViewport
   );
-  await vscode.window.showTextDocument(editor.document, editor.viewColumn);
 }
 
 function getNonce(): string {

@@ -816,7 +816,7 @@ spec s = Spec.describe s "integration" $ do
           x = 0
           """
           [ ("/items/0/value/name", "\"x\""),
-            ("/items/0/value/signature", "\"x :: Int\"")
+            ("/items/0/value/signature", "\"Int\"")
           ]
 
     Spec.it s "open type family" $ do
@@ -1282,7 +1282,7 @@ spec s = Spec.describe s "integration" $ do
             ("/items/1/value/key", "1"),
             ("/items/1/value/kind", "\"ClassMethod\""),
             ("/items/1/value/parentKey", "0"),
-            ("/items/1/value/signature", "\"m :: a\"")
+            ("/items/1/value/signature", "\"a\"")
           ]
 
       Spec.it s "works with documentation" $ do

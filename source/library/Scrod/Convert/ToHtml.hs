@@ -622,9 +622,9 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       lineAttribute loc
     ]
     ( nameContents
-        <> if isTypeVarSignature
-          then signatureContents <> [Content.Element kindElement]
-          else [Content.Element kindElement] <> signatureContents
+        <> sigBeforeKind
+        <> [Content.Element kindElement]
+        <> sigAfterKind
         <> [Content.Element keyElement]
         <> [Content.Element (locationElement loc)]
         <> docContents'
@@ -650,6 +650,14 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
         "span"
         [Xml.attribute "class" "item-kind"]
         [Xml.text (Text.pack " [" <> kindToText itemKind <> Text.pack "]")]
+
+    sigBeforeKind :: [Content.Content Element.Element]
+    sigBeforeKind =
+      if isTypeVarSignature then signatureContents else []
+
+    sigAfterKind :: [Content.Content Element.Element]
+    sigAfterKind =
+      if isTypeVarSignature then [] else signatureContents
 
     signatureContents :: [Content.Content Element.Element]
     signatureContents = case maybeSig of

@@ -571,7 +571,8 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
   Syntax.DataDecl _ _ _ _ dataDefn -> do
     parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
-    childItems <- convertDataDefnM parentKey dataDefn
+        parentType = extractParentTypeText tyClDecl
+    childItems <- convertDataDefnM parentKey parentType dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
     parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
@@ -591,7 +592,7 @@ convertInstDeclWithDocM doc lDecl inst = case inst of
   Syntax.DataFamInstD _ dataFamInst -> do
     parentItem <- convertDeclWithDocM Nothing doc (extractInstDeclName inst) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
-    childItems <- convertDataDefnM parentKey (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
+    childItems <- convertDataDefnM parentKey Nothing (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
     pure $ Maybe.maybeToList parentItem <> childItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractInstDeclName inst) Nothing lDecl
 
@@ -861,10 +862,11 @@ extractTyFamInstEqnSig eqn =
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.HsDataDefn Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-convertDataDefnM parentKey dataDefn = do
-  conItems <- concat <$> (traverse (convertConDeclM parentKey) . dataDefnConsList $ Syntax.dd_cons dataDefn)
+convertDataDefnM parentKey parentType dataDefn = do
+  conItems <- concat <$> (traverse (convertConDeclM parentKey parentType) . dataDefnConsList $ Syntax.dd_cons dataDefn)
   derivItems <- convertDerivingClausesM parentKey $ Syntax.dd_derivs dataDefn
   pure $ conItems <> derivItems
 
@@ -930,12 +932,13 @@ extractDerivedTypeDoc lSigTy =
 -- | Convert a constructor declaration.
 convertConDeclM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.LConDecl Ghc.GhcPs ->
   ConvertM [Located.Located Item.Item]
-convertConDeclM parentKey lConDecl = do
+convertConDeclM parentKey parentType lConDecl = do
   let conDecl = SrcLoc.unLoc lConDecl
       conDoc = extractConDeclDoc conDecl
-      conSig = extractConDeclSignature conDecl
+      conSig = extractConDeclSignature parentType conDecl
       conKind = constructorKind conDecl
   result <-
     mkItemWithKeyM
@@ -966,19 +969,72 @@ extractConDeclDoc conDecl = case conDecl of
     maybe Doc.Empty convertLHsDoc mDoc
 
 -- | Extract signature from a constructor declaration.
-extractConDeclSignature :: Syntax.ConDecl Ghc.GhcPs -> Maybe Text.Text
-extractConDeclSignature conDecl =
-  Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ case conDecl of
-    c@Syntax.ConDeclH98 {} ->
-      c
-        { Syntax.con_doc = Nothing,
-          Syntax.con_args = stripH98DetailsDocs (Syntax.con_args c)
-        }
-    c@Syntax.ConDeclGADT {} ->
-      c
-        { Syntax.con_doc = Nothing,
-          Syntax.con_g_args = stripGADTDetailsDocs (Syntax.con_g_args c)
-        }
+-- Returns only the type portion (no constructor name or @::@).
+extractConDeclSignature :: Maybe Text.Text -> Syntax.ConDecl Ghc.GhcPs -> Maybe Text.Text
+extractConDeclSignature mParentType conDecl = case conDecl of
+  Syntax.ConDeclH98
+    { Syntax.con_forall = hasForall,
+      Syntax.con_ex_tvs = exTvs,
+      Syntax.con_mb_cxt = mbCxt,
+      Syntax.con_args = args
+    } ->
+      case mParentType of
+        Nothing ->
+          Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+            conDecl
+              { Syntax.con_doc = Nothing,
+                Syntax.con_args = stripH98DetailsDocs args
+              }
+        Just parentType ->
+          let forallDoc =
+                if hasForall && not (null exTvs)
+                  then
+                    Outputable.text "forall"
+                      Outputable.<+> Outputable.hsep (fmap Outputable.ppr exTvs)
+                      Outputable.<> Outputable.text "."
+                  else Outputable.empty
+              cxtDoc = case mbCxt of
+                Nothing -> Outputable.empty
+                Just ctx -> Outputable.ppr ctx Outputable.<+> Outputable.text "=>"
+              argsDoc = h98ArgsToDoc (stripH98DetailsDocs args)
+              bodyDoc = case argsDoc of
+                Nothing -> Outputable.text (Text.unpack parentType)
+                Just ad -> ad Outputable.<+> Outputable.text "->" Outputable.<+> Outputable.text (Text.unpack parentType)
+           in Just . Text.pack . Outputable.showSDocUnsafe $
+                forallDoc Outputable.<+> cxtDoc Outputable.<+> bodyDoc
+  c@Syntax.ConDeclGADT {} ->
+    let full =
+          Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+            c
+              { Syntax.con_doc = Nothing,
+                Syntax.con_g_args = stripGADTDetailsDocs (Syntax.con_g_args c)
+              }
+        sep = Text.pack " :: "
+        (_, rest) = Text.breakOn sep full
+     in Just $ if Text.null rest then full else Text.drop (Text.length sep) rest
+
+-- | Convert H98 constructor arguments to an arrow-separated SDoc.
+h98ArgsToDoc ::
+  Syntax.HsConDeclH98Details Ghc.GhcPs ->
+  Maybe Outputable.SDoc
+h98ArgsToDoc details = case details of
+  Syntax.PrefixCon [] -> Nothing
+  Syntax.PrefixCon fields ->
+    Just
+      . Outputable.hsep
+      . List.intersperse (Outputable.text "->")
+      $ fmap (\f -> Outputable.ppr (Syntax.cdf_type f)) fields
+  Syntax.InfixCon l r ->
+    Just $
+      Outputable.ppr (Syntax.cdf_type l)
+        Outputable.<+> Outputable.text "->"
+        Outputable.<+> Outputable.ppr (Syntax.cdf_type r)
+  Syntax.RecCon lFields ->
+    Just $
+      Outputable.text "{"
+        Outputable.<+> Outputable.hsep
+          (List.intersperse (Outputable.text ",") (fmap Outputable.ppr (SrcLoc.unLoc lFields)))
+        Outputable.<+> Outputable.text "}"
 
 -- | Strip documentation from H98 constructor details.
 stripH98DetailsDocs ::
@@ -1099,6 +1155,16 @@ extractTyClDeclName tyClDecl = case tyClDecl of
   Syntax.SynDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
   Syntax.DataDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
   Syntax.ClassDecl {Syntax.tcdLName = lName} -> Just $ extractIdPName lName
+
+-- | Extract the fully applied parent type text from a data declaration.
+-- For @data Maybe a@, this produces @"Maybe a"@.
+extractParentTypeText :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
+extractParentTypeText tyClDecl = case tyClDecl of
+  Syntax.DataDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
+    Just . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
+      [] -> Outputable.ppr lName
+      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
+  _ -> Nothing
 
 -- | Extract name from a family declaration.
 extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName

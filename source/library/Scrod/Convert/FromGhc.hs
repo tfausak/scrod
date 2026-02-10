@@ -552,6 +552,9 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
     let sig = Just $ extractKindSigSignature kindSig
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
   Syntax.InstD _ inst -> convertInstDeclWithDocM doc lDecl inst
+  Syntax.SpliceD _ spliceDecl ->
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc Nothing sig lDecl
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.
@@ -694,7 +697,7 @@ itemKindFromDecl decl = case decl of
   Syntax.WarningD {} -> ItemKind.Function -- Treat as function for now
   Syntax.AnnD {} -> ItemKind.Annotation
   Syntax.RuleD {} -> ItemKind.Rule
-  Syntax.SpliceD {} -> ItemKind.Function -- TH splice
+  Syntax.SpliceD {} -> ItemKind.Splice
   Syntax.DocD {} -> ItemKind.Function -- Doc comment
   Syntax.RoleAnnotD {} -> ItemKind.Function -- Role annotation
   Syntax.DerivD {} -> ItemKind.StandaloneDeriving

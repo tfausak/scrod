@@ -721,6 +721,7 @@ kindToText k = case k of
   ItemKind.Rule -> Text.pack "rule"
   ItemKind.Default -> Text.pack "default"
   ItemKind.Annotation -> Text.pack "annotation"
+  ItemKind.Splice -> Text.pack "splice"
 
 -- Doc to HTML conversion
 

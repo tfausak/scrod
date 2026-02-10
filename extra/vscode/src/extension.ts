@@ -25,11 +25,11 @@ export function activate(context: vscode.ExtensionContext): void {
           clearTimeout(debounceTimer);
         });
       }
-      scheduleUpdate();
+      immediateUpdate();
     }),
-    vscode.window.onDidChangeActiveTextEditor(() => scheduleUpdate()),
+    vscode.window.onDidChangeActiveTextEditor(() => immediateUpdate()),
     vscode.workspace.onDidChangeTextDocument(() => scheduleUpdate()),
-    vscode.workspace.onDidSaveTextDocument(() => scheduleUpdate())
+    vscode.workspace.onDidSaveTextDocument(() => immediateUpdate())
   );
 }
 
@@ -37,6 +37,14 @@ export function deactivate(): void {}
 
 function isHaskell(doc: vscode.TextDocument): boolean {
   return doc.languageId === "haskell" || doc.languageId === "literate haskell";
+}
+
+function immediateUpdate(): void {
+  if (!panel) return;
+  clearTimeout(debounceTimer);
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || !isHaskell(editor.document)) return;
+  update(editor.document);
 }
 
 function scheduleUpdate(): void {

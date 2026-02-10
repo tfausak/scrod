@@ -1543,7 +1543,34 @@ spec s = Spec.describe s "integration" $ do
         {-# language TemplateHaskell #-}
         $( return [] )
         """
-        []
+        [ ("/items/0/value/kind", "\"Splice\""),
+          ("/items/0/value/name", "null"),
+          ("/items/0/value/signature", "\"$(return [])\"")
+        ]
+
+    Spec.it s "typed splice declaration" $ do
+      check
+        s
+        """
+        {-# language TemplateHaskell #-}
+        $$(pure [])
+        """
+        [ ("/items/0/value/kind", "\"Splice\""),
+          ("/items/0/value/name", "null"),
+          ("/items/0/value/signature", "\"$$(pure [])\"")
+        ]
+
+    Spec.it s "quasi-quote declaration" $ do
+      check
+        s
+        """
+        {-# language QuasiQuotes #-}
+        [x||]
+        """
+        [ ("/items/0/value/kind", "\"Splice\""),
+          ("/items/0/value/name", "null"),
+          ("/items/0/value/signature", "\"[x||]\"")
+        ]
 
     Spec.it s "role annotation" $ do
       check

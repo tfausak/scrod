@@ -208,6 +208,7 @@ itemKindToJson k = Json.string $ case k of
   ItemKind.TypeData -> "TypeData"
   ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
   ItemKind.TypeSynonym -> "TypeSynonym"
+  ItemKind.Splice -> "Splice"
 
 itemNameToJson :: ItemName.ItemName -> Json.Value
 itemNameToJson = Json.text . ItemName.unwrap

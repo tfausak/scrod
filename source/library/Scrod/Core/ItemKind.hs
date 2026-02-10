@@ -60,4 +60,6 @@ data ItemKind
     Default
   | -- | Annotation: @{-# ANN ... #-}@
     Annotation
+  | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
+    Splice
   deriving (Eq, Ord, Show)

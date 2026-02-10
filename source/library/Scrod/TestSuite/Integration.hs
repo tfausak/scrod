@@ -983,6 +983,22 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/signature", "\"{ f4 :: Int } -> T4\"")
         ]
 
+    Spec.it s "data constructor with existential" $ do
+      check
+        s
+        "{-# language ExistentialQuantification #-} data T5 = forall a. C5 a"
+        [ ("/items/1/value/name", "\"C5\""),
+          ("/items/1/value/signature", "\"forall a. a -> T5\"")
+        ]
+
+    Spec.it s "data constructor with context" $ do
+      check
+        s
+        "{-# language ExistentialQuantification, FlexibleContexts #-} data T6 = forall a. Show a => C6 a"
+        [ ("/items/1/value/name", "\"C6\""),
+          ("/items/1/value/signature", "\"forall a. Show a => a -> T6\"")
+        ]
+
     Spec.it s "type data" $ do
       check s "{-# language TypeData #-} type data L" [("/items/0/value/kind", "\"TypeData\"")]
 

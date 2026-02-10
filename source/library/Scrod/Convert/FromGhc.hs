@@ -995,7 +995,13 @@ extractConDeclSignature mParentType conDecl = case conDecl of
                   else Outputable.empty
               cxtDoc = case mbCxt of
                 Nothing -> Outputable.empty
-                Just ctx -> Outputable.ppr ctx Outputable.<+> Outputable.text "=>"
+                Just ctx -> case SrcLoc.unLoc ctx of
+                  [] -> Outputable.empty
+                  [c] -> Outputable.ppr c Outputable.<+> Outputable.text "=>"
+                  cs ->
+                    Outputable.parens
+                      (Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr cs)))
+                      Outputable.<+> Outputable.text "=>"
               argsDoc = h98ArgsToDoc (stripH98DetailsDocs args)
               bodyDoc = case argsDoc of
                 Nothing -> Outputable.text (Text.unpack parentType)
@@ -1033,7 +1039,7 @@ h98ArgsToDoc details = case details of
     Just $
       Outputable.text "{"
         Outputable.<+> Outputable.hsep
-          (List.intersperse (Outputable.text ",") (fmap Outputable.ppr (SrcLoc.unLoc lFields)))
+          (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr (SrcLoc.unLoc lFields)))
         Outputable.<+> Outputable.text "}"
 
 -- | Strip documentation from H98 constructor details.

@@ -8,4 +8,5 @@
 /extra/vscode/out/
 /extra/vscode/wasm/
 /extra/vscode/*.vsix
+/extra/github-pages/dist/
 /extra/wasm/dist/

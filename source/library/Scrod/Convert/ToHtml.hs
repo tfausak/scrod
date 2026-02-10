@@ -17,6 +17,7 @@ import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
 import qualified Scrod.Core.Identifier as Identifier
+import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -106,6 +107,7 @@ bodyElement m =
     ( [Content.Element (headerSection m)]
         <> metadataContents m
         <> exportsContents (Module.exports m)
+        <> importsContents (Module.imports m)
         <> extensionsContents (Module.extensions m)
         <> itemsContents (Module.items m)
         <> [Content.Element (footerSection m)]
@@ -319,6 +321,46 @@ sectionLevelToName l = case l of
   Level.Four -> "h6"
   Level.Five -> "h6"
   Level.Six -> "h6"
+
+-- Imports section
+
+importsContents :: [Import.Import] -> [Content.Content Element.Element]
+importsContents [] = []
+importsContents imports =
+  [ Content.Element $
+      Xml.element
+        "section"
+        [Xml.attribute "class" "imports"]
+        ( [Content.Element $ Xml.element "h2" [] [Xml.string "Imports"]]
+            <> [ Content.Element $
+                   Xml.element
+                     "ul"
+                     [Xml.attribute "class" "import-list"]
+                     (fmap importToContent imports)
+               ]
+        )
+  ]
+
+importToContent :: Import.Import -> Content.Content Element.Element
+importToContent i =
+  Content.Element $
+    Xml.element
+      "li"
+      []
+      ( packageContents (Import.package i)
+          <> [Xml.text (ModuleName.unwrap $ Import.name i)]
+          <> aliasContents (Import.alias i)
+      )
+  where
+    packageContents :: Maybe PackageName.PackageName -> [Content.Content Element.Element]
+    packageContents Nothing = []
+    packageContents (Just pkg) =
+      [Xml.text (Text.pack "\"" <> PackageName.unwrap pkg <> Text.pack "\" ")]
+
+    aliasContents :: Maybe ModuleName.ModuleName -> [Content.Content Element.Element]
+    aliasContents Nothing = []
+    aliasContents (Just a) =
+      [Xml.text (Text.pack " as " <> ModuleName.unwrap a)]
 
 -- Extensions section
 
@@ -702,6 +744,9 @@ stylesheet =
       rule [".export-group-title"] [("font-weight", "bold"), ("color", "#333"), ("margin-bottom", "0.5rem")],
       rule [".export-list"] [("list-style-type", "none"), ("padding-left", "0")],
       rule [".export-list > li"] [("padding", "0.25rem 0")],
+      rule [".imports"] [("margin", "2rem 0")],
+      rule [".import-list"] [("list-style-type", "none"), ("padding-left", "0")],
+      rule [".import-list > li"] [("padding", "0.25rem 0"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.9em")],
       rule [".items"] [("margin", "2rem 0")],
       rule [".item"] [("margin", "1.5rem 0"), ("padding", "1rem"), ("background", "#fafafa"), ("border-radius", "5px"), ("border-left", "4px solid #ddd")],
       rule [".item-name"] [("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-weight", "bold"), ("font-size", "1.1em"), ("color", "#006600")],

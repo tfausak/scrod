@@ -4,6 +4,7 @@ import qualified Data.Map as Map
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
+import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.Language as Language
 import qualified Scrod.Core.Located as Located
@@ -21,6 +22,7 @@ data Module = MkModule
     name :: Maybe (Located.Located ModuleName.ModuleName),
     warning :: Maybe Warning.Warning,
     exports :: Maybe [Export.Export],
+    imports :: [Import.Import],
     items :: [Located.Located Item.Item]
   }
   deriving (Eq, Ord, Show)

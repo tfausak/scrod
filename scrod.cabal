@@ -100,6 +100,7 @@ library
     Scrod.Core.Header
     Scrod.Core.Hyperlink
     Scrod.Core.Identifier
+    Scrod.Core.Import
     Scrod.Core.Item
     Scrod.Core.ItemKey
     Scrod.Core.ItemKind

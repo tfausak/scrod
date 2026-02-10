@@ -15,6 +15,7 @@ import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
 import qualified Scrod.Core.Identifier as Identifier
+import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -54,6 +55,7 @@ moduleToJson m =
       ("name", Json.optional (locatedToJson moduleNameToJson) $ Module.name m),
       ("warning", Json.optional warningToJson $ Module.warning m),
       ("exports", Json.optional (Json.arrayOf exportToJson) $ Module.exports m),
+      ("imports", Json.arrayOf importToJson $ Module.imports m),
       ("items", Json.arrayOf (locatedToJson itemToJson) $ Module.items m)
     ]
 
@@ -90,6 +92,14 @@ docToJson doc = case doc of
   Doc.Examples es -> Json.tagged "Examples" $ Json.arrayOf exampleToJson es
   Doc.Header h -> Json.tagged "Header" $ headerToJson docToJson h
   Doc.Table t -> Json.tagged "Table" $ tableToJson docToJson t
+
+importToJson :: Import.Import -> Json.Value
+importToJson i =
+  Json.object
+    [ ("name", moduleNameToJson $ Import.name i),
+      ("package", Json.optional packageNameToJson $ Import.package i),
+      ("alias", Json.optional moduleNameToJson $ Import.alias i)
+    ]
 
 sinceToJson :: Since.Since -> Json.Value
 sinceToJson s =

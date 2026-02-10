@@ -213,9 +213,7 @@ function loadFile(file) {
   var reader = new FileReader();
   reader.onload = function () {
     source.value = reader.result;
-    if (file.name.endsWith('.lhs')) {
-      literate.checked = true;
-    }
+    literate.checked = file.name.endsWith('.lhs');
     updateHash();
     process(true);
   };

@@ -909,6 +909,24 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"a\"")
         ]
 
+    Spec.it s "newtype with type variable" $ do
+      check
+        s
+        "newtype N a = MkN a"
+        [ ("/items/0/value/kind", "\"Newtype\""),
+          ("/items/0/value/name", "\"N\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "GADT with type variable" $ do
+      check
+        s
+        "data G a where MkG :: a -> G a"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"G\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
+
     Spec.it s "data constructor" $ do
       check
         s

@@ -21,6 +21,7 @@ import qualified GHC.Hs.ImpExp as ImpExp
 import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.Name.Reader as Reader
+import qualified GHC.Types.PkgQual as PkgQual
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Unit.Module.Warnings as Warnings
@@ -38,6 +39,7 @@ import qualified Scrod.Core.ExportName as ExportName
 import qualified Scrod.Core.ExportNameKind as ExportNameKind
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
+import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -102,6 +104,7 @@ fromGhc ((language, extensions), lHsModule) = do
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = extractModuleExports lHsModule,
+        Module.imports = extractModuleImports lHsModule,
         Module.items = extractItems lHsModule
       }
 
@@ -265,6 +268,33 @@ extractModuleExports lHsModule = do
   lExports <- Syntax.hsmodExports hsModule
   let exports = SrcLoc.unLoc lExports
   Just $ fmap convertIE exports
+
+-- | Extract module imports.
+extractModuleImports ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  [Import.Import]
+extractModuleImports lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+   in convertImportDecl <$> Syntax.hsmodImports hsModule
+
+-- | Convert a GHC import declaration to our 'Import' type.
+convertImportDecl ::
+  SrcLoc.GenLocated l (Syntax.ImportDecl Ghc.GhcPs) ->
+  Import.Import
+convertImportDecl lImportDecl =
+  let importDecl = SrcLoc.unLoc lImportDecl
+   in Import.MkImport
+        { Import.name = moduleNameFromGhc . SrcLoc.unLoc $ Syntax.ideclName importDecl,
+          Import.package = packageFromPkgQual $ Syntax.ideclPkgQual importDecl,
+          Import.alias = moduleNameFromGhc . SrcLoc.unLoc <$> Syntax.ideclAs importDecl
+        }
+
+-- | Convert a GHC package qualifier to our 'PackageName' type.
+packageFromPkgQual :: PkgQual.RawPkgQual -> Maybe PackageName.PackageName
+packageFromPkgQual pkgQual = case pkgQual of
+  PkgQual.NoRawPkgQual -> Nothing
+  PkgQual.RawPkgQual sl ->
+    Just . PackageName.MkPackageName . Text.pack . FastString.unpackFS $ SourceText.sl_fs sl
 
 -- | Convert an IE (import/export) entry to our 'Export' type.
 convertIE ::

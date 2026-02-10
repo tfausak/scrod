@@ -29,6 +29,7 @@ spec s = Spec.describe s "integration" $ do
         ("/name", "null"),
         ("/warning", "null"),
         ("/exports", "null"),
+        ("/imports", "[]"),
         ("/items", "[]")
       ]
 
@@ -742,6 +743,62 @@ spec s = Spec.describe s "integration" $ do
           [ ("/exports/0/type", "\"DocNamed\""),
             ("/exports/0/value", "\"foo\"")
           ]
+
+  Spec.describe s "imports" $ do
+    Spec.it s "defaults to empty list" $ do
+      check s "" [("/imports", "[]")]
+
+    Spec.it s "works with a simple import" $ do
+      check
+        s
+        "import Data.List"
+        [ ("/imports/0/name", "\"Data.List\""),
+          ("/imports/0/package", "null"),
+          ("/imports/0/alias", "null")
+        ]
+
+    Spec.it s "works with multiple imports" $ do
+      check
+        s
+        """
+        import Data.List
+        import Data.Map
+        """
+        [ ("/imports/0/name", "\"Data.List\""),
+          ("/imports/1/name", "\"Data.Map\"")
+        ]
+
+    Spec.it s "works with an alias" $ do
+      check
+        s
+        "import Data.List as List"
+        [ ("/imports/0/name", "\"Data.List\""),
+          ("/imports/0/alias", "\"List\"")
+        ]
+
+    Spec.it s "works with a package import" $ do
+      check
+        s
+        "{-# language PackageImports #-} import \"base\" Data.List"
+        [ ("/imports/0/name", "\"Data.List\""),
+          ("/imports/0/package", "\"base\"")
+        ]
+
+    Spec.it s "works with a qualified import" $ do
+      check
+        s
+        "import qualified Data.Map"
+        [ ("/imports/0/name", "\"Data.Map\""),
+          ("/imports/0/alias", "null")
+        ]
+
+    Spec.it s "works with a qualified import with alias" $ do
+      check
+        s
+        "import qualified Data.Map as Map"
+        [ ("/imports/0/name", "\"Data.Map\""),
+          ("/imports/0/alias", "\"Map\"")
+        ]
 
   Spec.describe s "items" $ do
     Spec.it s "defaults to empty list" $ do

@@ -658,7 +658,10 @@ locationElement :: Location.Location -> Element.Element
 locationElement (Location.MkLocation (Line.MkLine l) (Column.MkColumn c)) =
   Xml.element
     "span"
-    [Xml.attribute "class" "item-location"]
+    [ Xml.attribute "class" "item-location",
+      Xml.attribute "data-line" (show l),
+      Xml.attribute "data-col" (show c)
+    ]
     [ Xml.text
         ( Text.pack " (line "
             <> Text.pack (show l)

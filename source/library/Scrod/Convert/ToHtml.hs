@@ -101,7 +101,7 @@ headElement m =
       Content.Element $
         Xml.element "title" [] [Xml.text (moduleTitle m)],
       Content.Element $
-        Xml.element "style" [] [Xml.text . Builder.toText $ CssStylesheet.encode stylesheet]
+        Xml.element "style" [] [Xml.raw . Builder.toText $ CssStylesheet.encode stylesheet]
     ]
 
 bodyElement :: Module.Module -> Element.Element

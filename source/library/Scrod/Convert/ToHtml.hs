@@ -1,5 +1,6 @@
 module Scrod.Convert.ToHtml where
 
+import qualified Data.Bifunctor as Bifunctor
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
@@ -366,7 +367,7 @@ ghcUserGuideBaseUrl = "https://downloads.haskell.org/ghc/latest/docs/users_guide
 extensionUrlPaths :: Map.Map Text.Text String
 extensionUrlPaths =
   Map.fromList
-    . fmap (\(n, p) -> (Text.pack n, p))
+    . fmap (Bifunctor.first Text.pack)
     $ [ ("AllowAmbiguousTypes", "exts/ambiguous_types.html#extension-AllowAmbiguousTypes"),
         ("ApplicativeDo", "exts/applicative_do.html#extension-ApplicativeDo"),
         ("Arrows", "exts/arrows.html#extension-Arrows"),
@@ -444,7 +445,7 @@ extensionUrlPaths =
         ("NegativeLiterals", "exts/negative_literals.html#extension-NegativeLiterals"),
         ("NondecreasingIndentation", "bugs.html#extension-NondecreasingIndentation"),
         ("NPlusKPatterns", "exts/nk_patterns.html#extension-NPlusKPatterns"),
-        ("NullaryTypeClasses", "exts/multi_param_type_classes.html#extension-MultiParamTypeClasses"),
+        ("NullaryTypeClasses", "exts/multi_param_type_classes.html#extension-NullaryTypeClasses"),
         ("NumDecimals", "exts/num_decimals.html#extension-NumDecimals"),
         ("NumericUnderscores", "exts/numeric_underscores.html#extension-NumericUnderscores"),
         ("OrPatterns", "exts/or_patterns.html#extension-OrPatterns"),

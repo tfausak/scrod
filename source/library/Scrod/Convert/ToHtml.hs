@@ -4,6 +4,7 @@ import qualified Data.Bifunctor as Bifunctor
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
@@ -333,19 +334,26 @@ sectionLevelToName l = case l of
 importsContents :: [Import.Import] -> [Content.Content Element.Element]
 importsContents [] = []
 importsContents imports =
-  [ Content.Element $
-      Xml.element
-        "section"
-        [Xml.attribute "class" "imports"]
-        ( [Content.Element $ Xml.element "h2" [] [Xml.string "Imports"]]
-            <> [ Content.Element $
-                   Xml.element
-                     "ul"
-                     [Xml.attribute "class" "import-list"]
-                     (fmap importToContent imports)
-               ]
-        )
-  ]
+  let uniqueCount = Set.size . Set.fromList $ fmap Import.name imports
+      summary =
+        "Imports ("
+          <> show uniqueCount
+          <> if uniqueCount == 1 then " module)" else " modules)"
+   in [ Content.Element $
+          Xml.element
+            "details"
+            [Xml.attribute "class" "imports"]
+            ( [ Content.Element $
+                  Xml.element "summary" [] [Xml.string summary]
+              ]
+                <> [ Content.Element $
+                       Xml.element
+                         "ul"
+                         [Xml.attribute "class" "import-list"]
+                         (fmap importToContent imports)
+                   ]
+            )
+      ]
 
 importToContent :: Import.Import -> Content.Content Element.Element
 importToContent i =
@@ -949,6 +957,7 @@ stylesheet =
       rule [".export-list"] [("list-style-type", "none"), ("padding-left", "0")],
       rule [".export-list > li"] [("padding", "0.25rem 0")],
       rule [".imports"] [("margin", "2rem 0")],
+      rule [".imports > summary"] [("font-size", "1.5em"), ("font-weight", "bold"), ("cursor", "pointer"), ("border-bottom", "1px solid var(--scrod-text-secondary)"), ("padding-bottom", "0.3rem")],
       rule [".import-list"] [("list-style-type", "none"), ("padding-left", "0")],
       rule [".import-list > li"] [("padding", "0.25rem 0"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.9em")],
       rule [".items"] [("margin", "2rem 0")],

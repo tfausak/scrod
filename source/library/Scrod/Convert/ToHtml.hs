@@ -382,19 +382,26 @@ extensionsContents :: Map.Map Extension.Extension Bool -> [Content.Content Eleme
 extensionsContents extensions
   | Map.null extensions = []
   | otherwise =
-      [ Content.Element $
-          Xml.element
-            "section"
-            [Xml.attribute "class" "extensions"]
-            ( [Content.Element $ Xml.element "h2" [] [Xml.string "Extensions"]]
-                <> [ Content.Element $
-                       Xml.element
-                         "div"
-                         [Xml.attribute "class" "extension-list"]
-                         (concatMap extToContents $ Map.toList extensions)
-                   ]
-            )
-      ]
+      let count = Map.size extensions
+          summary =
+            "Extensions ("
+              <> show count
+              <> if count == 1 then " extension)" else " extensions)"
+       in [ Content.Element $
+              Xml.element
+                "details"
+                [Xml.attribute "class" "extensions"]
+                ( [ Content.Element $
+                      Xml.element "summary" [] [Xml.string summary]
+                  ]
+                    <> [ Content.Element $
+                           Xml.element
+                             "div"
+                             [Xml.attribute "class" "extension-list"]
+                             (concatMap extToContents $ Map.toList extensions)
+                       ]
+                )
+          ]
 
 extToContents :: (Extension.Extension, Bool) -> [Content.Content Element.Element]
 extToContents (Extension.MkExtension name, enabled) =
@@ -979,6 +986,7 @@ stylesheet =
       rule [".math-inline"] [("font-style", "italic")],
       rule [".math-display"] [("display", "block"), ("text-align", "center"), ("margin", "1rem 0"), ("font-style", "italic")],
       rule [".extensions"] [("margin", "1rem 0")],
+      rule [".extensions > summary"] [("font-size", "1.5em"), ("font-weight", "bold"), ("cursor", "pointer"), ("border-bottom", "1px solid var(--scrod-text-secondary)"), ("padding-bottom", "0.3rem")],
       rule [".extension"] [("display", "inline-block"), ("margin", "0.25rem"), ("padding", "0.25rem 0.5rem"), ("background", "var(--scrod-extension-bg)"), ("border-radius", "3px"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.85em")],
       rule [".extension-disabled"] [("background", "var(--scrod-extension-disabled-bg)"), ("text-decoration", "line-through")],
       rule [".generated-by"] [("margin-top", "3rem"), ("padding-top", "1rem"), ("border-top", "1px solid var(--scrod-border)"), ("color", "var(--scrod-text-muted)"), ("font-size", "0.85em")],

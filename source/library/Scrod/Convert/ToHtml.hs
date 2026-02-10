@@ -41,6 +41,9 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
+import qualified Scrod.Css.AtRule as CssAtRule
+import qualified Scrod.Css.Block as CssBlock
+import qualified Scrod.Css.BlockContent as CssBlockContent
 import qualified Scrod.Css.Declaration as CssDeclaration
 import qualified Scrod.Css.Item as CssItem
 import qualified Scrod.Css.Name as CssName
@@ -879,13 +882,43 @@ stylesheet :: CssStylesheet.Stylesheet
 stylesheet =
   CssStylesheet.MkStylesheet
     [ rule ["*", "* ::before", "* ::after"] [("box-sizing", "border-box")],
-      rule ["body"] [("font-family", "system-ui, -apple-system, sans-serif"), ("line-height", "1.6"), ("max-width", "900px"), ("margin", "0 auto"), ("padding", "2rem"), ("color", "#333")],
-      rule ["h1"] [("border-bottom", "2px solid #333"), ("padding-bottom", "0.5rem"), ("margin-top", "0")],
-      rule ["h2"] [("border-bottom", "1px solid #666"), ("padding-bottom", "0.3rem"), ("margin-top", "2rem")],
+      rule
+        ["body"]
+        [ ("--scrod-text", "#333"),
+          ("--scrod-text-secondary", "#666"),
+          ("--scrod-text-muted", "#999"),
+          ("--scrod-bg", "white"),
+          ("--scrod-bg-subtle", "#f4f4f4"),
+          ("--scrod-metadata-bg", "#f9f9f9"),
+          ("--scrod-item-bg", "#fafafa"),
+          ("--scrod-border", "#ddd"),
+          ("--scrod-accent", "#0066cc"),
+          ("--scrod-code-color", "#006600"),
+          ("--scrod-module-color", "#660066"),
+          ("--scrod-warning-bg", "#fff3cd"),
+          ("--scrod-warning-border", "#ffc107"),
+          ("--scrod-warning-text", "#856404"),
+          ("--scrod-examples-bg", "#fffef0"),
+          ("--scrod-examples-border", "#e6db74"),
+          ("--scrod-property-bg", "#f0f8ff"),
+          ("--scrod-property-border", "#4169e1"),
+          ("--scrod-extension-bg", "#e8e8e8"),
+          ("--scrod-extension-disabled-bg", "#ffebeb"),
+          ("font-family", "system-ui, -apple-system, sans-serif"),
+          ("line-height", "1.6"),
+          ("max-width", "900px"),
+          ("margin", "0 auto"),
+          ("padding", "2rem"),
+          ("color", "var(--scrod-text)"),
+          ("background-color", "var(--scrod-bg)"),
+          ("color-scheme", "light dark")
+        ],
+      rule ["h1"] [("border-bottom", "2px solid var(--scrod-text)"), ("padding-bottom", "0.5rem"), ("margin-top", "0")],
+      rule ["h2"] [("border-bottom", "1px solid var(--scrod-text-secondary)"), ("padding-bottom", "0.3rem"), ("margin-top", "2rem")],
       rule ["h3", "h4", "h5", "h6"] [("margin-top", "1.5rem")],
       rule ["p"] [("margin", "1rem 0")],
-      rule ["code"] [("background", "#f4f4f4"), ("padding", "0.2em 0.4em"), ("border-radius", "3px"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.9em")],
-      rule ["pre"] [("background", "#f4f4f4"), ("padding", "1rem"), ("border-radius", "5px"), ("overflow-x", "auto"), ("margin", "1rem 0")],
+      rule ["code"] [("background", "var(--scrod-bg-subtle)"), ("padding", "0.2em 0.4em"), ("border-radius", "3px"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.9em")],
+      rule ["pre"] [("background", "var(--scrod-bg-subtle)"), ("padding", "1rem"), ("border-radius", "5px"), ("overflow-x", "auto"), ("margin", "1rem 0")],
       rule ["pre > code"] [("background", "transparent"), ("padding", "0")],
       rule ["ul", "ol"] [("margin", "1rem 0"), ("padding-left", "2rem")],
       rule ["li"] [("margin", "0.25rem 0")],
@@ -893,46 +926,72 @@ stylesheet =
       rule ["dt"] [("font-weight", "bold"), ("margin-top", "0.5rem")],
       rule ["dd"] [("margin-left", "2rem"), ("margin-bottom", "0.5rem")],
       rule ["table"] [("border-collapse", "collapse"), ("width", "100%"), ("margin", "1rem 0")],
-      rule ["th", "td"] [("border", "1px solid #ddd"), ("padding", "0.5rem"), ("text-align", "left")],
-      rule ["th"] [("background", "#f4f4f4"), ("font-weight", "bold")],
-      rule ["a"] [("color", "#0066cc"), ("text-decoration", "none")],
+      rule ["th", "td"] [("border", "1px solid var(--scrod-border)"), ("padding", "0.5rem"), ("text-align", "left")],
+      rule ["th"] [("background", "var(--scrod-bg-subtle)"), ("font-weight", "bold")],
+      rule ["a"] [("color", "var(--scrod-accent)"), ("text-decoration", "none")],
       rule ["a:hover"] [("text-decoration", "underline")],
       rule ["img"] [("max-width", "100%"), ("height", "auto")],
       rule [".module-header"] [("margin-bottom", "2rem")],
       rule [".module-doc"] [("margin", "1rem 0")],
-      rule [".metadata"] [("background", "#f9f9f9"), ("border-left", "4px solid #0066cc"), ("padding", "1rem"), ("margin", "1rem 0")],
+      rule [".metadata"] [("background", "var(--scrod-metadata-bg)"), ("border-left", "4px solid var(--scrod-accent)"), ("padding", "1rem"), ("margin", "1rem 0")],
       rule [".metadata > dt"] [("display", "inline")],
       rule [".metadata > dd"] [("display", "inline"), ("margin-left", "0.5rem")],
       rule [".exports"] [("margin", "2rem 0")],
       rule [".export-group"] [("margin", "1.5rem 0")],
-      rule [".export-group-title"] [("font-weight", "bold"), ("color", "#333"), ("margin-bottom", "0.5rem")],
+      rule [".export-group-title"] [("font-weight", "bold"), ("color", "var(--scrod-text)"), ("margin-bottom", "0.5rem")],
       rule [".export-list"] [("list-style-type", "none"), ("padding-left", "0")],
       rule [".export-list > li"] [("padding", "0.25rem 0")],
       rule [".imports"] [("margin", "2rem 0")],
       rule [".import-list"] [("list-style-type", "none"), ("padding-left", "0")],
       rule [".import-list > li"] [("padding", "0.25rem 0"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.9em")],
       rule [".items"] [("margin", "2rem 0")],
-      rule [".item"] [("margin", "1.5rem 0"), ("padding", "1rem"), ("background", "#fafafa"), ("border-radius", "5px"), ("border-left", "4px solid #ddd")],
-      rule [".item-name"] [("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-weight", "bold"), ("font-size", "1.1em"), ("color", "#006600")],
-      rule [".item-key"] [("color", "#999"), ("font-size", "0.8em"), ("margin-left", "0.5rem")],
+      rule [".item"] [("margin", "1.5rem 0"), ("padding", "1rem"), ("background", "var(--scrod-item-bg)"), ("border-radius", "5px"), ("border-left", "4px solid var(--scrod-border)")],
+      rule [".item-name"] [("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-weight", "bold"), ("font-size", "1.1em"), ("color", "var(--scrod-code-color)")],
+      rule [".item-key"] [("color", "var(--scrod-text-muted)"), ("font-size", "0.8em"), ("margin-left", "0.5rem")],
       rule [".item-doc"] [("margin-top", "0.5rem")],
-      rule [".item-children"] [("margin-left", "1.5rem"), ("margin-top", "0.5rem"), ("border-left", "2px solid #ddd"), ("padding-left", "1rem")],
-      rule [".identifier"] [("color", "#006600"), ("font-family", "Consolas, Monaco, Menlo, monospace")],
-      rule [".module-link"] [("color", "#660066"), ("font-family", "Consolas, Monaco, Menlo, monospace")],
-      rule [".warning"] [("background", "#fff3cd"), ("border-left", "4px solid #ffc107"), ("padding", "1rem"), ("margin", "1rem 0")],
-      rule [".warning-category"] [("font-weight", "bold"), ("color", "#856404")],
-      rule [".since"] [("color", "#666"), ("font-size", "0.9em")],
-      rule [".examples"] [("background", "#fffef0"), ("border-left", "4px solid #e6db74"), ("padding", "1rem"), ("margin", "1rem 0")],
+      rule [".item-children"] [("margin-left", "1.5rem"), ("margin-top", "0.5rem"), ("border-left", "2px solid var(--scrod-border)"), ("padding-left", "1rem")],
+      rule [".identifier"] [("color", "var(--scrod-code-color)"), ("font-family", "Consolas, Monaco, Menlo, monospace")],
+      rule [".module-link"] [("color", "var(--scrod-module-color)"), ("font-family", "Consolas, Monaco, Menlo, monospace")],
+      rule [".warning"] [("background", "var(--scrod-warning-bg)"), ("border-left", "4px solid var(--scrod-warning-border)"), ("padding", "1rem"), ("margin", "1rem 0")],
+      rule [".warning-category"] [("font-weight", "bold"), ("color", "var(--scrod-warning-text)")],
+      rule [".since"] [("color", "var(--scrod-text-secondary)"), ("font-size", "0.9em")],
+      rule [".examples"] [("background", "var(--scrod-examples-bg)"), ("border-left", "4px solid var(--scrod-examples-border)"), ("padding", "1rem"), ("margin", "1rem 0")],
       rule [".example"] [("margin", "0.5rem 0")],
       rule [".example-expression"] [("font-family", "Consolas, Monaco, Menlo, monospace")],
-      rule [".example-result"] [("font-family", "Consolas, Monaco, Menlo, monospace"), ("color", "#666"), ("padding-left", "1rem")],
-      rule [".property"] [("background", "#f0f8ff"), ("border-left", "4px solid #4169e1"), ("padding", "1rem"), ("margin", "1rem 0")],
+      rule [".example-result"] [("font-family", "Consolas, Monaco, Menlo, monospace"), ("color", "var(--scrod-text-secondary)"), ("padding-left", "1rem")],
+      rule [".property"] [("background", "var(--scrod-property-bg)"), ("border-left", "4px solid var(--scrod-property-border)"), ("padding", "1rem"), ("margin", "1rem 0")],
       rule [".math-inline"] [("font-style", "italic")],
       rule [".math-display"] [("display", "block"), ("text-align", "center"), ("margin", "1rem 0"), ("font-style", "italic")],
       rule [".extensions"] [("margin", "1rem 0")],
-      rule [".extension"] [("display", "inline-block"), ("margin", "0.25rem"), ("padding", "0.25rem 0.5rem"), ("background", "#e8e8e8"), ("border-radius", "3px"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.85em")],
-      rule [".extension-disabled"] [("background", "#ffebeb"), ("text-decoration", "line-through")],
-      rule [".generated-by"] [("margin-top", "3rem"), ("padding-top", "1rem"), ("border-top", "1px solid #ddd"), ("color", "#999"), ("font-size", "0.85em")]
+      rule [".extension"] [("display", "inline-block"), ("margin", "0.25rem"), ("padding", "0.25rem 0.5rem"), ("background", "var(--scrod-extension-bg)"), ("border-radius", "3px"), ("font-family", "Consolas, Monaco, Menlo, monospace"), ("font-size", "0.85em")],
+      rule [".extension-disabled"] [("background", "var(--scrod-extension-disabled-bg)"), ("text-decoration", "line-through")],
+      rule [".generated-by"] [("margin-top", "3rem"), ("padding-top", "1rem"), ("border-top", "1px solid var(--scrod-border)"), ("color", "var(--scrod-text-muted)"), ("font-size", "0.85em")],
+      mediaRule
+        "(prefers-color-scheme: dark)"
+        [ rule
+            ["body"]
+            [ ("--scrod-text", "#ddd"),
+              ("--scrod-text-secondary", "#aaa"),
+              ("--scrod-text-muted", "#888"),
+              ("--scrod-bg", "#121212"),
+              ("--scrod-bg-subtle", "#2a2a2a"),
+              ("--scrod-metadata-bg", "#1e1e1e"),
+              ("--scrod-item-bg", "#1a1a1a"),
+              ("--scrod-border", "#444"),
+              ("--scrod-accent", "#4da6ff"),
+              ("--scrod-code-color", "#66cc66"),
+              ("--scrod-module-color", "#cc66cc"),
+              ("--scrod-warning-bg", "#3d3000"),
+              ("--scrod-warning-border", "#ffc107"),
+              ("--scrod-warning-text", "#ffd75e"),
+              ("--scrod-examples-bg", "#2a2800"),
+              ("--scrod-examples-border", "#e6db74"),
+              ("--scrod-property-bg", "#1a2233"),
+              ("--scrod-property-border", "#6b8ef0"),
+              ("--scrod-extension-bg", "#3a3a3a"),
+              ("--scrod-extension-disabled-bg", "#3d1a1a")
+            ]
+        ]
     ]
 
 rule :: [String] -> [(String, String)] -> CssItem.Item
@@ -941,3 +1000,11 @@ rule selectors declarations =
     CssRule.MkRule
       (fmap (CssSelector.MkSelector . Text.pack) selectors)
       (fmap (\(p, v) -> CssDeclaration.MkDeclaration (CssName.MkName $ Text.pack p) (Text.pack v) False) declarations)
+
+mediaRule :: String -> [CssItem.Item] -> CssItem.Item
+mediaRule query items =
+  CssItem.ItemAtRule $
+    CssAtRule.MkAtRule
+      (CssName.MkName $ Text.pack "media")
+      (Text.pack query)
+      (Just $ CssBlock.MkBlock (fmap CssBlockContent.ContentItem items))

@@ -180,14 +180,13 @@ jobs:
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
-      - run: mkdir dist
-      - run: cp extra/github-pages/index.html extra/github-pages/index.js extra/github-pages/worker.js extra/github-pages/style.css dist/
-      - run: cp -r extra/github-pages/vendor dist/
-      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm dist/scrod-wasm.wasm
-      - run: cp artifact/ghc_wasm_jsffi.js dist/
+      - run: mkdir -p extra/wasm/dist
+      - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/scrod-wasm.wasm
+      - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
+      - run: extra/github-pages/build.sh
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: dist/
+          path: extra/github-pages/dist/
       - id: deploy
         uses: actions/deploy-pages@v4
   release:

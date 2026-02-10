@@ -117,7 +117,9 @@ headerSection :: Module.Module -> Element.Element
 headerSection m =
   Xml.element
     "header"
-    [Xml.attribute "class" "module-header"]
+    ( [Xml.attribute "class" "module-header"]
+        <> foldMap (\(Located.MkLocated loc _) -> [lineAttribute loc]) (Module.name m)
+    )
     ( [Content.Element $ Xml.element "h1" [] [Xml.text (moduleTitle m)]]
         <> warningContents (Module.warning m)
         <> moduleDocContents (Module.documentation m)
@@ -399,7 +401,8 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
   Xml.element
     "div"
     [ Xml.attribute "class" "item",
-      Xml.attribute "id" ("item-" <> show (ItemKey.unwrap key))
+      Xml.attribute "id" ("item-" <> show (ItemKey.unwrap key)),
+      lineAttribute loc
     ]
     ( nameContents
         <> [Content.Element kindElement]
@@ -444,6 +447,10 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     docContents' = case doc of
       Doc.Empty -> []
       _ -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "item-doc"] (docToContents doc)]
+
+lineAttribute :: Location.Location -> Attribute.Attribute
+lineAttribute loc =
+  Xml.attribute "data-line" (show (Line.unwrap (Location.line loc)))
 
 locationElement :: Location.Location -> Element.Element
 locationElement (Location.MkLocation (Line.MkLine l) (Column.MkColumn c)) =

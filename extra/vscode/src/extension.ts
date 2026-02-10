@@ -18,8 +18,9 @@ export function activate(context: vscode.ExtensionContext): void {
           "scrodPreview",
           "Scrod Preview",
           { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
-          { retainContextWhenHidden: true }
+          { enableScripts: true, retainContextWhenHidden: true }
         );
+        panel.webview.html = wrapperHtml();
         panel.onDidDispose(() => {
           panel = undefined;
           clearTimeout(debounceTimer);
@@ -35,7 +36,12 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.workspace.onDidSaveTextDocument((document) =>
       immediateUpdate(document)
-    )
+    ),
+    vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
+      if (panel && isHaskell(event.textEditor.document)) {
+        syncScroll(event.textEditor);
+      }
+    })
   );
 }
 
@@ -67,16 +73,90 @@ async function update(document: vscode.TextDocument): Promise<void> {
   const literate = document.fileName.endsWith(".lhs");
   try {
     const process = await engine;
-    panel.webview.html = await process(document.getText(), literate);
+    const html = await process(document.getText(), literate);
+    panel.webview.postMessage({ type: "update", html });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
-    panel.webview.html = `<!DOCTYPE html>
-<html><body>
-<pre style="color: #c00; white-space: pre-wrap; padding: 1rem;">${escaped}</pre>
-</body></html>`;
+    panel.webview.postMessage({
+      type: "update",
+      html: `<pre style="color: #c00; white-space: pre-wrap; padding: 1rem;">${escaped}</pre>`,
+    });
   }
+  const editor = vscode.window.activeTextEditor;
+  if (editor && isHaskell(editor.document)) {
+    syncScroll(editor);
+  }
+}
+
+function syncScroll(editor: vscode.TextEditor): void {
+  if (!panel) return;
+  const topLine = (editor.visibleRanges[0]?.start.line ?? 0) + 1;
+  panel.webview.postMessage({ type: "scroll", line: topLine });
+}
+
+function wrapperHtml(): string {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+  <script>
+    (function() {
+      window.addEventListener('message', function(event) {
+        var msg = event.data;
+        if (msg.type === 'update') {
+          applyUpdate(msg.html);
+        } else if (msg.type === 'scroll') {
+          scrollToLine(msg.line);
+        }
+      });
+
+      function applyUpdate(html) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(html, 'text/html');
+
+        var newStyle = doc.querySelector('style');
+        var style = document.getElementById('scrod-style');
+        if (newStyle) {
+          if (!style) {
+            style = document.createElement('style');
+            style.id = 'scrod-style';
+            document.head.appendChild(style);
+          }
+          style.textContent = newStyle.textContent;
+        }
+
+        var scrollTop = document.documentElement.scrollTop;
+        document.body.innerHTML = doc.body.innerHTML;
+        document.documentElement.scrollTop = scrollTop;
+      }
+
+      function scrollToLine(line) {
+        var elements = document.querySelectorAll('[data-line]');
+        var best = null;
+        var bestLine = 0;
+        for (var i = 0; i < elements.length; i++) {
+          var el = elements[i];
+          var elLine = parseInt(el.getAttribute('data-line'), 10);
+          if (elLine <= line && elLine > bestLine) {
+            best = el;
+            bestLine = elLine;
+          }
+        }
+        if (best) {
+          best.scrollIntoView({ block: 'start' });
+        } else {
+          window.scrollTo(0, 0);
+        }
+      }
+    })();
+  </script>
+</body>
+</html>`;
 }

@@ -48,6 +48,9 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with a language" $ do
       check s "{-# language Haskell98 #-}" [("/language", "\"Haskell98\"")]
 
+    Spec.it s "works with GHC2024" $ do
+      check s "{-# language GHC2024 #-}" [("/language", "\"GHC2024\"")]
+
     Spec.it s "picks the last one" $ do
       check s "{-# language Haskell98, Haskell2010 #-}" [("/language", "\"Haskell2010\"")]
 
@@ -163,6 +166,20 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/type", "\"Module\""),
           ("/documentation/value/value/name", "\"X\""),
           ("/documentation/value/value/label", "null")
+        ]
+
+    Spec.it s "works with a labeled module" $ do
+      check
+        s
+        """
+        -- | [label]("X")
+        module M where
+        """
+        [ ("/documentation/type", "\"Paragraph\""),
+          ("/documentation/value/type", "\"Module\""),
+          ("/documentation/value/value/name", "\"X\""),
+          ("/documentation/value/value/label/type", "\"String\""),
+          ("/documentation/value/value/label/value", "\"label\"")
         ]
 
     Spec.it s "works with emphasis" $ do
@@ -446,6 +463,28 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/title/value", "\"x\"")
         ]
 
+    Spec.it s "works with a level 2 header" $ do
+      check
+        s
+        """
+        -- | == x
+        module M where
+        """
+        [ ("/documentation/type", "\"Header\""),
+          ("/documentation/value/level", "2")
+        ]
+
+    Spec.it s "works with a level 3 header" $ do
+      check
+        s
+        """
+        -- | === x
+        module M where
+        """
+        [ ("/documentation/type", "\"Header\""),
+          ("/documentation/value/level", "3")
+        ]
+
     Spec.it s "works with a table" $ do
       check
         s
@@ -490,7 +529,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with a version" $ do
       check
         s
-        "-- | Docs\n--\n-- @since 1.2.3\nmodule M where"
+        """
+        -- | Docs
+        --
+        -- @since 1.2.3
+        module M where
+        """
         [ ("/since/package", "null"),
           ("/since/version", "[1,2,3]")
         ]
@@ -498,7 +542,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with a package and version" $ do
       check
         s
-        "-- | Docs\n--\n-- @since base-4.16.0\nmodule M where"
+        """
+        -- | Docs
+        --
+        -- @since base-4.16.0
+        module M where
+        """
         [ ("/since/package", "\"base\""),
           ("/since/version", "[4,16,0]")
         ]
@@ -945,6 +994,16 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind", "\"DataConstructor\"")
         ]
 
+    Spec.it s "infix data constructor" $ do
+      check
+        s
+        "data T = Int :+: Bool"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/1/value/kind", "\"DataConstructor\""),
+          ("/items/1/value/name", "\":+:\""),
+          ("/items/1/value/signature", "\"Int -> Bool -> T\"")
+        ]
+
     Spec.it s "data constructor with doc" $ do
       check
         s
@@ -1243,6 +1302,16 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"Show\"")
         ]
 
+    Spec.it s "data deriving multiple" $ do
+      check
+        s
+        "data R2 deriving (Show, Eq)"
+        [ ("/items/1/value/kind", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/2/value/kind", "\"DerivedInstance\""),
+          ("/items/2/value/name", "\"Eq\"")
+        ]
+
     Spec.it s "data GADT deriving" $ do
       check s "data T where deriving Show" []
 
@@ -1417,6 +1486,19 @@ spec s = Spec.describe s "integration" $ do
             ("/items/1/value/documentation/value/value", "\"d\"")
           ]
 
+    Spec.it s "class method with default" $ do
+      check
+        s
+        """
+        class C a where
+          m :: a -> a
+          m = id
+        """
+        [ ("/items/1/value/kind", "\"ClassMethod\""),
+          ("/items/1/value/name", "\"m\""),
+          ("/items/1/value/signature", "\"a -> a\"")
+        ]
+
     Spec.it s "default method signature" $ do
       check
         s
@@ -1542,6 +1624,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "foreign import" $ do
       check s "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" []
 
+    Spec.it s "foreign export" $ do
+      check
+        s
+        "{-# language ForeignFunctionInterface #-} foreign export ccall q :: IO ()"
+        [("/items/0/value/kind", "\"ForeignExport\"")]
+
     Spec.it s "warning pragma" $ do
       check
         s
@@ -1628,29 +1716,115 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "html" $ do
+    Spec.it s "generates html without error" $ do
+      checkHtml
+        s
+        []
+        """
+        -- | Module documentation.
+        module M
+          ( -- * Section
+            x
+          ) where
+
+        import Data.List
+
+        -- | A function.
+        x :: Int
+        x = 0
+
+        -- | A data type.
+        data T = C { field :: Bool }
+        """
+
   Spec.describe s "cpp" $ do
     Spec.it s "works with simple ifdef" $ do
       check
         s
-        "{-# language CPP #-}\n#define MY_FLAG\n#ifdef MY_FLAG\nmodule M where\n#endif"
+        """
+        {-# language CPP #-}
+        #define MY_FLAG
+        #ifdef MY_FLAG
+        module M where
+        #endif
+        """
         [("/name/value", "\"M\"")]
 
     Spec.it s "works with undefined macro" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef UNDEFINED\nmodule M where\n#endif"
+        """
+        {-# language CPP #-}
+        #ifdef UNDEFINED
+        module M where
+        #endif
+        """
         [("/name", "null")]
 
     Spec.it s "preserves line numbers" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef FOO\nimport Fake\n#endif\nx = 0"
+        """
+        {-# language CPP #-}
+        #ifdef FOO
+        import Fake
+        #endif
+        x = 0
+        """
         [("/items/0/location/line", "5")]
+
+    Spec.it s "works with elif" $ do
+      check
+        s
+        """
+        {-# language CPP #-}
+        #if 0
+        module A where
+        #elif 1
+        module B where
+        #endif
+        """
+        [("/name/value", "\"B\"")]
+
+    Spec.it s "skips elif after match" $ do
+      check
+        s
+        """
+        {-# language CPP #-}
+        #if 1
+        module A where
+        #elif 1
+        module B where
+        #endif
+        """
+        [("/name/value", "\"A\"")]
+
+    Spec.it s "works with else after active ifdef" $ do
+      check
+        s
+        """
+        {-# language CPP #-}
+        #define X
+        #ifdef X
+        module A where
+        #else
+        module B where
+        #endif
+        """
+        [("/name/value", "\"A\"")]
 
     Spec.it s "uses else branch for undefined macros" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef __GLASGOW_HASKELL__\nmodule GHC where\n#else\nmodule Other where\n#endif"
+        """
+        {-# language CPP #-}
+        #ifdef __GLASGOW_HASKELL__
+        module GHC where
+        #else
+        module Other where
+        #endif
+        """
         [("/name/value", "\"Other\"")]
 
   Spec.describe s "literate" $ do
@@ -1824,3 +1998,13 @@ checkWith s arguments input assertions = do
           "expected " <> maybe "(nothing)" (Builder.toString . Json.encode) expected,
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
+
+checkHtml :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> m ()
+checkHtml s arguments input = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" ("--format" : "html" : arguments)
+      $ pure input
+  output <- either (Spec.assertFailure s) pure result
+  Monad.when (null $ Builder.toString output) $
+    Spec.assertFailure s "expected non-empty HTML output"

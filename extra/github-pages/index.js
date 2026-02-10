@@ -14,8 +14,52 @@ var ready = false;
 // Dark mode CSS variable overrides for the shadow DOM.
 // These use :host() selectors to override the generated CSS variables
 // when the user manually picks a theme (instead of "auto").
-var darkVars = '--scrod-text: #ddd; --scrod-text-secondary: #aaa; --scrod-text-muted: #888; --scrod-bg: #121212; --scrod-bg-subtle: #2a2a2a; --scrod-metadata-bg: #1e1e1e; --scrod-item-bg: #1a1a1a; --scrod-border: #444; --scrod-accent: #4da6ff; --scrod-code-color: #66cc66; --scrod-module-color: #cc66cc; --scrod-warning-bg: #3d3000; --scrod-warning-border: #ffc107; --scrod-warning-text: #ffd75e; --scrod-examples-bg: #2a2800; --scrod-examples-border: #e6db74; --scrod-property-bg: #1a2233; --scrod-property-border: #6b8ef0; --scrod-extension-bg: #3a3a3a; --scrod-extension-disabled-bg: #3d1a1a; color-scheme: dark';
-var lightVars = '--scrod-text: #333; --scrod-text-secondary: #666; --scrod-text-muted: #999; --scrod-bg: white; --scrod-bg-subtle: #f4f4f4; --scrod-metadata-bg: #f9f9f9; --scrod-item-bg: #fafafa; --scrod-border: #ddd; --scrod-accent: #0066cc; --scrod-code-color: #006600; --scrod-module-color: #660066; --scrod-warning-bg: #fff3cd; --scrod-warning-border: #ffc107; --scrod-warning-text: #856404; --scrod-examples-bg: #fffef0; --scrod-examples-border: #e6db74; --scrod-property-bg: #f0f8ff; --scrod-property-border: #4169e1; --scrod-extension-bg: #e8e8e8; --scrod-extension-disabled-bg: #ffebeb; color-scheme: light';
+var darkVars = [
+  '--scrod-text: #ddd',
+  '--scrod-text-secondary: #aaa',
+  '--scrod-text-muted: #888',
+  '--scrod-bg: #121212',
+  '--scrod-bg-subtle: #2a2a2a',
+  '--scrod-metadata-bg: #1e1e1e',
+  '--scrod-item-bg: #1a1a1a',
+  '--scrod-border: #444',
+  '--scrod-accent: #4da6ff',
+  '--scrod-code-color: #66cc66',
+  '--scrod-module-color: #cc66cc',
+  '--scrod-warning-bg: #3d3000',
+  '--scrod-warning-border: #ffc107',
+  '--scrod-warning-text: #ffd75e',
+  '--scrod-examples-bg: #2a2800',
+  '--scrod-examples-border: #e6db74',
+  '--scrod-property-bg: #1a2233',
+  '--scrod-property-border: #6b8ef0',
+  '--scrod-extension-bg: #3a3a3a',
+  '--scrod-extension-disabled-bg: #3d1a1a',
+  'color-scheme: dark'
+].join('; ');
+var lightVars = [
+  '--scrod-text: #333',
+  '--scrod-text-secondary: #666',
+  '--scrod-text-muted: #999',
+  '--scrod-bg: white',
+  '--scrod-bg-subtle: #f4f4f4',
+  '--scrod-metadata-bg: #f9f9f9',
+  '--scrod-item-bg: #fafafa',
+  '--scrod-border: #ddd',
+  '--scrod-accent: #0066cc',
+  '--scrod-code-color: #006600',
+  '--scrod-module-color: #660066',
+  '--scrod-warning-bg: #fff3cd',
+  '--scrod-warning-border: #ffc107',
+  '--scrod-warning-text: #856404',
+  '--scrod-examples-bg: #fffef0',
+  '--scrod-examples-border: #e6db74',
+  '--scrod-property-bg: #f0f8ff',
+  '--scrod-property-border: #4169e1',
+  '--scrod-extension-bg: #e8e8e8',
+  '--scrod-extension-disabled-bg: #ffebeb',
+  'color-scheme: light'
+].join('; ');
 
 function ensureThemeStyle() {
   if (!shadow.querySelector('#theme-override')) {
@@ -39,7 +83,11 @@ function applyTheme(value) {
     output.classList.add('theme-' + value);
   }
   ensureThemeStyle();
-  localStorage.setItem('scrod-theme', value);
+  if (value === 'auto') {
+    localStorage.removeItem('scrod-theme');
+  } else {
+    localStorage.setItem('scrod-theme', value);
+  }
 }
 
 function showError(message) {

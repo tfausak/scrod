@@ -4,6 +4,43 @@
   padding: 0;
 }
 
+:root {
+  --app-bg: white;
+  --app-text: #333;
+  --app-border: #ccc;
+  --app-input-bg: white;
+  --app-toolbar-bg: white;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #121212;
+    --app-text: #ddd;
+    --app-border: #444;
+    --app-input-bg: #1e1e1e;
+    --app-toolbar-bg: #1a1a1a;
+  }
+}
+
+[data-theme="dark"] {
+  --app-bg: #121212;
+  --app-text: #ddd;
+  --app-border: #444;
+  --app-input-bg: #1e1e1e;
+  --app-toolbar-bg: #1a1a1a;
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  --app-bg: white;
+  --app-text: #333;
+  --app-border: #ccc;
+  --app-input-bg: white;
+  --app-toolbar-bg: white;
+  color-scheme: light;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -19,6 +56,8 @@ body {
   display: flex;
   height: 100vh;
   font-family: system-ui, sans-serif;
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 .pane {
@@ -28,7 +67,7 @@ body {
 }
 
 .input-pane {
-  border-right: 1px solid #ccc;
+  border-right: 1px solid var(--app-border);
 }
 
 .input-pane textarea {
@@ -41,6 +80,8 @@ body {
   font-family: monospace;
   font-size: 14px;
   tab-size: 2;
+  background: var(--app-input-bg);
+  color: var(--app-text);
 }
 
 .output-pane {
@@ -50,8 +91,9 @@ body {
 
 .toolbar {
   padding: 0.5rem 1rem;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
+  background: var(--app-toolbar-bg);
 }
 
 .toolbar select,
@@ -59,6 +101,13 @@ body {
   font-family: system-ui, sans-serif;
   font-size: 14px;
   padding: 2px 4px;
+}
+
+.toolbar select {
+  background: var(--app-input-bg);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
 }
 
 #output {

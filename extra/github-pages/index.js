@@ -5,6 +5,7 @@ var source = document.getElementById('source');
 var output = document.getElementById('output');
 var format = document.getElementById('format');
 var literate = document.getElementById('literate');
+var signature = document.getElementById('signature');
 var theme = document.getElementById('theme');
 var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
@@ -158,6 +159,9 @@ function updateHash() {
     if (literate.checked) {
       params.set('literate', 'true');
     }
+    if (signature.checked) {
+      params.set('signature', 'true');
+    }
     params.set('input', encodeHash(source.value));
     history.replaceState(null, '', '#' + params.toString());
   } else {
@@ -206,7 +210,7 @@ function process(skipUrlDetection) {
       fetchUrl(trimmed);
       return;
     }
-    worker.postMessage({ source: source.value, format: format.value, literate: literate.checked });
+    worker.postMessage({ source: source.value, format: format.value, literate: literate.checked, signature: signature.checked });
   }
 }
 
@@ -214,7 +218,8 @@ function loadFile(file) {
   var reader = new FileReader();
   reader.onload = function () {
     source.value = reader.result;
-    literate.checked = file.name.endsWith('.lhs');
+    literate.checked = file.name.endsWith('.lhs') || file.name.endsWith('.lhsig');
+    signature.checked = file.name.endsWith('.hsig') || file.name.endsWith('.lhsig');
     updateHash();
     process(true);
   };
@@ -238,6 +243,11 @@ format.addEventListener('change', function () {
 });
 
 literate.addEventListener('change', function () {
+  updateHash();
+  process();
+});
+
+signature.addEventListener('change', function () {
   updateHash();
   process();
 });
@@ -326,6 +336,9 @@ if (location.hash.length > 1) {
       }
       if (params.get('literate') === 'true') {
         literate.checked = true;
+      }
+      if (params.get('signature') === 'true') {
+        signature.checked = true;
       }
     } else {
       // Legacy format: bare base64-encoded source

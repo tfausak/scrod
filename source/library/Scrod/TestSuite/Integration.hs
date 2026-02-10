@@ -30,6 +30,7 @@ spec s = Spec.describe s "integration" $ do
         ("/warning", "null"),
         ("/exports", "null"),
         ("/imports", "[]"),
+        ("/signature", "false"),
         ("/items", "[]")
       ]
 
@@ -1723,6 +1724,74 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/0/value/name", "\"x\""),
           ("/items/1/value/name", "\"y\"")
+        ]
+
+  Spec.describe s "signature" $ do
+    Spec.it s "works with a simple signature" $ do
+      checkWith
+        s
+        ["--signature"]
+        "signature Foo where"
+        [ ("/name/value", "\"Foo\""),
+          ("/signature", "true")
+        ]
+
+    Spec.it s "works with a type signature" $ do
+      checkWith
+        s
+        ["--signature"]
+        """
+        signature Foo where
+          foo :: Int
+        """
+        [ ("/name/value", "\"Foo\""),
+          ("/signature", "true"),
+          ("/items/0/value/kind", "\"Function\""),
+          ("/items/0/value/name", "\"foo\""),
+          ("/items/0/value/signature", "\"Int\"")
+        ]
+
+    Spec.it s "works with an abstract data type" $ do
+      checkWith
+        s
+        ["--signature"]
+        """
+        signature Foo where
+          data T
+        """
+        [ ("/signature", "true"),
+          ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"T\"")
+        ]
+
+    Spec.it s "works with a class" $ do
+      checkWith
+        s
+        ["--signature"]
+        """
+        signature Foo where
+          class C a where
+            bar :: a -> Bool
+        """
+        [ ("/signature", "true"),
+          ("/items/0/value/kind", "\"Class\""),
+          ("/items/0/value/name", "\"C\""),
+          ("/items/1/value/kind", "\"ClassMethod\""),
+          ("/items/1/value/name", "\"bar\"")
+        ]
+
+    Spec.it s "works with documentation" $ do
+      checkWith
+        s
+        ["--signature"]
+        """
+        -- | Module doc
+        signature Foo where
+        """
+        [ ("/signature", "true"),
+          ("/documentation/type", "\"Paragraph\""),
+          ("/documentation/value/type", "\"String\""),
+          ("/documentation/value/value", "\"Module doc\"")
         ]
 
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()

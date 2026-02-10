@@ -24,11 +24,11 @@
     "languages": [
       {
         "id": "haskell",
-        "extensions": [".hs"]
+        "extensions": [".hs", ".hsig"]
       },
       {
         "id": "literate haskell",
-        "extensions": [".lhs"]
+        "extensions": [".lhs", ".lhsig"]
       }
     ],
     "commands": [
@@ -42,7 +42,7 @@
       "editor/title": [
         {
           "command": "scrod.openPreview",
-          "when": "editorLangId == haskell || editorLangId == 'literate haskell' || resourceExtname == .hs || resourceExtname == .lhs",
+          "when": "editorLangId == haskell || editorLangId == 'literate haskell' || resourceExtname == .hs || resourceExtname == .lhs || resourceExtname == .hsig || resourceExtname == .lhsig",
           "group": "navigation"
         }
       ]

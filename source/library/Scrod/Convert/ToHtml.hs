@@ -124,7 +124,7 @@ headerSection :: Module.Module -> Element.Element
 headerSection m =
   Xml.element
     "header"
-    ( [Xml.attribute "class" "module-header"]
+    ( [Xml.attribute "class" (if Module.signature m then "signature-header" else "module-header")]
         <> foldMap (\(Located.MkLocated loc _) -> [lineAttribute loc]) (Module.name m)
     )
     ( [Content.Element $ Xml.element "h1" [] [Xml.text (moduleTitle m)]]
@@ -972,7 +972,7 @@ stylesheet =
       rule ["a"] [("color", "var(--scrod-accent)"), ("text-decoration", "none")],
       rule ["a:hover"] [("text-decoration", "underline")],
       rule ["img"] [("max-width", "100%"), ("height", "auto")],
-      rule [".module-header"] [("margin-bottom", "2rem")],
+      rule [".module-header", ".signature-header"] [("margin-bottom", "2rem")],
       rule [".module-doc"] [("margin", "1rem 0")],
       rule [".metadata"] [("background", "var(--scrod-metadata-bg)"), ("border-left", "4px solid var(--scrod-accent)"), ("padding", "1rem"), ("margin", "1rem 0")],
       rule [".metadata > dt"] [("display", "inline")],

@@ -23,6 +23,7 @@ data Module = MkModule
     warning :: Maybe Warning.Warning,
     exports :: Maybe [Export.Export],
     imports :: [Import.Import],
+    signature :: Bool,
     items :: [Located.Located Item.Item]
   }
   deriving (Eq, Ord, Show)

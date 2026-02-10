@@ -55,6 +55,7 @@ onmessage = async function (e) {
       const msg = e.data;
       const args = ['--format', msg.format];
       if (msg.literate) args.push('--literate');
+      if (msg.signature) args.push('--signature');
       const result = await scrod(args, msg.source);
       postMessage({ tag: 'result', value: result, format: msg.format });
     } catch (err) {

@@ -29,13 +29,14 @@ import qualified Scrod.Spec as Spec
 import qualified System.IO.Unsafe as Unsafe
 
 parse ::
+  Bool ->
   String ->
   Either
     String
     ( (Maybe Session.Language, [DynFlags.OnOff Extension.Extension]),
       SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
     )
-parse string = do
+parse isSignature string = do
   let originalStringBuffer = StringBuffer.stringToStringBuffer string
   languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions originalStringBuffer
   let extensions = uncurry resolveExtensions languageAndExtensions
@@ -48,7 +49,8 @@ parse string = do
   let fastString = FastString.fsLit interactiveFilePath
   let realSrcLoc = SrcLoc.mkRealSrcLoc fastString 1 1
   let pState = Lexer.initParserState parserOpts modifiedStringBuffer realSrcLoc
-  case Lexer.unP Parser.parseModule pState of
+  let parser = if isSignature then Parser.parseSignature else Parser.parseModule
+  case Lexer.unP parser pState of
     Lexer.PFailed newPState -> Left . Outputable.showSDocUnsafe . Outputable.ppr $ Lexer.getPsErrorMessages newPState
     Lexer.POk _ lHsModule -> pure (languageAndExtensions, lHsModule)
 
@@ -93,19 +95,22 @@ spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'parse $ do
     Spec.it s "succeeds with empty input" $ do
-      Spec.assertEq s (fst <$> parse "") $ Right (Nothing, [])
+      Spec.assertEq s (fst <$> parse False "") $ Right (Nothing, [])
 
     Spec.it s "fails with invalid input" $ do
-      Spec.assertEq s (fst <$> parse "!") $ Left "{Resolved: ErrorWithoutFlag\n ErrorWithoutFlag\n   parse error on input `!'}"
+      Spec.assertEq s (fst <$> parse False "!") $ Left "{Resolved: ErrorWithoutFlag\n ErrorWithoutFlag\n   parse error on input `!'}"
 
     Spec.it s "fails with unknown language extension" $ do
-      Spec.assertEq s (fst <$> parse "{-# language Unknown #-}") $ Left "<interactive>:1:14: error: [GHC-46537]\n    Unsupported extension: Unknown"
+      Spec.assertEq s (fst <$> parse False "{-# language Unknown #-}") $ Left "<interactive>:1:14: error: [GHC-46537]\n    Unsupported extension: Unknown"
 
     Spec.it s "succeeds with a language" $ do
-      Spec.assertEq s (fst <$> parse "{-# language Haskell98 #-}") $ Right (Just Session.Haskell98, [])
+      Spec.assertEq s (fst <$> parse False "{-# language Haskell98 #-}") $ Right (Just Session.Haskell98, [])
 
     Spec.it s "succeeds with an enabled extension" $ do
-      Spec.assertEq s (fst <$> parse "{-# language CPP #-}") $ Right (Nothing, [Session.On Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False "{-# language CPP #-}") $ Right (Nothing, [Session.On Extension.Cpp])
 
     Spec.it s "succeeds with a disabled extension" $ do
-      Spec.assertEq s (fst <$> parse "{-# language NoCPP #-}") $ Right (Nothing, [Session.Off Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False "{-# language NoCPP #-}") $ Right (Nothing, [Session.Off Extension.Cpp])
+
+    Spec.it s "succeeds with a signature" $ do
+      Spec.assertEq s (fst <$> parse True "signature Foo where") $ Right (Nothing, [])

@@ -56,6 +56,7 @@ moduleToJson m =
       ("warning", Json.optional warningToJson $ Module.warning m),
       ("exports", Json.optional (Json.arrayOf exportToJson) $ Module.exports m),
       ("imports", Json.arrayOf importToJson $ Module.imports m),
+      ("signature", Json.boolean $ Module.signature m),
       ("items", Json.arrayOf (locatedToJson itemToJson) $ Module.items m)
     ]
 

@@ -2,7 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { pathToFileURL } from "url";
 
-type Process = (source: string, literate: boolean) => Promise<string>;
+type Process = (source: string, literate: boolean, signature: boolean) => Promise<string>;
 
 export async function loadWasmEngine(extensionPath: string): Promise<Process> {
   const wasmDir = path.join(extensionPath, "wasm");
@@ -52,9 +52,10 @@ export async function loadWasmEngine(extensionPath: string): Promise<Process> {
     source: string
   ) => Promise<string>;
 
-  return async (source, literate) => {
+  return async (source, literate, signature) => {
     const args = ["--format", "html"];
     if (literate) args.push("--literate");
+    if (signature) args.push("--signature");
     return scrod(args, source);
   };
 }

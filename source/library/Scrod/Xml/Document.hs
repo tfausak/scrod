@@ -41,6 +41,9 @@ attribute name value =
       Attribute.value = Text.pack value
     }
 
+raw :: Text.Text -> Content.Content a
+raw = Content.Raw
+
 string :: String -> Content.Content a
 string = text . Text.pack
 
@@ -161,3 +164,13 @@ spec s = do
               (mkElement "root" [mkText "hello"])
         )
         "<root>hello</root>"
+
+    Spec.it s "encodes raw content without escaping" $ do
+      Spec.assertEq
+        s
+        ( Builder.toString . encode $
+            MkDocument
+              []
+              (mkElement "style" [Content.Raw $ Text.pack "a > b { color: red; }"])
+        )
+        "<style>a > b { color: red; }</style>"

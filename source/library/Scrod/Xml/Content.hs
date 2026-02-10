@@ -18,6 +18,7 @@ import qualified Text.Parsec as Parsec
 data Content a
   = Comment Comment.Comment
   | Element a
+  | Raw Text.Text
   | Text Text.Text
   deriving (Eq, Ord, Show)
 
@@ -43,6 +44,7 @@ encode :: (a -> Builder.Builder) -> Content a -> Builder.Builder
 encode encodeElement c = case c of
   Comment comment -> Comment.encode comment
   Element element -> encodeElement element
+  Raw raw -> foldMap Builder.charUtf8 (Text.unpack raw)
   Text text -> XmlText.encode text
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -86,3 +88,9 @@ spec s = do
 
     Spec.it s "escapes text" $ do
       Spec.assertEq s (Builder.toString . encode encodeElement $ Text (Text.pack "a & b")) "a &amp; b"
+
+    Spec.it s "encodes raw" $ do
+      Spec.assertEq s (Builder.toString . encode encodeElement $ Raw (Text.pack "hello")) "hello"
+
+    Spec.it s "does not escape raw" $ do
+      Spec.assertEq s (Builder.toString . encode encodeElement $ Raw (Text.pack "a > b & c < d")) "a > b & c < d"

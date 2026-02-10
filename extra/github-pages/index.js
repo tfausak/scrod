@@ -35,9 +35,7 @@ worker.onmessage = function (e) {
   if (msg.tag === 'ready') {
     ready = true;
     shadow.innerHTML = '';
-    if (source.value) {
-      process();
-    }
+    process();
   } else if (msg.tag === 'result') {
     if (msg.format === 'json') {
       showJson(msg.value);

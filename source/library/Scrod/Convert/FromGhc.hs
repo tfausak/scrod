@@ -572,13 +572,13 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
       pure $ Maybe.maybeToList parentItem <> eqnItems
     _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
   Syntax.DataDecl _ _ _ _ dataDefn -> do
-    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) (extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
         parentType = extractParentTypeText tyClDecl
     childItems <- convertDataDefnM parentKey parentType dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
-    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+    parentItem <- convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) (extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     familyItems <- convertFamilyDeclsM parentKey ats
@@ -1174,6 +1174,23 @@ extractParentTypeText tyClDecl = case tyClDecl of
       [] -> Outputable.ppr lName
       tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
   _ -> Nothing
+
+-- | Extract type variable bindings from a type\/class declaration.
+-- For @data T a b@, this produces @Just "a b"@.
+-- For @class C a@, this produces @Just "a"@.
+-- Returns 'Nothing' if there are no type variables.
+extractTyClDeclTyVars :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
+extractTyClDeclTyVars tyClDecl = case tyClDecl of
+  Syntax.DataDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
+  Syntax.ClassDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
+  _ -> Nothing
+
+-- | Pretty-print explicit type variable binders as text.
+-- Returns 'Nothing' if the list is empty.
+tyVarsToText :: Syntax.LHsQTyVars Ghc.GhcPs -> Maybe Text.Text
+tyVarsToText tyVars = case Syntax.hsQTvExplicit tyVars of
+  [] -> Nothing
+  tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract name from a family declaration.
 extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName

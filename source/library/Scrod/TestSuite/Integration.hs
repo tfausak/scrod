@@ -900,6 +900,42 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "data" $ do
       check s "data H" [("/items/0/value/kind", "\"DataType\"")]
 
+    Spec.it s "data with type variable" $ do
+      check
+        s
+        "data T a"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"T\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "data with multiple type variables" $ do
+      check
+        s
+        "data E a b"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"E\""),
+          ("/items/0/value/signature", "\"a b\"")
+        ]
+
+    Spec.it s "newtype with type variable" $ do
+      check
+        s
+        "newtype N a = MkN a"
+        [ ("/items/0/value/kind", "\"Newtype\""),
+          ("/items/0/value/name", "\"N\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "GADT with type variable" $ do
+      check
+        s
+        "data G a where MkG :: a -> G a"
+        [ ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/name", "\"G\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
+
     Spec.it s "data constructor" $ do
       check
         s
@@ -1046,6 +1082,15 @@ spec s = Spec.describe s "integration" $ do
 
     Spec.it s "class" $ do
       check s "class Y" [("/items/0/value/kind", "\"Class\"")]
+
+    Spec.it s "class with type variable" $ do
+      check
+        s
+        "class C a"
+        [ ("/items/0/value/kind", "\"Class\""),
+          ("/items/0/value/name", "\"C\""),
+          ("/items/0/value/signature", "\"a\"")
+        ]
 
     Spec.it s "class instance" $ do
       check

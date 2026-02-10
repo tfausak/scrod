@@ -622,8 +622,9 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       lineAttribute loc
     ]
     ( nameContents
+        <> sigBeforeKind
         <> [Content.Element kindElement]
-        <> signatureContents
+        <> sigAfterKind
         <> [Content.Element keyElement]
         <> [Content.Element (locationElement loc)]
         <> docContents'
@@ -635,6 +636,14 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       Just (ItemName.MkItemName n) ->
         [Content.Element $ Xml.element "span" [Xml.attribute "class" "item-name"] [Xml.text n]]
 
+    isTypeVarSignature :: Bool
+    isTypeVarSignature = case itemKind of
+      ItemKind.DataType -> True
+      ItemKind.Newtype -> True
+      ItemKind.TypeData -> True
+      ItemKind.Class -> True
+      _ -> False
+
     kindElement :: Element.Element
     kindElement =
       Xml.element
@@ -642,16 +651,25 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
         [Xml.attribute "class" "item-kind"]
         [Xml.text (Text.pack " [" <> kindToText itemKind <> Text.pack "]")]
 
+    sigBeforeKind :: [Content.Content Element.Element]
+    sigBeforeKind =
+      if isTypeVarSignature then signatureContents else []
+
+    sigAfterKind :: [Content.Content Element.Element]
+    sigAfterKind =
+      if isTypeVarSignature then [] else signatureContents
+
     signatureContents :: [Content.Content Element.Element]
     signatureContents = case maybeSig of
       Nothing -> []
       Just sig ->
-        [ Content.Element $
-            Xml.element
-              "span"
-              [Xml.attribute "class" "item-signature"]
-              [Xml.text (Text.pack " :: " <> sig)]
-        ]
+        let prefix = if isTypeVarSignature then Text.pack " " else Text.pack " :: "
+         in [ Content.Element $
+                Xml.element
+                  "span"
+                  [Xml.attribute "class" "item-signature"]
+                  [Xml.text (prefix <> sig)]
+            ]
 
     keyElement :: Element.Element
     keyElement =

@@ -54,10 +54,58 @@
 
 body {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   font-family: system-ui, sans-serif;
   background: var(--app-bg);
   color: var(--app-text);
+}
+
+.toolbar {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  flex-shrink: 0;
+  background: var(--app-toolbar-bg);
+}
+
+.toolbar select,
+.toolbar label {
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  padding: 2px 4px;
+}
+
+.toolbar select {
+  background: var(--app-input-bg);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+}
+
+.file-label {
+  display: inline-block;
+  cursor: pointer;
+  background: var(--app-input-bg);
+  border: 1px solid var(--app-border);
+  border-radius: 3px;
+  margin-left: 0.5rem;
+}
+
+#file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+.panes {
+  display: flex;
+  flex: 1;
+  min-height: 0;
 }
 
 .pane {
@@ -89,29 +137,26 @@ body {
   flex-direction: column;
 }
 
-.toolbar {
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--app-border);
-  flex-shrink: 0;
-  background: var(--app-toolbar-bg);
-}
-
-.toolbar select,
-.toolbar label {
-  font-family: system-ui, sans-serif;
-  font-size: 14px;
-  padding: 2px 4px;
-}
-
-.toolbar select {
-  background: var(--app-input-bg);
-  color: var(--app-text);
-  border: 1px solid var(--app-border);
-  border-radius: 3px;
-}
-
 #output {
   flex: 1;
   overflow: auto;
   padding: 1rem;
+}
+
+.drop-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 102, 204, 0.15);
+  border: 3px dashed #0066cc;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: #0066cc;
+  pointer-events: none;
+}
+
+.drop-overlay.active {
+  display: flex;
 }

@@ -6,6 +6,8 @@ var output = document.getElementById('output');
 var format = document.getElementById('format');
 var literate = document.getElementById('literate');
 var theme = document.getElementById('theme');
+var fileInput = document.getElementById('file-input');
+var dropOverlay = document.getElementById('drop-overlay');
 var shadow = output.attachShadow({ mode: 'open' });
 shadow.innerHTML = '<p style="color: #888; font-style: italic">Loading WASM module...</p>';
 var debounceTimer;
@@ -207,6 +209,19 @@ function process(skipUrlDetection) {
   }
 }
 
+function loadFile(file) {
+  var reader = new FileReader();
+  reader.onload = function () {
+    source.value = reader.result;
+    if (file.name.endsWith('.lhs')) {
+      literate.checked = true;
+    }
+    updateHash();
+    process(true);
+  };
+  reader.readAsText(file);
+}
+
 source.addEventListener('input', function () {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(function () {
@@ -227,6 +242,45 @@ literate.addEventListener('change', function () {
 
 theme.addEventListener('change', function () {
   applyTheme(theme.value);
+});
+
+fileInput.addEventListener('change', function () {
+  if (fileInput.files.length > 0) {
+    loadFile(fileInput.files[0]);
+    fileInput.value = '';
+  }
+});
+
+// Drag and drop support
+var dragCounter = 0;
+
+document.addEventListener('dragenter', function (e) {
+  e.preventDefault();
+  dragCounter++;
+  if (dragCounter === 1) {
+    dropOverlay.classList.add('active');
+  }
+});
+
+document.addEventListener('dragleave', function (e) {
+  e.preventDefault();
+  dragCounter--;
+  if (dragCounter === 0) {
+    dropOverlay.classList.remove('active');
+  }
+});
+
+document.addEventListener('dragover', function (e) {
+  e.preventDefault();
+});
+
+document.addEventListener('drop', function (e) {
+  e.preventDefault();
+  dragCounter = 0;
+  dropOverlay.classList.remove('active');
+  if (e.dataTransfer.files.length > 0) {
+    loadFile(e.dataTransfer.files[0]);
+  }
 });
 
 // Load saved theme preference

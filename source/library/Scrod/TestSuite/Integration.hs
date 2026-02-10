@@ -529,7 +529,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with a version" $ do
       check
         s
-        "-- | Docs\n--\n-- @since 1.2.3\nmodule M where"
+        """
+        -- | Docs
+        --
+        -- @since 1.2.3
+        module M where
+        """
         [ ("/since/package", "null"),
           ("/since/version", "[1,2,3]")
         ]
@@ -537,7 +542,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with a package and version" $ do
       check
         s
-        "-- | Docs\n--\n-- @since base-4.16.0\nmodule M where"
+        """
+        -- | Docs
+        --
+        -- @since base-4.16.0
+        module M where
+        """
         [ ("/since/package", "\"base\""),
           ("/since/version", "[4,16,0]")
         ]
@@ -1732,43 +1742,89 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with simple ifdef" $ do
       check
         s
-        "{-# language CPP #-}\n#define MY_FLAG\n#ifdef MY_FLAG\nmodule M where\n#endif"
+        """
+        {-# language CPP #-}
+        #define MY_FLAG
+        #ifdef MY_FLAG
+        module M where
+        #endif
+        """
         [("/name/value", "\"M\"")]
 
     Spec.it s "works with undefined macro" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef UNDEFINED\nmodule M where\n#endif"
+        """
+        {-# language CPP #-}
+        #ifdef UNDEFINED
+        module M where
+        #endif
+        """
         [("/name", "null")]
 
     Spec.it s "preserves line numbers" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef FOO\nimport Fake\n#endif\nx = 0"
+        """
+        {-# language CPP #-}
+        #ifdef FOO
+        import Fake
+        #endif
+        x = 0
+        """
         [("/items/0/location/line", "5")]
 
     Spec.it s "works with elif" $ do
       check
         s
-        "{-# language CPP #-}\n#if 0\nmodule A where\n#elif 1\nmodule B where\n#endif"
+        """
+        {-# language CPP #-}
+        #if 0
+        module A where
+        #elif 1
+        module B where
+        #endif
+        """
         [("/name/value", "\"B\"")]
 
     Spec.it s "skips elif after match" $ do
       check
         s
-        "{-# language CPP #-}\n#if 1\nmodule A where\n#elif 1\nmodule B where\n#endif"
+        """
+        {-# language CPP #-}
+        #if 1
+        module A where
+        #elif 1
+        module B where
+        #endif
+        """
         [("/name/value", "\"A\"")]
 
     Spec.it s "works with else after active ifdef" $ do
       check
         s
-        "{-# language CPP #-}\n#define X\n#ifdef X\nmodule A where\n#else\nmodule B where\n#endif"
+        """
+        {-# language CPP #-}
+        #define X
+        #ifdef X
+        module A where
+        #else
+        module B where
+        #endif
+        """
         [("/name/value", "\"A\"")]
 
     Spec.it s "uses else branch for undefined macros" $ do
       check
         s
-        "{-# language CPP #-}\n#ifdef __GLASGOW_HASKELL__\nmodule GHC where\n#else\nmodule Other where\n#endif"
+        """
+        {-# language CPP #-}
+        #ifdef __GLASGOW_HASKELL__
+        module GHC where
+        #else
+        module Other where
+        #endif
+        """
         [("/name/value", "\"Other\"")]
 
   Spec.describe s "literate" $ do

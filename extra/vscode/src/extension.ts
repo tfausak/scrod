@@ -8,6 +8,7 @@ let panel: vscode.WebviewPanel | undefined;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
 let pendingHtml: string | undefined;
+let previewDocumentUri: vscode.Uri | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
   engine = loadWasmEngine(context.extensionPath);
@@ -36,12 +37,15 @@ export function activate(context: vscode.ExtensionContext): void {
                 syncScroll(editor);
               }
             }
+          } else if (msg.type === "goto") {
+            gotoLocation(msg.line, msg.col);
           }
         });
         panel.onDidDispose(() => {
           panel = undefined;
           webviewReady = false;
           pendingHtml = undefined;
+          previewDocumentUri = undefined;
           clearTimeout(debounceTimer);
         });
       }
@@ -102,6 +106,7 @@ function scheduleUpdate(document: vscode.TextDocument): void {
 
 async function update(document: vscode.TextDocument): Promise<void> {
   if (!panel) return;
+  previewDocumentUri = document.uri;
   panel.title = `Preview: ${path.basename(document.fileName)}`;
   const literate =
     document.languageId === "literate haskell" || extname(document) === ".lhs";
@@ -134,6 +139,26 @@ function syncScroll(editor: vscode.TextEditor): void {
   panel.webview.postMessage({ type: "scroll", line: topLine });
 }
 
+async function gotoLocation(line: number, col: number): Promise<void> {
+  if (!previewDocumentUri) return;
+  const existing = vscode.window.visibleTextEditors.find(
+    (e) => e.document.uri.toString() === previewDocumentUri?.toString()
+  );
+  const document = existing
+    ? existing.document
+    : await vscode.workspace.openTextDocument(previewDocumentUri);
+  const editor = await vscode.window.showTextDocument(
+    document,
+    existing?.viewColumn
+  );
+  const position = new vscode.Position(line - 1, col - 1);
+  editor.selection = new vscode.Selection(position, position);
+  editor.revealRange(
+    new vscode.Range(position, position),
+    vscode.TextEditorRevealType.InCenterIfOutsideViewport
+  );
+}
+
 function getNonce(): string {
   return crypto.randomBytes(16).toString("hex");
 }
@@ -146,6 +171,7 @@ function wrapperHtml(): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
+  <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>
   <script nonce="${nonce}">
@@ -180,6 +206,22 @@ function wrapperHtml(): string {
         document.body.innerHTML = doc.body.innerHTML;
         document.documentElement.scrollTop = scrollTop;
       }
+
+      document.addEventListener('click', function(event) {
+        var target = event.target;
+        while (target && target !== document.body) {
+          if (target.classList && target.classList.contains('item-location')) {
+            var line = parseInt(target.getAttribute('data-line'), 10);
+            var col = parseInt(target.getAttribute('data-col'), 10);
+            if (line && col) {
+              event.preventDefault();
+              vscode.postMessage({ type: 'goto', line: line, col: col });
+            }
+            return;
+          }
+          target = target.parentElement;
+        }
+      });
 
       function scrollToLine(line) {
         var elements = document.querySelectorAll('[data-line]');

@@ -654,16 +654,23 @@ lineAttribute :: Location.Location -> Attribute.Attribute
 lineAttribute loc =
   Xml.attribute "data-line" (show (Line.unwrap (Location.line loc)))
 
+columnAttribute :: Location.Location -> Attribute.Attribute
+columnAttribute loc =
+  Xml.attribute "data-col" (show (Column.unwrap (Location.column loc)))
+
 locationElement :: Location.Location -> Element.Element
-locationElement (Location.MkLocation (Line.MkLine l) (Column.MkColumn c)) =
+locationElement loc =
   Xml.element
     "span"
-    [Xml.attribute "class" "item-location"]
+    [ Xml.attribute "class" "item-location",
+      lineAttribute loc,
+      columnAttribute loc
+    ]
     [ Xml.text
         ( Text.pack " (line "
-            <> Text.pack (show l)
+            <> Text.pack (show (Line.unwrap (Location.line loc)))
             <> Text.pack ", col "
-            <> Text.pack (show c)
+            <> Text.pack (show (Column.unwrap (Location.column loc)))
             <> Text.pack ")"
         )
     ]

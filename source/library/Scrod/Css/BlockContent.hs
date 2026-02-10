@@ -12,15 +12,14 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Block Content
--- Parameterized by item type to avoid circular dependencies.
--- Item.hs uses BlockContent Item.
+-- | CSS Block Content. Parameterized by item type to avoid circular
+-- dependencies. "Scrod.Css.Item" uses @'BlockContent' Item@.
 data BlockContent a
   = ContentDeclaration Declaration.Declaration
   | ContentItem a
   deriving (Eq, Ord, Show)
 
--- | Decode block content, parameterized by item decoder
+-- | Decode block content, parameterized by item decoder.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m a -> Parsec.ParsecT s u m (BlockContent a)
 decode itemParser =
   Parsec.choice
@@ -28,7 +27,7 @@ decode itemParser =
       ContentDeclaration <$> Declaration.decode
     ]
 
--- | Encode block content, parameterized by item encoder
+-- | Encode block content, parameterized by item encoder.
 encode :: (a -> Builder.Builder) -> BlockContent a -> Builder.Builder
 encode encodeItem bc = case bc of
   ContentDeclaration decl -> Declaration.encode decl

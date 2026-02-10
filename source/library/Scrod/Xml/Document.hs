@@ -18,9 +18,8 @@ import qualified Scrod.Xml.Misc as Misc
 import qualified Scrod.Xml.Name as Name
 import qualified Text.Parsec as Parsec
 
--- | XML Document
--- Prolog (misc items) followed by root element
--- No epilog support
+-- | XML Document. Prolog (misc items) followed by root element. No epilog
+-- support.
 data Document = MkDocument
   { prolog :: [Misc.Misc],
     root :: Element.Element

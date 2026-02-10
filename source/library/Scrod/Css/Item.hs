@@ -17,8 +17,7 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Item (top-level or nested)
--- Either a style rule or an at-rule
+-- | CSS Item (top-level or nested). Either a style rule or an at-rule.
 data Item
   = StyleRule Rule.Rule
   | ItemAtRule (AtRule.AtRule Item)

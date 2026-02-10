@@ -12,10 +12,8 @@ import qualified Scrod.Spec as Spec
 import qualified Scrod.Xml.Name as Name
 import qualified Text.Parsec as Parsec
 
--- | XML Declaration (for DOCTYPE and similar)
--- <!name value>
--- Similar to Instruction but different delimiters
--- Cannot contain ">"
+-- | XML Declaration (for DOCTYPE and similar), like @\<!name value>@. Similar
+-- to 'Instruction' but different delimiters. Cannot contain @>@.
 data Declaration = MkDeclaration
   { name :: Name.Name,
     value :: Text.Text

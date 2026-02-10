@@ -13,8 +13,8 @@ import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | XML text content with entity support
--- Entities: &amp; &lt; &gt; &apos; &quot; &#123; &#x1a;
+-- | XML text content with entity support. Entities: @&amp;@, @&lt;@, @&gt;@,
+-- @&apos;@, @&quot;@, @\&#12;@, @\&#x9a;@.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Text.Text
 decode = Text.pack <$> Parsec.many decodeChar
 

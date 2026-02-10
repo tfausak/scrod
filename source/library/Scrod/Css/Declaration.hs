@@ -11,8 +11,7 @@ import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | CSS Declaration
--- property: value or property: value !important
+-- | CSS Declaration like @property: value@ or @property: value !important@.
 data Declaration = MkDeclaration
   { property :: Name.Name,
     value :: Text.Text,
@@ -20,8 +19,7 @@ data Declaration = MkDeclaration
   }
   deriving (Eq, Ord, Show)
 
--- | Decode a declaration
--- property : value [!important] [;]
+-- | Decode a declaration: @property : value [!important] [;]@.
 decode :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m Declaration
 decode = do
   _ <- Parsec.many Parsec.blank
@@ -34,8 +32,8 @@ decode = do
   _ <- Parsec.optional $ Parsec.char ';'
   pure $ MkDeclaration prop val imp
 
--- | Decode a value, returning (value, isImportant)
--- Handles quoted strings to correctly find the end
+-- | Decode a value, returning @(value, isImportant)@. Handles quoted strings
+-- to correctly find the end.
 decodeValue :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m (Text.Text, Bool)
 decodeValue = do
   chars <- decodeValueChars
@@ -45,7 +43,7 @@ decodeValue = do
     then fail "empty value"
     else pure (val, imp)
 
--- | Decode value characters, handling quoted strings
+-- | Decode value characters, handling quoted strings.
 decodeValueChars :: (Parsec.Stream s m Char) => Parsec.ParsecT s u m String
 decodeValueChars = concat <$> Parsec.many decodeValuePart
 
@@ -57,7 +55,7 @@ decodeValuePart =
       (: []) <$> Parsec.satisfy (\c -> c /= ';' && c /= '}' && c /= '"' && c /= '\'')
     ]
 
--- | Decode a quoted string including the quotes
+-- | Decode a quoted string including the quotes.
 decodeQuotedString :: (Parsec.Stream s m Char) => Char -> Parsec.ParsecT s u m String
 decodeQuotedString q = do
   _ <- Parsec.char q
@@ -65,7 +63,7 @@ decodeQuotedString q = do
   _ <- Parsec.char q
   pure $ q : (concat chars <> [q])
 
--- | Extract !important suffix from value
+-- | Extract @!important@ suffix from value.
 extractImportant :: Text.Text -> (Text.Text, Bool)
 extractImportant t =
   let lower = Text.toLower t

@@ -11,9 +11,7 @@ import qualified Scrod.Extra.Semigroup as Semigroup
 import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 
--- | XML Comment
--- <!-- comment text -->
--- Cannot contain "-->"
+-- | XML Comment like @\<!-- comment text -->@. Cannot contain @-->@.
 newtype Comment = MkComment
   { unwrap :: Text.Text
   }

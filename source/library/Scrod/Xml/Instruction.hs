@@ -12,11 +12,9 @@ import qualified Scrod.Spec as Spec
 import qualified Scrod.Xml.Name as Name
 import qualified Text.Parsec as Parsec
 
--- | XML Processing Instruction
--- <?name value?>
--- If value is empty, no space after the name
--- Otherwise there must be a space after the name
--- Cannot contain "?>"
+-- | XML Processing Instruction, like @\<?name value?>@. If value is empty, no
+-- space after the name. Otherwise there must be a space after the name. Cannot
+-- contain @?>@.
 data Instruction = MkInstruction
   { name :: Name.Name,
     value :: Text.Text

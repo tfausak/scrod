@@ -83,7 +83,7 @@ allocateKeyM = State.state allocateKey
 runConvert :: ConvertM a -> a
 runConvert = flip State.evalState initialState
 
--- | Convert a parsed GHC module to the internal Module type.
+-- | Convert a parsed GHC module to the internal 'Module' type.
 fromGhc ::
   ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension]),
     SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
@@ -105,13 +105,13 @@ fromGhc ((language, extensions), lHsModule) = do
         Module.items = extractItems lHsModule
       }
 
--- | Convert base version to our Version type.
+-- | Convert base version to our 'Version' type.
 versionFromBase :: Data.Version.Version -> Maybe Version.Version
 versionFromBase v = case Data.Version.versionBranch v of
   [] -> Nothing
   x : xs -> (Just . Version.MkVersion) . fmap fromIntegral $ x NonEmpty.:| xs
 
--- | Convert GHC language to our Language type.
+-- | Convert GHC language to our 'Language' type.
 languageFromGhc :: Session.Language -> Language.Language
 languageFromGhc lang =
   Language.MkLanguage . Text.pack $ case lang of
@@ -120,7 +120,7 @@ languageFromGhc lang =
     Session.GHC2021 -> "GHC2021"
     Session.GHC2024 -> "GHC2024"
 
--- | Convert GHC extension to our Extension type.
+-- | Convert GHC extension to our 'Extension' type.
 extensionFromGhc :: GhcExtension.Extension -> Extension.Extension
 extensionFromGhc =
   Extension.MkExtension
@@ -128,7 +128,7 @@ extensionFromGhc =
     . Outputable.showSDocUnsafe
     . Outputable.ppr
 
--- | Convert list of OnOff extensions to a Map.
+-- | Convert list of 'OnOff' extensions to a 'Map'.
 extensionsToMap ::
   [DynFlags.OnOff GhcExtension.Extension] ->
   Map.Map Extension.Extension Bool
@@ -147,14 +147,14 @@ extractModuleName lHsModule = do
       moduleName = moduleNameFromGhc $ SrcLoc.unLoc lModuleName
   locatedFromGhc $ SrcLoc.L srcSpan moduleName
 
--- | Convert GHC module name to our ModuleName type.
+-- | Convert GHC module name to our 'ModuleName' type.
 moduleNameFromGhc :: Syntax.ModuleName -> ModuleName.ModuleName
 moduleNameFromGhc =
   ModuleName.MkModuleName
     . Text.pack
     . Syntax.moduleNameString
 
--- | Convert GHC Located to our Located type.
+-- | Convert GHC Located to our 'Located' type.
 locatedFromGhc :: SrcLoc.Located a -> Maybe (Located.Located a)
 locatedFromGhc (SrcLoc.L srcSpan a) = do
   location <- locationFromSrcSpan srcSpan
@@ -164,7 +164,7 @@ locatedFromGhc (SrcLoc.L srcSpan a) = do
         Located.value = a
       }
 
--- | Convert SrcSpan to our Location type.
+-- | Convert SrcSpan to our 'Location' type.
 locationFromSrcSpan :: SrcLoc.SrcSpan -> Maybe Location.Location
 locationFromSrcSpan srcSpan = case srcSpan of
   SrcLoc.RealSrcSpan realSrcSpan _ ->
@@ -202,7 +202,7 @@ extractRawDocString lHsModule = do
       hsDocString = HsDoc.hsDocString hsDoc
   Just $ DocString.renderHsDocString hsDocString
 
--- | Convert a Haddock MetaSince to a Scrod Since.
+-- | Convert a Haddock MetaSince to our 'Since'.
 metaSinceToSince :: Haddock.MetaSince -> Maybe Since.Since
 metaSinceToSince metaSince = do
   versionNE <- NonEmpty.nonEmpty $ Haddock.sinceVersion metaSince
@@ -226,7 +226,7 @@ extractModuleWarning lHsModule = do
   let warningTxt = SrcLoc.unLoc lWarningTxt
   Just $ warningTxtToWarning warningTxt
 
--- | Convert GHC WarningTxt to our Warning type.
+-- | Convert GHC WarningTxt to our 'Warning' type.
 warningTxtToWarning :: Warnings.WarningTxt Ghc.GhcPs -> Warning.Warning
 warningTxtToWarning warningTxt =
   Warning.MkWarning
@@ -237,7 +237,7 @@ warningTxtToWarning warningTxt =
           $ Warnings.warningTxtMessage warningTxt
     }
 
--- | Convert GHC WarningCategory to our Category type.
+-- | Convert GHC WarningCategory to our 'Category' type.
 categoryFromGhc :: Warnings.WarningCategory -> Category.Category
 categoryFromGhc =
   Category.MkCategory
@@ -266,7 +266,7 @@ extractModuleExports lHsModule = do
   let exports = SrcLoc.unLoc lExports
   Just $ fmap convertIE exports
 
--- | Convert an IE (import/export) entry to our Export type.
+-- | Convert an IE (import/export) entry to our 'Export' type.
 convertIE ::
   SrcLoc.GenLocated l (Syntax.IE Ghc.GhcPs) ->
   Export.Export
@@ -351,7 +351,7 @@ convertExportWarning ::
   Maybe Warning.Warning
 convertExportWarning = fmap (warningTxtToWarning . SrcLoc.unLoc)
 
--- | Convert a wrapped name to our ExportName type.
+-- | Convert a wrapped name to our 'ExportName' type.
 convertWrappedName ::
   SrcLoc.GenLocated l (ImpExp.IEWrappedName Ghc.GhcPs) ->
   ExportName.ExportName
@@ -411,13 +411,13 @@ convertExportDoc lDoc =
       rendered = DocString.renderHsDocString hsDocString
    in parseDoc rendered
 
--- | Convert a located HsDoc to our Doc type.
+-- | Convert a located HsDoc to our 'Doc' type.
 convertLHsDoc ::
   SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
   Doc.Doc
 convertLHsDoc = convertExportDoc
 
--- | Parse documentation string to our Doc type.
+-- | Parse documentation string to our 'Doc' type.
 parseDoc :: String -> Doc.Doc
 parseDoc input =
   let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
@@ -502,7 +502,7 @@ applyPrevDoc prevDoc ((existingDoc, lDecl) : rest) = case SrcLoc.unLoc lDecl of
   Syntax.DocD {} -> (existingDoc, lDecl) : applyPrevDoc prevDoc rest
   _ -> (appendDoc existingDoc prevDoc, lDecl) : rest
 
--- | Append two Doc values.
+-- | Append two 'Doc' values.
 appendDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
 appendDoc Doc.Empty d = d
 appendDoc d Doc.Empty = d

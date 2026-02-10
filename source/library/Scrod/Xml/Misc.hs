@@ -14,8 +14,8 @@ import qualified Scrod.Xml.Instruction as Instruction
 import qualified Scrod.Xml.Name as Name
 import qualified Text.Parsec as Parsec
 
--- | XML Misc (what can appear in the prolog)
--- Comments, Declarations, and Processing Instructions
+-- | XML Misc (what can appear in the prolog). Comments, Declarations, and
+-- Processing Instructions.
 data Misc
   = Comment Comment.Comment
   | Declaration Declaration.Declaration

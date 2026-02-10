@@ -1023,7 +1023,7 @@ h98ArgsToDoc details = case details of
     Just
       . Outputable.hsep
       . List.intersperse (Outputable.text "->")
-      $ fmap (\f -> Outputable.ppr (Syntax.cdf_type f)) fields
+      $ fmap (Outputable.ppr . Syntax.cdf_type) fields
   Syntax.InfixCon l r ->
     Just $
       Outputable.ppr (Syntax.cdf_type l)

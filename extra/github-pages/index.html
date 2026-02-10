@@ -9,27 +9,32 @@
 </head>
 
 <body>
-  <div class='pane input-pane'>
-    <label for='source' class='sr-only'>Haskell source code</label>
-    <textarea id='source' placeholder='Enter Haskell source...' spellcheck='false'></textarea>
+  <div class='toolbar'>
+    <label for='format' class='sr-only'>Output format</label>
+    <select id='format'>
+      <option value='html' selected>HTML</option>
+      <option value='json'>JSON</option>
+    </select>
+    <label><input type='checkbox' id='literate'> Literate</label>
+    <label for='theme' class='sr-only'>Color scheme</label>
+    <select id='theme'>
+      <option value='auto' selected>Auto</option>
+      <option value='light'>Light</option>
+      <option value='dark'>Dark</option>
+    </select>
+    <button type='button' id='file-button' class='file-button'>Upload file</button>
+    <input type='file' id='file-input' accept='.hs,.lhs'>
   </div>
-  <div class='pane output-pane'>
-    <div class='toolbar'>
-      <label for='format' class='sr-only'>Output format</label>
-      <select id='format'>
-        <option value='html' selected>HTML</option>
-        <option value='json'>JSON</option>
-      </select>
-      <label><input type='checkbox' id='literate'> Literate</label>
-      <label for='theme' class='sr-only'>Color scheme</label>
-      <select id='theme'>
-        <option value='auto' selected>Auto</option>
-        <option value='light'>Light</option>
-        <option value='dark'>Dark</option>
-      </select>
+  <div class='panes'>
+    <div class='pane input-pane'>
+      <label for='source' class='sr-only'>Haskell source code</label>
+      <textarea id='source' placeholder='Enter Haskell source...' spellcheck='false'></textarea>
     </div>
-    <div id='output' role='region' aria-live='polite' aria-label='Output'></div>
+    <div class='pane output-pane'>
+      <div id='output' role='region' aria-live='polite' aria-label='Output'></div>
+    </div>
   </div>
+  <div id='drop-overlay' class='drop-overlay' aria-hidden='true'>Drop Haskell file here</div>
   <script src='index.js'></script>
 </body>
 

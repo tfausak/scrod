@@ -1094,9 +1094,14 @@ extractSigName sig = case sig of
   Syntax.ClassOpSig _ _ (lName : _) _ -> Just $ extractIdPName lName
   _ -> Nothing
 
--- | Extract signature text from a Sig.
+-- | Extract signature text from a Sig. Only returns the type part, not the
+-- name. For example, @x :: Int@ produces @"Int"@.
 extractSigSignature :: Syntax.Sig Ghc.GhcPs -> Maybe Text.Text
-extractSigSignature = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
+extractSigSignature sig = case sig of
+  Syntax.TypeSig _ _ ty -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr ty
+  Syntax.PatSynSig _ _ ty -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr ty
+  Syntax.ClassOpSig _ _ _ ty -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr ty
+  _ -> Nothing
 
 -- | Extract name from an instance declaration.
 extractInstDeclName :: Syntax.InstDecl Ghc.GhcPs -> Maybe ItemName.ItemName

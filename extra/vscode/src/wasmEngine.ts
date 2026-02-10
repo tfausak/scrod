@@ -36,7 +36,9 @@ export async function loadWasmEngine(extensionPath: string): Promise<Process> {
     )
   );
 
-  const wasmBuffer = fs.readFileSync(path.join(wasmDir, "scrod-wasm.wasm"));
+  const wasmBuffer = await fs.promises.readFile(
+    path.join(wasmDir, "scrod-wasm.wasm")
+  );
   const result = await WebAssembly.instantiate(wasmBuffer, {
     wasi_snapshot_preview1: wasi.wasiImport,
     ghc_wasm_jsffi: jsffi,

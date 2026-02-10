@@ -1950,5 +1950,5 @@ checkHtml s arguments input = do
       . Main.mainWith "scrod-test-suite" ("--format" : "html" : arguments)
       $ pure input
   output <- either (Spec.assertFailure s) pure result
-  Monad.when (null $ Builder.toString output)
-    $ Spec.assertFailure s "expected non-empty HTML output"
+  Monad.when (null $ Builder.toString output) $
+    Spec.assertFailure s "expected non-empty HTML output"

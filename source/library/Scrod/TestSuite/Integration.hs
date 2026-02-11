@@ -958,7 +958,20 @@ spec s = Spec.describe s "integration" $ do
       check s "{-# language TypeFamilies #-} data family F" [("/items/0/value/kind", "\"DataFamily\"")]
 
     Spec.it s "type synonym" $ do
-      check s "type G = ()" [("/items/0/value/kind", "\"TypeSynonym\"")]
+      check
+        s
+        "type G = ()"
+        [ ("/items/0/value/kind", "\"TypeSynonym\""),
+          ("/items/0/value/signature", "\"= ()\"")
+        ]
+
+    Spec.it s "type synonym with type variable" $ do
+      check
+        s
+        "type G a = [a]"
+        [ ("/items/0/value/kind", "\"TypeSynonym\""),
+          ("/items/0/value/signature", "\"a = [a]\"")
+        ]
 
     Spec.it s "data" $ do
       check s "data H" [("/items/0/value/kind", "\"DataType\"")]

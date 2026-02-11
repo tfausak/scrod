@@ -11,4 +11,5 @@
         - MultilineStrings
         - RankNTypes
         - ScopedTypeVariables
+        - TemplateHaskell
         - TemplateHaskellQuotes

@@ -14,6 +14,9 @@ extra-doc-files:
   CHANGELOG.md
   README.md
 
+extra-source-files:
+  extra/bootstrap/bootstrap.min.css
+
 source-repository head
   location: https://github.com/tfausak/scrod
   type: git
@@ -84,6 +87,7 @@ library
   -- cabal-gild: discover source/library
   exposed-modules:
     Scrod
+    Scrod.Bootstrap
     Scrod.Convert.FromGhc
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml

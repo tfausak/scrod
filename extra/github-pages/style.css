@@ -23,7 +23,7 @@
   }
 }
 
-[data-theme="dark"] {
+[data-bs-theme="dark"] {
   --app-bg: #121212;
   --app-text: #ddd;
   --app-border: #444;
@@ -32,7 +32,7 @@
   color-scheme: dark;
 }
 
-[data-theme="light"] {
+[data-bs-theme="light"] {
   --app-bg: white;
   --app-text: #333;
   --app-border: #ccc;

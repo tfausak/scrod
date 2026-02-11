@@ -99,6 +99,8 @@ headElement m =
       Content.Element $
         Xml.element "style" [] [Xml.raw Bootstrap.css],
       Content.Element $
+        Xml.element "style" [] [Xml.raw $ Text.pack ".container{overflow-wrap:anywhere}"],
+      Content.Element $
         Xml.element
           "script"
           []

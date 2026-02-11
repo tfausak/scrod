@@ -170,7 +170,7 @@ function fetchUrl(url) {
   }).catch(function (err) {
     if (err.name !== 'AbortError') {
       if (err instanceof TypeError) {
-        showError('Failed to fetch URL (possible CORS issue). Try prepending a proxy: https://corsproxy.io/?');
+        showError('Failed to fetch URL (possible CORS issue). Try a proxy: https://corsproxy.io/?url=' + encodeURIComponent(url));
       } else {
         showError('Failed to fetch URL: ' + err.message);
       }

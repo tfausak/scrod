@@ -129,6 +129,19 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/value/value", "\"x\"")
         ]
 
+    Spec.it s "strips module qualifier from identifier" $ do
+      check
+        s
+        """
+        -- | 'A.b'
+        module M where
+        """
+        [ ("/documentation/type", "\"Paragraph\""),
+          ("/documentation/value/type", "\"Identifier\""),
+          ("/documentation/value/value/namespace", "null"),
+          ("/documentation/value/value/value", "\"b\"")
+        ]
+
     Spec.it s "works with a value identifier" $ do
       check
         s

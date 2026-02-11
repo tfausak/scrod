@@ -29,8 +29,15 @@ convertIdentifier ns str =
   Just
     Identifier.MkIdentifier
       { Identifier.namespace = convertNamespace ns,
-        Identifier.value = Text.pack str
+        Identifier.value = stripQualifier $ Text.pack str
       }
+
+-- | Strips the module qualifier from an identifier. For example, @A.b@
+-- becomes @b@ and @Data.List.map@ becomes @map@.
+stripQualifier :: Text.Text -> Text.Text
+stripQualifier t =
+  let (_, name) = Text.breakOnEnd (Text.singleton '.') t
+   in if Text.null name then t else name
 
 convertNamespace :: Haddock.Namespace -> Maybe Namespace.Namespace
 convertNamespace ns = case ns of
@@ -150,6 +157,12 @@ spec s = do
 
     Spec.it s "works with type identifier" $ do
       Spec.assertEq s (fromHaddock . Haddock._doc $ Haddock.parseParas Nothing "t'z'") . Doc.Paragraph . Doc.Identifier . Identifier.MkIdentifier (Just Namespace.Type) $ Text.pack "z"
+
+    Spec.it s "strips module qualifier from identifier" $ do
+      Spec.assertEq s (fromHaddock . Haddock._doc $ Haddock.parseParas Nothing "'A.b'") . Doc.Paragraph . Doc.Identifier . Identifier.MkIdentifier Nothing $ Text.pack "b"
+
+    Spec.it s "strips deep module qualifier from identifier" $ do
+      Spec.assertEq s (fromHaddock . Haddock._doc $ Haddock.parseParas Nothing "'Data.List.map'") . Doc.Paragraph . Doc.Identifier . Identifier.MkIdentifier Nothing $ Text.pack "map"
 
     Spec.it s "works with module" $ do
       let input :: Haddock.DocH Void.Void Haddock.Identifier

@@ -1,5 +1,6 @@
 module Scrod.TestSuite.All where
 
+import qualified Scrod.Cabal
 import qualified Scrod.Convert.FromHaddock
 import qualified Scrod.Cpp
 import qualified Scrod.Cpp.Directive
@@ -55,6 +56,7 @@ import qualified Scrod.Xml.Text
 
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
+  Scrod.Cabal.spec s
   Scrod.Convert.FromHaddock.spec s
   Scrod.Cpp.spec s
   Scrod.Cpp.Directive.spec s

@@ -209,7 +209,19 @@ function wrapperHtml(): string {
         var scrollTop = document.documentElement.scrollTop;
         document.body.innerHTML = doc.body.innerHTML;
         document.documentElement.scrollTop = scrollTop;
+        syncTheme();
       }
+
+      function syncTheme() {
+        var isDark = document.body.classList.contains('vscode-dark')
+          || document.body.classList.contains('vscode-high-contrast');
+        document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+      }
+
+      syncTheme();
+
+      new MutationObserver(function() { syncTheme(); })
+        .observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
       document.addEventListener('click', function(event) {
         var target = event.target;

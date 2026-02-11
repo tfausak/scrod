@@ -1,11 +1,20 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Convert literate Haskell source to plain Haskell.
+--
+-- Supports both bird-track (@>@) and LaTeX (@\\begin{code}@ ... @\\end{code}@)
+-- styles. Non-code lines are replaced with blank lines to preserve line
+-- numbering in the output.
 module Scrod.Unlit where
 
 import qualified Control.Monad as Monad
 import qualified Data.Char as Char
 import qualified Scrod.Spec as Spec
 
+-- | Strip literate markup from the input, returning plain Haskell source.
+-- Returns 'Left' with an error message if the input is malformed (e.g.,
+-- unterminated LaTeX blocks, bird tracks adjacent to comments, or no code
+-- at all).
 unlit :: String -> Either String String
 unlit input = do
   let ls = lines input
@@ -39,7 +48,7 @@ data LineClass
   | BeginCode
   | EndCode
   | Comment
-  deriving (Eq)
+  deriving (Eq, Ord, Show)
 
 classifyLine :: String -> LineClass
 classifyLine line
@@ -49,6 +58,8 @@ classifyLine line
   | matchesDelimiter "\\end{code}" line = EndCode
   | otherwise = Comment
 
+-- | Check whether a line starts with the given LaTeX delimiter, ignoring
+-- leading whitespace and case.
 matchesDelimiter :: String -> String -> Bool
 matchesDelimiter delim line =
   let stripped = dropWhile Char.isSpace line

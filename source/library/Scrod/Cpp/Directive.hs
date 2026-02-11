@@ -1,6 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Parsing of C preprocessor directives.
+--
+-- Recognizes the conditional-compilation directives (@#if@, @#ifdef@,
+-- @#ifndef@, @#elif@, @#else@, @#endif@), macro definitions (@#define@,
+-- @#undef@), and lumps everything else (e.g., @#include@, @#error@) into
+-- 'Other'. Leading whitespace and whitespace between @#@ and the keyword
+-- are tolerated.
 module Scrod.Cpp.Directive where
 
 import qualified Control.Monad as Monad
@@ -14,11 +21,15 @@ data Directive
   | Elif String
   | Else
   | Endif
-  | Define String (Maybe String)
+  | -- | A @#define@ with a macro name and an optional replacement value.
+    Define String (Maybe String)
   | Undef String
-  | Other
-  deriving (Eq, Show)
+  | -- | Any directive not specifically recognized (e.g., @#include@, @#error@).
+    Other
+  deriving (Eq, Ord, Show)
 
+-- | Try to parse a single line as a CPP directive. Returns 'Nothing' if the
+-- line does not start with @#@ (after optional whitespace).
 parse :: String -> Maybe Directive
 parse = either (const Nothing) Just . Parsec.parse directive ""
 

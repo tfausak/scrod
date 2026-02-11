@@ -1,5 +1,11 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | A minimal C preprocessor for Haskell source.
+--
+-- Processes @#if@\/@#ifdef@\/@#ifndef@\/@#elif@\/@#else@\/@#endif@, @#define@,
+-- and @#undef@. Directive lines are replaced with blank lines to preserve
+-- line numbering. Unrecognized directives (e.g., @#include@) are silently
+-- blanked out.
 module Scrod.Cpp where
 
 import qualified Data.Map.Strict as Map
@@ -8,11 +14,16 @@ import qualified Scrod.Cpp.Directive as Directive
 import qualified Scrod.Cpp.Expr as Expr
 import qualified Scrod.Spec as Spec
 
+-- | State of a branch in a @#if@\/@#elif@\/@#else@ chain.
+--
+-- * 'Active' — this branch's condition was true; output its lines.
+-- * 'Inactive' — condition was false; may still activate on a later @#elif@\/@#else@.
+-- * 'Done' — a previous branch in this chain already activated; skip the rest.
 data Branch
   = Active
   | Inactive
   | Done
-  deriving (Eq)
+  deriving (Eq, Ord, Show)
 
 data State = MkState
   { defines :: Map.Map String String,

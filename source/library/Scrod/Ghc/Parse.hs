@@ -86,7 +86,7 @@ discoverExtensionsIO ::
   IO (Maybe Flags.Language, [DynFlags.OnOff Extension.Extension])
 discoverExtensionsIO cabalOptions stringBuffer = do
   logger <- Logger.initLogger
-  (dynFlags, _, _) <- Session.parseDynamicFilePragma logger DynFlags.empty $ cabalOptions ++ discoverOptions stringBuffer
+  (dynFlags, _, _) <- Session.parseDynamicFilePragma logger DynFlags.empty $ cabalOptions <> discoverOptions stringBuffer
   pure (DynFlags.language dynFlags, DynFlags.extensions dynFlags)
 
 discoverOptions :: StringBuffer.StringBuffer -> [SrcLoc.Located String]

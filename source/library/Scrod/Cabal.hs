@@ -27,9 +27,8 @@ import qualified Scrod.Spec as Spec
 -- | Discover extension names from a Cabal script header, if present.
 -- Returns extension names like @["TemplateHaskell", "GADTs"]@.
 discoverExtensions :: String -> [String]
-discoverExtensions source = case extractHeader source of
-  Nothing -> []
-  Just content -> parseDefaultExtensions content
+discoverExtensions source =
+  foldMap parseDefaultExtensions (extractHeader source)
 
 -- | Extract the content of a @{- cabal: ... -}@ block.
 --
@@ -47,7 +46,7 @@ extractHeader = findStart . lines
 
     collectBody _ [] = Nothing
     collectBody acc (l : ls)
-      | isEndMarker l = Just $ unlines $ reverse acc
+      | isEndMarker l = Just . unlines $ reverse acc
       | otherwise = collectBody (l : acc) ls
 
     isStartMarker = (== "{- cabal:") . stripTrailingSpace

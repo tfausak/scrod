@@ -218,6 +218,8 @@ function wrapperHtml(): string {
         document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
       }
 
+      syncTheme();
+
       new MutationObserver(function() { syncTheme(); })
         .observe(document.body, { attributes: true, attributeFilter: ['class'] });
 

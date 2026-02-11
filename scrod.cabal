@@ -177,6 +177,7 @@ library
     Scrod.Json.Object
     Scrod.Json.Pair
     Scrod.Json.String
+    Scrod.Json.ToJson
     Scrod.Json.Value
     Scrod.JsonPointer.Evaluate
     Scrod.JsonPointer.Pointer

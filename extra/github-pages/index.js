@@ -51,11 +51,7 @@ function syncShadowTheme() {
 })();
 
 function applyTheme(value) {
-  if (value === 'auto') {
-    document.documentElement.removeAttribute('data-bs-theme');
-  } else {
-    document.documentElement.setAttribute('data-bs-theme', value);
-  }
+  document.documentElement.setAttribute('data-bs-theme', effectiveTheme());
   syncShadowTheme();
   if (value === 'auto') {
     localStorage.removeItem('scrod-theme');
@@ -66,6 +62,7 @@ function applyTheme(value) {
 
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
   if (theme.value === 'auto') {
+    document.documentElement.setAttribute('data-bs-theme', effectiveTheme());
     syncShadowTheme();
   }
 });
@@ -295,8 +292,8 @@ document.addEventListener('dragend', function () {
 var savedTheme = localStorage.getItem('scrod-theme');
 if (savedTheme === 'light' || savedTheme === 'dark') {
   theme.value = savedTheme;
-  applyTheme(savedTheme);
 }
+applyTheme(theme.value);
 
 // Load content from URL hash on startup
 if (location.hash.length > 1) {

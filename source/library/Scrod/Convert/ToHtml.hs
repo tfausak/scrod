@@ -644,7 +644,6 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
               <> sigBeforeKind
               <> [Content.Element kindElement]
               <> sigAfterKind
-              <> [Content.Element keyElement]
               <> [Content.Element (locationElement loc)]
               <> docContents'
           )
@@ -691,13 +690,6 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
                   [Xml.attribute "class" "font-monospace"]
                   [Xml.text (prefix <> sig)]
             ]
-
-    keyElement :: Element.Element
-    keyElement =
-      Xml.element
-        "span"
-        [Xml.attribute "class" "text-body-tertiary small ms-2"]
-        [Xml.text (Text.pack "#" <> Text.pack (show (ItemKey.unwrap key)))]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of

@@ -43,16 +43,6 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import qualified Scrod.Css.AtRule as CssAtRule
-import qualified Scrod.Css.Block as CssBlock
-import qualified Scrod.Css.BlockContent as CssBlockContent
-import qualified Scrod.Css.Declaration as CssDeclaration
-import qualified Scrod.Css.Item as CssItem
-import qualified Scrod.Css.Name as CssName
-import qualified Scrod.Css.Rule as CssRule
-import qualified Scrod.Css.Selector as CssSelector
-import qualified Scrod.Css.Stylesheet as CssStylesheet
-import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Xml.Attribute as Attribute
 import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Declaration as XmlDeclaration
@@ -102,7 +92,19 @@ headElement m =
       Content.Element $
         Xml.element "title" [] [Xml.text (moduleTitle m)],
       Content.Element $
-        Xml.element "style" [] [Xml.raw Bootstrap.css, Xml.raw . Builder.toText $ CssStylesheet.encode stylesheet]
+        Xml.element "style" [] [Xml.raw Bootstrap.css],
+      Content.Element $
+        Xml.element
+          "script"
+          []
+          [ Xml.raw . Text.pack $
+              concat
+                [ "if(matchMedia('(prefers-color-scheme:dark)').matches)",
+                  "document.documentElement.dataset.bsTheme='dark';",
+                  "matchMedia('(prefers-color-scheme:dark)').onchange=",
+                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light'"
+                ]
+          ]
     ]
 
 bodyElement :: Module.Module -> Element.Element
@@ -647,7 +649,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     nameContents = case maybeName of
       Nothing -> []
       Just (ItemName.MkItemName n) ->
-        [Content.Element $ Xml.element "span" [Xml.attribute "class" "font-monospace fw-bold fs-6 scrod-code-color"] [Xml.text n]]
+        [Content.Element $ Xml.element "span" [Xml.attribute "class" "font-monospace fw-bold fs-6 text-success"] [Xml.text n]]
 
     isTypeVarSignature :: Bool
     isTypeVarSignature = case itemKind of
@@ -809,14 +811,14 @@ docToContents doc = case doc of
   Doc.AName t ->
     [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->
-    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "scrod-property"] [Xml.text t]]
+    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle p-3 my-3"] [Xml.text t]]
   Doc.Examples es -> [Content.Element (examplesToHtml es)]
   Doc.Header h -> [Content.Element (headerToHtml h)]
   Doc.Table t -> [Content.Element (tableToHtml t)]
 
 identifierToHtml :: Identifier.Identifier -> Element.Element
 identifierToHtml (Identifier.MkIdentifier ns val) =
-  Xml.element "code" [Xml.attribute "class" "font-monospace scrod-code-color"] [Xml.text (prefix <> val)]
+  Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text (prefix <> val)]
   where
     prefix :: Text.Text
     prefix = case ns of
@@ -826,7 +828,7 @@ identifierToHtml (Identifier.MkIdentifier ns val) =
 
 modLinkToHtml :: ModLink.ModLink Doc.Doc -> Element.Element
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =
-  Xml.element "code" [Xml.attribute "class" "font-monospace scrod-module-color"] $
+  Xml.element "code" [Xml.attribute "class" "font-monospace text-info"] $
     maybe [Xml.text modName] docToContents maybeLabel
 
 hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Element.Element
@@ -848,7 +850,7 @@ examplesToHtml :: [Example.Example] -> Element.Element
 examplesToHtml examples =
   Xml.element
     "div"
-    [Xml.attribute "class" "scrod-examples"]
+    [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle p-3 my-3"]
     (concatMap exampleToContents examples)
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
@@ -929,51 +931,3 @@ tableToHtml (Table.MkTable headerRows bodyRows) =
       [ Xml.attribute "colspan" (show c),
         Xml.attribute "rowspan" (show r)
       ]
-
--- CSS stylesheet
-
-stylesheet :: CssStylesheet.Stylesheet
-stylesheet =
-  CssStylesheet.MkStylesheet
-    [ rule
-        [":root"]
-        [ ("--scrod-code-color", "#006600"),
-          ("--scrod-module-color", "#660066"),
-          ("--scrod-examples-bg", "#fffef0"),
-          ("--scrod-examples-border", "#e6db74"),
-          ("--scrod-property-bg", "#f0f8ff"),
-          ("--scrod-property-border", "#4169e1")
-        ],
-      rule [".scrod-code-color"] [("color", "var(--scrod-code-color)")],
-      rule [".scrod-module-color"] [("color", "var(--scrod-module-color)")],
-      rule [".scrod-examples"] [("background", "var(--scrod-examples-bg)"), ("border-left", "4px solid var(--scrod-examples-border)"), ("padding", "1rem"), ("margin", "1rem 0")],
-      rule [".scrod-property"] [("background", "var(--scrod-property-bg)"), ("border-left", "4px solid var(--scrod-property-border)"), ("padding", "1rem"), ("margin", "1rem 0"), ("overflow-x", "auto")],
-      rule ["details > summary"] [("cursor", "pointer")],
-      mediaRule
-        "(prefers-color-scheme: dark)"
-        [ rule
-            [":root"]
-            [ ("--scrod-code-color", "#66cc66"),
-              ("--scrod-module-color", "#cc66cc"),
-              ("--scrod-examples-bg", "#2a2800"),
-              ("--scrod-examples-border", "#e6db74"),
-              ("--scrod-property-bg", "#1a2233"),
-              ("--scrod-property-border", "#6b8ef0")
-            ]
-        ]
-    ]
-
-rule :: [String] -> [(String, String)] -> CssItem.Item
-rule selectors declarations =
-  CssItem.StyleRule $
-    CssRule.MkRule
-      (fmap (CssSelector.MkSelector . Text.pack) selectors)
-      (fmap (\(p, v) -> CssDeclaration.MkDeclaration (CssName.MkName $ Text.pack p) (Text.pack v) False) declarations)
-
-mediaRule :: String -> [CssItem.Item] -> CssItem.Item
-mediaRule query items =
-  CssItem.ItemAtRule $
-    CssAtRule.MkAtRule
-      (CssName.MkName $ Text.pack "media")
-      (Text.pack query)
-      (Just $ CssBlock.MkBlock (fmap CssBlockContent.ContentItem items))

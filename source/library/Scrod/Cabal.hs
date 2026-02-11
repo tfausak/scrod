@@ -11,6 +11,11 @@
 --
 -- This module extracts and parses that header using @Cabal-syntax@ to
 -- discover extension names, which are then used during GHC parsing.
+--
+-- The extraction logic mirrors @extractScriptBlock@ from
+-- @cabal-install@'s @Distribution.Client.ScriptUtils@: both the
+-- @{- cabal:@ start marker and the @-}@ end marker must appear on
+-- their own lines (trailing whitespace is tolerated).
 module Scrod.Cabal where
 
 import qualified Data.ByteString.Char8 as Char8
@@ -26,46 +31,29 @@ discoverExtensions source = case extractHeader source of
   Nothing -> []
   Just content -> parseDefaultExtensions content
 
--- | Extract the content of a @{- cabal: ... -}@ block comment header.
--- Returns the text between @cabal:@ and the matching @-}@.
+-- | Extract the content of a @{- cabal: ... -}@ block.
+--
+-- Matches @cabal-install@'s @extractScriptBlock@: the start marker
+-- @{- cabal:@ and end marker @-}@ must each appear on their own line
+-- (with optional trailing whitespace). Lines before the start marker
+-- are skipped, so shebangs are handled naturally.
 extractHeader :: String -> Maybe String
-extractHeader source = do
-  let rest0 = skipShebang source
-  let rest1 = dropWhile Char.isSpace rest0
-  rest2 <- List.stripPrefix "{-" rest1
-  let rest3 = dropWhile Char.isSpace rest2
-  rest4 <- stripCaseInsensitivePrefix "cabal:" rest3
-  (content, _) <- matchClose 0 rest4
-  Just content
+extractHeader = findStart . lines
+  where
+    findStart [] = Nothing
+    findStart (l : ls)
+      | isStartMarker l = collectBody [] ls
+      | otherwise = findStart ls
 
--- | Skip a shebang line (@#!@) if present at the start of the source.
-skipShebang :: String -> String
-skipShebang ('#' : '!' : rest) = drop 1 $ dropWhile (/= '\n') rest
-skipShebang s = s
+    collectBody _ [] = Nothing
+    collectBody acc (l : ls)
+      | isEndMarker l = Just $ unlines $ reverse acc
+      | otherwise = collectBody (l : acc) ls
 
--- | Strip a case-insensitive prefix from a string.
-stripCaseInsensitivePrefix :: String -> String -> Maybe String
-stripCaseInsensitivePrefix [] s = Just s
-stripCaseInsensitivePrefix _ [] = Nothing
-stripCaseInsensitivePrefix (p : ps) (c : cs)
-  | Char.toLower p == Char.toLower c = stripCaseInsensitivePrefix ps cs
-  | otherwise = Nothing
+    isStartMarker = (== "{- cabal:") . stripTrailingSpace
+    isEndMarker = (== "-}") . stripTrailingSpace
 
--- | Find the matching @-}@ for a block comment, handling nested @{- -}@
--- pairs. Returns @(content, rest)@ where content is everything before the
--- closing @-}@ and rest is everything after.
-matchClose :: Int -> String -> Maybe (String, String)
-matchClose 0 ('-' : '}' : rest) = Just ([], rest)
-matchClose n ('{' : '-' : rest) = do
-  (inner, after) <- matchClose (n + 1) rest
-  (more, final) <- matchClose n after
-  Just ("{-" ++ inner ++ "-}" ++ more, final)
-matchClose n ('-' : '}' : rest)
-  | n > 0 = Just ([], rest)
-matchClose n (c : rest) = do
-  (content, after) <- matchClose n rest
-  Just (c : content, after)
-matchClose _ [] = Nothing
+    stripTrailingSpace = List.dropWhileEnd Char.isSpace
 
 -- | Parse @default-extensions@ values from Cabal field content.
 parseDefaultExtensions :: String -> [String]
@@ -123,10 +111,16 @@ spec s = do
         )
         ["TemplateHaskell"]
 
-    Spec.it s "is case-insensitive on cabal prefix" $ do
+    Spec.it s "returns empty when markers are not on their own lines" $ do
       Spec.assertEq
         s
-        (discoverExtensions "{- Cabal:\ndefault-extensions: TemplateHaskell\n-}")
+        (discoverExtensions "{- cabal: default-extensions: TemplateHaskell -}")
+        []
+
+    Spec.it s "tolerates trailing whitespace on markers" $ do
+      Spec.assertEq
+        s
+        (discoverExtensions "{- cabal:  \ndefault-extensions: TemplateHaskell\n-}  ")
         ["TemplateHaskell"]
 
   Spec.named s 'extractHeader $ do
@@ -137,10 +131,13 @@ spec s = do
       Spec.assertEq s (extractHeader "{- not cabal -}") Nothing
 
     Spec.it s "extracts header content" $ do
-      Spec.assertEq s (extractHeader "{- cabal:\nbuild-depends: base\n-}") (Just "\nbuild-depends: base\n")
+      Spec.assertEq s (extractHeader "{- cabal:\nbuild-depends: base\n-}") (Just "build-depends: base\n")
 
     Spec.it s "handles shebang" $ do
-      Spec.assertEq s (extractHeader "#!/usr/bin/env cabal\n{- cabal: x -}") (Just " x ")
+      Spec.assertEq s (extractHeader "#!/usr/bin/env cabal\n{- cabal:\nx\n-}") (Just "x\n")
 
-    Spec.it s "handles nested block comments" $ do
-      Spec.assertEq s (extractHeader "{- cabal: {- nested -} rest -}") (Just " {- nested -} rest ")
+    Spec.it s "returns Nothing for unclosed block" $ do
+      Spec.assertEq s (extractHeader "{- cabal:\nbuild-depends: base") Nothing
+
+    Spec.it s "skips non-marker lines before the header" $ do
+      Spec.assertEq s (extractHeader "-- a comment\n{- cabal:\nx\n-}") (Just "x\n")

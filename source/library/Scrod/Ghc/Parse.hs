@@ -1,5 +1,14 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Parse Haskell source into a GHC AST without a full GHC session.
+--
+-- Bootstraps a minimal set of GHC internals ('DynFlags.empty',
+-- 'ParserOpts.fromExtensions') to run the GHC lexer and parser
+-- stand-alone. The pipeline is:
+--
+-- 1. Discover @LANGUAGE@ pragmas and extensions from the source.
+-- 2. If CPP is enabled, preprocess with 'Cpp.cpp'.
+-- 3. Parse into @HsModule GhcPs@ using GHC's parser.
 module Scrod.Ghc.Parse where
 
 import qualified Control.Monad.Catch as Exception

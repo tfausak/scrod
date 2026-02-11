@@ -1,3 +1,4 @@
+-- | Construct GHC 'Lexer.ParserOpts' from a set of language extensions.
 module Scrod.Ghc.ParserOpts where
 
 import qualified GHC.Data.EnumSet as EnumSet

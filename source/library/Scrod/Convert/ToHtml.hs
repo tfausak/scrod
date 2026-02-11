@@ -1,3 +1,8 @@
+-- | Render a 'Module.Module' as a self-contained HTML document.
+--
+-- Produces a complete @\<html\>@ document with an inline Bootstrap 5
+-- stylesheet and semantic markup. The output uses the custom XML types
+-- in @Scrod.Xml.*@ and can be serialized with 'Xml.encode'.
 module Scrod.Convert.ToHtml where
 
 import qualified Data.Bifunctor as Bifunctor

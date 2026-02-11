@@ -7,9 +7,11 @@
 - extensions:
     - default: false
     - name:
+        - DerivingVia
         - FlexibleContexts
         - MultilineStrings
         - RankNTypes
         - ScopedTypeVariables
+        - StandaloneDeriving
         - TemplateHaskell
         - TemplateHaskellQuotes

@@ -15,6 +15,7 @@ data Config = MkConfig
   { format :: Format.Format,
     help :: Bool,
     literate :: Bool,
+    schema :: Bool,
     signature :: Bool,
     version :: Bool
   }
@@ -38,6 +39,11 @@ applyFlag config flag = case flag of
     Just string -> do
       bool <- Read.readM string
       pure config {literate = bool}
+  Flag.Schema maybeString -> case maybeString of
+    Nothing -> pure config {schema = True}
+    Just string -> do
+      bool <- Read.readM string
+      pure config {schema = bool}
   Flag.Signature maybeString -> case maybeString of
     Nothing -> pure config {signature = True}
     Just string -> do
@@ -55,6 +61,7 @@ initial =
     { format = Format.Json,
       help = False,
       literate = False,
+      schema = False,
       signature = False,
       version = False
     }
@@ -90,6 +97,19 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Literate $ Just "invalid"]) Nothing
+
+    Spec.describe s "schema" $ do
+      Spec.it s "works with nothing" $ do
+        Spec.assertEq s (fromFlags [Flag.Schema Nothing]) $ Just initial {schema = True}
+
+      Spec.it s "works with just false" $ do
+        Spec.assertEq s (fromFlags [Flag.Schema $ Just "False"]) $ Just initial
+
+      Spec.it s "works with just true" $ do
+        Spec.assertEq s (fromFlags [Flag.Schema $ Just "True"]) $ Just initial {schema = True}
+
+      Spec.it s "fails with just invalid" $ do
+        Spec.assertEq s (fromFlags [Flag.Schema $ Just "invalid"]) Nothing
 
     Spec.describe s "signature" $ do
       Spec.it s "works with nothing" $ do

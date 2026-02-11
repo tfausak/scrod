@@ -12,6 +12,7 @@ data Flag
   = Format String
   | Help (Maybe String)
   | Literate (Maybe String)
+  | Schema (Maybe String)
   | Signature (Maybe String)
   | Version (Maybe String)
   deriving (Eq, Ord, Show)
@@ -30,6 +31,7 @@ optDescrs =
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
     GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
     GetOpt.Option [] ["literate"] (GetOpt.OptArg Literate "BOOL") "Treats the input as Literate Haskell.",
+    GetOpt.Option [] ["schema"] (GetOpt.OptArg Schema "BOOL") "Shows the JSON output schema.",
     GetOpt.Option [] ["signature"] (GetOpt.OptArg Signature "BOOL") "Treats the input as a Backpack signature."
   ]
 
@@ -68,6 +70,13 @@ spec s = do
 
       Spec.it s "works with an argument" $ do
         Spec.assertEq s (fromArguments ["--literate="]) $ Just [Literate $ Just ""]
+
+    Spec.describe s "schema" $ do
+      Spec.it s "works with no argument" $ do
+        Spec.assertEq s (fromArguments ["--schema"]) $ Just [Schema Nothing]
+
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--schema="]) $ Just [Schema $ Just ""]
 
     Spec.describe s "signature" $ do
       Spec.it s "works with no argument" $ do

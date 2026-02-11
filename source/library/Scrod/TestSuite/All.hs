@@ -1,6 +1,7 @@
 module Scrod.TestSuite.All where
 
 import qualified Scrod.Convert.FromHaddock
+import qualified Scrod.Convert.ToJsonSchema
 import qualified Scrod.Cpp
 import qualified Scrod.Cpp.Directive
 import qualified Scrod.Cpp.Expr
@@ -56,6 +57,7 @@ import qualified Scrod.Xml.Text
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Scrod.Convert.FromHaddock.spec s
+  Scrod.Convert.ToJsonSchema.spec s
   Scrod.Cpp.spec s
   Scrod.Cpp.Directive.spec s
   Scrod.Cpp.Expr.spec s

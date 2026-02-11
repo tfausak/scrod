@@ -103,13 +103,22 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with cabal script header" $ do
       check
         s
-        "{- cabal:\ndefault-extensions: CPP\n-}"
+        """
+        {- cabal:
+        default-extensions: CPP
+        -}
+        """
         [("/extensions/Cpp", "true")]
 
     Spec.it s "works with cabal script header and pragma" $ do
       check
         s
-        "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language DeriveGeneric #-}"
+        """
+        {- cabal:
+        default-extensions: CPP
+        -}
+        {-# language DeriveGeneric #-}
+        """
         [ ("/extensions/Cpp", "true"),
           ("/extensions/DeriveGeneric", "true")
         ]
@@ -117,7 +126,12 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "works with cabal script header with shebang" $ do
       check
         s
-        "#!/usr/bin/env cabal\n{- cabal:\ndefault-extensions: CPP\n-}"
+        """
+        #!/usr/bin/env cabal
+        {- cabal:
+        default-extensions: CPP
+        -}
+        """
         [("/extensions/Cpp", "true")]
 
   Spec.describe s "documentation" $ do

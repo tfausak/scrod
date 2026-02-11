@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | CLI flag parsing via 'GetOpt'.
 module Scrod.Executable.Flag where
 
 import qualified Control.Monad.Catch as Exception

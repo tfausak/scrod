@@ -1,3 +1,8 @@
+-- | Render a 'Module.Module' as a JSON value.
+--
+-- Each @Scrod.Core.*@ type has a corresponding @*ToJson@ function that
+-- produces a 'Json.Value'. The output uses the custom JSON types in
+-- @Scrod.Json.*@ and can be serialized with 'Json.encode'.
 module Scrod.Convert.ToJson where
 
 import qualified Data.List.NonEmpty as NonEmpty

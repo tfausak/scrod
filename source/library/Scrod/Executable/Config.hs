@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | CLI configuration record, built from parsed 'Flag.Flag' values.
 module Scrod.Executable.Config where
 
 import qualified Control.Monad as Monad

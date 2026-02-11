@@ -1,5 +1,6 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Output format selection (@html@ or @json@).
 module Scrod.Executable.Format where
 
 import qualified Control.Monad.Catch as Exception

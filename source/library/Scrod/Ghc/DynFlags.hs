@@ -1,5 +1,13 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | A minimal 'DynFlags.DynFlags' stub sufficient for parsing.
+--
+-- GHC's parser requires a 'DynFlags' value, but most fields are irrelevant
+-- for parsing alone. This module constructs one where only the fields
+-- actually accessed during parsing (e.g., 'DynFlags.extensions',
+-- 'DynFlags.language') have real values; everything else throws
+-- 'Uninitialized.Uninitialized' if accessed, which makes it obvious when
+-- a new GHC version starts touching an unexpected field.
 module Scrod.Ghc.DynFlags where
 
 import qualified Data.Set as Set

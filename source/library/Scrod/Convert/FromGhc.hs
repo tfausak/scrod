@@ -1,3 +1,10 @@
+-- | Convert a parsed GHC AST into Scrod's core representation.
+--
+-- This is the largest module in the codebase. It walks the GHC 'HsModule'
+-- and translates declarations, exports, imports, documentation, and
+-- source locations into the corresponding @Scrod.Core.*@ types. A
+-- 'ConvertM' state monad assigns auto-incrementing 'ItemKey's to each
+-- declaration.
 module Scrod.Convert.FromGhc where
 
 import qualified Control.Monad.Trans.State.Strict as State

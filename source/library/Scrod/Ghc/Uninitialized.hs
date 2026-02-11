@@ -1,3 +1,4 @@
+-- | Exception thrown when an unneeded GHC 'DynFlags' field is accessed.
 module Scrod.Ghc.Uninitialized where
 
 import qualified Control.Monad.Catch as Exception

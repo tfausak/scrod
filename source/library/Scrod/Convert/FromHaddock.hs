@@ -1,5 +1,10 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Convert Haddock's documentation AST (@DocH@) into Scrod's 'Doc.Doc' type.
+--
+-- The Haddock parser produces @DocH Void Identifier@ nodes; this module
+-- maps each node kind (paragraphs, code blocks, identifiers, hyperlinks,
+-- examples, tables, etc.) to the corresponding @Scrod.Core.*@ constructors.
 module Scrod.Convert.FromHaddock where
 
 import qualified Data.Bifunctor as Bifunctor

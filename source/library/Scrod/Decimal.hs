@@ -1,5 +1,10 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Normalized decimal numbers represented as mantissa and exponent.
+--
+-- A 'Decimal' value represents the number @mantissa * 10 ^ exponent@.
+-- The smart constructor 'mkDecimal' ensures a canonical form by stripping
+-- trailing zeros from the mantissa (shifting them into the exponent).
 module Scrod.Decimal where
 
 import qualified Data.Function as Function
@@ -11,6 +16,9 @@ data Decimal = MkDecimal
   }
   deriving (Eq, Ord, Show)
 
+-- | Construct a 'Decimal' in canonical form. Trailing zeros in the mantissa
+-- are stripped and absorbed into the exponent. A zero mantissa always yields
+-- @MkDecimal 0 0@ regardless of the exponent.
 mkDecimal :: Integer -> Integer -> Decimal
 mkDecimal = Function.fix $ \rec m e ->
   if m == 0

@@ -1,6 +1,13 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
+-- | Evaluation of C preprocessor @#if@ \/ @#elif@ expressions.
+--
+-- Supports integer literals (decimal and hex), arithmetic operators,
+-- comparisons, logical operators, the @defined@ operator, macro name
+-- lookup, and parenthesized sub-expressions. Undefined identifiers and
+-- unrecognized function-like macro calls evaluate to @0@, matching
+-- standard CPP behavior.
 module Scrod.Cpp.Expr where
 
 import qualified Data.Bool as Bool
@@ -12,6 +19,8 @@ import qualified Scrod.Spec as Spec
 import qualified Text.Parsec as Parsec
 import qualified Text.Parsec.Expr as Expr
 
+-- | Evaluate a CPP expression string in the context of a set of @#define@d
+-- macros. Returns 'Left' on parse errors or division by zero.
 evaluate :: Map.Map String String -> String -> Either String Integer
 evaluate defines input =
   case Parsec.parse (Directive.spaces *> expression defines <* Parsec.eof) "" input of
@@ -22,6 +31,8 @@ evaluate defines input =
 expression :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
 expression = Expr.buildExpressionParser operatorTable . term
 
+-- | Operator precedence table, from highest to lowest:
+-- @*@\/@\/@\/@%@, @+@\/@-@, comparisons, equality, @&&@, @||@.
 operatorTable :: (Parsec.Stream s m Char) => Expr.OperatorTable s u m (Either String Integer)
 operatorTable =
   [ [ infixL "*" $ liftA2 (*),
@@ -55,6 +66,9 @@ infixL s f =
     (f <$ Directive.lexeme (Parsec.string' s))
     Expr.AssocLeft
 
+-- | Parse a term: unary operators (@!@, @-@, @+@), integer literals,
+-- @defined@ expressions, identifiers (with optional function-call syntax),
+-- or parenthesized sub-expressions.
 term :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m (Either String Integer)
 term defines =
   Parsec.choice
@@ -104,6 +118,8 @@ decLiteral = do
   digits <- Parsec.many1 Parsec.digit
   maybe (fail "invalid decimal literal") pure $ Read.readM digits
 
+-- | Parse a @defined NAME@ or @defined(NAME)@ expression. Returns @1@ if the
+-- name is in the defines map, @0@ otherwise.
 definedExpr :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 definedExpr defines = do
   _ <- Parsec.try $ Parsec.string "defined" <* Parsec.notFollowedBy (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
@@ -126,6 +142,9 @@ identName = do
   cs <- Parsec.many (Parsec.choice [Parsec.alphaNum, Parsec.char '_'])
   pure (c : cs)
 
+-- | Parse an identifier and look up its value in the defines map. If followed
+-- by parenthesized arguments (function-like macro call), returns @0@.
+-- Undefined or non-numeric identifiers also evaluate to @0@.
 identifier :: (Parsec.Stream s m Char) => Map.Map String String -> Parsec.ParsecT s u m Integer
 identifier defines = do
   n <- identName
@@ -137,6 +156,8 @@ identifier defines = do
       x <- Map.lookup n defines
       Read.readM x
 
+-- | Skip input until parentheses are balanced. The initial depth should be
+-- @1@ (after consuming the opening @(@).
 consumeBalancedParens :: (Parsec.Stream s m Char) => Int -> Parsec.ParsecT s u m ()
 consumeBalancedParens depth = case depth of
   0 -> pure ()

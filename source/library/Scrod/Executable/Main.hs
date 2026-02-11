@@ -1,3 +1,6 @@
+-- | CLI entry point. Reads Haskell source from stdin, parses it via the
+-- GHC API, converts to Scrod's core representation, and renders as HTML
+-- or JSON to stdout.
 module Scrod.Executable.Main where
 
 import qualified Control.Monad as Monad

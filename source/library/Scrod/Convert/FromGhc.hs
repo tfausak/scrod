@@ -561,6 +561,10 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
     let sig = Just $ extractKindSigSignature kindSig
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Just $ extractStandaloneKindSigName kindSig) sig lDecl
   Syntax.InstD _ inst -> convertInstDeclWithDocM doc lDecl inst
+  Syntax.ForD _ foreignDecl ->
+    let name = Just $ extractForeignDeclName foreignDecl
+        sig = Just $ extractForeignDeclSignature foreignDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc name sig lDecl
   Syntax.SpliceD _ spliceDecl ->
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc Nothing sig lDecl
@@ -1156,6 +1160,7 @@ extractDeclName lDecl = case SrcLoc.unLoc lDecl of
   Syntax.InstD _ inst -> extractInstDeclName inst
   Syntax.DerivD _ derivDecl -> extractDerivDeclName derivDecl
   Syntax.KindSigD _ kindSig -> Just $ extractStandaloneKindSigName kindSig
+  Syntax.ForD _ foreignDecl -> Just $ extractForeignDeclName foreignDecl
   _ -> Nothing
 
 -- | Extract name from a standalone kind signature.
@@ -1216,6 +1221,15 @@ extractSynDeclSignature tyClDecl = case tyClDecl of
 -- | Extract name from a family declaration.
 extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName
 extractFamilyDeclName famDecl = extractIdPName $ Syntax.fdLName famDecl
+
+-- | Extract name from a foreign declaration.
+extractForeignDeclName :: Syntax.ForeignDecl Ghc.GhcPs -> ItemName.ItemName
+extractForeignDeclName foreignDecl = extractIdPName $ Syntax.fd_name foreignDecl
+
+-- | Extract signature from a foreign declaration.
+extractForeignDeclSignature :: Syntax.ForeignDecl Ghc.GhcPs -> Text.Text
+extractForeignDeclSignature foreignDecl =
+  Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ Syntax.fd_sig_ty foreignDecl
 
 -- | Extract name from a binding.
 extractBindName :: Syntax.HsBindLR Ghc.GhcPs Ghc.GhcPs -> Maybe ItemName.ItemName

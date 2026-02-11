@@ -2,9 +2,9 @@
 {- cabal:
 build-depends:
   , base ^>=4.22.0
-  , directory ^>=1.3.9
+  , directory ^>=1.3.10
   , filepath ^>=1.5.4
-  , process ^>=1.6.25
+  , process ^>=1.6.26
 ghc-options: -Wall
 -}
 

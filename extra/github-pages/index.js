@@ -169,7 +169,11 @@ function fetchUrl(url) {
     process(true);
   }).catch(function (err) {
     if (err.name !== 'AbortError') {
-      showError('Failed to fetch URL: ' + err.message);
+      if (err instanceof TypeError) {
+        showError('Failed to fetch URL: ' + err.message + ' (possible CORS issue). Try a proxy: https://corsproxy.io/?url=' + encodeURIComponent(url));
+      } else {
+        showError('Failed to fetch URL: ' + err.message);
+      }
     }
   });
 }

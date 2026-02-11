@@ -11,82 +11,48 @@ var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
 var dropOverlay = document.getElementById('drop-overlay');
 var shadow = output.attachShadow({ mode: 'open' });
-shadow.innerHTML = '<p style="color: #888; font-style: italic">Loading WASM module...</p>';
 var debounceTimer;
 var ready = false;
 
-// Dark mode CSS variable overrides for the shadow DOM.
-// These use :host() selectors to override the generated CSS variables
-// when the user manually picks a theme (instead of "auto").
-var darkVars = [
-  '--scrod-text: #ddd',
-  '--scrod-text-secondary: #aaa',
-  '--scrod-text-muted: #888',
-  '--scrod-bg: #121212',
-  '--scrod-bg-subtle: #2a2a2a',
-  '--scrod-metadata-bg: #1e1e1e',
-  '--scrod-item-bg: #1a1a1a',
-  '--scrod-border: #444',
-  '--scrod-accent: #4da6ff',
-  '--scrod-code-color: #66cc66',
-  '--scrod-module-color: #cc66cc',
-  '--scrod-warning-bg: #3d3000',
-  '--scrod-warning-border: #ffc107',
-  '--scrod-warning-text: #ffd75e',
-  '--scrod-examples-bg: #2a2800',
-  '--scrod-examples-border: #e6db74',
-  '--scrod-property-bg: #1a2233',
-  '--scrod-property-border: #6b8ef0',
-  '--scrod-extension-bg: #3a3a3a',
-  '--scrod-extension-disabled-bg: #3d1a1a',
-  'color-scheme: dark'
-].join('; ');
-var lightVars = [
-  '--scrod-text: #333',
-  '--scrod-text-secondary: #666',
-  '--scrod-text-muted: #999',
-  '--scrod-bg: white',
-  '--scrod-bg-subtle: #f4f4f4',
-  '--scrod-metadata-bg: #f9f9f9',
-  '--scrod-item-bg: #fafafa',
-  '--scrod-border: #ddd',
-  '--scrod-accent: #0066cc',
-  '--scrod-code-color: #006600',
-  '--scrod-module-color: #660066',
-  '--scrod-warning-bg: #fff3cd',
-  '--scrod-warning-border: #ffc107',
-  '--scrod-warning-text: #856404',
-  '--scrod-examples-bg: #fffef0',
-  '--scrod-examples-border: #e6db74',
-  '--scrod-property-bg: #f0f8ff',
-  '--scrod-property-border: #4169e1',
-  '--scrod-extension-bg: #e8e8e8',
-  '--scrod-extension-disabled-bg: #ffebeb',
-  'color-scheme: light'
-].join('; ');
+function bootstrapLink() {
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'vendor/bootstrap.min.css';
+  return link;
+}
 
-function ensureThemeStyle() {
-  if (!shadow.querySelector('#theme-override')) {
-    var style = document.createElement('style');
-    style.id = 'theme-override';
-    style.textContent =
-      ':host(.theme-dark) body { ' + darkVars + ' } ' +
-      ':host(.theme-light) body { ' + lightVars + ' }';
-    shadow.appendChild(style);
+function effectiveTheme() {
+  if (theme.value !== 'auto') return theme.value;
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function setShadowMessage(element) {
+  shadow.textContent = '';
+  shadow.appendChild(bootstrapLink());
+  var wrapper = document.createElement('div');
+  wrapper.setAttribute('data-bs-theme', effectiveTheme());
+  wrapper.appendChild(element);
+  shadow.appendChild(wrapper);
+}
+
+function syncShadowTheme() {
+  var t = effectiveTheme();
+  var els = shadow.querySelectorAll('html, [data-bs-theme]');
+  for (var i = 0; i < els.length; i++) {
+    els[i].setAttribute('data-bs-theme', t);
   }
 }
 
+(function () {
+  var p = document.createElement('p');
+  p.className = 'text-body-secondary fst-italic';
+  p.textContent = 'Loading WASM module...';
+  setShadowMessage(p);
+})();
+
 function applyTheme(value) {
-  if (value === 'auto') {
-    document.documentElement.removeAttribute('data-theme');
-  } else {
-    document.documentElement.setAttribute('data-theme', value);
-  }
-  output.classList.remove('theme-dark', 'theme-light');
-  if (value !== 'auto') {
-    output.classList.add('theme-' + value);
-  }
-  ensureThemeStyle();
+  document.documentElement.setAttribute('data-bs-theme', effectiveTheme());
+  syncShadowTheme();
   if (value === 'auto') {
     localStorage.removeItem('scrod-theme');
   } else {
@@ -94,26 +60,29 @@ function applyTheme(value) {
   }
 }
 
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+  if (theme.value === 'auto') {
+    document.documentElement.setAttribute('data-bs-theme', effectiveTheme());
+    syncShadowTheme();
+  }
+});
+
 function showError(message) {
-  shadow.textContent = '';
   var pre = document.createElement('pre');
-  pre.style.cssText = 'color: #c00; white-space: pre-wrap; font-family: monospace; font-size: 14px';
+  pre.className = 'text-danger font-monospace';
   pre.textContent = message;
-  shadow.appendChild(pre);
-  ensureThemeStyle();
+  setShadowMessage(pre);
 }
 
 function showJson(json) {
-  shadow.textContent = '';
   var pre = document.createElement('pre');
-  pre.style.cssText = 'white-space: pre-wrap; font-family: monospace; font-size: 14px';
+  pre.className = 'font-monospace';
   try {
     pre.textContent = JSON.stringify(JSON.parse(json), null, 2);
   } catch (e) {
     pre.textContent = json;
   }
-  shadow.appendChild(pre);
-  ensureThemeStyle();
+  setShadowMessage(pre);
 }
 
 worker.onmessage = function (e) {
@@ -127,7 +96,7 @@ worker.onmessage = function (e) {
       showJson(msg.value);
     } else {
       shadow.innerHTML = msg.value;
-      ensureThemeStyle();
+      syncShadowTheme();
     }
   } else if (msg.tag === 'error') {
     showError(msg.message);
@@ -185,8 +154,10 @@ function fetchUrl(url) {
     fetchController.abort();
   }
   fetchController = new AbortController();
-  shadow.innerHTML = '<p style="color: #888; font-style: italic">Fetching URL...</p>';
-  ensureThemeStyle();
+  var p = document.createElement('p');
+  p.className = 'text-body-secondary fst-italic';
+  p.textContent = 'Fetching URL...';
+  setShadowMessage(p);
   fetch(url, { signal: fetchController.signal }).then(function (response) {
     if (!response.ok) {
       throw new Error('HTTP ' + response.status + ' ' + response.statusText);
@@ -276,7 +247,8 @@ function hasFiles(e) {
 
 function hideOverlay() {
   dragCounter = 0;
-  dropOverlay.classList.remove('active');
+  dropOverlay.classList.add('d-none');
+  dropOverlay.classList.remove('d-flex');
 }
 
 document.addEventListener('dragenter', function (e) {
@@ -284,7 +256,8 @@ document.addEventListener('dragenter', function (e) {
   e.preventDefault();
   dragCounter++;
   if (dragCounter === 1) {
-    dropOverlay.classList.add('active');
+    dropOverlay.classList.remove('d-none');
+    dropOverlay.classList.add('d-flex');
   }
 });
 
@@ -293,7 +266,8 @@ document.addEventListener('dragleave', function (e) {
   e.preventDefault();
   dragCounter = Math.max(0, dragCounter - 1);
   if (dragCounter === 0) {
-    dropOverlay.classList.remove('active');
+    dropOverlay.classList.add('d-none');
+    dropOverlay.classList.remove('d-flex');
   }
 });
 
@@ -318,8 +292,8 @@ document.addEventListener('dragend', function () {
 var savedTheme = localStorage.getItem('scrod-theme');
 if (savedTheme === 'light' || savedTheme === 'dark') {
   theme.value = savedTheme;
-  applyTheme(savedTheme);
 }
+applyTheme(theme.value);
 
 // Load content from URL hash on startup
 if (location.hash.length > 1) {

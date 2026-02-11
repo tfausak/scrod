@@ -5,37 +5,38 @@
   <meta charset='utf-8'>
   <meta name='viewport' content='initial-scale = 1, width = device-width'>
   <title>Scrod</title>
+  <link rel='stylesheet' href='vendor/bootstrap.min.css'>
   <link rel='stylesheet' href='style.css'>
 </head>
 
-<body>
-  <div class='toolbar'>
-    <label for='format' class='sr-only'>Output format</label>
-    <select id='format'>
+<body class='d-flex flex-column vh-100'>
+  <div class='d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary flex-shrink-0'>
+    <label for='format' class='visually-hidden'>Output format</label>
+    <select id='format' class='form-select form-select-sm w-auto'>
       <option value='html' selected>HTML</option>
       <option value='json'>JSON</option>
     </select>
-    <label><input type='checkbox' id='literate'> Literate</label>
-    <label><input type='checkbox' id='signature'> Signature</label>
-    <label for='theme' class='sr-only'>Color scheme</label>
-    <select id='theme'>
+    <label class='form-check-label'><input type='checkbox' id='literate' class='form-check-input'> Literate</label>
+    <label class='form-check-label'><input type='checkbox' id='signature' class='form-check-input'> Signature</label>
+    <label for='theme' class='visually-hidden'>Color scheme</label>
+    <select id='theme' class='form-select form-select-sm w-auto'>
       <option value='auto' selected>Auto</option>
       <option value='light'>Light</option>
       <option value='dark'>Dark</option>
     </select>
-    <button type='button' id='file-button' class='file-button'>Upload file</button>
-    <input type='file' id='file-input' accept='.hs,.lhs,.hsig,.lhsig'>
+    <button type='button' id='file-button' class='btn btn-outline-secondary btn-sm'>Upload file</button>
+    <input type='file' id='file-input' class='visually-hidden' accept='.hs,.lhs,.hsig,.lhsig'>
   </div>
-  <div class='panes'>
-    <div class='pane input-pane'>
-      <label for='source' class='sr-only'>Haskell source code or URL</label>
-      <textarea id='source' placeholder='Enter Haskell source or a URL...' spellcheck='false'></textarea>
+  <div class='d-flex flex-grow-1 overflow-hidden'>
+    <div class='w-50 h-100 overflow-auto border-end'>
+      <label for='source' class='visually-hidden'>Haskell source code or URL</label>
+      <textarea id='source' class='w-100 h-100 border-0 font-monospace small bg-body text-body p-3' placeholder='Enter Haskell source or a URL...' spellcheck='false'></textarea>
     </div>
-    <div class='pane output-pane'>
-      <div id='output' role='region' aria-live='polite' aria-label='Output'></div>
+    <div class='w-50 h-100 d-flex flex-column'>
+      <div id='output' class='flex-grow-1 overflow-auto p-3' role='region' aria-live='polite' aria-label='Output'></div>
     </div>
   </div>
-  <div id='drop-overlay' class='drop-overlay' aria-hidden='true'>Drop Haskell file here</div>
+  <div id='drop-overlay' class='drop-overlay d-none position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center fs-4 text-primary pe-none' aria-hidden='true'>Drop Haskell file here</div>
   <script src='index.js'></script>
 </body>
 

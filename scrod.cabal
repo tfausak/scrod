@@ -14,6 +14,9 @@ extra-doc-files:
   CHANGELOG.md
   README.md
 
+extra-source-files:
+  extra/bootstrap/bootstrap.min.css
+
 source-repository head
   location: https://github.com/tfausak/scrod
   type: git
@@ -72,6 +75,7 @@ library
   build-depends:
     bytestring ^>=0.12.2,
     containers ^>=0.8,
+    directory ^>=1.3.10,
     exceptions ^>=0.10.11,
     ghc ^>=9.14.1,
     ghc-boot-th ^>=9.14.1,
@@ -84,6 +88,7 @@ library
   -- cabal-gild: discover source/library
   exposed-modules:
     Scrod
+    Scrod.Bootstrap
     Scrod.Convert.FromGhc
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml
@@ -148,6 +153,7 @@ library
     Scrod.Extra.Parsec
     Scrod.Extra.Read
     Scrod.Extra.Semigroup
+    Scrod.Extra.TemplateHaskell
     Scrod.Ghc.ArchOS
     Scrod.Ghc.DynFlags
     Scrod.Ghc.FileSettings

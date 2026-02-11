@@ -1,17 +1,20 @@
 cabal-version: 3.12
 name: scrod
 version: 0.2026.2.11
-synopsis: TODO
+synopsis: Worse Haskell documentation
 description:
-  TODO
-  TODO
+  Scrod generates documentation for Haskell modules, similar to Haddock. Unlike
+  Haddock, it only parses the input rather than requiring a full build. This
+  makes it faster but less accurate.
 
 category: Documentation
+homepage: https://scrod.fyi
 license: 0BSD
 license-file: LICENSE.txt
 maintainer: Taylor Fausak
 extra-doc-files:
   CHANGELOG.md
+  CONTRIBUTING.md
   README.md
 
 extra-source-files:

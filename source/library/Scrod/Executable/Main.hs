@@ -11,6 +11,7 @@ import qualified Data.Bifunctor as Bifunctor
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
+import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc as FromGhc
 import qualified Scrod.Convert.ToHtml as ToHtml
 import qualified Scrod.Convert.ToJson as ToJson
@@ -18,6 +19,7 @@ import qualified Scrod.Executable.Config as Config
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
 import qualified Scrod.Extra.Either as Either
+import qualified Scrod.Extra.Semigroup as Semigroup
 import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Unlit as Unlit
@@ -43,12 +45,15 @@ mainWith ::
 mainWith name arguments myGetContents = ExceptT.runExceptT $ do
   flags <- Trans.lift $ Flag.fromArguments arguments
   config <- Trans.lift $ Config.fromFlags flags
-  Monad.when (Config.help config)
-    . ExceptT.throwE
-    $ GetOpt.usageInfo name Flag.optDescrs
-  Monad.when (Config.version config)
-    . ExceptT.throwE
-    $ Version.showVersion Version.version <> "\n"
+  let version = Version.showVersion Version.version
+  Monad.when (Config.help config) $ do
+    let header =
+          unlines
+            [ unwords [name, "version", version],
+              Semigroup.around "<" ">" PackageInfo.homepage
+            ]
+    ExceptT.throwE $ GetOpt.usageInfo header Flag.optDescrs
+  Monad.when (Config.version config) . ExceptT.throwE $ version <> "\n"
   contents <- Trans.lift myGetContents
   source <-
     if Config.literate config

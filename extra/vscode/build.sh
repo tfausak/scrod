@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 set -o errexit -o nounset -o xtrace
+cd "$( dirname "$0" )"
 npm ci
-tsc --noEmit
+npx tsc --noEmit
 mkdir -p wasm
 cp ../wasm/dist/ghc_wasm_jsffi.js wasm/ghc_wasm_jsffi.mjs
 cp ../wasm/dist/scrod-wasm.wasm wasm/

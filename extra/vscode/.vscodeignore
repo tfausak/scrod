@@ -2,5 +2,5 @@ src/**
 *.ts
 *.vsix
 tsconfig.json
-esbuild.js
 node_modules/**
+build.sh

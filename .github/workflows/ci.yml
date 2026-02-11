@@ -145,15 +145,7 @@ jobs:
         with:
           node-version: 22
       - working-directory: extra/vscode
-        run: npm ci
-      - working-directory: extra/vscode
-        run: npm run copy-wasm
-      - working-directory: extra/vscode
-        run: npm run lint
-      - working-directory: extra/vscode
-        run: npm run build
-      - working-directory: extra/vscode
-        run: npx vsce package --allow-missing-repository
+        run: ./build.sh
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode

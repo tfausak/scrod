@@ -1,5 +1,5 @@
-#!/usr/bin/env bash
-set -o errexit -o nounset -o pipefail
+#!/usr/bin/env sh
+set -o errexit -o nounset -o xtrace
 
 dist=extra/github-pages/dist
 

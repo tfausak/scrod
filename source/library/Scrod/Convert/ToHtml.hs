@@ -656,6 +656,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       ItemKind.DataType -> True
       ItemKind.Newtype -> True
       ItemKind.TypeData -> True
+      ItemKind.TypeSynonym -> True
       ItemKind.Class -> True
       _ -> False
 

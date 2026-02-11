@@ -585,7 +585,7 @@ convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
-  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) Nothing lDecl
+  Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (extractTyClDeclName tyClDecl) (extractSynDeclSignature tyClDecl) lDecl
 
 -- | Convert an instance declaration with documentation.
 convertInstDeclWithDocM ::
@@ -1193,6 +1193,18 @@ tyVarsToText :: Syntax.LHsQTyVars Ghc.GhcPs -> Maybe Text.Text
 tyVarsToText tyVars = case Syntax.hsQTvExplicit tyVars of
   [] -> Nothing
   tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
+
+-- | Extract the signature for a type synonym declaration.
+-- For @type T = ()@, this produces @Just "= ()"@.
+-- For @type T a = [a]@, this produces @Just "a = [a]"@.
+extractSynDeclSignature :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
+extractSynDeclSignature tyClDecl = case tyClDecl of
+  Syntax.SynDecl {Syntax.tcdTyVars = tyVars, Syntax.tcdRhs = rhs} ->
+    let rhsText = Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr rhs
+     in Just $ case tyVarsToText tyVars of
+          Nothing -> Text.pack "= " <> rhsText
+          Just tvs -> tvs <> Text.pack " = " <> rhsText
+  _ -> Nothing
 
 -- | Extract name from a family declaration.
 extractFamilyDeclName :: Syntax.FamilyDecl Ghc.GhcPs -> ItemName.ItemName

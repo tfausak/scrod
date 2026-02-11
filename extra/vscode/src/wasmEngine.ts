@@ -47,7 +47,7 @@ export async function loadWasmEngine(extensionPath: string): Promise<Process> {
   exports = result.instance.exports;
   wasi.initialize(result.instance);
 
-  const scrod = result.instance.exports.scrod as (
+  const scrod = result.instance.exports["scrod"] as (
     args: string[],
     source: string
   ) => Promise<string>;

@@ -153,6 +153,7 @@ library
     Scrod.Extra.Parsec
     Scrod.Extra.Read
     Scrod.Extra.Semigroup
+    Scrod.Extra.TemplateHaskell
     Scrod.Ghc.ArchOS
     Scrod.Ghc.DynFlags
     Scrod.Ghc.FileSettings

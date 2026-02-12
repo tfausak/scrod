@@ -77,11 +77,10 @@ function showError(message) {
 }
 
 function renderMath() {
-  var el = shadow.firstElementChild;
-  if (!el) return;
+  if (!shadow.firstElementChild) return;
   import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
     .then(function (m) {
-      m.default(el, { delimiters: [
+      m.default(shadow, { delimiters: [
         { left: '\\(', right: '\\)', display: false },
         { left: '\\[', right: '\\]', display: true }
       ]});

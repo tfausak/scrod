@@ -7,11 +7,16 @@
 - extensions:
     - default: false
     - name:
+        - DataKinds
+        - DeriveGeneric
         - DerivingVia
         - FlexibleContexts
+        - FlexibleInstances
         - MultilineStrings
         - RankNTypes
         - ScopedTypeVariables
         - StandaloneDeriving
         - TemplateHaskell
         - TemplateHaskellQuotes
+        - TypeOperators
+        - UndecidableInstances

@@ -4,9 +4,11 @@
 
 -- | Render Scrod core types as JSON values via the 'ToJson' class.
 --
--- Simple newtype wrappers use @deriving via@ to get instances for free.
--- More complex types have hand-written instances. Import this module to
--- bring all instances into scope.
+-- Simple newtype wrappers use @deriving via@ the underlying type.
+-- Record types, enum types, and tagged sum types all use
+-- @deriving via 'Generics.Generically'@ to get instances derived
+-- generically. Other types have hand-written instances. Import this
+-- module to bring all instances into scope.
 module Scrod.Convert.ToJson
   ( module Scrod.Json.ToJson,
   )
@@ -15,6 +17,7 @@ where
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
@@ -79,21 +82,69 @@ deriving via Header.Header Doc.Doc instance ToJson Section.Section
 
 deriving via NonEmpty.NonEmpty Natural.Natural instance ToJson Version.Version
 
+-- Record types, enum types, and tagged sum types use
+-- @Generics.Generically@ to derive their instances generically.
+
+deriving via Generics.Generically Example.Example instance ToJson Example.Example
+
+deriving via Generics.Generically ExportIdentifier.ExportIdentifier instance ToJson ExportIdentifier.ExportIdentifier
+
+deriving via Generics.Generically ExportName.ExportName instance ToJson ExportName.ExportName
+
+deriving via Generics.Generically (Header.Header doc) instance (ToJson doc) => ToJson (Header.Header doc)
+
+deriving via Generics.Generically (Hyperlink.Hyperlink doc) instance (ToJson doc) => ToJson (Hyperlink.Hyperlink doc)
+
+deriving via Generics.Generically Identifier.Identifier instance ToJson Identifier.Identifier
+
+deriving via Generics.Generically Import.Import instance ToJson Import.Import
+
+deriving via Generics.Generically Item.Item instance ToJson Item.Item
+
+deriving via Generics.Generically (Located.Located a) instance (ToJson a) => ToJson (Located.Located a)
+
+deriving via Generics.Generically Location.Location instance ToJson Location.Location
+
+deriving via Generics.Generically (ModLink.ModLink doc) instance (ToJson doc) => ToJson (ModLink.ModLink doc)
+
+deriving via Generics.Generically Picture.Picture instance ToJson Picture.Picture
+
+deriving via Generics.Generically Since.Since instance ToJson Since.Since
+
+deriving via Generics.Generically Subordinates.Subordinates instance ToJson Subordinates.Subordinates
+
+deriving via Generics.Generically (Table.Table doc) instance (ToJson doc) => ToJson (Table.Table doc)
+
+deriving via Generics.Generically (TableCell.Cell doc) instance (ToJson doc) => ToJson (TableCell.Cell doc)
+
+deriving via Generics.Generically Warning.Warning instance ToJson Warning.Warning
+
+deriving via Generics.Generically ExportNameKind.ExportNameKind instance ToJson ExportNameKind.ExportNameKind
+
+deriving via Generics.Generically ItemKind.ItemKind instance ToJson ItemKind.ItemKind
+
+deriving via Generics.Generically Namespace.Namespace instance ToJson Namespace.Namespace
+
+deriving via Generics.Generically Export.Export instance ToJson Export.Export
+
+-- Hand-written instances for types that require special encoding.
+
 instance ToJson Module.Module where
   toJson m =
     Json.object
-      [ ("version", toJson $ Module.version m),
-        ("language", toJson $ Module.language m),
-        ("extensions", extensionsToJson $ Module.extensions m),
-        ("documentation", toJson $ Module.documentation m),
-        ("since", toJson $ Module.since m),
-        ("signature", toJson $ Module.signature m),
-        ("name", toJson $ Module.name m),
-        ("warning", toJson $ Module.warning m),
-        ("exports", toJson $ Module.exports m),
-        ("imports", toJson $ Module.imports m),
-        ("items", toJson $ Module.items m)
-      ]
+      . filter (\(_, v) -> v /= Json.null)
+      $ [ ("version", toJson $ Module.version m),
+          ("language", toJson $ Module.language m),
+          ("extensions", extensionsToJson $ Module.extensions m),
+          ("documentation", toJson $ Module.documentation m),
+          ("since", toJson $ Module.since m),
+          ("signature", toJson $ Module.signature m),
+          ("name", toJson $ Module.name m),
+          ("warning", toJson $ Module.warning m),
+          ("exports", toJson $ Module.exports m),
+          ("imports", toJson $ Module.imports m),
+          ("items", toJson $ Module.items m)
+        ]
 
 extensionsToJson :: Map.Map Extension.Extension Bool -> Json.Value
 extensionsToJson =
@@ -129,184 +180,6 @@ instance ToJson Doc.Doc where
     Doc.Examples es -> Json.tagged "Examples" $ toJson es
     Doc.Header h -> Json.tagged "Header" $ toJson h
     Doc.Table t -> Json.tagged "Table" $ toJson t
-
-instance ToJson Import.Import where
-  toJson i =
-    Json.object
-      [ ("name", toJson $ Import.name i),
-        ("package", toJson $ Import.package i),
-        ("alias", toJson $ Import.alias i)
-      ]
-
-instance ToJson Since.Since where
-  toJson s =
-    Json.object
-      [ ("package", toJson $ Since.package s),
-        ("version", toJson $ Since.version s)
-      ]
-
-instance (ToJson a) => ToJson (Located.Located a) where
-  toJson l =
-    Json.object
-      [ ("location", toJson $ Located.location l),
-        ("value", toJson $ Located.value l)
-      ]
-
-instance ToJson Warning.Warning where
-  toJson w =
-    Json.object
-      [ ("category", toJson $ Warning.category w),
-        ("value", Json.text $ Warning.value w)
-      ]
-
-instance ToJson Export.Export where
-  toJson e = case e of
-    Export.Identifier ei -> Json.tagged "Identifier" $ toJson ei
-    Export.Group s -> Json.tagged "Group" $ toJson s
-    Export.Doc d -> Json.tagged "Doc" $ toJson d
-    Export.DocNamed t -> Json.tagged "DocNamed" $ Json.text t
-
-instance ToJson Item.Item where
-  toJson i =
-    Json.object
-      [ ("key", toJson $ Item.key i),
-        ("kind", toJson $ Item.kind i),
-        ("parentKey", toJson $ Item.parentKey i),
-        ("name", toJson $ Item.name i),
-        ("documentation", toJson $ Item.documentation i),
-        ("signature", toJson $ Item.signature i)
-      ]
-
-instance ToJson Location.Location where
-  toJson loc =
-    Json.object
-      [ ("line", toJson $ Location.line loc),
-        ("column", toJson $ Location.column loc)
-      ]
-
-instance ToJson ExportIdentifier.ExportIdentifier where
-  toJson ei =
-    Json.object
-      [ ("name", toJson $ ExportIdentifier.name ei),
-        ("subordinates", toJson $ ExportIdentifier.subordinates ei),
-        ("warning", toJson $ ExportIdentifier.warning ei),
-        ("doc", toJson $ ExportIdentifier.doc ei)
-      ]
-
-instance ToJson ItemKind.ItemKind where
-  toJson k = Json.string $ case k of
-    ItemKind.Annotation -> "Annotation"
-    ItemKind.Class -> "Class"
-    ItemKind.ClassInstance -> "ClassInstance"
-    ItemKind.ClassMethod -> "ClassMethod"
-    ItemKind.ClosedTypeFamily -> "ClosedTypeFamily"
-    ItemKind.DataConstructor -> "DataConstructor"
-    ItemKind.DataFamily -> "DataFamily"
-    ItemKind.DataFamilyInstance -> "DataFamilyInstance"
-    ItemKind.DataType -> "DataType"
-    ItemKind.Default -> "Default"
-    ItemKind.DerivedInstance -> "DerivedInstance"
-    ItemKind.FixitySignature -> "FixitySignature"
-    ItemKind.ForeignExport -> "ForeignExport"
-    ItemKind.ForeignImport -> "ForeignImport"
-    ItemKind.Function -> "Function"
-    ItemKind.GADTConstructor -> "GADTConstructor"
-    ItemKind.InlineSignature -> "InlineSignature"
-    ItemKind.Newtype -> "Newtype"
-    ItemKind.OpenTypeFamily -> "OpenTypeFamily"
-    ItemKind.PatternBinding -> "PatternBinding"
-    ItemKind.PatternSynonym -> "PatternSynonym"
-    ItemKind.RecordField -> "RecordField"
-    ItemKind.Rule -> "Rule"
-    ItemKind.SpecialiseSignature -> "SpecialiseSignature"
-    ItemKind.Splice -> "Splice"
-    ItemKind.StandaloneDeriving -> "StandaloneDeriving"
-    ItemKind.StandaloneKindSig -> "StandaloneKindSig"
-    ItemKind.TypeData -> "TypeData"
-    ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
-    ItemKind.TypeSynonym -> "TypeSynonym"
-
-instance ToJson ExportName.ExportName where
-  toJson en =
-    Json.object
-      [ ("kind", toJson $ ExportName.kind en),
-        ("name", Json.text $ ExportName.name en)
-      ]
-
-instance ToJson Subordinates.Subordinates where
-  toJson s =
-    Json.object
-      [ ("wildcard", toJson $ Subordinates.wildcard s),
-        ("explicit", toJson $ Subordinates.explicit s)
-      ]
-
-instance ToJson ExportNameKind.ExportNameKind where
-  toJson k = Json.string $ case k of
-    ExportNameKind.Module -> "Module"
-    ExportNameKind.Pattern -> "Pattern"
-    ExportNameKind.Type -> "Type"
-
-instance ToJson Namespace.Namespace where
-  toJson ns = Json.string $ case ns of
-    Namespace.Type -> "Type"
-    Namespace.Value -> "Value"
-
-instance ToJson Example.Example where
-  toJson ex =
-    Json.object
-      [ ("expression", Json.text $ Example.expression ex),
-        ("result", Json.arrayOf Json.text $ Example.result ex)
-      ]
-
-instance (ToJson doc) => ToJson (Header.Header doc) where
-  toJson h =
-    Json.object
-      [ ("level", toJson $ Header.level h),
-        ("title", toJson $ Header.title h)
-      ]
-
-instance (ToJson doc) => ToJson (Hyperlink.Hyperlink doc) where
-  toJson h =
-    Json.object
-      [ ("url", Json.text $ Hyperlink.url h),
-        ("label", toJson $ Hyperlink.label h)
-      ]
-
-instance ToJson Identifier.Identifier where
-  toJson i =
-    Json.object
-      [ ("namespace", toJson $ Identifier.namespace i),
-        ("value", Json.text $ Identifier.value i)
-      ]
-
-instance (ToJson doc) => ToJson (ModLink.ModLink doc) where
-  toJson ml =
-    Json.object
-      [ ("name", toJson $ ModLink.name ml),
-        ("label", toJson $ ModLink.label ml)
-      ]
-
-instance ToJson Picture.Picture where
-  toJson p =
-    Json.object
-      [ ("uri", Json.text $ Picture.uri p),
-        ("title", toJson $ Picture.title p)
-      ]
-
-instance (ToJson doc) => ToJson (Table.Table doc) where
-  toJson t =
-    Json.object
-      [ ("headerRows", toJson $ Table.headerRows t),
-        ("bodyRows", toJson $ Table.bodyRows t)
-      ]
-
-instance (ToJson doc) => ToJson (TableCell.Cell doc) where
-  toJson c =
-    Json.object
-      [ ("colspan", Json.integral $ TableCell.colspan c),
-        ("rowspan", Json.integral $ TableCell.rowspan c),
-        ("contents", toJson $ TableCell.contents c)
-      ]
 
 instance ToJson Level.Level where
   toJson l = Json.integer $ case l of

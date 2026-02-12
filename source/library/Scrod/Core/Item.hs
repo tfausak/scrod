@@ -1,6 +1,9 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Scrod.Core.Item where
 
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -14,4 +17,4 @@ data Item = MkItem
     documentation :: Doc.Doc,
     signature :: Maybe Text.Text
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generics.Generic, Ord, Show)

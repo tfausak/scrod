@@ -1,5 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Scrod.Core.Subordinates where
 
+import qualified GHC.Generics as Generics
 import qualified Scrod.Core.ExportName as ExportName
 
 -- | Subordinate exports for a type or class.
@@ -9,4 +12,4 @@ data Subordinates = MkSubordinates
     -- | Explicitly listed children.
     explicit :: [ExportName.ExportName]
   }
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generics.Generic, Ord, Show)

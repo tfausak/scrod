@@ -208,6 +208,16 @@ library
   hs-source-dirs: source/library
   other-modules: PackageInfo_scrod
 
+benchmark scrod-benchmark
+  import: executable
+  build-depends:
+    bytestring ^>=0.12.2,
+    tasty-bench ^>=0.5,
+
+  hs-source-dirs: source/benchmark
+  main-is: Main.hs
+  type: exitcode-stdio-1.0
+
 test-suite scrod-test-suite
   import: executable
   build-depends:

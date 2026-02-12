@@ -7,13 +7,11 @@ import qualified Control.Monad as Monad
 import qualified Control.Monad.Catch as Exception
 import qualified GHC.Stack as Stack
 import qualified Scrod.Executable.Flag as Flag
-import qualified Scrod.Executable.Format as Format
 import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
 
 data Config = MkConfig
-  { format :: Format.Format,
-    help :: Bool,
+  { help :: Bool,
     literate :: Bool,
     schema :: Bool,
     signature :: Bool,
@@ -26,9 +24,6 @@ fromFlags = Monad.foldM applyFlag initial
 
 applyFlag :: (Stack.HasCallStack, Exception.MonadThrow m) => Config -> Flag.Flag -> m Config
 applyFlag config flag = case flag of
-  Flag.Format string -> do
-    fmt <- Format.fromString string
-    pure config {format = fmt}
   Flag.Help maybeString -> case maybeString of
     Nothing -> pure config {help = True}
     Just string -> do
@@ -58,8 +53,7 @@ applyFlag config flag = case flag of
 initial :: Config
 initial =
   MkConfig
-    { format = Format.Json,
-      help = False,
+    { help = False,
       literate = False,
       schema = False,
       signature = False,
@@ -71,19 +65,6 @@ spec s = do
   Spec.named s 'fromFlags $ do
     Spec.it s "works with no flags" $ do
       Spec.assertEq s (fromFlags []) $ Just initial
-
-    Spec.describe s "format" $ do
-      Spec.it s "defaults to json" $ do
-        Spec.assertEq s (fromFlags []) $ Just initial
-
-      Spec.it s "works with json" $ do
-        Spec.assertEq s (fromFlags [Flag.Format "json"]) $ Just initial
-
-      Spec.it s "works with html" $ do
-        Spec.assertEq s (fromFlags [Flag.Format "html"]) $ Just initial {format = Format.Html}
-
-      Spec.it s "fails with invalid format" $ do
-        Spec.assertEq s (fromFlags [Flag.Format "invalid"]) Nothing
 
     Spec.describe s "literate" $ do
       Spec.it s "works with nothing" $ do

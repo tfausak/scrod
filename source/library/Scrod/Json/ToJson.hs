@@ -26,6 +26,9 @@ instance ToJson Bool where
 instance ToJson Text.Text where
   toJson = Json.text
 
+instance ToJson Int where
+  toJson = Json.integral
+
 instance ToJson Natural.Natural where
   toJson = Json.integral
 

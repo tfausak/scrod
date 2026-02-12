@@ -1,6 +1,6 @@
 -- | CLI entry point. Reads Haskell source from stdin, parses it via the
--- GHC API, converts to Scrod's core representation, and renders as HTML
--- or JSON to stdout.
+-- GHC API, converts to Scrod's core representation, and renders as JSON
+-- to stdout.
 module Scrod.Executable.Main where
 
 import qualified Control.Monad as Monad
@@ -13,11 +13,9 @@ import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc as FromGhc
-import qualified Scrod.Convert.ToHtml as ToHtml
 import qualified Scrod.Convert.ToJsonSchema as ToJsonSchema
 import qualified Scrod.Executable.Config as Config
 import qualified Scrod.Executable.Flag as Flag
-import qualified Scrod.Executable.Format as Format
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Either as Either
 import qualified Scrod.Extra.Semigroup as Semigroup
@@ -26,7 +24,6 @@ import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Unlit as Unlit
 import qualified Scrod.Version as Version
-import qualified Scrod.Xml.Document as Xml
 import qualified System.Console.GetOpt as GetOpt
 import qualified System.Environment as Environment
 import qualified System.IO as IO
@@ -66,7 +63,4 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
   let isSignature = Config.signature config
   result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature source
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result
-  let convert = case Config.format config of
-        Format.Json -> Json.encode . ToJson.toJson
-        Format.Html -> Xml.encode . ToHtml.toHtml
-  pure $ convert module_ <> Builder.charUtf8 '\n'
+  pure $ (Json.encode . ToJson.toJson) module_ <> Builder.charUtf8 '\n'

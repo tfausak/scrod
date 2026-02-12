@@ -23,7 +23,6 @@ spec s = Spec.describe s "integration" $ do
       ""
       [ ("/extensions", "{}"),
         ("/documentation/type", "\"Empty\""),
-        ("/documentation/value", "null"),
         ("/imports", "[]"),
         ("/signature", "false"),
         ("/items", "[]")
@@ -299,10 +298,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "1"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "1"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with an ordered list using parens" $ do
@@ -313,10 +312,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "1"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "1"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with an ordered list starting at 2" $ do
@@ -327,10 +326,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "2"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "2"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with a definition list" $ do
@@ -341,10 +340,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"DefList\""),
-          ("/documentation/value/0/0/type", "\"String\""),
-          ("/documentation/value/0/0/value", "\"x\""),
-          ("/documentation/value/0/1/type", "\"String\""),
-          ("/documentation/value/0/1/value", "\"y\"")
+          ("/documentation/value/0/term/type", "\"String\""),
+          ("/documentation/value/0/term/value", "\"x\""),
+          ("/documentation/value/0/definition/type", "\"String\""),
+          ("/documentation/value/0/definition/value", "\"y\"")
         ]
 
     Spec.it s "works with a code block" $ do
@@ -1782,28 +1781,6 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
-  Spec.describe s "html" $ do
-    Spec.it s "generates html without error" $ do
-      checkHtml
-        s
-        []
-        """
-        -- | Module documentation.
-        module M
-          ( -- * Section
-            x
-          ) where
-
-        import Data.List
-
-        -- | A function.
-        x :: Int
-        x = 0
-
-        -- | A data type.
-        data T = C { field :: Bool }
-        """
-
   Spec.describe s "cpp" $ do
     Spec.it s "works with simple ifdef" $ do
       check
@@ -2064,13 +2041,3 @@ checkWith s arguments input assertions = do
           "expected " <> maybe "(nothing)" (Builder.toString . Json.encode) expected,
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
-
-checkHtml :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> m ()
-checkHtml s arguments input = do
-  result <-
-    either (Spec.assertFailure s . Exception.displayException) pure
-      . Main.mainWith "scrod-test-suite" ("--format" : "html" : arguments)
-      $ pure input
-  output <- either (Spec.assertFailure s) pure result
-  Monad.when (null $ Builder.toString output) $
-    Spec.assertFailure s "expected non-empty HTML output"

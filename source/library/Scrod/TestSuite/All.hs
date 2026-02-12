@@ -6,19 +6,9 @@ import qualified Scrod.Convert.ToJsonSchema
 import qualified Scrod.Cpp
 import qualified Scrod.Cpp.Directive
 import qualified Scrod.Cpp.Expr
-import qualified Scrod.Css.AtRule
-import qualified Scrod.Css.Block
-import qualified Scrod.Css.BlockContent
-import qualified Scrod.Css.Declaration
-import qualified Scrod.Css.Item
-import qualified Scrod.Css.Name
-import qualified Scrod.Css.Rule
-import qualified Scrod.Css.Selector
-import qualified Scrod.Css.Stylesheet
 import qualified Scrod.Decimal
 import qualified Scrod.Executable.Config
 import qualified Scrod.Executable.Flag
-import qualified Scrod.Executable.Format
 import qualified Scrod.Extra.Builder
 import qualified Scrod.Extra.Either
 import qualified Scrod.Extra.Maybe
@@ -45,16 +35,6 @@ import qualified Scrod.Spec as Spec
 import qualified Scrod.TestSuite.Integration
 import qualified Scrod.Unlit
 import qualified Scrod.Version
-import qualified Scrod.Xml.Attribute
-import qualified Scrod.Xml.Comment
-import qualified Scrod.Xml.Content
-import qualified Scrod.Xml.Declaration
-import qualified Scrod.Xml.Document
-import qualified Scrod.Xml.Element
-import qualified Scrod.Xml.Instruction
-import qualified Scrod.Xml.Misc
-import qualified Scrod.Xml.Name
-import qualified Scrod.Xml.Text
 
 spec :: (Monad m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -64,18 +44,8 @@ spec s = do
   Scrod.Cpp.spec s
   Scrod.Cpp.Directive.spec s
   Scrod.Cpp.Expr.spec s
-  Scrod.Css.AtRule.spec s
-  Scrod.Css.Block.spec s
-  Scrod.Css.BlockContent.spec s
-  Scrod.Css.Declaration.spec s
-  Scrod.Css.Item.spec s
-  Scrod.Css.Name.spec s
-  Scrod.Css.Rule.spec s
-  Scrod.Css.Selector.spec s
-  Scrod.Css.Stylesheet.spec s
   Scrod.Decimal.spec s
   Scrod.Executable.Config.spec s
-  Scrod.Executable.Format.spec s
   Scrod.Executable.Flag.spec s
   Scrod.Extra.Builder.spec s
   Scrod.Extra.Either.spec s
@@ -102,13 +72,3 @@ spec s = do
   Scrod.TestSuite.Integration.spec s
   Scrod.Unlit.spec s
   Scrod.Version.spec s
-  Scrod.Xml.Attribute.spec s
-  Scrod.Xml.Comment.spec s
-  Scrod.Xml.Content.spec s
-  Scrod.Xml.Declaration.spec s
-  Scrod.Xml.Document.spec s
-  Scrod.Xml.Element.spec s
-  Scrod.Xml.Instruction.spec s
-  Scrod.Xml.Misc.spec s
-  Scrod.Xml.Name.spec s
-  Scrod.Xml.Text.spec s

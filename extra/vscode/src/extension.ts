@@ -1,6 +1,7 @@
 import * as crypto from "crypto";
 import * as vscode from "vscode";
 import * as path from "path";
+import { renderModule } from "../../renderer/dist/renderer.js";
 import { loadWasmEngine } from "./wasmEngine";
 
 let engine: Promise<(source: string, literate: boolean, signature: boolean) => Promise<string>>;
@@ -117,7 +118,9 @@ async function update(document: vscode.TextDocument): Promise<void> {
   let html: string;
   try {
     const process = await engine;
-    html = await process(document.getText(), literate, isSignature);
+    const jsonStr = await process(document.getText(), literate, isSignature);
+    const moduleData = JSON.parse(jsonStr);
+    html = renderModule(moduleData);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message

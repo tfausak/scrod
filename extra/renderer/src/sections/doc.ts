@@ -7,7 +7,7 @@ import type { Doc } from "../types.js";
 /**
  * Escape special HTML characters to prevent injection.
  */
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

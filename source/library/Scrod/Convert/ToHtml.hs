@@ -99,8 +99,6 @@ headElement m =
       Content.Element $
         Xml.element "style" [] [Xml.raw Bootstrap.css],
       Content.Element $
-        Xml.element "style" [] [Xml.raw $ Text.pack ".container{overflow-wrap:anywhere}"],
-      Content.Element $
         Xml.element
           "script"
           []
@@ -122,7 +120,7 @@ bodyElement m =
     [ Content.Element $
         Xml.element
           "div"
-          [Xml.attribute "class" "container py-4"]
+          [Xml.attribute "class" "container py-4 text-break"]
           ( [Content.Element (headerSection m)]
               <> metadataContents m
               <> exportsContents (Module.exports m)

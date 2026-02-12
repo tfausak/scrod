@@ -27,7 +27,7 @@ jobs:
       - run: mkdir artifact
       - run: ghc-pkg list
       - run: cabal sdist --output-dir artifact
-      - run: cabal configure --enable-tests --flags=pedantic --jobs
+      - run: cabal configure --enable-tests --enable-benchmarks --flags=pedantic --jobs
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: cabal freeze
@@ -44,6 +44,7 @@ jobs:
       - run: cabal build
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
+      - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-benchmark ) artifact
       - run: artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }} --schema > artifact/schema.json
         shell: bash
       - run: tar --create --file artifact.tar --verbose artifact
@@ -107,6 +108,23 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
       - run: tar --extract --file artifact.tar --verbose
       - run: artifact/${{ needs.meta.outputs.name }}-test-suite
+  bench:
+    name: Bench
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - meta
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+      - run: tar --extract --file artifact.tar --verbose
+      - run: chmod +x artifact/${{ needs.meta.outputs.name }}-benchmark
+      - run: artifact/${{ needs.meta.outputs.name }}-benchmark --csv bench.csv +RTS -T
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-bench
+          path: bench.csv
   wasm:
     name: WASM
     runs-on: ubuntu-latest

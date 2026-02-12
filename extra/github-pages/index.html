@@ -13,7 +13,7 @@
   <div class='d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary flex-shrink-0'>
     <label for='format' class='visually-hidden'>Output format</label>
     <select id='format' class='form-select form-select-sm w-auto'>
-      <option value='html' selected>HTML</option>
+      <option value='rendered' selected>Rendered</option>
       <option value='json'>JSON</option>
     </select>
     <label class='form-check-label'><input type='checkbox' id='literate' class='form-check-input'> Literate</label>
@@ -37,7 +37,7 @@
     </div>
   </div>
   <div id='drop-overlay' class='drop-overlay d-none position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center fs-4 text-primary pe-none' aria-hidden='true'>Drop Haskell file here</div>
-  <script src='index.js'></script>
+  <script type='module' src='index.js'></script>
 </body>
 
 </html>

@@ -1,5 +1,7 @@
 'use strict';
 
+import { renderModule } from './renderer.js';
+
 var worker = new Worker('worker.js', { type: 'module' });
 var source = document.getElementById('source');
 var output = document.getElementById('output');
@@ -108,12 +110,18 @@ worker.onmessage = function (e) {
     shadow.innerHTML = '';
     process();
   } else if (msg.tag === 'result') {
-    if (msg.format === 'json') {
+    if (format.value === 'json') {
       showJson(msg.value);
     } else {
-      shadow.innerHTML = msg.value;
-      syncShadowTheme();
-      renderMath();
+      // Parse JSON, render to HTML, inject into shadow DOM
+      try {
+        var module = JSON.parse(msg.value);
+        shadow.innerHTML = renderModule(module);
+        syncShadowTheme();
+        renderMath();
+      } catch (e) {
+        showError('Render error: ' + e.message);
+      }
     }
   } else if (msg.tag === 'error') {
     showError(msg.message);
@@ -139,7 +147,7 @@ function decodeHash(hash) {
 function updateHash() {
   if (source.value) {
     var params = new URLSearchParams();
-    if (format.value !== 'html') {
+    if (format.value !== 'rendered') {
       params.set('format', format.value);
     }
     if (literate.checked) {
@@ -202,7 +210,7 @@ function process(skipUrlDetection) {
       fetchUrl(trimmed);
       return;
     }
-    worker.postMessage({ source: source.value, format: format.value, literate: literate.checked, signature: signature.checked });
+    worker.postMessage({ source: source.value, literate: literate.checked, signature: signature.checked });
   }
 }
 
@@ -325,8 +333,8 @@ if (location.hash.length > 1) {
       source.value = decodeHash(params.get('input'));
       if (params.has('format')) {
         var hashFormat = params.get('format');
-        if (hashFormat === 'html' || hashFormat === 'json') {
-          format.value = hashFormat;
+        if (hashFormat === 'rendered' || hashFormat === 'json' || hashFormat === 'html') {
+          format.value = hashFormat === 'html' ? 'rendered' : hashFormat;
         }
       }
       if (params.get('literate') === 'true') {

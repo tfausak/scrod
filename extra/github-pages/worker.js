@@ -53,11 +53,11 @@ onmessage = async function (e) {
   if (scrod) {
     try {
       const msg = e.data;
-      const args = ['--format', msg.format];
+      const args = [];
       if (msg.literate) args.push('--literate');
       if (msg.signature) args.push('--signature');
       const result = await scrod(args, msg.source);
-      postMessage({ tag: 'result', value: result, format: msg.format });
+      postMessage({ tag: 'result', value: result });
     } catch (err) {
       postMessage({ tag: 'error', message: err.message });
     }

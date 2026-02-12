@@ -2042,4 +2042,3 @@ checkWith s arguments input assertions = do
           "expected " <> maybe "(nothing)" (Builder.toString . Json.encode) expected,
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
-

@@ -14,7 +14,7 @@
 -- than values: each instance describes the JSON Schema for the type's
 -- 'ToJson' encoding. An 'Control.Monad.Trans.Accum.Accum' monad
 -- accumulates named definitions (for @$defs@).
-module Scrod.Json.ToSchema where
+module Scrod.Schema where
 
 import qualified Control.Monad.Trans.Accum as Accum
 import qualified Data.Kind as Kind

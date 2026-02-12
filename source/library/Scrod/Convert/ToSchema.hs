@@ -9,10 +9,7 @@
 -- @deriving via 'Generics.Generically'@ to get instances derived
 -- generically. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
-module Scrod.Convert.ToSchema
-  ( module Scrod.Json.ToSchema,
-  )
-where
+module Scrod.Convert.ToSchema where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Proxy as Proxy
@@ -54,108 +51,107 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToSchema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
-import qualified Scrod.Json.ToSchema as ToSchema
 import qualified Scrod.Json.Value as Json
+import qualified Scrod.Schema as Schema
 
 -- * Simple newtype wrappers use @deriving via@ to get their instances
 
 -- from the underlying type.
 
-deriving via Text.Text instance ToSchema Category.Category
+deriving via Text.Text instance Schema.ToSchema Category.Category
 
-deriving via Natural.Natural instance ToSchema Column.Column
+deriving via Natural.Natural instance Schema.ToSchema Column.Column
 
-deriving via Text.Text instance ToSchema Extension.Extension
+deriving via Text.Text instance Schema.ToSchema Extension.Extension
 
-deriving via Text.Text instance ToSchema ItemName.ItemName
+deriving via Text.Text instance Schema.ToSchema ItemName.ItemName
 
-deriving via Natural.Natural instance ToSchema ItemKey.ItemKey
+deriving via Natural.Natural instance Schema.ToSchema ItemKey.ItemKey
 
-deriving via Text.Text instance ToSchema Language.Language
+deriving via Text.Text instance Schema.ToSchema Language.Language
 
-deriving via Natural.Natural instance ToSchema Line.Line
+deriving via Natural.Natural instance Schema.ToSchema Line.Line
 
-deriving via Text.Text instance ToSchema ModuleName.ModuleName
+deriving via Text.Text instance Schema.ToSchema ModuleName.ModuleName
 
-deriving via Text.Text instance ToSchema PackageName.PackageName
+deriving via Text.Text instance Schema.ToSchema PackageName.PackageName
 
-deriving via Header.Header Doc.Doc instance ToSchema Section.Section
+deriving via Header.Header Doc.Doc instance Schema.ToSchema Section.Section
 
-deriving via NonEmpty.NonEmpty Natural.Natural instance ToSchema Version.Version
+deriving via NonEmpty.NonEmpty Natural.Natural instance Schema.ToSchema Version.Version
 
 -- * Record types, enum types, and tagged sum types use
 
 -- @Generics.Generically@ to derive their instances generically.
 
-deriving via Generics.Generically Example.Example instance ToSchema Example.Example
+deriving via Generics.Generically Example.Example instance Schema.ToSchema Example.Example
 
-deriving via Generics.Generically ExportIdentifier.ExportIdentifier instance ToSchema ExportIdentifier.ExportIdentifier
+deriving via Generics.Generically ExportIdentifier.ExportIdentifier instance Schema.ToSchema ExportIdentifier.ExportIdentifier
 
-deriving via Generics.Generically ExportName.ExportName instance ToSchema ExportName.ExportName
+deriving via Generics.Generically ExportName.ExportName instance Schema.ToSchema ExportName.ExportName
 
-deriving via Generics.Generically (Header.Header doc) instance (ToSchema doc) => ToSchema (Header.Header doc)
+deriving via Generics.Generically (Header.Header doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Header.Header doc)
 
-deriving via Generics.Generically (Hyperlink.Hyperlink doc) instance (ToSchema doc) => ToSchema (Hyperlink.Hyperlink doc)
+deriving via Generics.Generically (Hyperlink.Hyperlink doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Hyperlink.Hyperlink doc)
 
-deriving via Generics.Generically Identifier.Identifier instance ToSchema Identifier.Identifier
+deriving via Generics.Generically Identifier.Identifier instance Schema.ToSchema Identifier.Identifier
 
-deriving via Generics.Generically Import.Import instance ToSchema Import.Import
+deriving via Generics.Generically Import.Import instance Schema.ToSchema Import.Import
 
-deriving via Generics.Generically Item.Item instance ToSchema Item.Item
+deriving via Generics.Generically Item.Item instance Schema.ToSchema Item.Item
 
-deriving via Generics.Generically (Located.Located a) instance (ToSchema a) => ToSchema (Located.Located a)
+deriving via Generics.Generically (Located.Located a) instance (Schema.ToSchema a) => Schema.ToSchema (Located.Located a)
 
-deriving via Generics.Generically Location.Location instance ToSchema Location.Location
+deriving via Generics.Generically Location.Location instance Schema.ToSchema Location.Location
 
-deriving via Generics.Generically (ModLink.ModLink doc) instance (ToSchema doc) => ToSchema (ModLink.ModLink doc)
+deriving via Generics.Generically (ModLink.ModLink doc) instance (Schema.ToSchema doc) => Schema.ToSchema (ModLink.ModLink doc)
 
-deriving via Generics.Generically Picture.Picture instance ToSchema Picture.Picture
+deriving via Generics.Generically Picture.Picture instance Schema.ToSchema Picture.Picture
 
-deriving via Generics.Generically Since.Since instance ToSchema Since.Since
+deriving via Generics.Generically Since.Since instance Schema.ToSchema Since.Since
 
-deriving via Generics.Generically Subordinates.Subordinates instance ToSchema Subordinates.Subordinates
+deriving via Generics.Generically Subordinates.Subordinates instance Schema.ToSchema Subordinates.Subordinates
 
-deriving via Generics.Generically (Table.Table doc) instance (ToSchema doc) => ToSchema (Table.Table doc)
+deriving via Generics.Generically (Table.Table doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Table.Table doc)
 
-deriving via Generics.Generically (TableCell.Cell doc) instance (ToSchema doc) => ToSchema (TableCell.Cell doc)
+deriving via Generics.Generically (TableCell.Cell doc) instance (Schema.ToSchema doc) => Schema.ToSchema (TableCell.Cell doc)
 
-deriving via Generics.Generically Warning.Warning instance ToSchema Warning.Warning
+deriving via Generics.Generically Warning.Warning instance Schema.ToSchema Warning.Warning
 
-deriving via Generics.Generically ExportNameKind.ExportNameKind instance ToSchema ExportNameKind.ExportNameKind
+deriving via Generics.Generically ExportNameKind.ExportNameKind instance Schema.ToSchema ExportNameKind.ExportNameKind
 
-deriving via Generics.Generically ItemKind.ItemKind instance ToSchema ItemKind.ItemKind
+deriving via Generics.Generically ItemKind.ItemKind instance Schema.ToSchema ItemKind.ItemKind
 
-deriving via Generics.Generically Namespace.Namespace instance ToSchema Namespace.Namespace
+deriving via Generics.Generically Namespace.Namespace instance Schema.ToSchema Namespace.Namespace
 
-deriving via Generics.Generically Export.Export instance ToSchema Export.Export
+deriving via Generics.Generically Export.Export instance Schema.ToSchema Export.Export
 
 -- * Hand-written instances for types that require special encoding.
 
-instance ToSchema Module.Module where
+instance Schema.ToSchema Module.Module where
   toSchema _ = do
-    version <- toSchema (Proxy.Proxy :: Proxy.Proxy Version.Version)
-    language <- toSchema (Proxy.Proxy :: Proxy.Proxy Language.Language)
+    version <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Version.Version)
+    language <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Language.Language)
     extensions <- extensionsSchema
-    documentation <- toSchema (Proxy.Proxy :: Proxy.Proxy Doc.Doc)
-    since <- toSchema (Proxy.Proxy :: Proxy.Proxy Since.Since)
-    name <- toSchema (Proxy.Proxy :: Proxy.Proxy (Located.Located ModuleName.ModuleName))
-    warning <- toSchema (Proxy.Proxy :: Proxy.Proxy Warning.Warning)
-    exports <- toSchema (Proxy.Proxy :: Proxy.Proxy [Export.Export])
-    imports <- toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
-    items <- toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
+    documentation <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Doc.Doc)
+    since <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Since.Since)
+    name <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Located.Located ModuleName.ModuleName))
+    warning <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Warning.Warning)
+    exports <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Export.Export])
+    imports <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
+    items <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
     let allProps =
-          [ ("version", unwrap version),
-            ("language", unwrap language),
-            ("extensions", unwrap extensions),
-            ("documentation", unwrap documentation),
-            ("since", unwrap since),
+          [ ("version", Schema.unwrap version),
+            ("language", Schema.unwrap language),
+            ("extensions", Schema.unwrap extensions),
+            ("documentation", Schema.unwrap documentation),
+            ("since", Schema.unwrap since),
             ("signature", Json.object [("type", Json.string "boolean")]),
-            ("name", unwrap name),
-            ("warning", unwrap warning),
-            ("exports", unwrap exports),
-            ("imports", unwrap imports),
-            ("items", unwrap items)
+            ("name", Schema.unwrap name),
+            ("warning", Schema.unwrap warning),
+            ("exports", Schema.unwrap exports),
+            ("imports", Schema.unwrap imports),
+            ("items", Schema.unwrap items)
           ]
     let reqNames =
           [ Json.string "version",
@@ -165,7 +161,7 @@ instance ToSchema Module.Module where
             Json.string "imports",
             Json.string "items"
           ]
-    pure . MkSchema $
+    pure . Schema.MkSchema $
       Json.object
         [ ("type", Json.string "object"),
           ("properties", Json.object allProps),
@@ -173,9 +169,9 @@ instance ToSchema Module.Module where
           ("additionalProperties", Json.boolean False)
         ]
 
-extensionsSchema :: SchemaM Schema
+extensionsSchema :: Schema.SchemaM Schema.Schema
 extensionsSchema =
-  pure . MkSchema $
+  pure . Schema.MkSchema $
     Json.object
       [ ("type", Json.string "object"),
         ("additionalProperties", Json.object [("type", Json.string "boolean")])
@@ -184,8 +180,8 @@ extensionsSchema =
 -- | 'Doc.Doc' is recursive, so its schema uses 'define' to register a
 -- named definition in @$defs@ and return a @$ref@. The schema value is
 -- built purely with inline sub-schemas and a self-reference for @Doc@.
-instance ToSchema Doc.Doc where
-  toSchema _ = define "doc" $ pure (MkSchema docSchemaValue)
+instance Schema.ToSchema Doc.Doc where
+  toSchema _ = Schema.define "doc" $ pure (Schema.MkSchema docSchemaValue)
 
 -- | Pure schema value for 'Doc.Doc'. Uses @$ref \"#/$defs/doc\"@ for
 -- self-references and inlines all other sub-schemas.
@@ -298,8 +294,8 @@ docSchemaValue =
 -- | Extract the schema value from a non-recursive 'ToSchema' instance
 -- without the monadic context. Only safe for types whose 'toSchema'
 -- does not depend on accumulated definitions.
-pureSchema :: (ToSchema a) => Proxy.Proxy a -> Json.Value
-pureSchema p = unwrap . fst $ ToSchema.runSchemaM (toSchema p)
+pureSchema :: (Schema.ToSchema a) => Proxy.Proxy a -> Json.Value
+pureSchema p = Schema.unwrap . fst $ Schema.runSchemaM (Schema.toSchema p)
 
 -- | Build an object schema from required properties only (pure helper).
 objectSchemaPure :: [(String, Json.Value)] -> Json.Value
@@ -322,9 +318,9 @@ objectSchemaOptPure required optional =
       ("additionalProperties", Json.boolean False)
     ]
 
-instance ToSchema Level.Level where
+instance Schema.ToSchema Level.Level where
   toSchema _ =
-    pure . MkSchema $
+    pure . Schema.MkSchema $
       Json.object
         [ ("type", Json.string "integer"),
           ("minimum", Json.integer 1),

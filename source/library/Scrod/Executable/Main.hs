@@ -14,7 +14,7 @@ import qualified GHC.Stack as Stack
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc as FromGhc
 import qualified Scrod.Convert.ToHtml as ToHtml
-import qualified Scrod.Convert.ToJson as ToJson
+import qualified Scrod.Convert.ToJson ()
 import qualified Scrod.Convert.ToJsonSchema as ToJsonSchema
 import qualified Scrod.Executable.Config as Config
 import qualified Scrod.Executable.Flag as Flag
@@ -23,6 +23,7 @@ import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Either as Either
 import qualified Scrod.Extra.Semigroup as Semigroup
 import qualified Scrod.Ghc.Parse as Parse
+import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Unlit as Unlit
 import qualified Scrod.Version as Version

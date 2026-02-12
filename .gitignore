@@ -4,6 +4,7 @@
 /a.out
 /cabal.project.*
 /dist-newstyle/
+/extra/renderer/node_modules/
 /extra/vscode/node_modules/
 /extra/vscode/dist/
 /extra/vscode/wasm/

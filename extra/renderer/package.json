@@ -1,0 +1,14 @@
+{
+  "name": "scrod-renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild --bundle --format=esm --outfile=dist/renderer.js src/render.ts",
+    "check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -91,6 +91,14 @@ library
     Scrod
     Scrod.Cabal
     Scrod.Convert.FromGhc
+    Scrod.Convert.FromGhc.Constructors
+    Scrod.Convert.FromGhc.Doc
+    Scrod.Convert.FromGhc.Exports
+    Scrod.Convert.FromGhc.InstanceParents
+    Scrod.Convert.FromGhc.Internal
+    Scrod.Convert.FromGhc.ItemKind
+    Scrod.Convert.FromGhc.Merge
+    Scrod.Convert.FromGhc.Names
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml
     Scrod.Convert.ToJsonSchema

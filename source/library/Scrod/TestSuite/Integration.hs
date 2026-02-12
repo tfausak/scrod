@@ -1648,13 +1648,22 @@ spec s = Spec.describe s "integration" $ do
       check s "default ()" []
 
     Spec.it s "foreign import" $ do
-      check s "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()" []
+      check
+        s
+        "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()"
+        [ ("/items/0/value/kind", "\"ForeignImport\""),
+          ("/items/0/value/name", "\"p\""),
+          ("/items/0/value/signature", "\"()\"")
+        ]
 
     Spec.it s "foreign export" $ do
       check
         s
         "{-# language ForeignFunctionInterface #-} foreign export ccall q :: IO ()"
-        [("/items/0/value/kind", "\"ForeignExport\"")]
+        [ ("/items/0/value/kind", "\"ForeignExport\""),
+          ("/items/0/value/name", "\"q\""),
+          ("/items/0/value/signature", "\"IO ()\"")
+        ]
 
     Spec.it s "warning pragma" $ do
       check

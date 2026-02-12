@@ -36,6 +36,7 @@ import qualified Scrod.Json.Number
 import qualified Scrod.Json.Object
 import qualified Scrod.Json.Pair
 import qualified Scrod.Json.String
+import qualified Scrod.Json.ToSchema
 import qualified Scrod.Json.Value
 import qualified Scrod.JsonPointer.Evaluate
 import qualified Scrod.JsonPointer.Pointer
@@ -93,6 +94,7 @@ spec s = do
   Scrod.Json.Object.spec s
   Scrod.Json.Pair.spec s
   Scrod.Json.String.spec s
+  Scrod.Json.ToSchema.spec s
   Scrod.Json.Value.spec s
   Scrod.JsonPointer.Evaluate.spec s
   Scrod.JsonPointer.Pointer.spec s

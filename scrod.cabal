@@ -99,6 +99,7 @@ library
     Scrod.Convert.ToHtml
     Scrod.Convert.ToJson
     Scrod.Convert.ToJsonSchema
+    Scrod.Convert.ToSchema
     Scrod.Core.Category
     Scrod.Core.Column
     Scrod.Core.Doc
@@ -181,6 +182,7 @@ library
     Scrod.Json.Pair
     Scrod.Json.String
     Scrod.Json.ToJson
+    Scrod.Json.ToSchema
     Scrod.Json.Value
     Scrod.JsonPointer.Evaluate
     Scrod.JsonPointer.Pointer

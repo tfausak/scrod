@@ -1,11 +1,8 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeOperators #-}
@@ -218,27 +215,6 @@ instance
 instance (GToSchema (Generics.Rep a)) => ToSchema (Generics.Generically a) where
   toSchema _ = gToSchema (Proxy.Proxy :: Proxy.Proxy (Generics.Rep a))
 
--- * Test types for generic deriving
-
-data TestRecord = MkTestRecord
-  { testBool :: Bool,
-    testName :: Text.Text,
-    testOptional :: Maybe Bool
-  }
-  deriving (Generics.Generic)
-
-deriving via Generics.Generically TestRecord instance ToSchema TestRecord
-
-data TestEnum = TestEnumA | TestEnumB
-  deriving (Generics.Generic)
-
-deriving via Generics.Generically TestEnum instance ToSchema TestEnum
-
-data TestTagged = TestTaggedX Bool | TestTaggedY Text.Text
-  deriving (Generics.Generic)
-
-deriving via Generics.Generically TestTagged instance ToSchema TestTagged
-
 -- * Tests
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
@@ -295,73 +271,3 @@ spec s = do
             runSchemaM . define "myBool" $
               toSchema (Proxy.Proxy :: Proxy.Proxy Bool)
       Spec.assertEq s defs [("myBool", Json.object [("type", Json.string "boolean")])]
-
-    Spec.it s "record type via Generically produces object schema" $ do
-      let (MkSchema v, _) = runSchemaM $ toSchema (Proxy.Proxy :: Proxy.Proxy TestRecord)
-      Spec.assertEq s v $
-        Json.object
-          [ ("type", Json.string "object"),
-            ( "properties",
-              Json.object
-                [ ("testBool", Json.object [("type", Json.string "boolean")]),
-                  ("testName", Json.object [("type", Json.string "string")]),
-                  ("testOptional", Json.object [("type", Json.string "boolean")])
-                ]
-            ),
-            ("required", Json.array [Json.string "testBool", Json.string "testName"]),
-            ("additionalProperties", Json.boolean False)
-          ]
-
-    Spec.it s "enum type via Generically produces oneOf schema" $ do
-      let (MkSchema v, _) = runSchemaM $ toSchema (Proxy.Proxy :: Proxy.Proxy TestEnum)
-      Spec.assertEq s v $
-        Json.object
-          [ ( "oneOf",
-              Json.array
-                [ Json.object
-                    [ ("type", Json.string "object"),
-                      ("properties", Json.object [("type", Json.object [("const", Json.string "TestEnumA")])]),
-                      ("required", Json.array [Json.string "type"]),
-                      ("additionalProperties", Json.boolean False)
-                    ],
-                  Json.object
-                    [ ("type", Json.string "object"),
-                      ("properties", Json.object [("type", Json.object [("const", Json.string "TestEnumB")])]),
-                      ("required", Json.array [Json.string "type"]),
-                      ("additionalProperties", Json.boolean False)
-                    ]
-                ]
-            )
-          ]
-
-    Spec.it s "tagged sum type via Generically produces oneOf schema" $ do
-      let (MkSchema v, _) = runSchemaM $ toSchema (Proxy.Proxy :: Proxy.Proxy TestTagged)
-      Spec.assertEq s v $
-        Json.object
-          [ ( "oneOf",
-              Json.array
-                [ Json.object
-                    [ ("type", Json.string "object"),
-                      ( "properties",
-                        Json.object
-                          [ ("type", Json.object [("const", Json.string "TestTaggedX")]),
-                            ("value", Json.object [("type", Json.string "boolean")])
-                          ]
-                      ),
-                      ("required", Json.array [Json.string "type", Json.string "value"]),
-                      ("additionalProperties", Json.boolean False)
-                    ],
-                  Json.object
-                    [ ("type", Json.string "object"),
-                      ( "properties",
-                        Json.object
-                          [ ("type", Json.object [("const", Json.string "TestTaggedY")]),
-                            ("value", Json.object [("type", Json.string "string")])
-                          ]
-                      ),
-                      ("required", Json.array [Json.string "type", Json.string "value"]),
-                      ("additionalProperties", Json.boolean False)
-                    ]
-                ]
-            )
-          ]

@@ -2,7 +2,7 @@
 
 import { renderModule } from './renderer.js';
 
-var worker = new Worker('worker.js', { type: 'module' });
+var worker = new Worker(WORKER_URL, { type: 'module' });
 var source = document.getElementById('source');
 var output = document.getElementById('output');
 var format = document.getElementById('format');

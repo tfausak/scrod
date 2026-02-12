@@ -4,14 +4,14 @@
 module Scrod.Core.Column where
 
 import qualified Numeric.Natural as Natural
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 newtype Column = MkColumn
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
 
-deriving via Natural.Natural instance ToJson Column
+deriving via Natural.Natural instance ToJson.ToJson Column
 
-deriving via Natural.Natural instance ToSchema Column
+deriving via Natural.Natural instance Schema.ToSchema Column

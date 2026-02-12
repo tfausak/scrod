@@ -5,8 +5,8 @@ module Scrod.Core.Section where
 
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Header as Header
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A section heading in an export list.
 newtype Section = MkSection
@@ -14,6 +14,6 @@ newtype Section = MkSection
   }
   deriving (Eq, Ord, Show)
 
-deriving via Header.Header Doc.Doc instance ToJson Section
+deriving via Header.Header Doc.Doc instance ToJson.ToJson Section
 
-deriving via Header.Header Doc.Doc instance ToSchema Section
+deriving via Header.Header Doc.Doc instance Schema.ToSchema Section

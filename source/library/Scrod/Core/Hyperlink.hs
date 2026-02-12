@@ -6,8 +6,8 @@ module Scrod.Core.Hyperlink where
 
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A hyperlink with an optional label.
 data Hyperlink doc = MkHyperlink
@@ -16,6 +16,6 @@ data Hyperlink doc = MkHyperlink
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically (Hyperlink doc) instance (ToJson doc) => ToJson (Hyperlink doc)
+deriving via Generics.Generically (Hyperlink doc) instance (ToJson.ToJson doc) => ToJson.ToJson (Hyperlink doc)
 
-deriving via Generics.Generically (Hyperlink doc) instance (ToSchema doc) => ToSchema (Hyperlink doc)
+deriving via Generics.Generically (Hyperlink doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Hyperlink doc)

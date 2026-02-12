@@ -5,8 +5,8 @@
 module Scrod.Core.ItemKind where
 
 import qualified GHC.Generics as Generics
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | The kind of Haskell declaration an Item represents.
 data ItemKind
@@ -72,6 +72,6 @@ data ItemKind
     Splice
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically ItemKind instance ToJson ItemKind
+deriving via Generics.Generically ItemKind instance ToJson.ToJson ItemKind
 
-deriving via Generics.Generically ItemKind instance ToSchema ItemKind
+deriving via Generics.Generically ItemKind instance Schema.ToSchema ItemKind

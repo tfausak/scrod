@@ -6,8 +6,8 @@ module Scrod.Core.Table where
 
 import qualified GHC.Generics as Generics
 import qualified Scrod.Core.TableCell as TableCell
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A table with header and body rows.
 data Table doc = MkTable
@@ -16,6 +16,6 @@ data Table doc = MkTable
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically (Table doc) instance (ToJson doc) => ToJson (Table doc)
+deriving via Generics.Generically (Table doc) instance (ToJson.ToJson doc) => ToJson.ToJson (Table doc)
 
-deriving via Generics.Generically (Table doc) instance (ToSchema doc) => ToSchema (Table doc)
+deriving via Generics.Generically (Table doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Table doc)

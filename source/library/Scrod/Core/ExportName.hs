@@ -7,8 +7,8 @@ module Scrod.Core.ExportName where
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
 import qualified Scrod.Core.ExportNameKind as ExportNameKind
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A name in an export list, possibly annotated with @pattern@ or @type@.
 data ExportName = MkExportName
@@ -17,6 +17,6 @@ data ExportName = MkExportName
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically ExportName instance ToJson ExportName
+deriving via Generics.Generically ExportName instance ToJson.ToJson ExportName
 
-deriving via Generics.Generically ExportName instance ToSchema ExportName
+deriving via Generics.Generically ExportName instance Schema.ToSchema ExportName

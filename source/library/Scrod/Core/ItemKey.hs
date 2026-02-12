@@ -4,14 +4,14 @@
 module Scrod.Core.ItemKey where
 
 import qualified Numeric.Natural as Natural
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 newtype ItemKey = MkItemKey
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
 
-deriving via Natural.Natural instance ToJson ItemKey
+deriving via Natural.Natural instance ToJson.ToJson ItemKey
 
-deriving via Natural.Natural instance ToSchema ItemKey
+deriving via Natural.Natural instance Schema.ToSchema ItemKey

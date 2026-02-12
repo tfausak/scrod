@@ -11,10 +11,9 @@ import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ModLink as ModLink
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Table as Table
-import Scrod.Json.ToJson (ToJson (toJson))
+import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
-import Scrod.Schema (Schema (MkSchema, unwrap), ToSchema (toSchema), define)
-import qualified Scrod.Schema as ToSchema
+import qualified Scrod.Schema as Schema
 
 -- | Documentation AST.
 data Doc
@@ -42,40 +41,40 @@ data Doc
   | Table (Table.Table Doc)
   deriving (Eq, Ord, Show)
 
-instance ToJson Doc where
+instance ToJson.ToJson Doc where
   toJson doc = case doc of
     Empty -> Json.tagged "Empty" Json.null
-    Append a b -> Json.tagged "Append" $ Json.arrayOf toJson [a, b]
+    Append a b -> Json.tagged "Append" $ Json.arrayOf ToJson.toJson [a, b]
     String t -> Json.tagged "String" $ Json.text t
-    Paragraph d -> Json.tagged "Paragraph" $ toJson d
-    Identifier i -> Json.tagged "Identifier" $ toJson i
-    Module ml -> Json.tagged "Module" $ toJson ml
-    Emphasis d -> Json.tagged "Emphasis" $ toJson d
-    Monospaced d -> Json.tagged "Monospaced" $ toJson d
-    Bold d -> Json.tagged "Bold" $ toJson d
-    UnorderedList ds -> Json.tagged "UnorderedList" $ toJson ds
+    Paragraph d -> Json.tagged "Paragraph" $ ToJson.toJson d
+    Identifier i -> Json.tagged "Identifier" $ ToJson.toJson i
+    Module ml -> Json.tagged "Module" $ ToJson.toJson ml
+    Emphasis d -> Json.tagged "Emphasis" $ ToJson.toJson d
+    Monospaced d -> Json.tagged "Monospaced" $ ToJson.toJson d
+    Bold d -> Json.tagged "Bold" $ ToJson.toJson d
+    UnorderedList ds -> Json.tagged "UnorderedList" $ ToJson.toJson ds
     OrderedList items ->
       Json.tagged "OrderedList" $
-        Json.arrayOf (\(n, d) -> Json.array [Json.integral n, toJson d]) items
+        Json.arrayOf (\(n, d) -> Json.array [Json.integral n, ToJson.toJson d]) items
     DefList defs ->
       Json.tagged "DefList" $
-        Json.arrayOf (\(t, d) -> Json.arrayOf toJson [t, d]) defs
-    CodeBlock d -> Json.tagged "CodeBlock" $ toJson d
-    Hyperlink h -> Json.tagged "Hyperlink" $ toJson h
-    Pic p -> Json.tagged "Pic" $ toJson p
+        Json.arrayOf (\(t, d) -> Json.arrayOf ToJson.toJson [t, d]) defs
+    CodeBlock d -> Json.tagged "CodeBlock" $ ToJson.toJson d
+    Hyperlink h -> Json.tagged "Hyperlink" $ ToJson.toJson h
+    Pic p -> Json.tagged "Pic" $ ToJson.toJson p
     MathInline t -> Json.tagged "MathInline" $ Json.text t
     MathDisplay t -> Json.tagged "MathDisplay" $ Json.text t
     AName t -> Json.tagged "AName" $ Json.text t
     Property t -> Json.tagged "Property" $ Json.text t
-    Examples es -> Json.tagged "Examples" $ toJson es
-    Header h -> Json.tagged "Header" $ toJson h
-    Table t -> Json.tagged "Table" $ toJson t
+    Examples es -> Json.tagged "Examples" $ ToJson.toJson es
+    Header h -> Json.tagged "Header" $ ToJson.toJson h
+    Table t -> Json.tagged "Table" $ ToJson.toJson t
 
 -- | 'Doc' is recursive, so its schema uses 'define' to register a
 -- named definition in @$defs@ and return a @$ref@. The schema value is
 -- built purely with inline sub-schemas and a self-reference for @Doc@.
-instance ToSchema Doc where
-  toSchema _ = define "doc" $ pure (MkSchema docSchemaValue)
+instance Schema.ToSchema Doc where
+  toSchema _ = Schema.define "doc" $ pure (Schema.MkSchema docSchemaValue)
 
 -- | Pure schema value for 'Doc'. Uses @$ref \"#/$defs/doc\"@ for
 -- self-references and inlines all other sub-schemas.
@@ -188,8 +187,8 @@ docSchemaValue =
 -- | Extract the schema value from a non-recursive 'ToSchema' instance
 -- without the monadic context. Only safe for types whose 'toSchema'
 -- does not depend on accumulated definitions.
-pureSchema :: (ToSchema a) => Proxy.Proxy a -> Json.Value
-pureSchema p = unwrap . fst $ ToSchema.runSchemaM (toSchema p)
+pureSchema :: (Schema.ToSchema a) => Proxy.Proxy a -> Json.Value
+pureSchema p = Schema.unwrap . fst $ Schema.runSchemaM (Schema.toSchema p)
 
 -- | Build an object schema from required properties only (pure helper).
 objectSchemaPure :: [(String, Json.Value)] -> Json.Value

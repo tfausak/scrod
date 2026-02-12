@@ -1,8 +1,8 @@
 module Scrod.Core.Level where
 
-import Scrod.Json.ToJson (ToJson (toJson))
+import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
-import Scrod.Schema (Schema (MkSchema), ToSchema (toSchema))
+import qualified Scrod.Schema as Schema
 
 -- | A header level from 1 to 6 inclusive.
 data Level
@@ -14,7 +14,7 @@ data Level
   | Six
   deriving (Eq, Ord, Show)
 
-instance ToJson Level where
+instance ToJson.ToJson Level where
   toJson l = Json.integer $ case l of
     One -> 1
     Two -> 2
@@ -23,9 +23,9 @@ instance ToJson Level where
     Five -> 5
     Six -> 6
 
-instance ToSchema Level where
+instance Schema.ToSchema Level where
   toSchema _ =
-    pure . MkSchema $
+    pure . Schema.MkSchema $
       Json.object
         [ ("type", Json.string "integer"),
           ("minimum", Json.integer 1),

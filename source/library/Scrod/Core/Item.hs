@@ -10,8 +10,8 @@ import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 data Item = MkItem
   { key :: ItemKey.ItemKey,
@@ -23,6 +23,6 @@ data Item = MkItem
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically Item instance ToJson Item
+deriving via Generics.Generically Item instance ToJson.ToJson Item
 
-deriving via Generics.Generically Item instance ToSchema Item
+deriving via Generics.Generically Item instance Schema.ToSchema Item

@@ -9,8 +9,8 @@ import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ExportName as ExportName
 import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A named export: variable, type/class, or module re-export.
 data ExportIdentifier = MkExportIdentifier
@@ -21,6 +21,6 @@ data ExportIdentifier = MkExportIdentifier
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically ExportIdentifier instance ToJson ExportIdentifier
+deriving via Generics.Generically ExportIdentifier instance ToJson.ToJson ExportIdentifier
 
-deriving via Generics.Generically ExportIdentifier instance ToSchema ExportIdentifier
+deriving via Generics.Generically ExportIdentifier instance Schema.ToSchema ExportIdentifier

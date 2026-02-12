@@ -6,8 +6,8 @@ module Scrod.Core.Located where
 
 import qualified GHC.Generics as Generics
 import qualified Scrod.Core.Location as Location
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 data Located a = MkLocated
   { location :: Location.Location,
@@ -15,6 +15,6 @@ data Located a = MkLocated
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically (Located a) instance (ToJson a) => ToJson (Located a)
+deriving via Generics.Generically (Located a) instance (ToJson.ToJson a) => ToJson.ToJson (Located a)
 
-deriving via Generics.Generically (Located a) instance (ToSchema a) => ToSchema (Located a)
+deriving via Generics.Generically (Located a) instance (Schema.ToSchema a) => Schema.ToSchema (Located a)

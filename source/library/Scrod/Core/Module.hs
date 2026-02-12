@@ -14,9 +14,9 @@ import qualified Scrod.Core.ModuleName as ModuleName
 import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToJson (ToJson (toJson))
+import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
-import Scrod.Schema (Schema (MkSchema, unwrap), SchemaM, ToSchema (toSchema))
+import qualified Scrod.Schema as Schema
 
 data Module = MkModule
   { version :: Version.Version,
@@ -33,53 +33,53 @@ data Module = MkModule
   }
   deriving (Eq, Ord, Show)
 
-instance ToJson Module where
+instance ToJson.ToJson Module where
   toJson m =
     Json.object
       . filter (\(_, v) -> v /= Json.null)
-      $ [ ("version", toJson $ version m),
-          ("language", toJson $ language m),
+      $ [ ("version", ToJson.toJson $ version m),
+          ("language", ToJson.toJson $ language m),
           ("extensions", extensionsToJson $ extensions m),
-          ("documentation", toJson $ documentation m),
-          ("since", toJson $ since m),
-          ("signature", toJson $ signature m),
-          ("name", toJson $ name m),
-          ("warning", toJson $ warning m),
-          ("exports", toJson $ exports m),
-          ("imports", toJson $ imports m),
-          ("items", toJson $ items m)
+          ("documentation", ToJson.toJson $ documentation m),
+          ("since", ToJson.toJson $ since m),
+          ("signature", ToJson.toJson $ signature m),
+          ("name", ToJson.toJson $ name m),
+          ("warning", ToJson.toJson $ warning m),
+          ("exports", ToJson.toJson $ exports m),
+          ("imports", ToJson.toJson $ imports m),
+          ("items", ToJson.toJson $ items m)
         ]
 
 extensionsToJson :: Map.Map Extension.Extension Bool -> Json.Value
 extensionsToJson =
   Json.object
-    . fmap (\(k, v) -> (Text.unpack $ Extension.unwrap k, toJson v))
+    . fmap (\(k, v) -> (Text.unpack $ Extension.unwrap k, ToJson.toJson v))
     . Map.toList
 
-instance ToSchema Module where
+instance Schema.ToSchema Module where
   toSchema _ = do
-    versionS <- toSchema (Proxy.Proxy :: Proxy.Proxy Version.Version)
-    languageS <- toSchema (Proxy.Proxy :: Proxy.Proxy Language.Language)
+    versionS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Version.Version)
+    languageS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Language.Language)
     extensionsS <- extensionsSchema
-    documentationS <- toSchema (Proxy.Proxy :: Proxy.Proxy Doc.Doc)
-    sinceS <- toSchema (Proxy.Proxy :: Proxy.Proxy Since.Since)
-    nameS <- toSchema (Proxy.Proxy :: Proxy.Proxy (Located.Located ModuleName.ModuleName))
-    warningS <- toSchema (Proxy.Proxy :: Proxy.Proxy Warning.Warning)
-    exportsS <- toSchema (Proxy.Proxy :: Proxy.Proxy [Export.Export])
-    importsS <- toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
-    itemsS <- toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
+    documentationS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Doc.Doc)
+    sinceS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Since.Since)
+    nameS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Located.Located ModuleName.ModuleName))
+    warningS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Warning.Warning)
+    exportsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Export.Export])
+    importsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
+    itemsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
     let allProps =
-          [ ("version", unwrap versionS),
-            ("language", unwrap languageS),
-            ("extensions", unwrap extensionsS),
-            ("documentation", unwrap documentationS),
-            ("since", unwrap sinceS),
+          [ ("version", Schema.unwrap versionS),
+            ("language", Schema.unwrap languageS),
+            ("extensions", Schema.unwrap extensionsS),
+            ("documentation", Schema.unwrap documentationS),
+            ("since", Schema.unwrap sinceS),
             ("signature", Json.object [("type", Json.string "boolean")]),
-            ("name", unwrap nameS),
-            ("warning", unwrap warningS),
-            ("exports", unwrap exportsS),
-            ("imports", unwrap importsS),
-            ("items", unwrap itemsS)
+            ("name", Schema.unwrap nameS),
+            ("warning", Schema.unwrap warningS),
+            ("exports", Schema.unwrap exportsS),
+            ("imports", Schema.unwrap importsS),
+            ("items", Schema.unwrap itemsS)
           ]
     let reqNames =
           [ Json.string "version",
@@ -89,7 +89,7 @@ instance ToSchema Module where
             Json.string "imports",
             Json.string "items"
           ]
-    pure . MkSchema $
+    pure . Schema.MkSchema $
       Json.object
         [ ("type", Json.string "object"),
           ("properties", Json.object allProps),
@@ -97,9 +97,9 @@ instance ToSchema Module where
           ("additionalProperties", Json.boolean False)
         ]
 
-extensionsSchema :: SchemaM Schema
+extensionsSchema :: Schema.SchemaM Schema.Schema
 extensionsSchema =
-  pure . MkSchema $
+  pure . Schema.MkSchema $
     Json.object
       [ ("type", Json.string "object"),
         ("additionalProperties", Json.object [("type", Json.string "boolean")])

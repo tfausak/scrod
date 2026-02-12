@@ -4,14 +4,14 @@
 module Scrod.Core.Line where
 
 import qualified Numeric.Natural as Natural
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 newtype Line = MkLine
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
 
-deriving via Natural.Natural instance ToJson Line
+deriving via Natural.Natural instance ToJson.ToJson Line
 
-deriving via Natural.Natural instance ToSchema Line
+deriving via Natural.Natural instance Schema.ToSchema Line

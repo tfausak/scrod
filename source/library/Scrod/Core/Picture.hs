@@ -6,8 +6,8 @@ module Scrod.Core.Picture where
 
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
-import Scrod.Json.ToJson (ToJson)
-import Scrod.Schema (ToSchema)
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A picture/image reference.
 data Picture = MkPicture
@@ -16,6 +16,6 @@ data Picture = MkPicture
   }
   deriving (Eq, Generics.Generic, Ord, Show)
 
-deriving via Generics.Generically Picture instance ToJson Picture
+deriving via Generics.Generically Picture instance ToJson.ToJson Picture
 
-deriving via Generics.Generically Picture instance ToSchema Picture
+deriving via Generics.Generically Picture instance Schema.ToSchema Picture

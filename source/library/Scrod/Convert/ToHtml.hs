@@ -1,3 +1,5 @@
+{-# LANGUAGE MultilineStrings #-}
+
 -- | Render a 'Module.Module' as a self-contained HTML document.
 --
 -- Produces a complete @\<html\>@ document with Bootstrap 5 and KaTeX
@@ -127,17 +129,17 @@ headElement m =
           "script"
           []
           [ Xml.raw . Text.pack $
-              concat
-                [ "if(matchMedia('(prefers-color-scheme:dark)').matches)",
-                  "document.documentElement.dataset.bsTheme='dark';",
-                  "matchMedia('(prefers-color-scheme:dark)').onchange=",
-                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';",
-                  "import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')",
-                  ".then(function(m){m.default(document.body,{delimiters:[",
-                  "{left:'\\\\(',right:'\\\\)',display:false},",
-                  "{left:'\\\\[',right:'\\\\]',display:true}",
-                  "]})})"
-                ]
+              """
+              if(matchMedia('(prefers-color-scheme:dark)').matches)
+              document.documentElement.dataset.bsTheme='dark';
+              matchMedia('(prefers-color-scheme:dark)').onchange=
+              e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';
+              import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
+              .then(function(m){m.default(document.body,{delimiters:[
+              {left:'\\\\(',right:'\\\\)',display:false},
+              {left:'\\\\[',right:'\\\\]',display:true}
+              ]})})
+              """
           ]
     ]
 

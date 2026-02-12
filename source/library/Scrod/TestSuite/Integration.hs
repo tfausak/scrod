@@ -100,6 +100,40 @@ spec s = Spec.describe s "integration" $ do
           ("/extensions/RankNTypes", "true")
         ]
 
+    Spec.it s "works with cabal script header" $ do
+      check
+        s
+        """
+        {- cabal:
+        default-extensions: CPP
+        -}
+        """
+        [("/extensions/Cpp", "true")]
+
+    Spec.it s "works with cabal script header and pragma" $ do
+      check
+        s
+        """
+        {- cabal:
+        default-extensions: CPP
+        -}
+        {-# language DeriveGeneric #-}
+        """
+        [ ("/extensions/Cpp", "true"),
+          ("/extensions/DeriveGeneric", "true")
+        ]
+
+    Spec.it s "works with cabal script header with shebang" $ do
+      check
+        s
+        """
+        #!/usr/bin/env cabal
+        {- cabal:
+        default-extensions: CPP
+        -}
+        """
+        [("/extensions/Cpp", "true")]
+
   Spec.describe s "documentation" $ do
     Spec.it s "defaults to Empty" $ do
       check s "" [("/documentation/type", "\"Empty\"")]

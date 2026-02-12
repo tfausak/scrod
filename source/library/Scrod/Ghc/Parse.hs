@@ -29,6 +29,7 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Logger as Logger
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Hs
+import qualified Scrod.Cabal as Cabal
 import qualified Scrod.Cpp as Cpp
 import qualified Scrod.Ghc.ArchOS as ArchOS
 import qualified Scrod.Ghc.DynFlags as DynFlags
@@ -47,7 +48,8 @@ parse ::
     )
 parse isSignature string = do
   let originalStringBuffer = StringBuffer.stringToStringBuffer string
-  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions originalStringBuffer
+  let cabalOptions = cabalExtensionOptions string
+  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions cabalOptions originalStringBuffer
   let extensions = uncurry resolveExtensions languageAndExtensions
   source <-
     if EnumSet.member Extension.Cpp extensions
@@ -63,22 +65,28 @@ parse isSignature string = do
     Lexer.PFailed newPState -> Left . Outputable.showSDocUnsafe . Outputable.ppr $ Lexer.getPsErrorMessages newPState
     Lexer.POk _ lHsModule -> pure (languageAndExtensions, lHsModule)
 
+cabalExtensionOptions :: String -> [SrcLoc.Located String]
+cabalExtensionOptions =
+  fmap (SrcLoc.L SrcLoc.noSrcSpan . ("-X" ++)) . Cabal.discoverExtensions
+
 discoverExtensions ::
+  [SrcLoc.Located String] ->
   StringBuffer.StringBuffer ->
   Either
     SourceError.SourceError
     (Maybe Flags.Language, [DynFlags.OnOff Extension.Extension])
-discoverExtensions =
+discoverExtensions cabalOptions =
   Unsafe.unsafePerformIO
     . Exception.try
-    . discoverExtensionsIO
+    . discoverExtensionsIO cabalOptions
 
 discoverExtensionsIO ::
+  [SrcLoc.Located String] ->
   StringBuffer.StringBuffer ->
   IO (Maybe Flags.Language, [DynFlags.OnOff Extension.Extension])
-discoverExtensionsIO stringBuffer = do
+discoverExtensionsIO cabalOptions stringBuffer = do
   logger <- Logger.initLogger
-  (dynFlags, _, _) <- Session.parseDynamicFilePragma logger DynFlags.empty $ discoverOptions stringBuffer
+  (dynFlags, _, _) <- Session.parseDynamicFilePragma logger DynFlags.empty $ cabalOptions <> discoverOptions stringBuffer
   pure (DynFlags.language dynFlags, DynFlags.extensions dynFlags)
 
 discoverOptions :: StringBuffer.StringBuffer -> [SrcLoc.Located String]
@@ -123,3 +131,9 @@ spec s = do
 
     Spec.it s "succeeds with a signature" $ do
       Spec.assertEq s (fst <$> parse True "signature Foo where") $ Right (Nothing, [])
+
+    Spec.it s "succeeds with cabal script header extension" $ do
+      Spec.assertEq s (fst <$> parse False "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (Nothing, [Session.On Extension.Cpp])
+
+    Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
+      Spec.assertEq s (fst <$> parse False "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp])

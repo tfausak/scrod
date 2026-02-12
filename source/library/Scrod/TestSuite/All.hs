@@ -36,11 +36,11 @@ import qualified Scrod.Json.Number
 import qualified Scrod.Json.Object
 import qualified Scrod.Json.Pair
 import qualified Scrod.Json.String
-import qualified Scrod.Schema
 import qualified Scrod.Json.Value
 import qualified Scrod.JsonPointer.Evaluate
 import qualified Scrod.JsonPointer.Pointer
 import qualified Scrod.JsonPointer.Token
+import qualified Scrod.Schema
 import qualified Scrod.Spec as Spec
 import qualified Scrod.TestSuite.Integration
 import qualified Scrod.Unlit

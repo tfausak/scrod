@@ -14,10 +14,10 @@ import qualified Scrod.Core.Module as Module
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Parsec as Parsec
 import qualified Scrod.Json.Object as Object
-import qualified Scrod.Schema as ToSchema
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.JsonPointer.Evaluate as Pointer
 import qualified Scrod.JsonPointer.Pointer as Pointer
+import qualified Scrod.Schema as ToSchema
 import qualified Scrod.Spec as Spec
 
 -- | See 'moduleSchema'.

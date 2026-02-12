@@ -54,9 +54,9 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
+import qualified Scrod.Json.Value as Json
 import Scrod.Schema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
 import qualified Scrod.Schema as ToSchema
-import qualified Scrod.Json.Value as Json
 
 -- * Simple newtype wrappers use @deriving via@ to get their instances
 

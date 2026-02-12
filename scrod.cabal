@@ -182,11 +182,11 @@ library
     Scrod.Json.Pair
     Scrod.Json.String
     Scrod.Json.ToJson
-    Scrod.Schema
     Scrod.Json.Value
     Scrod.JsonPointer.Evaluate
     Scrod.JsonPointer.Pointer
     Scrod.JsonPointer.Token
+    Scrod.Schema
     Scrod.Spec
     Scrod.TestSuite.All
     Scrod.TestSuite.Integration

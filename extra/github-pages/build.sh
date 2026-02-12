@@ -11,7 +11,6 @@ cp extra/github-pages/index.js "$dist/"
 cp extra/github-pages/worker.js "$dist/"
 cp extra/github-pages/style.css "$dist/"
 cp -r extra/github-pages/vendor "$dist/"
-cp extra/bootstrap/bootstrap.min.css "$dist/vendor/"
 cp extra/wasm/dist/scrod-wasm.wasm "$dist/"
 cp extra/wasm/dist/ghc_wasm_jsffi.js "$dist/"
 
@@ -40,7 +39,6 @@ hash_asset() {
 hash_asset vendor/browser_wasi_shim.js worker.js
 hash_asset ghc_wasm_jsffi.js           worker.js
 hash_asset scrod-wasm.wasm              worker.js
-hash_asset vendor/bootstrap.min.css     index.html index.js
 hash_asset style.css                    index.html
 
 # Phase 2: files that reference leaf assets (content now includes hashed names)

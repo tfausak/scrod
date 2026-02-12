@@ -12,11 +12,14 @@
 --
 -- This parallels 'Scrod.Json.ToJson.ToJson' but operates on types rather
 -- than values: each instance describes the JSON Schema for the type's
--- 'ToJson' encoding. An 'Control.Monad.Trans.Accum.Accum' monad
--- accumulates named definitions (for @$defs@).
+-- 'ToJson' encoding. A 'Control.Monad.Trans.State.Strict.State' monad
+-- tracks named definitions (for @$defs@) and detects re-entrant calls
+-- to 'define' so that mutually recursive types produce @$ref@
+-- references instead of infinite inlining.
 module Scrod.Schema where
 
-import qualified Control.Monad.Trans.Accum as Accum
+import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.Char as Char
 import qualified Data.Kind as Kind
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
@@ -35,28 +38,36 @@ newtype Schema = MkSchema
   }
   deriving (Eq, Ord, Show)
 
--- | Monad for schema generation. Accumulates named schema definitions
--- (keyed by name) that become entries in the @$defs@ section of a root
--- schema. Using a 'Map.Map' ensures each definition is stored once even
--- if registered multiple times.
-type SchemaM = Accum.Accum (Map.Map String Json.Value)
+-- | Monad for schema generation. The state maps definition names to
+-- their schema values: 'Nothing' marks a definition that is currently
+-- being built (to break recursive cycles), and @'Just' v@ holds a
+-- completed definition.
+type SchemaM = State.State (Map.Map String (Maybe Json.Value))
 
--- | Run a schema computation, returning the result and accumulated
+-- | Run a schema computation, returning the result and completed
 -- definitions as an association list sorted by name.
 runSchemaM :: SchemaM a -> (a, [(String, Json.Value)])
 runSchemaM m =
-  let (a, defs) = Accum.runAccum m Map.empty
-   in (a, Map.toAscList defs)
+  let (a, defs) = State.runState m Map.empty
+   in (a, [(k, v) | (k, Just v) <- Map.toAscList defs])
 
 -- | Register a named schema definition and return a @$ref@ pointing to
--- it. The definition is added to the accumulated @$defs@. Characters
--- @~@ and @/@ in the name are escaped per RFC 6901 for the JSON Pointer
--- in the @$ref@.
+-- it. If the name is already registered (or currently being defined),
+-- the body is not evaluated and only the @$ref@ is returned, breaking
+-- recursive cycles. Characters @~@ and @/@ in the name are escaped
+-- per RFC 6901 for the JSON Pointer in the @$ref@.
 define :: String -> SchemaM Schema -> SchemaM Schema
 define name m = do
-  MkSchema s <- m
-  Accum.add $ Map.singleton name s
-  pure . MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> escapeJsonPointer name)]
+  defs <- State.get
+  if Map.member name defs
+    then pure ref
+    else do
+      State.modify' $ Map.insert name Nothing
+      MkSchema s <- m
+      State.modify' $ Map.insert name (Just s)
+      pure ref
+  where
+    ref = MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> escapeJsonPointer name)]
 
 -- | Escape a JSON Pointer reference token per RFC 6901: @~@ becomes
 -- @~0@ and @/@ becomes @~1@.
@@ -70,7 +81,8 @@ escapeJsonPointer = List.concatMap $ \c -> case c of
 --
 -- Use @deriving via 'Generics.Generically'@ with a 'Generics.Generic'
 -- instance to derive 'ToSchema' for record types, enum types, and tagged
--- sum types.
+-- sum types. The derived instance registers the type as a named
+-- definition in @$defs@ and returns a @$ref@.
 type ToSchema :: Kind.Type -> Kind.Constraint
 class ToSchema a where
   toSchema :: Proxy.Proxy a -> SchemaM Schema
@@ -121,8 +133,14 @@ type GToSchema :: (Kind.Type -> Kind.Type) -> Kind.Constraint
 class GToSchema f where
   gToSchema :: Proxy.Proxy f -> SchemaM Schema
 
-instance (GToSchema f) => GToSchema (Generics.M1 Generics.D c f) where
-  gToSchema _ = gToSchema (Proxy.Proxy :: Proxy.Proxy f)
+-- | The datatype wrapper registers the type as a named definition
+-- in @$defs@ using the lowercased datatype name, and returns a
+-- @$ref@ pointing to it.
+instance (Generics.Datatype c, GToSchema f) => GToSchema (Generics.M1 Generics.D c f) where
+  gToSchema _ =
+    define
+      (lcFirst $ Generics.datatypeName (undefined :: Generics.M1 Generics.D c f ()))
+      (gToSchema (Proxy.Proxy :: Proxy.Proxy f))
 
 instance (GToSchemaFields f) => GToSchema (Generics.M1 Generics.C c f) where
   gToSchema _ = do
@@ -217,6 +235,11 @@ instance
 
 instance (GToSchema (Generics.Rep a)) => ToSchema (Generics.Generically a) where
   toSchema _ = gToSchema (Proxy.Proxy :: Proxy.Proxy (Generics.Rep a))
+
+-- | Lowercase the first character of a string.
+lcFirst :: String -> String
+lcFirst [] = []
+lcFirst (c : cs) = Char.toLower c : cs
 
 -- * Tests
 

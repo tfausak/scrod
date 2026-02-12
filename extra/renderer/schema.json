@@ -26,748 +26,33 @@
             "$ref": "#/$defs/doc"
         },
         "since": {
-            "type": "object",
-            "properties": {
-                "package": {
-                    "type": "string"
-                },
-                "version": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer",
-                        "minimum": 0
-                    },
-                    "minItems": 1
-                }
-            },
-            "required": [
-                "version"
-            ],
-            "additionalProperties": false
+            "$ref": "#/$defs/since"
         },
         "signature": {
             "type": "boolean"
         },
         "name": {
-            "type": "object",
-            "properties": {
-                "location": {
-                    "type": "object",
-                    "properties": {
-                        "line": {
-                            "type": "integer",
-                            "minimum": 0
-                        },
-                        "column": {
-                            "type": "integer",
-                            "minimum": 0
-                        }
-                    },
-                    "required": [
-                        "line",
-                        "column"
-                    ],
-                    "additionalProperties": false
-                },
-                "value": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "location",
-                "value"
-            ],
-            "additionalProperties": false
+            "$ref": "#/$defs/located"
         },
         "warning": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            },
-            "required": [
-                "category",
-                "value"
-            ],
-            "additionalProperties": false
+            "$ref": "#/$defs/warning"
         },
         "exports": {
             "type": "array",
             "items": {
-                "oneOf": [
-                    {
-                        "type": "object",
-                        "properties": {
-                            "type": {
-                                "const": "Identifier"
-                            },
-                            "value": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {
-                                        "type": "object",
-                                        "properties": {
-                                            "kind": {
-                                                "oneOf": [
-                                                    {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "type": {
-                                                                "const": "Pattern"
-                                                            }
-                                                        },
-                                                        "required": [
-                                                            "type"
-                                                        ],
-                                                        "additionalProperties": false
-                                                    },
-                                                    {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "type": {
-                                                                "const": "Type"
-                                                            }
-                                                        },
-                                                        "required": [
-                                                            "type"
-                                                        ],
-                                                        "additionalProperties": false
-                                                    },
-                                                    {
-                                                        "type": "object",
-                                                        "properties": {
-                                                            "type": {
-                                                                "const": "Module"
-                                                            }
-                                                        },
-                                                        "required": [
-                                                            "type"
-                                                        ],
-                                                        "additionalProperties": false
-                                                    }
-                                                ]
-                                            },
-                                            "name": {
-                                                "type": "string"
-                                            }
-                                        },
-                                        "required": [
-                                            "name"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    "subordinates": {
-                                        "type": "object",
-                                        "properties": {
-                                            "wildcard": {
-                                                "type": "boolean"
-                                            },
-                                            "explicit": {
-                                                "type": "array",
-                                                "items": {
-                                                    "type": "object",
-                                                    "properties": {
-                                                        "kind": {
-                                                            "oneOf": [
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "type": {
-                                                                            "const": "Pattern"
-                                                                        }
-                                                                    },
-                                                                    "required": [
-                                                                        "type"
-                                                                    ],
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "type": {
-                                                                            "const": "Type"
-                                                                        }
-                                                                    },
-                                                                    "required": [
-                                                                        "type"
-                                                                    ],
-                                                                    "additionalProperties": false
-                                                                },
-                                                                {
-                                                                    "type": "object",
-                                                                    "properties": {
-                                                                        "type": {
-                                                                            "const": "Module"
-                                                                        }
-                                                                    },
-                                                                    "required": [
-                                                                        "type"
-                                                                    ],
-                                                                    "additionalProperties": false
-                                                                }
-                                                            ]
-                                                        },
-                                                        "name": {
-                                                            "type": "string"
-                                                        }
-                                                    },
-                                                    "required": [
-                                                        "name"
-                                                    ],
-                                                    "additionalProperties": false
-                                                }
-                                            }
-                                        },
-                                        "required": [
-                                            "wildcard",
-                                            "explicit"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    "warning": {
-                                        "type": "object",
-                                        "properties": {
-                                            "category": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "string"
-                                            }
-                                        },
-                                        "required": [
-                                            "category",
-                                            "value"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    "doc": {
-                                        "$ref": "#/$defs/doc"
-                                    }
-                                },
-                                "required": [
-                                    "name"
-                                ],
-                                "additionalProperties": false
-                            }
-                        },
-                        "required": [
-                            "type",
-                            "value"
-                        ],
-                        "additionalProperties": false
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "type": {
-                                "const": "Group"
-                            },
-                            "value": {
-                                "type": "object",
-                                "properties": {
-                                    "level": {
-                                        "type": "integer",
-                                        "minimum": 1,
-                                        "maximum": 6
-                                    },
-                                    "title": {
-                                        "$ref": "#/$defs/doc"
-                                    }
-                                },
-                                "required": [
-                                    "level",
-                                    "title"
-                                ],
-                                "additionalProperties": false
-                            }
-                        },
-                        "required": [
-                            "type",
-                            "value"
-                        ],
-                        "additionalProperties": false
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "type": {
-                                "const": "Doc"
-                            },
-                            "value": {
-                                "$ref": "#/$defs/doc"
-                            }
-                        },
-                        "required": [
-                            "type",
-                            "value"
-                        ],
-                        "additionalProperties": false
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "type": {
-                                "const": "DocNamed"
-                            },
-                            "value": {
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "type",
-                            "value"
-                        ],
-                        "additionalProperties": false
-                    }
-                ]
+                "$ref": "#/$defs/export"
             }
         },
         "imports": {
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
-                    "name": {
-                        "type": "string"
-                    },
-                    "package": {
-                        "type": "string"
-                    },
-                    "alias": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "name"
-                ],
-                "additionalProperties": false
+                "$ref": "#/$defs/import"
             }
         },
         "items": {
             "type": "array",
             "items": {
-                "type": "object",
-                "properties": {
-                    "location": {
-                        "type": "object",
-                        "properties": {
-                            "line": {
-                                "type": "integer",
-                                "minimum": 0
-                            },
-                            "column": {
-                                "type": "integer",
-                                "minimum": 0
-                            }
-                        },
-                        "required": [
-                            "line",
-                            "column"
-                        ],
-                        "additionalProperties": false
-                    },
-                    "value": {
-                        "type": "object",
-                        "properties": {
-                            "key": {
-                                "type": "integer",
-                                "minimum": 0
-                            },
-                            "kind": {
-                                "oneOf": [
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Function"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "PatternBinding"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "PatternSynonym"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "DataType"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Newtype"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "TypeData"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "TypeSynonym"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "DataConstructor"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "GADTConstructor"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "RecordField"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Class"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "ClassMethod"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "ClassInstance"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "StandaloneDeriving"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "DerivedInstance"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "OpenTypeFamily"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "ClosedTypeFamily"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "DataFamily"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "TypeFamilyInstance"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "DataFamilyInstance"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "ForeignImport"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "ForeignExport"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "FixitySignature"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "InlineSignature"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "SpecialiseSignature"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "StandaloneKindSig"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Rule"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Default"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Annotation"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    },
-                                    {
-                                        "type": "object",
-                                        "properties": {
-                                            "type": {
-                                                "const": "Splice"
-                                            }
-                                        },
-                                        "required": [
-                                            "type"
-                                        ],
-                                        "additionalProperties": false
-                                    }
-                                ]
-                            },
-                            "parentKey": {
-                                "type": "integer",
-                                "minimum": 0
-                            },
-                            "name": {
-                                "type": "string"
-                            },
-                            "documentation": {
-                                "$ref": "#/$defs/doc"
-                            },
-                            "signature": {
-                                "type": "string"
-                            }
-                        },
-                        "required": [
-                            "key",
-                            "kind",
-                            "documentation"
-                        ],
-                        "additionalProperties": false
-                    }
-                },
-                "required": [
-                    "location",
-                    "value"
-                ],
-                "additionalProperties": false
+                "$ref": "#/$defs/located"
             }
         }
     },
@@ -781,6 +66,44 @@
     ],
     "additionalProperties": false,
     "$defs": {
+        "cell": {
+            "type": "object",
+            "properties": {
+                "colspan": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "rowspan": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "contents": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "colspan",
+                "rowspan",
+                "contents"
+            ],
+            "additionalProperties": false
+        },
+        "definition": {
+            "type": "object",
+            "properties": {
+                "term": {
+                    "$ref": "#/$defs/doc"
+                },
+                "definition": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "term",
+                "definition"
+            ],
+            "additionalProperties": false
+        },
         "doc": {
             "oneOf": [
                 {
@@ -859,44 +182,7 @@
                             "const": "Identifier"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "namespace": {
-                                    "oneOf": [
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "type": {
-                                                    "const": "Value"
-                                                }
-                                            },
-                                            "required": [
-                                                "type"
-                                            ],
-                                            "additionalProperties": false
-                                        },
-                                        {
-                                            "type": "object",
-                                            "properties": {
-                                                "type": {
-                                                    "const": "Type"
-                                                }
-                                            },
-                                            "required": [
-                                                "type"
-                                            ],
-                                            "additionalProperties": false
-                                        }
-                                    ]
-                                },
-                                "value": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "value"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/identifier"
                         }
                     },
                     "required": [
@@ -912,19 +198,7 @@
                             "const": "Module"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "name": {
-                                    "type": "string"
-                                },
-                                "label": {
-                                    "$ref": "#/$defs/doc"
-                                }
-                            },
-                            "required": [
-                                "name"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/modLink"
                         }
                     },
                     "required": [
@@ -1009,20 +283,7 @@
                         "value": {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "index": {
-                                        "type": "integer"
-                                    },
-                                    "item": {
-                                        "$ref": "#/$defs/doc"
-                                    }
-                                },
-                                "required": [
-                                    "index",
-                                    "item"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/numberedItem"
                             }
                         }
                     },
@@ -1041,20 +302,7 @@
                         "value": {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "term": {
-                                        "$ref": "#/$defs/doc"
-                                    },
-                                    "definition": {
-                                        "$ref": "#/$defs/doc"
-                                    }
-                                },
-                                "required": [
-                                    "term",
-                                    "definition"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/definition"
                             }
                         }
                     },
@@ -1087,19 +335,7 @@
                             "const": "Hyperlink"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "url": {
-                                    "type": "string"
-                                },
-                                "label": {
-                                    "$ref": "#/$defs/doc"
-                                }
-                            },
-                            "required": [
-                                "url"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/hyperlink"
                         }
                     },
                     "required": [
@@ -1115,19 +351,7 @@
                             "const": "Pic"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "uri": {
-                                    "type": "string"
-                                },
-                                "title": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": [
-                                "uri"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/picture"
                         }
                     },
                     "required": [
@@ -1209,23 +433,7 @@
                         "value": {
                             "type": "array",
                             "items": {
-                                "type": "object",
-                                "properties": {
-                                    "expression": {
-                                        "type": "string"
-                                    },
-                                    "result": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "string"
-                                        }
-                                    }
-                                },
-                                "required": [
-                                    "expression",
-                                    "result"
-                                ],
-                                "additionalProperties": false
+                                "$ref": "#/$defs/example"
                             }
                         }
                     },
@@ -1242,22 +450,7 @@
                             "const": "Header"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "level": {
-                                    "type": "integer",
-                                    "minimum": 1,
-                                    "maximum": 6
-                                },
-                                "title": {
-                                    "$ref": "#/$defs/doc"
-                                }
-                            },
-                            "required": [
-                                "level",
-                                "title"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/header"
                         }
                     },
                     "required": [
@@ -1273,70 +466,7 @@
                             "const": "Table"
                         },
                         "value": {
-                            "type": "object",
-                            "properties": {
-                                "headerRows": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "colspan": {
-                                                    "type": "integer",
-                                                    "minimum": 0
-                                                },
-                                                "rowspan": {
-                                                    "type": "integer",
-                                                    "minimum": 0
-                                                },
-                                                "contents": {
-                                                    "$ref": "#/$defs/doc"
-                                                }
-                                            },
-                                            "required": [
-                                                "colspan",
-                                                "rowspan",
-                                                "contents"
-                                            ],
-                                            "additionalProperties": false
-                                        }
-                                    }
-                                },
-                                "bodyRows": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "colspan": {
-                                                    "type": "integer",
-                                                    "minimum": 0
-                                                },
-                                                "rowspan": {
-                                                    "type": "integer",
-                                                    "minimum": 0
-                                                },
-                                                "contents": {
-                                                    "$ref": "#/$defs/doc"
-                                                }
-                                            },
-                                            "required": [
-                                                "colspan",
-                                                "rowspan",
-                                                "contents"
-                                            ],
-                                            "additionalProperties": false
-                                        }
-                                    }
-                                }
-                            },
-                            "required": [
-                                "headerRows",
-                                "bodyRows"
-                            ],
-                            "additionalProperties": false
+                            "$ref": "#/$defs/table"
                         }
                     },
                     "required": [
@@ -1346,6 +476,426 @@
                     "additionalProperties": false
                 }
             ]
+        },
+        "example": {
+            "type": "object",
+            "properties": {
+                "expression": {
+                    "type": "string"
+                },
+                "result": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "expression",
+                "result"
+            ],
+            "additionalProperties": false
+        },
+        "export": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Identifier"
+                        },
+                        "value": {
+                            "$ref": "#/$defs/exportIdentifier"
+                        }
+                    },
+                    "required": [
+                        "type",
+                        "value"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Group"
+                        },
+                        "value": {
+                            "$ref": "#/$defs/header"
+                        }
+                    },
+                    "required": [
+                        "type",
+                        "value"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Doc"
+                        },
+                        "value": {
+                            "$ref": "#/$defs/doc"
+                        }
+                    },
+                    "required": [
+                        "type",
+                        "value"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "DocNamed"
+                        },
+                        "value": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "type",
+                        "value"
+                    ],
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "exportIdentifier": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "$ref": "#/$defs/exportName"
+                },
+                "subordinates": {
+                    "$ref": "#/$defs/subordinates"
+                },
+                "warning": {
+                    "$ref": "#/$defs/warning"
+                },
+                "doc": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "additionalProperties": false
+        },
+        "exportName": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "$ref": "#/$defs/exportNameKind"
+                },
+                "name": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "additionalProperties": false
+        },
+        "exportNameKind": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Pattern"
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Type"
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Module"
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "header": {
+            "type": "object",
+            "properties": {
+                "level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 6
+                },
+                "title": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "level",
+                "title"
+            ],
+            "additionalProperties": false
+        },
+        "hyperlink": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string"
+                },
+                "label": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "url"
+            ],
+            "additionalProperties": false
+        },
+        "identifier": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "$ref": "#/$defs/namespace"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "value"
+            ],
+            "additionalProperties": false
+        },
+        "import": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "package": {
+                    "type": "string"
+                },
+                "alias": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "additionalProperties": false
+        },
+        "located": {
+            "type": "object",
+            "properties": {
+                "location": {
+                    "$ref": "#/$defs/location"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "location",
+                "value"
+            ],
+            "additionalProperties": false
+        },
+        "location": {
+            "type": "object",
+            "properties": {
+                "line": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "column": {
+                    "type": "integer",
+                    "minimum": 0
+                }
+            },
+            "required": [
+                "line",
+                "column"
+            ],
+            "additionalProperties": false
+        },
+        "modLink": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "label": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "name"
+            ],
+            "additionalProperties": false
+        },
+        "namespace": {
+            "oneOf": [
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Value"
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                },
+                {
+                    "type": "object",
+                    "properties": {
+                        "type": {
+                            "const": "Type"
+                        }
+                    },
+                    "required": [
+                        "type"
+                    ],
+                    "additionalProperties": false
+                }
+            ]
+        },
+        "numberedItem": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "integer"
+                },
+                "item": {
+                    "$ref": "#/$defs/doc"
+                }
+            },
+            "required": [
+                "index",
+                "item"
+            ],
+            "additionalProperties": false
+        },
+        "picture": {
+            "type": "object",
+            "properties": {
+                "uri": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "uri"
+            ],
+            "additionalProperties": false
+        },
+        "since": {
+            "type": "object",
+            "properties": {
+                "package": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": [
+                "version"
+            ],
+            "additionalProperties": false
+        },
+        "subordinates": {
+            "type": "object",
+            "properties": {
+                "wildcard": {
+                    "type": "boolean"
+                },
+                "explicit": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/exportName"
+                    }
+                }
+            },
+            "required": [
+                "wildcard",
+                "explicit"
+            ],
+            "additionalProperties": false
+        },
+        "table": {
+            "type": "object",
+            "properties": {
+                "headerRows": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/$defs/cell"
+                        }
+                    }
+                },
+                "bodyRows": {
+                    "type": "array",
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/$defs/cell"
+                        }
+                    }
+                }
+            },
+            "required": [
+                "headerRows",
+                "bodyRows"
+            ],
+            "additionalProperties": false
+        },
+        "warning": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "category",
+                "value"
+            ],
+            "additionalProperties": false
         }
     }
 }

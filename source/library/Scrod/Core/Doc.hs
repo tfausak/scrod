@@ -2,13 +2,11 @@ module Scrod.Core.Doc where
 
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
-import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
 import qualified Scrod.Core.Identifier as Identifier
-import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ModLink as ModLink
 import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.Picture as Picture
@@ -69,19 +67,26 @@ instance ToJson.ToJson Doc where
     Table t -> Json.tagged "Table" $ ToJson.toJson t
 
 -- | 'Doc' is recursive, so its schema uses 'define' to register a
--- named definition in @$defs@ and return a @$ref@. The schema value is
--- built purely with inline sub-schemas and a self-reference for @Doc@.
+-- named definition in @$defs@ and return a @$ref@. Sub-type schemas
+-- are obtained via 'toSchema', which registers each as a named
+-- definition in @$defs@ and returns a @$ref@ pointer.
 instance Schema.ToSchema Doc where
-  toSchema _ = Schema.define "doc" $ pure (Schema.MkSchema docSchemaValue)
+  toSchema _ = Schema.define "doc" docSchema
 
--- | Pure schema value for 'Doc'. Uses @$ref \"#/$defs/doc\"@ for
--- self-references and inlines all other sub-schemas.
-docSchemaValue :: Json.Value
-docSchemaValue =
-  let self = Json.object [("$ref", Json.string "#/$defs/doc")]
-      str = Json.object [("type", Json.string "string")]
+docSchema :: Schema.SchemaM Schema.Schema
+docSchema = do
+  Schema.MkSchema self <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Doc)
+  Schema.MkSchema identifierS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Identifier.Identifier)
+  Schema.MkSchema modLinkS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (ModLink.ModLink Doc))
+  Schema.MkSchema hyperlinkS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Hyperlink.Hyperlink Doc))
+  Schema.MkSchema numberedItemS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (NumberedItem.NumberedItem Doc))
+  Schema.MkSchema definitionS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Definition.Definition Doc))
+  Schema.MkSchema pictureS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Picture.Picture)
+  Schema.MkSchema exampleS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Example.Example)
+  Schema.MkSchema headerS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Header.Header Doc))
+  Schema.MkSchema tableS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Table.Table Doc))
+  let str = Json.object [("type", Json.string "string")]
       nullSchema = Json.object [("type", Json.string "null")]
-      int = Json.object [("type", Json.string "integer")]
       tagged tag valueSchema =
         Json.object
           [ ("type", Json.string "object"),
@@ -94,115 +99,54 @@ docSchemaValue =
             ("required", Json.array [Json.string "type", Json.string "value"]),
             ("additionalProperties", Json.boolean False)
           ]
-      -- Inline sub-schemas (non-recursive types, computed purely)
-      identifierSchema = pureSchema (Proxy.Proxy :: Proxy.Proxy Identifier.Identifier)
-      pictureSchema = pureSchema (Proxy.Proxy :: Proxy.Proxy Picture.Picture)
-      exampleSchema = pureSchema (Proxy.Proxy :: Proxy.Proxy Example.Example)
-      -- Sub-schemas parameterized by Doc (use self-reference)
-      modLinkSchema =
-        objectSchemaOptPure
-          [("name", str)]
-          [("label", self)]
-      hyperlinkSchema =
-        objectSchemaOptPure
-          [("url", str)]
-          [("label", self)]
-      numberedItemSchema =
-        objectSchemaPure
-          [("index", int), ("item", self)]
-      definitionSchema =
-        objectSchemaPure
-          [("term", self), ("definition", self)]
-      headerSchema =
-        objectSchemaPure
-          [ ("level", pureSchema (Proxy.Proxy :: Proxy.Proxy Level.Level)),
-            ("title", self)
-          ]
-      cellSchema =
-        objectSchemaPure
-          [ ("colspan", pureSchema (Proxy.Proxy :: Proxy.Proxy Natural.Natural)),
-            ("rowspan", pureSchema (Proxy.Proxy :: Proxy.Proxy Natural.Natural)),
-            ("contents", self)
-          ]
-      tableSchema =
-        objectSchemaPure
-          [ ("headerRows", Json.object [("type", Json.string "array"), ("items", Json.object [("type", Json.string "array"), ("items", cellSchema)])]),
-            ("bodyRows", Json.object [("type", Json.string "array"), ("items", Json.object [("type", Json.string "array"), ("items", cellSchema)])])
-          ]
-   in Json.object
-        [ ( "oneOf",
-            Json.array
-              [ tagged "Empty" nullSchema,
-                tagged "Append" $
-                  Json.object
-                    [ ("type", Json.string "array"),
-                      ("items", self),
-                      ("minItems", Json.integer 2),
-                      ("maxItems", Json.integer 2)
-                    ],
-                tagged "String" str,
-                tagged "Paragraph" self,
-                tagged "Identifier" identifierSchema,
-                tagged "Module" modLinkSchema,
-                tagged "Emphasis" self,
-                tagged "Monospaced" self,
-                tagged "Bold" self,
-                tagged "UnorderedList" $
-                  Json.object
-                    [ ("type", Json.string "array"),
-                      ("items", self)
-                    ],
-                tagged "OrderedList" $
-                  Json.object
-                    [ ("type", Json.string "array"),
-                      ("items", numberedItemSchema)
-                    ],
-                tagged "DefList" $
-                  Json.object
-                    [ ("type", Json.string "array"),
-                      ("items", definitionSchema)
-                    ],
-                tagged "CodeBlock" self,
-                tagged "Hyperlink" hyperlinkSchema,
-                tagged "Pic" pictureSchema,
-                tagged "MathInline" str,
-                tagged "MathDisplay" str,
-                tagged "AName" str,
-                tagged "Property" str,
-                tagged "Examples" $
-                  Json.object
-                    [ ("type", Json.string "array"),
-                      ("items", exampleSchema)
-                    ],
-                tagged "Header" headerSchema,
-                tagged "Table" tableSchema
-              ]
-          )
-        ]
-
--- | Extract the schema value from a non-recursive 'ToSchema' instance
--- without the monadic context. Only safe for types whose 'toSchema'
--- does not depend on accumulated definitions.
-pureSchema :: (Schema.ToSchema a) => Proxy.Proxy a -> Json.Value
-pureSchema p = Schema.unwrap . fst $ Schema.runSchemaM (Schema.toSchema p)
-
--- | Build an object schema from required properties only (pure helper).
-objectSchemaPure :: [(String, Json.Value)] -> Json.Value
-objectSchemaPure props =
-  Json.object
-    [ ("type", Json.string "object"),
-      ("properties", Json.object props),
-      ("required", Json.array $ fmap (Json.string . fst) props),
-      ("additionalProperties", Json.boolean False)
-    ]
-
--- | Build an object schema with required and optional properties (pure
--- helper).
-objectSchemaOptPure :: [(String, Json.Value)] -> [(String, Json.Value)] -> Json.Value
-objectSchemaOptPure required optional =
-  Json.object
-    [ ("type", Json.string "object"),
-      ("properties", Json.object (required <> optional)),
-      ("required", Json.array $ fmap (Json.string . fst) required),
-      ("additionalProperties", Json.boolean False)
-    ]
+  pure . Schema.MkSchema $
+    Json.object
+      [ ( "oneOf",
+          Json.array
+            [ tagged "Empty" nullSchema,
+              tagged "Append" $
+                Json.object
+                  [ ("type", Json.string "array"),
+                    ("items", self),
+                    ("minItems", Json.integer 2),
+                    ("maxItems", Json.integer 2)
+                  ],
+              tagged "String" str,
+              tagged "Paragraph" self,
+              tagged "Identifier" identifierS,
+              tagged "Module" modLinkS,
+              tagged "Emphasis" self,
+              tagged "Monospaced" self,
+              tagged "Bold" self,
+              tagged "UnorderedList" $
+                Json.object
+                  [ ("type", Json.string "array"),
+                    ("items", self)
+                  ],
+              tagged "OrderedList" $
+                Json.object
+                  [ ("type", Json.string "array"),
+                    ("items", numberedItemS)
+                  ],
+              tagged "DefList" $
+                Json.object
+                  [ ("type", Json.string "array"),
+                    ("items", definitionS)
+                  ],
+              tagged "CodeBlock" self,
+              tagged "Hyperlink" hyperlinkS,
+              tagged "Pic" pictureS,
+              tagged "MathInline" str,
+              tagged "MathDisplay" str,
+              tagged "AName" str,
+              tagged "Property" str,
+              tagged "Examples" $
+                Json.object
+                  [ ("type", Json.string "array"),
+                    ("items", exampleS)
+                  ],
+              tagged "Header" headerS,
+              tagged "Table" tableS
+            ]
+        )
+      ]

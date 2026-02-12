@@ -1,4 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Item where
 
@@ -8,6 +10,8 @@ import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
+import Scrod.Json.ToJson (ToJson)
+import Scrod.Schema (ToSchema)
 
 data Item = MkItem
   { key :: ItemKey.ItemKey,
@@ -18,3 +22,7 @@ data Item = MkItem
     signature :: Maybe Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
+
+deriving via Generics.Generically Item instance ToJson Item
+
+deriving via Generics.Generically Item instance ToSchema Item

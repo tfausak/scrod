@@ -1,8 +1,12 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ItemKind where
 
 import qualified GHC.Generics as Generics
+import Scrod.Json.ToJson (ToJson)
+import Scrod.Schema (ToSchema)
 
 -- | The kind of Haskell declaration an Item represents.
 data ItemKind
@@ -67,3 +71,7 @@ data ItemKind
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
   deriving (Eq, Generics.Generic, Ord, Show)
+
+deriving via Generics.Generically ItemKind instance ToJson ItemKind
+
+deriving via Generics.Generically ItemKind instance ToSchema ItemKind

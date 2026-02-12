@@ -93,9 +93,7 @@ library
     Scrod.Convert.FromGhc
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml
-    Scrod.Convert.ToJson
     Scrod.Convert.ToJsonSchema
-    Scrod.Convert.ToSchema
     Scrod.Core.Category
     Scrod.Core.Column
     Scrod.Core.Doc

@@ -14,7 +14,6 @@ module Scrod.Convert.ToSchema
   )
 where
 
-import qualified Control.Monad.Trans.Accum as Accum
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
@@ -55,7 +54,7 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToSchema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema))
+import Scrod.Json.ToSchema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
 import qualified Scrod.Json.ToSchema as ToSchema
 import qualified Scrod.Json.Value as Json
 
@@ -182,13 +181,11 @@ extensionsSchema =
         ("additionalProperties", Json.object [("type", Json.string "boolean")])
       ]
 
--- | 'Doc.Doc' is recursive, so its schema uses @define@ to register a
+-- | 'Doc.Doc' is recursive, so its schema uses 'define' to register a
 -- named definition in @$defs@ and return a @$ref@. The schema value is
 -- built purely with inline sub-schemas and a self-reference for @Doc@.
 instance ToSchema Doc.Doc where
-  toSchema _ = do
-    Accum.add [("doc", docSchemaValue)]
-    pure . MkSchema $ Json.object [("$ref", Json.string "#/$defs/doc")]
+  toSchema _ = define "doc" $ pure (MkSchema docSchemaValue)
 
 -- | Pure schema value for 'Doc.Doc'. Uses @$ref \"#/$defs/doc\"@ for
 -- self-references and inlines all other sub-schemas.

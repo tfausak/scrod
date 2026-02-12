@@ -18,7 +18,9 @@ module Scrod.Json.ToSchema where
 
 import qualified Control.Monad.Trans.Accum as Accum
 import qualified Data.Kind as Kind
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Map.Strict as Map
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
@@ -33,22 +35,36 @@ newtype Schema = MkSchema
   }
   deriving (Eq, Ord, Show)
 
--- | Monad for schema generation. Accumulates @(name, schema)@ pairs
--- that become entries in the @$defs@ section of a root schema.
-type SchemaM = Accum.Accum [(String, Json.Value)]
+-- | Monad for schema generation. Accumulates named schema definitions
+-- (keyed by name) that become entries in the @$defs@ section of a root
+-- schema. Using a 'Map.Map' ensures each definition is stored once even
+-- if registered multiple times.
+type SchemaM = Accum.Accum (Map.Map String Json.Value)
 
 -- | Run a schema computation, returning the result and accumulated
--- definitions.
+-- definitions as an association list sorted by name.
 runSchemaM :: SchemaM a -> (a, [(String, Json.Value)])
-runSchemaM m = Accum.runAccum m []
+runSchemaM m =
+  let (a, defs) = Accum.runAccum m Map.empty
+   in (a, Map.toAscList defs)
 
 -- | Register a named schema definition and return a @$ref@ pointing to
--- it. The definition is added to the accumulated @$defs@.
+-- it. The definition is added to the accumulated @$defs@. Characters
+-- @~@ and @/@ in the name are escaped per RFC 6901 for the JSON Pointer
+-- in the @$ref@.
 define :: String -> SchemaM Schema -> SchemaM Schema
 define name m = do
   MkSchema s <- m
-  Accum.add [(name, s)]
-  pure . MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> name)]
+  Accum.add $ Map.singleton name s
+  pure . MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> escapeJsonPointer name)]
+
+-- | Escape a JSON Pointer reference token per RFC 6901: @~@ becomes
+-- @~0@ and @/@ becomes @~1@.
+escapeJsonPointer :: String -> String
+escapeJsonPointer = List.concatMap $ \c -> case c of
+  '~' -> "~0"
+  '/' -> "~1"
+  _ -> [c]
 
 -- | Convert a type to its JSON Schema representation.
 --
@@ -109,7 +125,7 @@ instance (GToSchemaFields f) => GToSchema (Generics.M1 Generics.C c f) where
   gToSchema _ = do
     fields <- gToSchemaFields (Proxy.Proxy :: Proxy.Proxy f)
     let allProps = fmap (\(n, MkSchema s, _) -> (n, s)) fields
-    let reqNames = fmap (\(n, _, _) -> Json.string n) $ filter (\(_, _, r) -> r) fields
+    let reqNames = (\(n, _, _) -> Json.string n) <$> filter (\(_, _, r) -> r) fields
     pure . MkSchema $
       Json.object
         [ ("type", Json.string "object"),
@@ -246,14 +262,12 @@ spec s = do
 
     Spec.it s "define returns a $ref" $ do
       let (MkSchema v, _) =
-            runSchemaM $
-              define "myBool" $
-                toSchema (Proxy.Proxy :: Proxy.Proxy Bool)
+            runSchemaM . define "myBool" $
+              toSchema (Proxy.Proxy :: Proxy.Proxy Bool)
       Spec.assertEq s v $ Json.object [("$ref", Json.string "#/$defs/myBool")]
 
     Spec.it s "define accumulates the definition" $ do
       let (_, defs) =
-            runSchemaM $
-              define "myBool" $
-                toSchema (Proxy.Proxy :: Proxy.Proxy Bool)
+            runSchemaM . define "myBool" $
+              toSchema (Proxy.Proxy :: Proxy.Proxy Bool)
       Spec.assertEq s defs [("myBool", Json.object [("type", Json.string "boolean")])]

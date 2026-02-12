@@ -9,10 +9,7 @@
 -- @deriving via 'Generics.Generically'@ to get instances derived
 -- generically. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
-module Scrod.Convert.ToJson
-  ( module Scrod.Json.ToJson,
-  )
-where
+module Scrod.Convert.ToJson where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map

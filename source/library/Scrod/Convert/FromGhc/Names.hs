@@ -148,9 +148,10 @@ extractDerivDeclName =
     . Syntax.hswc_body
     . Syntax.deriv_type
 
--- | Extract name from a constructor declaration.
-extractConDeclName :: Syntax.ConDecl Ghc.GhcPs -> ItemName.ItemName
-extractConDeclName conDecl = case conDecl of
-  Syntax.ConDeclH98 {Syntax.con_name = lName} -> Internal.extractIdPName lName
+-- | Extract names from a constructor declaration.
+-- GADT constructors can declare multiple names (e.g. @A, B :: Int -> T@).
+extractConDeclNames :: Syntax.ConDecl Ghc.GhcPs -> NonEmpty.NonEmpty ItemName.ItemName
+extractConDeclNames conDecl = case conDecl of
+  Syntax.ConDeclH98 {Syntax.con_name = lName} -> pure $ Internal.extractIdPName lName
   Syntax.ConDeclGADT {Syntax.con_names = lNames} ->
-    Internal.extractIdPName $ NonEmpty.head lNames
+    fmap Internal.extractIdPName lNames

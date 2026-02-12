@@ -6,6 +6,7 @@
 module Scrod.Convert.FromGhc.Constructors where
 
 import qualified Data.List as List
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified GHC.Hs.Extension as Ghc
@@ -20,9 +21,12 @@ import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
+import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Located as Located
 
 -- | Convert a constructor declaration.
+-- GADT constructors can declare multiple names (e.g. @A, B :: Int -> T@),
+-- so this emits one item per constructor name.
 convertConDeclM ::
   Maybe ItemKey.ItemKey ->
   Maybe Text.Text ->
@@ -33,11 +37,27 @@ convertConDeclM parentKey parentType lConDecl = do
       conDoc = extractConDeclDoc conDecl
       conSig = extractConDeclSignature parentType conDecl
       conKind = constructorKind conDecl
+      conNames = Names.extractConDeclNames conDecl
+  fmap concat
+    . traverse (convertOneConNameM (Annotation.getLocA lConDecl) parentKey conDoc conSig conKind conDecl)
+    $ NonEmpty.toList conNames
+
+-- | Create items for a single constructor name, plus any record fields.
+convertOneConNameM ::
+  SrcLoc.SrcSpan ->
+  Maybe ItemKey.ItemKey ->
+  Doc.Doc ->
+  Maybe Text.Text ->
+  ItemKind.ItemKind ->
+  Syntax.ConDecl Ghc.GhcPs ->
+  ItemName.ItemName ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertOneConNameM srcSpan parentKey conDoc conSig conKind conDecl conName = do
   result <-
     Internal.mkItemWithKeyM
-      (Annotation.getLocA lConDecl)
+      srcSpan
       parentKey
-      (Just $ Names.extractConDeclName conDecl)
+      (Just conName)
       conDoc
       conSig
       conKind

@@ -1042,6 +1042,20 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind/type", "\"GADTConstructor\"")
         ]
 
+    Spec.it s "GADT with multiple constructor names" $ do
+      check
+        s
+        "data T where A, B :: Int -> T"
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/0/value/name", "\"T\""),
+          ("/items/1/value/kind/type", "\"GADTConstructor\""),
+          ("/items/1/value/name", "\"A\""),
+          ("/items/1/value/signature", "\"Int -> T\""),
+          ("/items/2/value/kind/type", "\"GADTConstructor\""),
+          ("/items/2/value/name", "\"B\""),
+          ("/items/2/value/signature", "\"Int -> T\"")
+        ]
+
     Spec.it s "data constructor GADT with doc" $ do
       check
         s

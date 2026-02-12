@@ -667,7 +667,8 @@ itemToHtml :: Located.Located Item.Item -> Element.Element
 itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSig)) =
   Xml.element
     "div"
-    [ Xml.attribute "class" ("card mb-3 border-start border-4 " <> kindBorderClass itemKind),
+    [ Xml.attribute "class" "card mb-3 border-start border-4",
+      Xml.attribute "style" (kindBorderStyle itemKind),
       Xml.attribute "id" ("item-" <> show (ItemKey.unwrap key)),
       lineAttribute loc
     ]
@@ -742,18 +743,20 @@ columnAttribute loc =
 
 locationElement :: Location.Location -> Element.Element
 locationElement loc =
-  Xml.element
-    "span"
-    [ Xml.attribute "class" "item-location ms-auto text-body-tertiary small",
-      Xml.attribute "role" "button",
-      lineAttribute loc,
-      columnAttribute loc
-    ]
-    [ Xml.text
-        ( Text.pack "line "
-            <> Text.pack (show (Line.unwrap (Location.line loc)))
-        )
-    ]
+  let lineNum = Line.unwrap (Location.line loc)
+   in Xml.element
+        "button"
+        [ Xml.attribute "type" "button",
+          Xml.attribute "class" "item-location ms-auto text-body-tertiary small bg-transparent border-0 p-0",
+          Xml.attribute "aria-label" ("Go to line " <> show lineNum),
+          lineAttribute loc,
+          columnAttribute loc
+        ]
+        [ Xml.text
+            ( Text.pack "line "
+                <> Text.pack (show lineNum)
+            )
+        ]
 
 kindToText :: ItemKind.ItemKind -> Text.Text
 kindToText k = case k of
@@ -788,71 +791,61 @@ kindToText k = case k of
   ItemKind.Annotation -> Text.pack "annotation"
   ItemKind.Splice -> Text.pack "splice"
 
-kindBadgeClass :: ItemKind.ItemKind -> String
-kindBadgeClass k = case k of
-  ItemKind.Function -> "bg-success-subtle text-success-emphasis"
-  ItemKind.PatternBinding -> "bg-success-subtle text-success-emphasis"
-  ItemKind.PatternSynonym -> "bg-success-subtle text-success-emphasis"
-  ItemKind.DataType -> "bg-info-subtle text-info-emphasis"
-  ItemKind.Newtype -> "bg-info-subtle text-info-emphasis"
-  ItemKind.TypeData -> "bg-info-subtle text-info-emphasis"
-  ItemKind.TypeSynonym -> "bg-info-subtle text-info-emphasis"
-  ItemKind.DataConstructor -> "bg-secondary-subtle text-body"
-  ItemKind.GADTConstructor -> "bg-secondary-subtle text-body"
-  ItemKind.RecordField -> "bg-secondary-subtle text-body"
-  ItemKind.Class -> "bg-primary-subtle text-primary-emphasis"
-  ItemKind.ClassMethod -> "bg-primary-subtle text-primary-emphasis"
-  ItemKind.ClassInstance -> "bg-primary-subtle text-primary-emphasis"
-  ItemKind.StandaloneDeriving -> "bg-primary-subtle text-primary-emphasis"
-  ItemKind.DerivedInstance -> "bg-primary-subtle text-primary-emphasis"
-  ItemKind.OpenTypeFamily -> "bg-info-subtle text-info-emphasis"
-  ItemKind.ClosedTypeFamily -> "bg-info-subtle text-info-emphasis"
-  ItemKind.DataFamily -> "bg-info-subtle text-info-emphasis"
-  ItemKind.TypeFamilyInstance -> "bg-info-subtle text-info-emphasis"
-  ItemKind.DataFamilyInstance -> "bg-info-subtle text-info-emphasis"
-  ItemKind.ForeignImport -> "bg-warning-subtle text-warning-emphasis"
-  ItemKind.ForeignExport -> "bg-warning-subtle text-warning-emphasis"
-  ItemKind.FixitySignature -> "bg-secondary-subtle text-body"
-  ItemKind.InlineSignature -> "bg-secondary-subtle text-body"
-  ItemKind.SpecialiseSignature -> "bg-secondary-subtle text-body"
-  ItemKind.StandaloneKindSig -> "bg-info-subtle text-info-emphasis"
-  ItemKind.Rule -> "bg-secondary-subtle text-body"
-  ItemKind.Default -> "bg-secondary-subtle text-body"
-  ItemKind.Annotation -> "bg-secondary-subtle text-body"
-  ItemKind.Splice -> "bg-secondary-subtle text-body"
+data KindColor
+  = KindSuccess
+  | KindInfo
+  | KindSecondary
+  | KindPrimary
+  | KindWarning
 
-kindBorderClass :: ItemKind.ItemKind -> String
-kindBorderClass k = case k of
-  ItemKind.Function -> "border-success"
-  ItemKind.PatternBinding -> "border-success"
-  ItemKind.PatternSynonym -> "border-success"
-  ItemKind.DataType -> "border-info"
-  ItemKind.Newtype -> "border-info"
-  ItemKind.TypeData -> "border-info"
-  ItemKind.TypeSynonym -> "border-info"
-  ItemKind.DataConstructor -> "border-secondary"
-  ItemKind.GADTConstructor -> "border-secondary"
-  ItemKind.RecordField -> "border-secondary"
-  ItemKind.Class -> "border-primary"
-  ItemKind.ClassMethod -> "border-primary"
-  ItemKind.ClassInstance -> "border-primary"
-  ItemKind.StandaloneDeriving -> "border-primary"
-  ItemKind.DerivedInstance -> "border-primary"
-  ItemKind.OpenTypeFamily -> "border-info"
-  ItemKind.ClosedTypeFamily -> "border-info"
-  ItemKind.DataFamily -> "border-info"
-  ItemKind.TypeFamilyInstance -> "border-info"
-  ItemKind.DataFamilyInstance -> "border-info"
-  ItemKind.ForeignImport -> "border-warning"
-  ItemKind.ForeignExport -> "border-warning"
-  ItemKind.FixitySignature -> "border-secondary"
-  ItemKind.InlineSignature -> "border-secondary"
-  ItemKind.SpecialiseSignature -> "border-secondary"
-  ItemKind.StandaloneKindSig -> "border-info"
-  ItemKind.Rule -> "border-secondary"
-  ItemKind.Default -> "border-secondary"
-  ItemKind.Annotation -> "border-secondary"
-  ItemKind.Splice -> "border-secondary"
+kindColor :: ItemKind.ItemKind -> KindColor
+kindColor k = case k of
+  ItemKind.Function -> KindSuccess
+  ItemKind.PatternBinding -> KindSuccess
+  ItemKind.PatternSynonym -> KindSuccess
+  ItemKind.DataType -> KindInfo
+  ItemKind.Newtype -> KindInfo
+  ItemKind.TypeData -> KindInfo
+  ItemKind.TypeSynonym -> KindInfo
+  ItemKind.DataConstructor -> KindSecondary
+  ItemKind.GADTConstructor -> KindSecondary
+  ItemKind.RecordField -> KindSecondary
+  ItemKind.Class -> KindPrimary
+  ItemKind.ClassMethod -> KindPrimary
+  ItemKind.ClassInstance -> KindPrimary
+  ItemKind.StandaloneDeriving -> KindPrimary
+  ItemKind.DerivedInstance -> KindPrimary
+  ItemKind.OpenTypeFamily -> KindInfo
+  ItemKind.ClosedTypeFamily -> KindInfo
+  ItemKind.DataFamily -> KindInfo
+  ItemKind.TypeFamilyInstance -> KindInfo
+  ItemKind.DataFamilyInstance -> KindInfo
+  ItemKind.ForeignImport -> KindWarning
+  ItemKind.ForeignExport -> KindWarning
+  ItemKind.FixitySignature -> KindSecondary
+  ItemKind.InlineSignature -> KindSecondary
+  ItemKind.SpecialiseSignature -> KindSecondary
+  ItemKind.StandaloneKindSig -> KindInfo
+  ItemKind.Rule -> KindSecondary
+  ItemKind.Default -> KindSecondary
+  ItemKind.Annotation -> KindSecondary
+  ItemKind.Splice -> KindSecondary
+
+kindBadgeClass :: ItemKind.ItemKind -> String
+kindBadgeClass k = case kindColor k of
+  KindSuccess -> "bg-success-subtle text-success-emphasis"
+  KindInfo -> "bg-info-subtle text-info-emphasis"
+  KindSecondary -> "bg-secondary-subtle text-body"
+  KindPrimary -> "bg-primary-subtle text-primary-emphasis"
+  KindWarning -> "bg-warning-subtle text-warning-emphasis"
+
+kindBorderStyle :: ItemKind.ItemKind -> String
+kindBorderStyle k = case kindColor k of
+  KindSuccess -> "border-left-color: var(--bs-success)"
+  KindInfo -> "border-left-color: var(--bs-info)"
+  KindSecondary -> "border-left-color: var(--bs-secondary)"
+  KindPrimary -> "border-left-color: var(--bs-primary)"
+  KindWarning -> "border-left-color: var(--bs-warning)"
 
 -- Doc to HTML conversion
 

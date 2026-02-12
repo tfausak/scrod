@@ -13,9 +13,11 @@
         - FlexibleContexts
         - FlexibleInstances
         - MultilineStrings
+        - PolyKinds
         - RankNTypes
         - ScopedTypeVariables
         - StandaloneDeriving
+        - StandaloneKindSignatures
         - TemplateHaskell
         - TemplateHaskellQuotes
         - TypeOperators

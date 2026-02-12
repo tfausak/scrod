@@ -9,10 +9,7 @@
 -- @deriving via 'Generics.Generically'@ to get instances derived
 -- generically. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
-module Scrod.Convert.ToSchema
-  ( module Scrod.Schema,
-  )
-where
+module Scrod.Convert.ToSchema where
 
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Proxy as Proxy
@@ -55,7 +52,7 @@ import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Json.Value as Json
-import Scrod.Schema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
+import Scrod.Schema (Schema (MkSchema, unwrap), SchemaM, ToSchema (toSchema), define)
 import qualified Scrod.Schema as ToSchema
 
 -- * Simple newtype wrappers use @deriving via@ to get their instances

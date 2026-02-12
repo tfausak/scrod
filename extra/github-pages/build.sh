@@ -31,7 +31,8 @@ hash_asset() {
   new="${base}.${hash}.${ext}"
   mv "$dist/$file" "$dist/$new"
   for ref in "$@"; do
-    sed -i "s|$file|$new|g" "$dist/$ref"
+    sed "s|$file|$new|g" "$dist/$ref" > "$dist/$ref.tmp"
+    mv "$dist/$ref.tmp" "$dist/$ref"
   done
 }
 

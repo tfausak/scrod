@@ -183,6 +183,7 @@ library
     Scrod.TestSuite.Integration
     Scrod.Unlit
     Scrod.Version
+
   hs-source-dirs: source/library
   other-modules: PackageInfo_scrod
 

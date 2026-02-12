@@ -130,15 +130,16 @@ headElement m =
           []
           [ Xml.raw . Text.pack $
               """
-              if(matchMedia('(prefers-color-scheme:dark)').matches)
-              document.documentElement.dataset.bsTheme='dark';
-              matchMedia('(prefers-color-scheme:dark)').onchange=
-              e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';
+              const dark = matchMedia('(prefers-color-scheme: dark)');
+              const setTheme = (e) =>
+                document.documentElement.dataset.bsTheme = e.matches ? 'dark' : 'light';
+              setTheme(dark);
+              dark.addEventListener('change', setTheme);
               import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
-              .then(function(m){m.default(document.body,{delimiters:[
-              {left:'\\\\(',right:'\\\\)',display:false},
-              {left:'\\\\[',right:'\\\\]',display:true}
-              ]})})
+                .then((m) => m.default(document.body, { delimiters: [
+                  { left: '\\\\(', right: '\\\\)', display: false },
+                  { left: '\\\\[', right: '\\\\]', display: true }
+                ]}));
               """
           ]
     ]

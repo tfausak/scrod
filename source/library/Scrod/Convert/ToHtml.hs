@@ -1,8 +1,8 @@
 -- | Render a 'Module.Module' as a self-contained HTML document.
 --
--- Produces a complete @\<html\>@ document with an inline Bootstrap 5
--- stylesheet and semantic markup. The output uses the custom XML types
--- in @Scrod.Xml.*@ and can be serialized with 'Xml.encode'.
+-- Produces a complete @\<html\>@ document with Bootstrap 5 and KaTeX
+-- loaded from CDNs. The output uses the custom XML types in
+-- @Scrod.Xml.*@ and can be serialized with 'Xml.encode'.
 module Scrod.Convert.ToHtml where
 
 import qualified Data.Bifunctor as Bifunctor
@@ -12,7 +12,6 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
-import qualified Scrod.Bootstrap as Bootstrap
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Doc as Doc
@@ -97,7 +96,29 @@ headElement m =
       Content.Element $
         Xml.element "title" [] [Xml.text (moduleTitle m)],
       Content.Element $
-        Xml.element "style" [] [Xml.raw Bootstrap.css],
+        Xml.element
+          "link"
+          [ Xml.attribute "rel" "stylesheet",
+            Xml.attribute "href" "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+          ]
+          [],
+      Content.Element $
+        Xml.element
+          "link"
+          [ Xml.attribute "rel" "stylesheet",
+            Xml.attribute "href" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"
+          ]
+          [],
+      Content.Element $
+        Xml.element
+          "script"
+          [Xml.attribute "defer" "defer", Xml.attribute "src" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"]
+          [Xml.string ""],
+      Content.Element $
+        Xml.element
+          "script"
+          [Xml.attribute "defer" "defer", Xml.attribute "src" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"]
+          [Xml.string ""],
       Content.Element $
         Xml.element
           "script"
@@ -107,7 +128,13 @@ headElement m =
                 [ "if(matchMedia('(prefers-color-scheme:dark)').matches)",
                   "document.documentElement.dataset.bsTheme='dark';",
                   "matchMedia('(prefers-color-scheme:dark)').onchange=",
-                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light'"
+                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';",
+                  "document.addEventListener('DOMContentLoaded',function(){",
+                  "if(typeof renderMathInElement!=='undefined')",
+                  "renderMathInElement(document.body,{delimiters:[",
+                  "{left:'\\\\(',right:'\\\\)',display:false},",
+                  "{left:'\\\\[',right:'\\\\]',display:true}",
+                  "]})})"
                 ]
           ]
     ]
@@ -803,9 +830,9 @@ docToContents doc = case doc of
   Doc.Hyperlink h -> [Content.Element (hyperlinkToHtml h)]
   Doc.Pic p -> [Content.Element (pictureToHtml p)]
   Doc.MathInline t ->
-    [Content.Element $ Xml.element "span" [Xml.attribute "class" "fst-italic"] [Xml.text t]]
+    [Xml.text $ Text.pack "\\(" <> t <> Text.pack "\\)"]
   Doc.MathDisplay t ->
-    [Content.Element $ Xml.element "div" [Xml.attribute "class" "d-block text-center my-3 fst-italic"] [Xml.text t]]
+    [Xml.text $ Text.pack "\\[" <> t <> Text.pack "\\]"]
   Doc.AName t ->
     [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->

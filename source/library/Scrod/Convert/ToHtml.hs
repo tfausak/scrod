@@ -99,26 +99,16 @@ headElement m =
         Xml.element
           "link"
           [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            Xml.attribute "href" "https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css"
           ]
           [],
       Content.Element $
         Xml.element
           "link"
           [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css"
+            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/katex.min.css"
           ]
           [],
-      Content.Element $
-        Xml.element
-          "script"
-          [Xml.attribute "defer" "defer", Xml.attribute "src" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"]
-          [Xml.string ""],
-      Content.Element $
-        Xml.element
-          "script"
-          [Xml.attribute "defer" "defer", Xml.attribute "src" "https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js"]
-          [Xml.string ""],
       Content.Element $
         Xml.element
           "script"
@@ -128,13 +118,20 @@ headElement m =
                 [ "if(matchMedia('(prefers-color-scheme:dark)').matches)",
                   "document.documentElement.dataset.bsTheme='dark';",
                   "matchMedia('(prefers-color-scheme:dark)').onchange=",
-                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';",
-                  "document.addEventListener('DOMContentLoaded',function(){",
-                  "if(typeof renderMathInElement!=='undefined')",
-                  "renderMathInElement(document.body,{delimiters:[",
+                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light'"
+                ]
+          ],
+      Content.Element $
+        Xml.element
+          "script"
+          [Xml.attribute "type" "module"]
+          [ Xml.raw . Text.pack $
+              concat
+                [ "import r from'https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js';",
+                  "r(document.body,{delimiters:[",
                   "{left:'\\\\(',right:'\\\\)',display:false},",
                   "{left:'\\\\[',right:'\\\\]',display:true}",
-                  "]})})"
+                  "]})"
                 ]
           ]
     ]

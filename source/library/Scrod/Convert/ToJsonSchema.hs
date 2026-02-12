@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
 -- | Generate a JSON Schema describing the output of 'ToJson.toJson'.
@@ -9,6 +8,7 @@
 -- prepended and appended.
 module Scrod.Convert.ToJsonSchema where
 
+import qualified Data.Proxy as Proxy
 import Scrod.Convert.ToSchema ()
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Extra.Builder as Builder
@@ -35,7 +35,7 @@ moduleSchema =
   let (schema, defs) =
         ToSchema.runSchemaM $
           ToSchema.toSchema
-            (undefined :: proxy Module.Module)
+            (Proxy.Proxy :: Proxy.Proxy Module.Module)
    in case ToSchema.unwrap schema of
         Json.Object (Object.MkObject bodyPairs) ->
           Json.Object . Object.MkObject $

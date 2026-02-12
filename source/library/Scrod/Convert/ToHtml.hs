@@ -131,20 +131,12 @@ headElement m =
                 [ "if(matchMedia('(prefers-color-scheme:dark)').matches)",
                   "document.documentElement.dataset.bsTheme='dark';",
                   "matchMedia('(prefers-color-scheme:dark)').onchange=",
-                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light'"
-                ]
-          ],
-      Content.Element $
-        Xml.element
-          "script"
-          [Xml.attribute "type" "module"]
-          [ Xml.raw . Text.pack $
-              concat
-                [ "import r from'https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js';",
-                  "r(document.body,{delimiters:[",
+                  "e=>document.documentElement.dataset.bsTheme=e.matches?'dark':'light';",
+                  "import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')",
+                  ".then(function(m){m.default(document.body,{delimiters:[",
                   "{left:'\\\\(',right:'\\\\)',display:false},",
                   "{left:'\\\\[',right:'\\\\]',display:true}",
-                  "]})"
+                  "]})})"
                 ]
           ]
     ]

@@ -9,7 +9,6 @@
 module Scrod.Convert.ToJsonSchema where
 
 import qualified Data.Proxy as Proxy
-import Scrod.Convert.ToSchema ()
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Extra.Parsec as Parsec

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 
 module Scrod.Core.Export where
 
@@ -7,6 +8,8 @@ import qualified GHC.Generics as Generics
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Core.Section as Section
+import qualified Scrod.Json.ToJson as ToJson
+import qualified Scrod.Schema as Schema
 
 -- | A single entry in a module's export list.
 data Export
@@ -19,3 +22,4 @@ data Export
   | -- | Named doc reference: @-- $chunkName@
     DocNamed Text.Text
   deriving (Eq, Generics.Generic, Ord, Show)
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Export

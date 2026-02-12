@@ -174,7 +174,7 @@ function wrapperHtml(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}';">
   <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>
@@ -204,6 +204,14 @@ function wrapperHtml(): string {
             document.head.appendChild(style);
           }
           style.textContent = newStyle.textContent;
+        }
+
+        var newLinks = doc.querySelectorAll('link[rel="stylesheet"]');
+        for (var i = 0; i < newLinks.length; i++) {
+          var href = newLinks[i].getAttribute('href');
+          if (href && !document.querySelector('link[href="' + href + '"]')) {
+            document.head.appendChild(newLinks[i].cloneNode());
+          }
         }
 
         var scrollTop = document.documentElement.scrollTop;

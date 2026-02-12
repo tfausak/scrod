@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ExportNameKind where
 
@@ -17,7 +16,4 @@ data ExportNameKind
   | -- | @module Data.List@
     Module
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically ExportNameKind instance ToJson.ToJson ExportNameKind
-
-deriving via Generics.Generically ExportNameKind instance Schema.ToSchema ExportNameKind
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ExportNameKind

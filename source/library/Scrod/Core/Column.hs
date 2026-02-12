@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Column where
 
@@ -11,7 +10,4 @@ newtype Column = MkColumn
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
-
-deriving via Natural.Natural instance ToJson.ToJson Column
-
-deriving via Natural.Natural instance Schema.ToSchema Column
+  deriving (ToJson.ToJson, Schema.ToSchema) via Natural.Natural

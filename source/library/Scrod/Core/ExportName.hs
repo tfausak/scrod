@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ExportName where
 
@@ -16,7 +15,4 @@ data ExportName = MkExportName
     name :: Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically ExportName instance ToJson.ToJson ExportName
-
-deriving via Generics.Generically ExportName instance Schema.ToSchema ExportName
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ExportName

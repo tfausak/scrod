@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Picture where
 
@@ -15,7 +14,4 @@ data Picture = MkPicture
     title :: Maybe Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Picture instance ToJson.ToJson Picture
-
-deriving via Generics.Generically Picture instance Schema.ToSchema Picture
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Picture

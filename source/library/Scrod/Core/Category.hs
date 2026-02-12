@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Category where
 
@@ -11,7 +10,4 @@ newtype Category = MkCategory
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
-
-deriving via Text.Text instance ToJson.ToJson Category
-
-deriving via Text.Text instance Schema.ToSchema Category
+  deriving (ToJson.ToJson, Schema.ToSchema) via Text.Text

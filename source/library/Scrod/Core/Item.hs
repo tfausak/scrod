@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Item where
 
@@ -22,7 +21,4 @@ data Item = MkItem
     signature :: Maybe Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Item instance ToJson.ToJson Item
-
-deriving via Generics.Generically Item instance Schema.ToSchema Item
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Item

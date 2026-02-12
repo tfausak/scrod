@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Extension where
 
@@ -11,7 +10,4 @@ newtype Extension = MkExtension
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
-
-deriving via Text.Text instance ToJson.ToJson Extension
-
-deriving via Text.Text instance Schema.ToSchema Extension
+  deriving (ToJson.ToJson, Schema.ToSchema) via Text.Text

@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Namespace where
 
@@ -15,7 +14,4 @@ data Namespace
   | -- | @t'identifier'@ syntax
     Type
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Namespace instance ToJson.ToJson Namespace
-
-deriving via Generics.Generically Namespace instance Schema.ToSchema Namespace
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Namespace

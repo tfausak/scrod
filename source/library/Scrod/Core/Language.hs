@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Language where
 
@@ -11,7 +10,4 @@ newtype Language = MkLanguage
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
-
-deriving via Text.Text instance ToJson.ToJson Language
-
-deriving via Text.Text instance Schema.ToSchema Language
+  deriving (ToJson.ToJson, Schema.ToSchema) via Text.Text

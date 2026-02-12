@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Import where
 
@@ -16,7 +15,4 @@ data Import = MkImport
     alias :: Maybe ModuleName.ModuleName
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Import instance ToJson.ToJson Import
-
-deriving via Generics.Generically Import instance Schema.ToSchema Import
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Import

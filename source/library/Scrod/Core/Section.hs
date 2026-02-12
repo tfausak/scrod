@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Section where
 
@@ -13,7 +12,4 @@ newtype Section = MkSection
   { header :: Header.Header Doc.Doc
   }
   deriving (Eq, Ord, Show)
-
-deriving via Header.Header Doc.Doc instance ToJson.ToJson Section
-
-deriving via Header.Header Doc.Doc instance Schema.ToSchema Section
+  deriving (ToJson.ToJson, Schema.ToSchema) via Header.Header Doc.Doc

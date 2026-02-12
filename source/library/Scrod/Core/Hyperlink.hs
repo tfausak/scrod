@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Hyperlink where
 
@@ -15,7 +14,4 @@ data Hyperlink doc = MkHyperlink
     label :: Maybe doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically (Hyperlink doc) instance (ToJson.ToJson doc) => ToJson.ToJson (Hyperlink doc)
-
-deriving via Generics.Generically (Hyperlink doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Hyperlink doc)
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically (Hyperlink doc)

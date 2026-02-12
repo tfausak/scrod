@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Identifier where
 
@@ -16,7 +15,4 @@ data Identifier = MkIdentifier
     value :: Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Identifier instance ToJson.ToJson Identifier
-
-deriving via Generics.Generically Identifier instance Schema.ToSchema Identifier
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Identifier

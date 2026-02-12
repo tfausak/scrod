@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ItemKey where
 
@@ -11,7 +10,4 @@ newtype ItemKey = MkItemKey
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
-
-deriving via Natural.Natural instance ToJson.ToJson ItemKey
-
-deriving via Natural.Natural instance Schema.ToSchema ItemKey
+  deriving (ToJson.ToJson, Schema.ToSchema) via Natural.Natural

@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Subordinates where
 
@@ -17,7 +16,4 @@ data Subordinates = MkSubordinates
     explicit :: [ExportName.ExportName]
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Subordinates instance ToJson.ToJson Subordinates
-
-deriving via Generics.Generically Subordinates instance Schema.ToSchema Subordinates
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Subordinates

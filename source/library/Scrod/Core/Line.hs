@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Line where
 
@@ -11,7 +10,4 @@ newtype Line = MkLine
   { unwrap :: Natural.Natural
   }
   deriving (Eq, Ord, Show)
-
-deriving via Natural.Natural instance ToJson.ToJson Line
-
-deriving via Natural.Natural instance Schema.ToSchema Line
+  deriving (ToJson.ToJson, Schema.ToSchema) via Natural.Natural

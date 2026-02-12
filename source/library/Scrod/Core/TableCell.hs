@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.TableCell where
 
@@ -16,7 +15,4 @@ data Cell doc = MkCell
     contents :: doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically (Cell doc) instance (ToJson.ToJson doc) => ToJson.ToJson (Cell doc)
-
-deriving via Generics.Generically (Cell doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Cell doc)
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically (Cell doc)

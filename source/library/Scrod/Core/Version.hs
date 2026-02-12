@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Version where
 
@@ -12,7 +11,4 @@ newtype Version = MkVersion
   { unwrap :: NonEmpty.NonEmpty Natural.Natural
   }
   deriving (Eq, Ord, Show)
-
-deriving via NonEmpty.NonEmpty Natural.Natural instance ToJson.ToJson Version
-
-deriving via NonEmpty.NonEmpty Natural.Natural instance Schema.ToSchema Version
+  deriving (ToJson.ToJson, Schema.ToSchema) via NonEmpty.NonEmpty Natural.Natural

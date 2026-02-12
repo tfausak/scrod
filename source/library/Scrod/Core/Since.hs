@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Since where
 
@@ -15,7 +14,4 @@ data Since = MkSince
     version :: Version.Version
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Since instance ToJson.ToJson Since
-
-deriving via Generics.Generically Since instance Schema.ToSchema Since
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Since

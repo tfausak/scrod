@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Header where
 
@@ -15,7 +14,4 @@ data Header doc = MkHeader
     title :: doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically (Header doc) instance (ToJson.ToJson doc) => ToJson.ToJson (Header doc)
-
-deriving via Generics.Generically (Header doc) instance (Schema.ToSchema doc) => Schema.ToSchema (Header doc)
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically (Header doc)

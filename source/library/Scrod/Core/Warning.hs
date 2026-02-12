@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Warning where
 
@@ -15,7 +14,4 @@ data Warning = MkWarning
     value :: Text.Text
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Warning instance ToJson.ToJson Warning
-
-deriving via Generics.Generically Warning instance Schema.ToSchema Warning
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Warning

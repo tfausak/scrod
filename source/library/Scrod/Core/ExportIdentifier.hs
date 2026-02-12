@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ExportIdentifier where
 
@@ -20,7 +19,4 @@ data ExportIdentifier = MkExportIdentifier
     doc :: Maybe Doc.Doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically ExportIdentifier instance ToJson.ToJson ExportIdentifier
-
-deriving via Generics.Generically ExportIdentifier instance Schema.ToSchema ExportIdentifier
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ExportIdentifier

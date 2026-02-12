@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ModLink where
 
@@ -15,7 +14,4 @@ data ModLink doc = MkModLink
     label :: Maybe doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically (ModLink doc) instance (ToJson.ToJson doc) => ToJson.ToJson (ModLink doc)
-
-deriving via Generics.Generically (ModLink doc) instance (Schema.ToSchema doc) => Schema.ToSchema (ModLink doc)
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically (ModLink doc)

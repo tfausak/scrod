@@ -1,5 +1,4 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ModuleName where
 
@@ -11,7 +10,4 @@ newtype ModuleName = MkModuleName
   { unwrap :: Text.Text
   }
   deriving (Eq, Ord, Show)
-
-deriving via Text.Text instance ToJson.ToJson ModuleName
-
-deriving via Text.Text instance Schema.ToSchema ModuleName
+  deriving (ToJson.ToJson, Schema.ToSchema) via Text.Text

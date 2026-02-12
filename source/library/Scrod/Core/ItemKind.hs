@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.ItemKind where
 
@@ -71,7 +70,4 @@ data ItemKind
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically ItemKind instance ToJson.ToJson ItemKind
-
-deriving via Generics.Generically ItemKind instance Schema.ToSchema ItemKind
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Example where
 
@@ -15,7 +14,4 @@ data Example = MkExample
     result :: [Text.Text]
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Example instance ToJson.ToJson Example
-
-deriving via Generics.Generically Example instance Schema.ToSchema Example
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Example

@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module Scrod.Core.Location where
 
@@ -15,7 +14,4 @@ data Location = MkLocation
     column :: Column.Column
   }
   deriving (Eq, Generics.Generic, Ord, Show)
-
-deriving via Generics.Generically Location instance ToJson.ToJson Location
-
-deriving via Generics.Generically Location instance Schema.ToSchema Location
+  deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Location

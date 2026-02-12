@@ -5,10 +5,9 @@
 -- | Render Scrod core types as JSON values via the 'ToJson' class.
 --
 -- Simple newtype wrappers use @deriving via@ the underlying type.
--- Record types use @deriving via 'Generics.Generically'@ to get
--- instances derived from their field names. Enum types use
--- @deriving via 'GenericEnum'@ to get their constructor name as a
--- JSON string. Other types have hand-written instances. Import this
+-- Record types, enum types, and tagged sum types all use
+-- @deriving via 'Generics.Generically'@ to get instances derived
+-- generically. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
 module Scrod.Convert.ToJson
   ( module Scrod.Json.ToJson,
@@ -55,7 +54,7 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToJson (GenericEnum (GenericEnum), GenericTagged (GenericTagged), ToJson (toJson))
+import Scrod.Json.ToJson (ToJson (toJson))
 import qualified Scrod.Json.Value as Json
 
 -- Simple newtype wrappers use @deriving via@ to get their instances
@@ -83,9 +82,8 @@ deriving via Header.Header Doc.Doc instance ToJson Section.Section
 
 deriving via NonEmpty.NonEmpty Natural.Natural instance ToJson Version.Version
 
--- Record types use @Generics.Generically@ to derive instances from
--- their field names and 'ToJson' instances. Enum types use
--- @GenericEnum@ to derive instances from their constructor names.
+-- Record types, enum types, and tagged sum types use
+-- @Generics.Generically@ to derive their instances generically.
 
 deriving via Generics.Generically Example.Example instance ToJson Example.Example
 
@@ -121,13 +119,13 @@ deriving via Generics.Generically (TableCell.Cell doc) instance (ToJson doc) => 
 
 deriving via Generics.Generically Warning.Warning instance ToJson Warning.Warning
 
-deriving via GenericEnum ExportNameKind.ExportNameKind instance ToJson ExportNameKind.ExportNameKind
+deriving via Generics.Generically ExportNameKind.ExportNameKind instance ToJson ExportNameKind.ExportNameKind
 
-deriving via GenericEnum ItemKind.ItemKind instance ToJson ItemKind.ItemKind
+deriving via Generics.Generically ItemKind.ItemKind instance ToJson ItemKind.ItemKind
 
-deriving via GenericEnum Namespace.Namespace instance ToJson Namespace.Namespace
+deriving via Generics.Generically Namespace.Namespace instance ToJson Namespace.Namespace
 
-deriving via GenericTagged Export.Export instance ToJson Export.Export
+deriving via Generics.Generically Export.Export instance ToJson Export.Export
 
 -- Hand-written instances for types that require special encoding.
 

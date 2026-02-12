@@ -293,11 +293,10 @@ itemSchema =
 itemKindSchema :: Json.Value
 itemKindSchema =
   Json.object
-    [ ("type", Json.string "string"),
-      ( "enum",
+    [ ( "oneOf",
         Json.array $
           fmap
-            Json.string
+            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
             [ "Annotation",
               "Class",
               "ClassInstance",
@@ -351,8 +350,12 @@ exportNameSchema =
 exportNameKindSchema :: Json.Value
 exportNameKindSchema =
   Json.object
-    [ ("type", Json.string "string"),
-      ("enum", Json.array [Json.string "Module", Json.string "Pattern", Json.string "Type"])
+    [ ( "oneOf",
+        Json.array $
+          fmap
+            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
+            ["Module", "Pattern", "Type"]
+      )
     ]
 
 subordinatesSchema :: Json.Value
@@ -372,8 +375,12 @@ identifierSchema =
 namespaceSchema :: Json.Value
 namespaceSchema =
   Json.object
-    [ ("type", Json.string "string"),
-      ("enum", Json.array [Json.string "Type", Json.string "Value"])
+    [ ( "oneOf",
+        Json.array $
+          fmap
+            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
+            ["Type", "Value"]
+      )
     ]
 
 exampleSchema :: Json.Value
@@ -451,7 +458,7 @@ spec s = do
       at s "/$defs/version/type" $ Json.string "array"
 
     Spec.it s "defines itemKind" $ do
-      at s "/$defs/itemKind/type" $ Json.string "string"
+      at s "/$defs/itemKind/oneOf" Json.null
 
     Spec.it s "defines location" $ do
       at s "/$defs/location/type" $ Json.string "object"

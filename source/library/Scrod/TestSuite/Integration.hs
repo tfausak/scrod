@@ -185,7 +185,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Identifier\""),
-          ("/documentation/value/value/namespace", "\"Value\""),
+          ("/documentation/value/value/namespace/type", "\"Value\""),
           ("/documentation/value/value/value", "\"x\"")
         ]
 
@@ -198,7 +198,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Identifier\""),
-          ("/documentation/value/value/namespace", "\"Type\""),
+          ("/documentation/value/value/namespace/type", "\"Type\""),
           ("/documentation/value/value/value", "\"x\"")
         ]
 
@@ -703,7 +703,7 @@ spec s = Spec.describe s "integration" $ do
           module M ( pattern True ) where
           """
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "\"Pattern\""),
+            ("/exports/0/value/name/kind/type", "\"Pattern\""),
             ("/exports/0/value/name/name", "\"True\""),
             ("/exports/0/value/subordinates", "null"),
             ("/exports/0/value/warning", "null"),
@@ -718,7 +718,7 @@ spec s = Spec.describe s "integration" $ do
           module M ( type Bool ) where
           """
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "\"Type\""),
+            ("/exports/0/value/name/kind/type", "\"Type\""),
             ("/exports/0/value/name/name", "\"Bool\""),
             ("/exports/0/value/subordinates", "null"),
             ("/exports/0/value/warning", "null"),
@@ -730,7 +730,7 @@ spec s = Spec.describe s "integration" $ do
           s
           "module M ( module M ) where"
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "\"Module\""),
+            ("/exports/0/value/name/kind/type", "\"Module\""),
             ("/exports/0/value/name/name", "\"M\""),
             ("/exports/0/value/subordinates", "null"),
             ("/exports/0/value/warning", "null"),
@@ -912,7 +912,7 @@ spec s = Spec.describe s "integration" $ do
           [ ("/items/0/location/line", "1"),
             ("/items/0/location/column", "1"),
             ("/items/0/value/key", "0"),
-            ("/items/0/value/kind", "\"Function\""),
+            ("/items/0/value/kind/type", "\"Function\""),
             ("/items/0/value/parentKey", "null"),
             ("/items/0/value/name", "\"x\""),
             ("/items/0/value/documentation/type", "\"Empty\""),
@@ -974,28 +974,28 @@ spec s = Spec.describe s "integration" $ do
           ]
 
     Spec.it s "open type family" $ do
-      check s "{-# language TypeFamilies #-} type family A" [("/items/0/value/kind", "\"OpenTypeFamily\"")]
+      check s "{-# language TypeFamilies #-} type family A" [("/items/0/value/kind/type", "\"OpenTypeFamily\"")]
 
     Spec.it s "closed type family" $ do
-      check s "{-# language TypeFamilies #-} type family B where" [("/items/0/value/kind", "\"ClosedTypeFamily\"")]
+      check s "{-# language TypeFamilies #-} type family B where" [("/items/0/value/kind/type", "\"ClosedTypeFamily\"")]
 
     Spec.it s "closed type family with instance" $ do
       check
         s
         "{-# language TypeFamilies #-} type family C a where C () = ()"
-        [ ("/items/0/value/kind", "\"ClosedTypeFamily\""),
-          ("/items/1/value/kind", "\"TypeFamilyInstance\""),
+        [ ("/items/0/value/kind/type", "\"ClosedTypeFamily\""),
+          ("/items/1/value/kind/type", "\"TypeFamilyInstance\""),
           ("/items/1/value/parentKey", "0")
         ]
 
     Spec.it s "data family" $ do
-      check s "{-# language TypeFamilies #-} data family F" [("/items/0/value/kind", "\"DataFamily\"")]
+      check s "{-# language TypeFamilies #-} data family F" [("/items/0/value/kind/type", "\"DataFamily\"")]
 
     Spec.it s "type synonym" $ do
       check
         s
         "type G = ()"
-        [ ("/items/0/value/kind", "\"TypeSynonym\""),
+        [ ("/items/0/value/kind/type", "\"TypeSynonym\""),
           ("/items/0/value/signature", "\"= ()\"")
         ]
 
@@ -1003,18 +1003,18 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "type G a = [a]"
-        [ ("/items/0/value/kind", "\"TypeSynonym\""),
+        [ ("/items/0/value/kind/type", "\"TypeSynonym\""),
           ("/items/0/value/signature", "\"a = [a]\"")
         ]
 
     Spec.it s "data" $ do
-      check s "data H" [("/items/0/value/kind", "\"DataType\"")]
+      check s "data H" [("/items/0/value/kind/type", "\"DataType\"")]
 
     Spec.it s "data with type variable" $ do
       check
         s
         "data T a"
-        [ ("/items/0/value/kind", "\"DataType\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"T\""),
           ("/items/0/value/signature", "\"a\"")
         ]
@@ -1023,7 +1023,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data E a b"
-        [ ("/items/0/value/kind", "\"DataType\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"E\""),
           ("/items/0/value/signature", "\"a b\"")
         ]
@@ -1032,7 +1032,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "newtype N a = MkN a"
-        [ ("/items/0/value/kind", "\"Newtype\""),
+        [ ("/items/0/value/kind/type", "\"Newtype\""),
           ("/items/0/value/name", "\"N\""),
           ("/items/0/value/signature", "\"a\"")
         ]
@@ -1041,7 +1041,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data G a where MkG :: a -> G a"
-        [ ("/items/0/value/kind", "\"DataType\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"G\""),
           ("/items/0/value/signature", "\"a\"")
         ]
@@ -1050,16 +1050,16 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data I = J"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"DataConstructor\"")
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\"")
         ]
 
     Spec.it s "infix data constructor" $ do
       check
         s
         "data T = Int :+: Bool"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"DataConstructor\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
           ("/items/1/value/name", "\":+:\""),
           ("/items/1/value/signature", "\"Int -> Bool -> T\"")
         ]
@@ -1068,7 +1068,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data I2 = {- | x -} J2"
-        [ ("/items/1/value/kind", "\"DataConstructor\""),
+        [ ("/items/1/value/kind/type", "\"DataConstructor\""),
           ("/items/1/value/name", "\"J2\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
           ("/items/1/value/documentation/value/type", "\"String\""),
@@ -1080,8 +1080,8 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data K where L :: K"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"GADTConstructor\"")
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"GADTConstructor\"")
         ]
 
     Spec.it s "data constructor GADT with doc" $ do
@@ -1092,7 +1092,7 @@ spec s = Spec.describe s "integration" $ do
           -- | d
           L2 :: K2
         """
-        [ ("/items/1/value/kind", "\"GADTConstructor\""),
+        [ ("/items/1/value/kind/type", "\"GADTConstructor\""),
           ("/items/1/value/name", "\"L2\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
           ("/items/1/value/documentation/value/type", "\"String\""),
@@ -1156,58 +1156,58 @@ spec s = Spec.describe s "integration" $ do
         ]
 
     Spec.it s "type data" $ do
-      check s "{-# language TypeData #-} type data L" [("/items/0/value/kind", "\"TypeData\"")]
+      check s "{-# language TypeData #-} type data L" [("/items/0/value/kind/type", "\"TypeData\"")]
 
     Spec.it s "type data constructor" $ do
       check
         s
         "{-# language TypeData #-} type data M = N"
-        [ ("/items/0/value/kind", "\"TypeData\""),
-          ("/items/1/value/kind", "\"DataConstructor\"")
+        [ ("/items/0/value/kind/type", "\"TypeData\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\"")
         ]
 
     Spec.it s "type data constructor GADT" $ do
       check
         s
         "{-# language TypeData #-} type data O where P :: O"
-        [ ("/items/0/value/kind", "\"TypeData\""),
-          ("/items/1/value/kind", "\"GADTConstructor\"")
+        [ ("/items/0/value/kind/type", "\"TypeData\""),
+          ("/items/1/value/kind/type", "\"GADTConstructor\"")
         ]
 
     Spec.it s "newtype" $ do
       check
         s
         "newtype Q = R ()"
-        [ ("/items/0/value/kind", "\"Newtype\""),
-          ("/items/1/value/kind", "\"DataConstructor\"")
+        [ ("/items/0/value/kind/type", "\"Newtype\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\"")
         ]
 
     Spec.it s "record field" $ do
       check
         s
         "data S = T { u :: () }"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"DataConstructor\""),
-          ("/items/2/value/kind", "\"RecordField\"")
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/2/value/kind/type", "\"RecordField\"")
         ]
 
     Spec.it s "record field GADT" $ do
       check
         s
         "data V where W :: { x :: () } -> V"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"GADTConstructor\""),
-          ("/items/2/value/kind", "\"RecordField\"")
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"GADTConstructor\""),
+          ("/items/2/value/kind/type", "\"RecordField\"")
         ]
 
     Spec.it s "class" $ do
-      check s "class Y" [("/items/0/value/kind", "\"Class\"")]
+      check s "class Y" [("/items/0/value/kind/type", "\"Class\"")]
 
     Spec.it s "class with type variable" $ do
       check
         s
         "class C a"
-        [ ("/items/0/value/kind", "\"Class\""),
+        [ ("/items/0/value/kind/type", "\"Class\""),
           ("/items/0/value/name", "\"C\""),
           ("/items/0/value/signature", "\"a\"")
         ]
@@ -1219,7 +1219,7 @@ spec s = Spec.describe s "integration" $ do
         class Z a
         instance Z ()
         """
-        [("/items/1/value/kind", "\"ClassInstance\"")]
+        [("/items/1/value/kind/type", "\"ClassInstance\"")]
 
     Spec.it s "class instance parent is local type" $ do
       check
@@ -1229,7 +1229,7 @@ spec s = Spec.describe s "integration" $ do
         data T
         instance C T
         """
-        [ ("/items/2/value/kind", "\"ClassInstance\""),
+        [ ("/items/2/value/kind/type", "\"ClassInstance\""),
           ("/items/2/value/name", "\"C T\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1241,7 +1241,7 @@ spec s = Spec.describe s "integration" $ do
         class C a
         instance C Int
         """
-        [ ("/items/1/value/kind", "\"ClassInstance\""),
+        [ ("/items/1/value/kind/type", "\"ClassInstance\""),
           ("/items/1/value/parentKey", "null")
         ]
 
@@ -1253,7 +1253,7 @@ spec s = Spec.describe s "integration" $ do
         data family A a
         data instance A ()
         """
-        [("/items/1/value/kind", "\"DataFamilyInstance\"")]
+        [("/items/1/value/kind/type", "\"DataFamilyInstance\"")]
 
     Spec.it s "data instance constructor" $ do
       check
@@ -1263,8 +1263,8 @@ spec s = Spec.describe s "integration" $ do
         data family B a
         data instance B () = C
         """
-        [ ("/items/1/value/kind", "\"DataFamilyInstance\""),
-          ("/items/2/value/kind", "\"DataConstructor\""),
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
 
@@ -1276,8 +1276,8 @@ spec s = Spec.describe s "integration" $ do
         data family D
         data instance D where E :: D
         """
-        [ ("/items/1/value/kind", "\"DataFamilyInstance\""),
-          ("/items/2/value/kind", "\"GADTConstructor\""),
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
 
@@ -1289,8 +1289,8 @@ spec s = Spec.describe s "integration" $ do
         data family F
         newtype instance F = G ()
         """
-        [ ("/items/1/value/kind", "\"DataFamilyInstance\""),
-          ("/items/2/value/kind", "\"DataConstructor\""),
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
 
@@ -1302,8 +1302,8 @@ spec s = Spec.describe s "integration" $ do
         data family H
         newtype instance H where I :: () -> H
         """
-        [ ("/items/1/value/kind", "\"DataFamilyInstance\""),
-          ("/items/2/value/kind", "\"GADTConstructor\""),
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
 
@@ -1315,7 +1315,7 @@ spec s = Spec.describe s "integration" $ do
         type family J
         type instance J = ()
         """
-        [("/items/1/value/kind", "\"TypeFamilyInstance\"")]
+        [("/items/1/value/kind/type", "\"TypeFamilyInstance\"")]
 
     Spec.it s "standalone deriving" $ do
       check
@@ -1324,7 +1324,7 @@ spec s = Spec.describe s "integration" $ do
         data L
         deriving instance Show L
         """
-        [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
+        [ ("/items/1/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/1/value/name", "\"Show L\""),
           ("/items/1/value/parentKey", "0")
         ]
@@ -1337,7 +1337,7 @@ spec s = Spec.describe s "integration" $ do
         data M
         deriving stock instance Show M
         """
-        [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
+        [ ("/items/1/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/1/value/name", "\"Show M\""),
           ("/items/1/value/parentKey", "0")
         ]
@@ -1350,7 +1350,7 @@ spec s = Spec.describe s "integration" $ do
         newtype N = MkN Int
         deriving newtype instance Show N
         """
-        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+        [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"Show N\""),
           ("/items/2/value/parentKey", "0")
         ]
@@ -1364,7 +1364,7 @@ spec s = Spec.describe s "integration" $ do
         data W2
         deriving anyclass instance O W2
         """
-        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+        [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"O W2\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1377,7 +1377,7 @@ spec s = Spec.describe s "integration" $ do
         newtype P = MkP Int
         deriving via Int instance Show P
         """
-        [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
+        [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"Show P\""),
           ("/items/2/value/parentKey", "0")
         ]
@@ -1386,8 +1386,8 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data R deriving Show"
-        [ ("/items/0/value/kind", "\"DataType\""),
-          ("/items/1/value/kind", "\"DerivedInstance\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DerivedInstance\""),
           ("/items/1/value/name", "\"Show\"")
         ]
 
@@ -1395,9 +1395,9 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "data R2 deriving (Show, Eq)"
-        [ ("/items/1/value/kind", "\"DerivedInstance\""),
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
           ("/items/1/value/name", "\"Show\""),
-          ("/items/2/value/kind", "\"DerivedInstance\""),
+          ("/items/2/value/kind/type", "\"DerivedInstance\""),
           ("/items/2/value/name", "\"Eq\"")
         ]
 
@@ -1555,9 +1555,9 @@ spec s = Spec.describe s "integration" $ do
             m :: a
           """
           [ ("/items/0/value/key", "0"),
-            ("/items/0/value/kind", "\"Class\""),
+            ("/items/0/value/kind/type", "\"Class\""),
             ("/items/1/value/key", "1"),
-            ("/items/1/value/kind", "\"ClassMethod\""),
+            ("/items/1/value/kind/type", "\"ClassMethod\""),
             ("/items/1/value/parentKey", "0"),
             ("/items/1/value/signature", "\"a\"")
           ]
@@ -1583,7 +1583,7 @@ spec s = Spec.describe s "integration" $ do
           m :: a -> a
           m = id
         """
-        [ ("/items/1/value/kind", "\"ClassMethod\""),
+        [ ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/name", "\"m\""),
           ("/items/1/value/signature", "\"a -> a\"")
         ]
@@ -1714,7 +1714,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "{-# language ForeignFunctionInterface #-} foreign import ccall \"\" p :: ()"
-        [ ("/items/0/value/kind", "\"ForeignImport\""),
+        [ ("/items/0/value/kind/type", "\"ForeignImport\""),
           ("/items/0/value/name", "\"p\""),
           ("/items/0/value/signature", "\"()\"")
         ]
@@ -1723,7 +1723,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "{-# language ForeignFunctionInterface #-} foreign export ccall q :: IO ()"
-        [ ("/items/0/value/kind", "\"ForeignExport\""),
+        [ ("/items/0/value/kind/type", "\"ForeignExport\""),
           ("/items/0/value/name", "\"q\""),
           ("/items/0/value/signature", "\"IO ()\"")
         ]
@@ -1775,7 +1775,7 @@ spec s = Spec.describe s "integration" $ do
         {-# language TemplateHaskell #-}
         $( return [] )
         """
-        [ ("/items/0/value/kind", "\"Splice\""),
+        [ ("/items/0/value/kind/type", "\"Splice\""),
           ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"$(return [])\"")
         ]
@@ -1787,7 +1787,7 @@ spec s = Spec.describe s "integration" $ do
         {-# language TemplateHaskell #-}
         $$(pure [])
         """
-        [ ("/items/0/value/kind", "\"Splice\""),
+        [ ("/items/0/value/kind/type", "\"Splice\""),
           ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"$$(pure [])\"")
         ]
@@ -1799,7 +1799,7 @@ spec s = Spec.describe s "integration" $ do
         {-# language QuasiQuotes #-}
         [x||]
         """
-        [ ("/items/0/value/kind", "\"Splice\""),
+        [ ("/items/0/value/kind/type", "\"Splice\""),
           ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"[x||]\"")
         ]
@@ -2018,7 +2018,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/name/value", "\"Foo\""),
           ("/signature", "true"),
-          ("/items/0/value/kind", "\"Function\""),
+          ("/items/0/value/kind/type", "\"Function\""),
           ("/items/0/value/name", "\"foo\""),
           ("/items/0/value/signature", "\"Int\"")
         ]
@@ -2032,7 +2032,7 @@ spec s = Spec.describe s "integration" $ do
           data T
         """
         [ ("/signature", "true"),
-          ("/items/0/value/kind", "\"DataType\""),
+          ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"T\"")
         ]
 
@@ -2046,9 +2046,9 @@ spec s = Spec.describe s "integration" $ do
             bar :: a -> Bool
         """
         [ ("/signature", "true"),
-          ("/items/0/value/kind", "\"Class\""),
+          ("/items/0/value/kind/type", "\"Class\""),
           ("/items/0/value/name", "\"C\""),
-          ("/items/1/value/kind", "\"ClassMethod\""),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/name", "\"bar\"")
         ]
 

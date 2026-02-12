@@ -120,7 +120,7 @@ bodyElement m =
     [ Content.Element $
         Xml.element
           "div"
-          [Xml.attribute "class" "container py-4"]
+          [Xml.attribute "class" "container py-4 text-break"]
           ( [Content.Element (headerSection m)]
               <> metadataContents m
               <> exportsContents (Module.exports m)

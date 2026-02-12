@@ -44,6 +44,8 @@ jobs:
       - run: cabal build
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
+      - run: artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }} --schema > artifact/schema.json
+        shell: bash
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
@@ -200,4 +202,4 @@ jobs:
       - run: .github/workflows/release.sh ${{ needs.meta.outputs.name }} ${{ needs.meta.outputs.version }} ${{ github.sha }}
       - env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz *.vsix
+        run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz ${{ needs.meta.outputs.name }}-*.json *.vsix

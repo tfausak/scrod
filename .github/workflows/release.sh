@@ -7,6 +7,8 @@ sha="$3"
 artifact_prefix="${name}-${sha}"
 
 tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 --wildcards '*.tar.gz'
+tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 artifact/schema.json
+mv schema.json "${name}-${version}-schema.json"
 
 shopt -s nullglob
 dirs=("${artifact_prefix}"-*/)

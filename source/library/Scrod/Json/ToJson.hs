@@ -64,3 +64,28 @@ instance GToJson Generics.U1 where
 
 instance (Generics.Generic a, GToJson (Generics.Rep a)) => ToJson (Generics.Generically a) where
   toJson (Generics.Generically x) = Json.object (gToJsonFields (Generics.from x))
+
+-- | Wrapper for deriving 'ToJson' for enum types (nullary constructors
+-- only). The constructor name becomes a JSON string.
+newtype GenericEnum a = GenericEnum a
+
+-- | Generic derivation helper for enum types. Extracts the constructor
+-- name as a 'String'.
+class GToJsonEnum f where
+  gToJsonEnum :: f p -> String
+
+instance (GToJsonEnum f) => GToJsonEnum (Generics.M1 Generics.D c f) where
+  gToJsonEnum (Generics.M1 x) = gToJsonEnum x
+
+instance (GToJsonEnum f, GToJsonEnum g) => GToJsonEnum (f Generics.:+: g) where
+  gToJsonEnum (Generics.L1 x) = gToJsonEnum x
+  gToJsonEnum (Generics.R1 x) = gToJsonEnum x
+
+instance
+  (TypeLits.KnownSymbol name) =>
+  GToJsonEnum (Generics.M1 Generics.C ('Generics.MetaCons name fix rec) Generics.U1)
+  where
+  gToJsonEnum _ = TypeLits.symbolVal (Proxy.Proxy :: Proxy.Proxy name)
+
+instance (Generics.Generic a, GToJsonEnum (Generics.Rep a)) => ToJson (GenericEnum a) where
+  toJson (GenericEnum x) = Json.string (gToJsonEnum (Generics.from x))

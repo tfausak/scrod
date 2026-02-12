@@ -6,8 +6,9 @@
 --
 -- Simple newtype wrappers use @deriving via@ the underlying type.
 -- Record types use @deriving via 'Generics.Generically'@ to get
--- instances derived from their field names. Sum types, enums, and
--- other special cases have hand-written instances. Import this
+-- instances derived from their field names. Enum types use
+-- @deriving via 'GenericEnum'@ to get their constructor name as a
+-- JSON string. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
 module Scrod.Convert.ToJson
   ( module Scrod.Json.ToJson,
@@ -54,7 +55,7 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToJson (ToJson (toJson))
+import Scrod.Json.ToJson (GenericEnum (GenericEnum), ToJson (toJson))
 import qualified Scrod.Json.Value as Json
 
 -- Simple newtype wrappers use @deriving via@ to get their instances
@@ -83,7 +84,8 @@ deriving via Header.Header Doc.Doc instance ToJson Section.Section
 deriving via NonEmpty.NonEmpty Natural.Natural instance ToJson Version.Version
 
 -- Record types use @Generics.Generically@ to derive instances from
--- their field names and 'ToJson' instances.
+-- their field names and 'ToJson' instances. Enum types use
+-- @GenericEnum@ to derive instances from their constructor names.
 
 deriving via Generics.Generically Example.Example instance ToJson Example.Example
 
@@ -118,6 +120,12 @@ deriving via Generics.Generically (Table.Table doc) instance (ToJson doc) => ToJ
 deriving via Generics.Generically (TableCell.Cell doc) instance (ToJson doc) => ToJson (TableCell.Cell doc)
 
 deriving via Generics.Generically Warning.Warning instance ToJson Warning.Warning
+
+deriving via GenericEnum ExportNameKind.ExportNameKind instance ToJson ExportNameKind.ExportNameKind
+
+deriving via GenericEnum ItemKind.ItemKind instance ToJson ItemKind.ItemKind
+
+deriving via GenericEnum Namespace.Namespace instance ToJson Namespace.Namespace
 
 -- Hand-written instances for types that require special encoding.
 
@@ -178,50 +186,6 @@ instance ToJson Export.Export where
     Export.Group s -> Json.tagged "Group" $ toJson s
     Export.Doc d -> Json.tagged "Doc" $ toJson d
     Export.DocNamed t -> Json.tagged "DocNamed" $ Json.text t
-
-instance ToJson ItemKind.ItemKind where
-  toJson k = Json.string $ case k of
-    ItemKind.Annotation -> "Annotation"
-    ItemKind.Class -> "Class"
-    ItemKind.ClassInstance -> "ClassInstance"
-    ItemKind.ClassMethod -> "ClassMethod"
-    ItemKind.ClosedTypeFamily -> "ClosedTypeFamily"
-    ItemKind.DataConstructor -> "DataConstructor"
-    ItemKind.DataFamily -> "DataFamily"
-    ItemKind.DataFamilyInstance -> "DataFamilyInstance"
-    ItemKind.DataType -> "DataType"
-    ItemKind.Default -> "Default"
-    ItemKind.DerivedInstance -> "DerivedInstance"
-    ItemKind.FixitySignature -> "FixitySignature"
-    ItemKind.ForeignExport -> "ForeignExport"
-    ItemKind.ForeignImport -> "ForeignImport"
-    ItemKind.Function -> "Function"
-    ItemKind.GADTConstructor -> "GADTConstructor"
-    ItemKind.InlineSignature -> "InlineSignature"
-    ItemKind.Newtype -> "Newtype"
-    ItemKind.OpenTypeFamily -> "OpenTypeFamily"
-    ItemKind.PatternBinding -> "PatternBinding"
-    ItemKind.PatternSynonym -> "PatternSynonym"
-    ItemKind.RecordField -> "RecordField"
-    ItemKind.Rule -> "Rule"
-    ItemKind.SpecialiseSignature -> "SpecialiseSignature"
-    ItemKind.Splice -> "Splice"
-    ItemKind.StandaloneDeriving -> "StandaloneDeriving"
-    ItemKind.StandaloneKindSig -> "StandaloneKindSig"
-    ItemKind.TypeData -> "TypeData"
-    ItemKind.TypeFamilyInstance -> "TypeFamilyInstance"
-    ItemKind.TypeSynonym -> "TypeSynonym"
-
-instance ToJson ExportNameKind.ExportNameKind where
-  toJson k = Json.string $ case k of
-    ExportNameKind.Module -> "Module"
-    ExportNameKind.Pattern -> "Pattern"
-    ExportNameKind.Type -> "Type"
-
-instance ToJson Namespace.Namespace where
-  toJson ns = Json.string $ case ns of
-    Namespace.Type -> "Type"
-    Namespace.Value -> "Value"
 
 instance ToJson Level.Level where
   toJson l = Json.integer $ case l of

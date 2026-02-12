@@ -1,4 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Scrod.Core.ItemKind where
+
+import qualified GHC.Generics as Generics
 
 -- | The kind of Haskell declaration an Item represents.
 data ItemKind
@@ -62,4 +66,4 @@ data ItemKind
     Annotation
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generics.Generic, Ord, Show)

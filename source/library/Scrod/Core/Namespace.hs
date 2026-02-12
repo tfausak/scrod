@@ -1,4 +1,8 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Scrod.Core.Namespace where
+
+import qualified GHC.Generics as Generics
 
 -- | The namespace qualification for an identifier.
 data Namespace
@@ -6,4 +10,4 @@ data Namespace
     Value
   | -- | @t'identifier'@ syntax
     Type
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generics.Generic, Ord, Show)

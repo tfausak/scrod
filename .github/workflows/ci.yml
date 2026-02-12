@@ -80,9 +80,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - id: name
-        run: "echo name=$( grep ^name: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+        run: "echo name=$( awk '/^name:/ {print $2}' *.cabal ) >> $GITHUB_OUTPUT"
       - id: version
-        run: "echo version=$( grep ^version: *.cabal | cut -d ' ' -f 2 ) >> $GITHUB_OUTPUT"
+        run: "echo version=$( awk '/^version:/ {print $2}' *.cabal ) >> $GITHUB_OUTPUT"
     outputs:
       name: ${{ steps.name.outputs.name }}
       version: ${{ steps.version.outputs.version }}

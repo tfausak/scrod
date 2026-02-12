@@ -1221,6 +1221,30 @@ spec s = Spec.describe s "integration" $ do
         """
         [("/items/1/value/kind", "\"ClassInstance\"")]
 
+    Spec.it s "class instance parent is local type" $ do
+      check
+        s
+        """
+        class C a
+        data T
+        instance C T
+        """
+        [ ("/items/2/value/kind", "\"ClassInstance\""),
+          ("/items/2/value/name", "\"C T\""),
+          ("/items/2/value/parentKey", "1")
+        ]
+
+    Spec.it s "class instance parent is local class when type is external" $ do
+      check
+        s
+        """
+        class C a
+        instance C Int
+        """
+        [ ("/items/1/value/kind", "\"ClassInstance\""),
+          ("/items/1/value/parentKey", "null")
+        ]
+
     Spec.it s "data instance" $ do
       check
         s
@@ -1301,7 +1325,8 @@ spec s = Spec.describe s "integration" $ do
         deriving instance Show L
         """
         [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
-          ("/items/1/value/name", "\"Show L\"")
+          ("/items/1/value/name", "\"Show L\""),
+          ("/items/1/value/parentKey", "0")
         ]
 
     Spec.it s "standalone deriving stock" $ do
@@ -1313,7 +1338,8 @@ spec s = Spec.describe s "integration" $ do
         deriving stock instance Show M
         """
         [ ("/items/1/value/kind", "\"StandaloneDeriving\""),
-          ("/items/1/value/name", "\"Show M\"")
+          ("/items/1/value/name", "\"Show M\""),
+          ("/items/1/value/parentKey", "0")
         ]
 
     Spec.it s "standalone deriving newtype" $ do
@@ -1325,7 +1351,8 @@ spec s = Spec.describe s "integration" $ do
         deriving newtype instance Show N
         """
         [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
-          ("/items/2/value/name", "\"Show N\"")
+          ("/items/2/value/name", "\"Show N\""),
+          ("/items/2/value/parentKey", "0")
         ]
 
     Spec.it s "standalone deriving anyclass" $ do
@@ -1338,7 +1365,8 @@ spec s = Spec.describe s "integration" $ do
         deriving anyclass instance O W2
         """
         [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
-          ("/items/2/value/name", "\"O W2\"")
+          ("/items/2/value/name", "\"O W2\""),
+          ("/items/2/value/parentKey", "1")
         ]
 
     Spec.it s "standalone deriving via" $ do
@@ -1350,7 +1378,8 @@ spec s = Spec.describe s "integration" $ do
         deriving via Int instance Show P
         """
         [ ("/items/2/value/kind", "\"StandaloneDeriving\""),
-          ("/items/2/value/name", "\"Show P\"")
+          ("/items/2/value/name", "\"Show P\""),
+          ("/items/2/value/parentKey", "0")
         ]
 
     Spec.it s "data deriving" $ do

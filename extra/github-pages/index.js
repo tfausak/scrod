@@ -84,6 +84,9 @@ function renderMath() {
         { left: '\\(', right: '\\)', display: false },
         { left: '\\[', right: '\\]', display: true }
       ]});
+    })
+    .catch(function (e) {
+      console.error('Failed to load KaTeX:', e);
     });
 }
 

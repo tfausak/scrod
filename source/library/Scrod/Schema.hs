@@ -88,6 +88,9 @@ instance ToSchema Bool where
 instance ToSchema Text.Text where
   toSchema _ = pure . MkSchema $ Json.object [("type", Json.string "string")]
 
+instance ToSchema Int where
+  toSchema _ = pure . MkSchema $ Json.object [("type", Json.string "integer")]
+
 instance ToSchema Natural.Natural where
   toSchema _ =
     pure . MkSchema $

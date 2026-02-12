@@ -1009,18 +1009,20 @@
                         "value": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "prefixItems": [
-                                    {
+                                "type": "object",
+                                "properties": {
+                                    "index": {
                                         "type": "integer"
                                     },
-                                    {
+                                    "item": {
                                         "$ref": "#/$defs/doc"
                                     }
+                                },
+                                "required": [
+                                    "index",
+                                    "item"
                                 ],
-                                "items": false,
-                                "minItems": 2,
-                                "maxItems": 2
+                                "additionalProperties": false
                             }
                         }
                     },
@@ -1039,18 +1041,20 @@
                         "value": {
                             "type": "array",
                             "items": {
-                                "type": "array",
-                                "prefixItems": [
-                                    {
+                                "type": "object",
+                                "properties": {
+                                    "term": {
                                         "$ref": "#/$defs/doc"
                                     },
-                                    {
+                                    "definition": {
                                         "$ref": "#/$defs/doc"
                                     }
+                                },
+                                "required": [
+                                    "term",
+                                    "definition"
                                 ],
-                                "items": false,
-                                "minItems": 2,
-                                "maxItems": 2
+                                "additionalProperties": false
                             }
                         }
                     },

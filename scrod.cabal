@@ -103,6 +103,7 @@ library
     Scrod.Convert.ToJsonSchema
     Scrod.Core.Category
     Scrod.Core.Column
+    Scrod.Core.Definition
     Scrod.Core.Doc
     Scrod.Core.Example
     Scrod.Core.Export
@@ -127,6 +128,7 @@ library
     Scrod.Core.Module
     Scrod.Core.ModuleName
     Scrod.Core.Namespace
+    Scrod.Core.NumberedItem
     Scrod.Core.PackageName
     Scrod.Core.Picture
     Scrod.Core.Section

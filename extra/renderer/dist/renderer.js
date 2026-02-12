@@ -36,12 +36,12 @@ function renderDoc(doc) {
       return `<ul>${items}</ul>`;
     }
     case "OrderedList": {
-      const items = doc.value.map(([n, d]) => `<li value="${n}">${renderDoc(d)}</li>`).join("");
+      const items = doc.value.map((e) => `<li value="${e.index}">${renderDoc(e.item)}</li>`).join("");
       return `<ol>${items}</ol>`;
     }
     case "DefList": {
       const entries = doc.value.map(
-        ([term, def]) => `<dt>${renderDoc(term)}</dt><dd>${renderDoc(def)}</dd>`
+        (e) => `<dt>${renderDoc(e.term)}</dt><dd>${renderDoc(e.definition)}</dd>`
       ).join("");
       return `<dl>${entries}</dl>`;
     }

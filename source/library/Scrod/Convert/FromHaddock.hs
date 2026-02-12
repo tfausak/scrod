@@ -7,11 +7,11 @@
 -- examples, tables, etc.) to the corresponding @Scrod.Core.*@ constructors.
 module Scrod.Convert.FromHaddock where
 
-import qualified Data.Bifunctor as Bifunctor
 import qualified Data.Text as Text
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
+import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Header as Header
@@ -21,6 +21,7 @@ import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ModLink as ModLink
 import qualified Scrod.Core.ModuleName as ModuleName
 import qualified Scrod.Core.Namespace as Namespace
+import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
@@ -68,8 +69,8 @@ convertDoc doc = case doc of
   Haddock.DocMonospaced d -> Doc.Monospaced $ convertDoc d
   Haddock.DocBold d -> Doc.Bold $ convertDoc d
   Haddock.DocUnorderedList ds -> Doc.UnorderedList $ fmap convertDoc ds
-  Haddock.DocOrderedList items -> Doc.OrderedList $ fmap (fmap convertDoc) items
-  Haddock.DocDefList defs -> Doc.DefList $ fmap (Bifunctor.bimap convertDoc convertDoc) defs
+  Haddock.DocOrderedList items -> Doc.OrderedList $ fmap (\(n, d) -> NumberedItem.MkNumberedItem {NumberedItem.index = n, NumberedItem.item = convertDoc d}) items
+  Haddock.DocDefList defs -> Doc.DefList $ fmap (\(t, d) -> Definition.MkDefinition {Definition.term = convertDoc t, Definition.definition = convertDoc d}) defs
   Haddock.DocCodeBlock d -> Doc.CodeBlock $ convertDoc d
   Haddock.DocHyperlink h ->
     Doc.Hyperlink
@@ -202,13 +203,19 @@ spec s = do
     Spec.it s "works with ordered list" $ do
       let input :: Haddock.DocH Void.Void Haddock.Identifier
           input = Haddock.DocOrderedList [(1, Haddock.DocString "first"), (2, Haddock.DocString "second")]
-      let expected = Doc.OrderedList [(1, Doc.String $ Text.pack "first"), (2, Doc.String $ Text.pack "second")]
+      let expected =
+            Doc.OrderedList
+              [ NumberedItem.MkNumberedItem {NumberedItem.index = 1, NumberedItem.item = Doc.String $ Text.pack "first"},
+                NumberedItem.MkNumberedItem {NumberedItem.index = 2, NumberedItem.item = Doc.String $ Text.pack "second"}
+              ]
       Spec.assertEq s (fromHaddock input) expected
 
     Spec.it s "works with definition list" $ do
       let input :: Haddock.DocH Void.Void Haddock.Identifier
           input = Haddock.DocDefList [(Haddock.DocString "term", Haddock.DocString "def")]
-      let expected = Doc.DefList [(Doc.String $ Text.pack "term", Doc.String $ Text.pack "def")]
+      let expected =
+            Doc.DefList
+              [Definition.MkDefinition {Definition.term = Doc.String $ Text.pack "term", Definition.definition = Doc.String $ Text.pack "def"}]
       Spec.assertEq s (fromHaddock input) expected
 
     Spec.it s "works with code block" $ do

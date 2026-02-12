@@ -31,8 +31,8 @@ export type Doc =
   | { type: "Monospaced"; value: Doc }
   | { type: "Bold"; value: Doc }
   | { type: "UnorderedList"; value: Doc[] }
-  | { type: "OrderedList"; value: [number, Doc][] }
-  | { type: "DefList"; value: [Doc, Doc][] }
+  | { type: "OrderedList"; value: { index: number; item: Doc }[] }
+  | { type: "DefList"; value: { term: Doc; definition: Doc }[] }
   | { type: "CodeBlock"; value: Doc }
   | { type: "Hyperlink"; value: Hyperlink }
   | { type: "Pic"; value: Picture }

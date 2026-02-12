@@ -3,12 +3,14 @@ module Scrod.Core.Doc where
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
+import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
 import qualified Scrod.Core.Identifier as Identifier
 import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ModLink as ModLink
+import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Json.ToJson as ToJson
@@ -27,8 +29,8 @@ data Doc
   | Monospaced Doc
   | Bold Doc
   | UnorderedList [Doc]
-  | OrderedList [(Int, Doc)]
-  | DefList [(Doc, Doc)]
+  | OrderedList [NumberedItem.NumberedItem Doc]
+  | DefList [Definition.Definition Doc]
   | CodeBlock Doc
   | Hyperlink (Hyperlink.Hyperlink Doc)
   | Pic Picture.Picture
@@ -53,12 +55,8 @@ instance ToJson.ToJson Doc where
     Monospaced d -> Json.tagged "Monospaced" $ ToJson.toJson d
     Bold d -> Json.tagged "Bold" $ ToJson.toJson d
     UnorderedList ds -> Json.tagged "UnorderedList" $ ToJson.toJson ds
-    OrderedList items ->
-      Json.tagged "OrderedList" $
-        Json.arrayOf (\(n, d) -> Json.array [Json.integral n, ToJson.toJson d]) items
-    DefList defs ->
-      Json.tagged "DefList" $
-        Json.arrayOf (\(t, d) -> Json.arrayOf ToJson.toJson [t, d]) defs
+    OrderedList items -> Json.tagged "OrderedList" $ ToJson.toJson items
+    DefList defs -> Json.tagged "DefList" $ ToJson.toJson defs
     CodeBlock d -> Json.tagged "CodeBlock" $ ToJson.toJson d
     Hyperlink h -> Json.tagged "Hyperlink" $ ToJson.toJson h
     Pic p -> Json.tagged "Pic" $ ToJson.toJson p
@@ -96,14 +94,6 @@ docSchemaValue =
             ("required", Json.array [Json.string "type", Json.string "value"]),
             ("additionalProperties", Json.boolean False)
           ]
-      tupleOf items =
-        Json.object
-          [ ("type", Json.string "array"),
-            ("prefixItems", Json.array items),
-            ("items", Json.boolean False),
-            ("minItems", Json.integral $ length items),
-            ("maxItems", Json.integral $ length items)
-          ]
       -- Inline sub-schemas (non-recursive types, computed purely)
       identifierSchema = pureSchema (Proxy.Proxy :: Proxy.Proxy Identifier.Identifier)
       pictureSchema = pureSchema (Proxy.Proxy :: Proxy.Proxy Picture.Picture)
@@ -117,6 +107,12 @@ docSchemaValue =
         objectSchemaOptPure
           [("url", str)]
           [("label", self)]
+      numberedItemSchema =
+        objectSchemaPure
+          [("index", int), ("item", self)]
+      definitionSchema =
+        objectSchemaPure
+          [("term", self), ("definition", self)]
       headerSchema =
         objectSchemaPure
           [ ("level", pureSchema (Proxy.Proxy :: Proxy.Proxy Level.Level)),
@@ -159,12 +155,12 @@ docSchemaValue =
                 tagged "OrderedList" $
                   Json.object
                     [ ("type", Json.string "array"),
-                      ("items", tupleOf [int, self])
+                      ("items", numberedItemSchema)
                     ],
                 tagged "DefList" $
                   Json.object
                     [ ("type", Json.string "array"),
-                      ("items", tupleOf [self, self])
+                      ("items", definitionSchema)
                     ],
                 tagged "CodeBlock" self,
                 tagged "Hyperlink" hyperlinkSchema,

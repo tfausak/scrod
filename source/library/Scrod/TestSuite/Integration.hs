@@ -299,10 +299,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "1"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "1"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with an ordered list using parens" $ do
@@ -313,10 +313,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "1"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "1"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with an ordered list starting at 2" $ do
@@ -327,10 +327,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"OrderedList\""),
-          ("/documentation/value/0/0", "2"),
-          ("/documentation/value/0/1/type", "\"Paragraph\""),
-          ("/documentation/value/0/1/value/type", "\"String\""),
-          ("/documentation/value/0/1/value/value", "\"x\"")
+          ("/documentation/value/0/index", "2"),
+          ("/documentation/value/0/item/type", "\"Paragraph\""),
+          ("/documentation/value/0/item/value/type", "\"String\""),
+          ("/documentation/value/0/item/value/value", "\"x\"")
         ]
 
     Spec.it s "works with a definition list" $ do
@@ -341,10 +341,10 @@ spec s = Spec.describe s "integration" $ do
         module M where
         """
         [ ("/documentation/type", "\"DefList\""),
-          ("/documentation/value/0/0/type", "\"String\""),
-          ("/documentation/value/0/0/value", "\"x\""),
-          ("/documentation/value/0/1/type", "\"String\""),
-          ("/documentation/value/0/1/value", "\"y\"")
+          ("/documentation/value/0/term/type", "\"String\""),
+          ("/documentation/value/0/term/value", "\"x\""),
+          ("/documentation/value/0/definition/type", "\"String\""),
+          ("/documentation/value/0/definition/value", "\"y\"")
         ]
 
     Spec.it s "works with a code block" $ do

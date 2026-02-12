@@ -10,7 +10,7 @@
 -- generically. Other types have hand-written instances. Import this
 -- module to bring all instances into scope.
 module Scrod.Convert.ToSchema
-  ( module Scrod.Json.ToSchema,
+  ( module Scrod.Schema,
   )
 where
 
@@ -54,8 +54,8 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToSchema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
-import qualified Scrod.Json.ToSchema as ToSchema
+import Scrod.Schema (Schema (MkSchema, unwrap), SchemaM, ToSchema (isOptional, toSchema), define)
+import qualified Scrod.Schema as ToSchema
 import qualified Scrod.Json.Value as Json
 
 -- * Simple newtype wrappers use @deriving via@ to get their instances

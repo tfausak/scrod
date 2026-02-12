@@ -52,7 +52,8 @@ instance (GToJson f) => GToJson (Generics.M1 Generics.D c f) where
   gToJson (Generics.M1 x) = gToJson x
 
 instance (GToJsonFields f) => GToJson (Generics.M1 Generics.C c f) where
-  gToJson (Generics.M1 x) = Json.object (gToJsonFields x)
+  gToJson (Generics.M1 x) =
+    Json.object (filter (\(_, v) -> v /= Json.null) (gToJsonFields x))
 
 instance (GToJsonSum f, GToJsonSum g) => GToJson (f Generics.:+: g) where
   gToJson = gToJsonSum
@@ -87,7 +88,7 @@ instance
   GToJsonSum (Generics.M1 Generics.C ('Generics.MetaCons name fix rec) Generics.U1)
   where
   gToJsonSum _ =
-    Json.tagged (TypeLits.symbolVal (Proxy.Proxy :: Proxy.Proxy name)) Json.null
+    Json.object [("type", Json.string (TypeLits.symbolVal (Proxy.Proxy :: Proxy.Proxy name)))]
 
 instance
   (TypeLits.KnownSymbol name, ToJson a) =>

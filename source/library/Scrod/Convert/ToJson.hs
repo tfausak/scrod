@@ -132,18 +132,19 @@ deriving via Generics.Generically Export.Export instance ToJson Export.Export
 instance ToJson Module.Module where
   toJson m =
     Json.object
-      [ ("version", toJson $ Module.version m),
-        ("language", toJson $ Module.language m),
-        ("extensions", extensionsToJson $ Module.extensions m),
-        ("documentation", toJson $ Module.documentation m),
-        ("since", toJson $ Module.since m),
-        ("signature", toJson $ Module.signature m),
-        ("name", toJson $ Module.name m),
-        ("warning", toJson $ Module.warning m),
-        ("exports", toJson $ Module.exports m),
-        ("imports", toJson $ Module.imports m),
-        ("items", toJson $ Module.items m)
-      ]
+      . filter (\(_, v) -> v /= Json.null)
+      $ [ ("version", toJson $ Module.version m),
+          ("language", toJson $ Module.language m),
+          ("extensions", extensionsToJson $ Module.extensions m),
+          ("documentation", toJson $ Module.documentation m),
+          ("since", toJson $ Module.since m),
+          ("signature", toJson $ Module.signature m),
+          ("name", toJson $ Module.name m),
+          ("warning", toJson $ Module.warning m),
+          ("exports", toJson $ Module.exports m),
+          ("imports", toJson $ Module.imports m),
+          ("items", toJson $ Module.items m)
+        ]
 
 extensionsToJson :: Map.Map Extension.Extension Bool -> Json.Value
 extensionsToJson =

@@ -21,14 +21,9 @@ spec s = Spec.describe s "integration" $ do
     check
       s
       ""
-      [ ("/language", "null"),
-        ("/extensions", "{}"),
+      [ ("/extensions", "{}"),
         ("/documentation/type", "\"Empty\""),
         ("/documentation/value", "null"),
-        ("/since", "null"),
-        ("/name", "null"),
-        ("/warning", "null"),
-        ("/exports", "null"),
         ("/imports", "[]"),
         ("/signature", "false"),
         ("/items", "[]")
@@ -42,8 +37,8 @@ spec s = Spec.describe s "integration" $ do
       check s "" [("/version/0", "0")]
 
   Spec.describe s "language" $ do
-    Spec.it s "defaults to null" $ do
-      check s "" [("/language", "null")]
+    Spec.it s "defaults to absent" $ do
+      check s "" [("/language", "")]
 
     Spec.it s "works with a language" $ do
       check s "{-# language Haskell98 #-}" [("/language", "\"Haskell98\"")]
@@ -159,7 +154,6 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Identifier\""),
-          ("/documentation/value/value/namespace", "null"),
           ("/documentation/value/value/value", "\"x\"")
         ]
 
@@ -172,7 +166,6 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Identifier\""),
-          ("/documentation/value/value/namespace", "null"),
           ("/documentation/value/value/value", "\"b\"")
         ]
 
@@ -211,8 +204,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Module\""),
-          ("/documentation/value/value/name", "\"X\""),
-          ("/documentation/value/value/label", "null")
+          ("/documentation/value/value/name", "\"X\"")
         ]
 
     Spec.it s "works with a labeled module" $ do
@@ -376,8 +368,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/documentation/type", "\"Paragraph\""),
           ("/documentation/value/type", "\"Hyperlink\""),
-          ("/documentation/value/value/url", "\"http://example\""),
-          ("/documentation/value/value/label", "null")
+          ("/documentation/value/value/url", "\"http://example\"")
         ]
 
     Spec.it s "works with a labeled hyperlink" $ do
@@ -391,8 +382,7 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/type", "\"Hyperlink\""),
           ("/documentation/value/value/url", "\"x\""),
           ("/documentation/value/value/label/type", "\"Hyperlink\""),
-          ("/documentation/value/value/label/value/url", "\"http://example\""),
-          ("/documentation/value/value/label/value/label", "null")
+          ("/documentation/value/value/label/value/url", "\"http://example\"")
         ]
 
     Spec.it s "works with a picture" $ do
@@ -570,8 +560,8 @@ spec s = Spec.describe s "integration" $ do
         ]
 
   Spec.describe s "since" $ do
-    Spec.it s "defaults to null" $ do
-      check s "" [("/since", "null")]
+    Spec.it s "defaults to absent" $ do
+      check s "" [("/since", "")]
 
     Spec.it s "works with a version" $ do
       check
@@ -582,8 +572,7 @@ spec s = Spec.describe s "integration" $ do
         -- @since 1.2.3
         module M where
         """
-        [ ("/since/package", "null"),
-          ("/since/version", "[1,2,3]")
+        [ ("/since/version", "[1,2,3]")
         ]
 
     Spec.it s "works with a package and version" $ do
@@ -600,8 +589,8 @@ spec s = Spec.describe s "integration" $ do
         ]
 
   Spec.describe s "name" $ do
-    Spec.it s "defaults to null" $ do
-      check s "" [("/name", "null")]
+    Spec.it s "defaults to absent" $ do
+      check s "" [("/name", "")]
 
     Spec.it s "works with a simple module name" $ do
       check
@@ -622,8 +611,8 @@ spec s = Spec.describe s "integration" $ do
         ]
 
   Spec.describe s "warning" $ do
-    Spec.it s "defaults to null" $ do
-      check s "" [("/warning", "null")]
+    Spec.it s "defaults to absent" $ do
+      check s "" [("/warning", "")]
 
     Spec.it s "works with deprecated" $ do
       check
@@ -676,8 +665,8 @@ spec s = Spec.describe s "integration" $ do
         ]
 
   Spec.describe s "exports" $ do
-    Spec.it s "defaults to null" $ do
-      check s "" [("/exports", "null")]
+    Spec.it s "defaults to absent" $ do
+      check s "" [("/exports", "")]
 
     Spec.it s "works with an empty list" $ do
       check s "module M () where" [("/exports", "[]")]
@@ -688,11 +677,7 @@ spec s = Spec.describe s "integration" $ do
           s
           "module M ( pi ) where"
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "null"),
-            ("/exports/0/value/name/name", "\"pi\""),
-            ("/exports/0/value/subordinates", "null"),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/name/name", "\"pi\"")
           ]
 
       Spec.it s "works with an explicit pattern" $ do
@@ -704,10 +689,7 @@ spec s = Spec.describe s "integration" $ do
           """
           [ ("/exports/0/type", "\"Identifier\""),
             ("/exports/0/value/name/kind/type", "\"Pattern\""),
-            ("/exports/0/value/name/name", "\"True\""),
-            ("/exports/0/value/subordinates", "null"),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/name/name", "\"True\"")
           ]
 
       Spec.it s "works with an explicit type" $ do
@@ -719,10 +701,7 @@ spec s = Spec.describe s "integration" $ do
           """
           [ ("/exports/0/type", "\"Identifier\""),
             ("/exports/0/value/name/kind/type", "\"Type\""),
-            ("/exports/0/value/name/name", "\"Bool\""),
-            ("/exports/0/value/subordinates", "null"),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/name/name", "\"Bool\"")
           ]
 
       Spec.it s "works with a module" $ do
@@ -731,10 +710,7 @@ spec s = Spec.describe s "integration" $ do
           "module M ( module M ) where"
           [ ("/exports/0/type", "\"Identifier\""),
             ("/exports/0/value/name/kind/type", "\"Module\""),
-            ("/exports/0/value/name/name", "\"M\""),
-            ("/exports/0/value/subordinates", "null"),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/name/name", "\"M\"")
           ]
 
       Spec.it s "works with a subordinate" $ do
@@ -742,13 +718,9 @@ spec s = Spec.describe s "integration" $ do
           s
           "module M ( Bool ( True ) ) where"
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "null"),
             ("/exports/0/value/name/name", "\"Bool\""),
             ("/exports/0/value/subordinates/wildcard", "false"),
-            ("/exports/0/value/subordinates/explicit/0/kind", "null"),
-            ("/exports/0/value/subordinates/explicit/0/name", "\"True\""),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/subordinates/explicit/0/name", "\"True\"")
           ]
 
       Spec.it s "works with a wildcard" $ do
@@ -756,12 +728,9 @@ spec s = Spec.describe s "integration" $ do
           s
           "module M ( Bool ( .. ) ) where"
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "null"),
             ("/exports/0/value/name/name", "\"Bool\""),
             ("/exports/0/value/subordinates/wildcard", "true"),
-            ("/exports/0/value/subordinates/explicit", "[]"),
-            ("/exports/0/value/warning", "null"),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/subordinates/explicit", "[]")
           ]
 
       Spec.it s "works with a warning" $ do
@@ -771,12 +740,9 @@ spec s = Spec.describe s "integration" $ do
           module M ( {-# warning "foo" #-} pi ) where
           """
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "null"),
             ("/exports/0/value/name/name", "\"pi\""),
-            ("/exports/0/value/subordinates", "null"),
             ("/exports/0/value/warning/category", "\"deprecations\""),
-            ("/exports/0/value/warning/value", "\"foo\""),
-            ("/exports/0/value/doc", "null")
+            ("/exports/0/value/warning/value", "\"foo\"")
           ]
 
       Spec.it s "works with a doc" $ do
@@ -788,10 +754,7 @@ spec s = Spec.describe s "integration" $ do
             ) where
           """
           [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind", "null"),
             ("/exports/0/value/name/name", "\"pi\""),
-            ("/exports/0/value/subordinates", "null"),
-            ("/exports/0/value/warning", "null"),
             ("/exports/0/value/doc/type", "\"Paragraph\""),
             ("/exports/0/value/doc/value/type", "\"String\""),
             ("/exports/0/value/doc/value/value", "\"foo\"")
@@ -849,9 +812,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "import Data.List"
-        [ ("/imports/0/name", "\"Data.List\""),
-          ("/imports/0/package", "null"),
-          ("/imports/0/alias", "null")
+        [ ("/imports/0/name", "\"Data.List\"")
         ]
 
     Spec.it s "works with multiple imports" $ do
@@ -885,8 +846,7 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         "import qualified Data.Map"
-        [ ("/imports/0/name", "\"Data.Map\""),
-          ("/imports/0/alias", "null")
+        [ ("/imports/0/name", "\"Data.Map\"")
         ]
 
     Spec.it s "works with a qualified import with alias" $ do
@@ -913,10 +873,8 @@ spec s = Spec.describe s "integration" $ do
             ("/items/0/location/column", "1"),
             ("/items/0/value/key", "0"),
             ("/items/0/value/kind/type", "\"Function\""),
-            ("/items/0/value/parentKey", "null"),
             ("/items/0/value/name", "\"x\""),
-            ("/items/0/value/documentation/type", "\"Empty\""),
-            ("/items/0/value/signature", "null")
+            ("/items/0/value/documentation/type", "\"Empty\"")
           ]
 
       Spec.it s "works with two" $ do
@@ -1241,8 +1199,7 @@ spec s = Spec.describe s "integration" $ do
         class C a
         instance C Int
         """
-        [ ("/items/1/value/kind/type", "\"ClassInstance\""),
-          ("/items/1/value/parentKey", "null")
+        [ ("/items/1/value/kind/type", "\"ClassInstance\"")
         ]
 
     Spec.it s "data instance" $ do
@@ -1776,7 +1733,6 @@ spec s = Spec.describe s "integration" $ do
         $( return [] )
         """
         [ ("/items/0/value/kind/type", "\"Splice\""),
-          ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"$(return [])\"")
         ]
 
@@ -1788,7 +1744,6 @@ spec s = Spec.describe s "integration" $ do
         $$(pure [])
         """
         [ ("/items/0/value/kind/type", "\"Splice\""),
-          ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"$$(pure [])\"")
         ]
 
@@ -1800,7 +1755,6 @@ spec s = Spec.describe s "integration" $ do
         [x||]
         """
         [ ("/items/0/value/kind/type", "\"Splice\""),
-          ("/items/0/value/name", "null"),
           ("/items/0/value/signature", "\"[x||]\"")
         ]
 
@@ -1858,7 +1812,7 @@ spec s = Spec.describe s "integration" $ do
         module M where
         #endif
         """
-        [("/name", "null")]
+        [("/name", "")]
 
     Spec.it s "preserves line numbers" $ do
       check

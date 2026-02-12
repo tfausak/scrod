@@ -23,10 +23,6 @@ toJsonSchema = moduleSchema
 ref :: String -> Json.Value
 ref name = Json.object [("$ref", Json.string $ "#/$defs/" <> name)]
 
--- | Allow a schema to also accept @null@.
-nullable :: Json.Value -> Json.Value
-nullable schema = Json.object [("oneOf", Json.array [schema, Json.object [("type", Json.string "null")]])]
-
 -- | Create a tagged-object variant for use in @oneOf@.
 --
 -- This mirrors the runtime @{"type": tag, "value": ...}@ pattern produced
@@ -56,6 +52,32 @@ objectSchema props =
       ("additionalProperties", Json.boolean False)
     ]
 
+-- | Create an object schema where some properties are required and others
+-- are optional (omitted when null).
+objectSchemaOpt :: [(String, Json.Value)] -> [(String, Json.Value)] -> Json.Value
+objectSchemaOpt required optional =
+  Json.object
+    [ ("type", Json.string "object"),
+      ("properties", Json.object (required <> optional)),
+      ("required", Json.array $ fmap (Json.string . fst) required),
+      ("additionalProperties", Json.boolean False)
+    ]
+
+-- | Create a tagged-object variant for a nullary constructor (no @value@
+-- field).
+taggedNullary :: String -> Json.Value
+taggedNullary tag =
+  Json.object
+    [ ("type", Json.string "object"),
+      ( "properties",
+        Json.object
+          [ ("type", Json.object [("const", Json.string tag)])
+          ]
+      ),
+      ("required", Json.array [Json.string "type"]),
+      ("additionalProperties", Json.boolean False)
+    ]
+
 -- | Create a fixed-length array (tuple) schema.
 tupleSchema :: [Json.Value] -> Json.Value
 tupleSchema items =
@@ -81,14 +103,14 @@ moduleSchema =
       ( "properties",
         Json.object
           [ ("version", ref "version"),
-            ("language", nullable $ ref "language"),
+            ("language", ref "language"),
             ("extensions", ref "extensions"),
             ("documentation", ref "doc"),
-            ("since", nullable $ ref "since"),
+            ("since", ref "since"),
             ("signature", Json.object [("type", Json.string "boolean")]),
-            ("name", nullable $ ref "locatedModuleName"),
-            ("warning", nullable $ ref "warning"),
-            ("exports", nullable $ Json.object [("type", Json.string "array"), ("items", ref "export")]),
+            ("name", ref "locatedModuleName"),
+            ("warning", ref "warning"),
+            ("exports", Json.object [("type", Json.string "array"), ("items", ref "export")]),
             ("imports", Json.object [("type", Json.string "array"), ("items", ref "import")]),
             ("items", Json.object [("type", Json.string "array"), ("items", ref "locatedItem")])
           ]
@@ -96,14 +118,9 @@ moduleSchema =
       ( "required",
         Json.array
           [ Json.string "version",
-            Json.string "language",
             Json.string "extensions",
             Json.string "documentation",
-            Json.string "since",
             Json.string "signature",
-            Json.string "name",
-            Json.string "warning",
-            Json.string "exports",
             Json.string "imports",
             Json.string "items"
           ]
@@ -224,10 +241,9 @@ docSchema =
 
 sinceSchema :: Json.Value
 sinceSchema =
-  objectSchema
-    [ ("package", nullable $ Json.object [("type", Json.string "string")]),
-      ("version", ref "version")
-    ]
+  objectSchemaOpt
+    [("version", ref "version")]
+    [("package", Json.object [("type", Json.string "string")])]
 
 locatedModuleNameSchema :: Json.Value
 locatedModuleNameSchema =
@@ -266,10 +282,10 @@ exportSchema =
 
 importSchema :: Json.Value
 importSchema =
-  objectSchema
-    [ ("name", Json.object [("type", Json.string "string")]),
-      ("package", nullable $ Json.object [("type", Json.string "string")]),
-      ("alias", nullable $ Json.object [("type", Json.string "string")])
+  objectSchemaOpt
+    [("name", Json.object [("type", Json.string "string")])]
+    [ ("package", Json.object [("type", Json.string "string")]),
+      ("alias", Json.object [("type", Json.string "string")])
     ]
 
 locatedItemSchema :: Json.Value
@@ -281,13 +297,14 @@ locatedItemSchema =
 
 itemSchema :: Json.Value
 itemSchema =
-  objectSchema
+  objectSchemaOpt
     [ ("key", Json.object [("type", Json.string "integer"), ("minimum", Json.integer 0)]),
       ("kind", ref "itemKind"),
-      ("parentKey", nullable $ Json.object [("type", Json.string "integer"), ("minimum", Json.integer 0)]),
-      ("name", nullable $ Json.object [("type", Json.string "string")]),
-      ("documentation", ref "doc"),
-      ("signature", nullable $ Json.object [("type", Json.string "string")])
+      ("documentation", ref "doc")
+    ]
+    [ ("parentKey", Json.object [("type", Json.string "integer"), ("minimum", Json.integer 0)]),
+      ("name", Json.object [("type", Json.string "string")]),
+      ("signature", Json.object [("type", Json.string "string")])
     ]
 
 itemKindSchema :: Json.Value
@@ -296,7 +313,7 @@ itemKindSchema =
     [ ( "oneOf",
         Json.array $
           fmap
-            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
+            taggedNullary
             [ "Annotation",
               "Class",
               "ClassInstance",
@@ -333,19 +350,18 @@ itemKindSchema =
 
 exportIdentifierSchema :: Json.Value
 exportIdentifierSchema =
-  objectSchema
-    [ ("name", ref "exportName"),
-      ("subordinates", nullable $ ref "subordinates"),
-      ("warning", nullable $ ref "warning"),
-      ("doc", nullable $ ref "doc")
+  objectSchemaOpt
+    [("name", ref "exportName")]
+    [ ("subordinates", ref "subordinates"),
+      ("warning", ref "warning"),
+      ("doc", ref "doc")
     ]
 
 exportNameSchema :: Json.Value
 exportNameSchema =
-  objectSchema
-    [ ("kind", nullable $ ref "exportNameKind"),
-      ("name", Json.object [("type", Json.string "string")])
-    ]
+  objectSchemaOpt
+    [("name", Json.object [("type", Json.string "string")])]
+    [("kind", ref "exportNameKind")]
 
 exportNameKindSchema :: Json.Value
 exportNameKindSchema =
@@ -353,7 +369,7 @@ exportNameKindSchema =
     [ ( "oneOf",
         Json.array $
           fmap
-            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
+            taggedNullary
             ["Module", "Pattern", "Type"]
       )
     ]
@@ -367,10 +383,9 @@ subordinatesSchema =
 
 identifierSchema :: Json.Value
 identifierSchema =
-  objectSchema
-    [ ("namespace", nullable $ ref "namespace"),
-      ("value", Json.object [("type", Json.string "string")])
-    ]
+  objectSchemaOpt
+    [("value", Json.object [("type", Json.string "string")])]
+    [("namespace", ref "namespace")]
 
 namespaceSchema :: Json.Value
 namespaceSchema =
@@ -378,7 +393,7 @@ namespaceSchema =
     [ ( "oneOf",
         Json.array $
           fmap
-            (\name -> taggedVariant name $ Json.object [("type", Json.string "null")])
+            taggedNullary
             ["Type", "Value"]
       )
     ]
@@ -399,24 +414,21 @@ headerSchema =
 
 hyperlinkSchema :: Json.Value
 hyperlinkSchema =
-  objectSchema
-    [ ("url", Json.object [("type", Json.string "string")]),
-      ("label", nullable $ ref "doc")
-    ]
+  objectSchemaOpt
+    [("url", Json.object [("type", Json.string "string")])]
+    [("label", ref "doc")]
 
 modLinkSchema :: Json.Value
 modLinkSchema =
-  objectSchema
-    [ ("name", Json.object [("type", Json.string "string")]),
-      ("label", nullable $ ref "doc")
-    ]
+  objectSchemaOpt
+    [("name", Json.object [("type", Json.string "string")])]
+    [("label", ref "doc")]
 
 pictureSchema :: Json.Value
 pictureSchema =
-  objectSchema
-    [ ("uri", Json.object [("type", Json.string "string")]),
-      ("title", nullable $ Json.object [("type", Json.string "string")])
-    ]
+  objectSchemaOpt
+    [("uri", Json.object [("type", Json.string "string")])]
+    [("title", Json.object [("type", Json.string "string")])]
 
 tableSchema :: Json.Value
 tableSchema =

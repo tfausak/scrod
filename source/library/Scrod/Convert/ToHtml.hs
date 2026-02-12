@@ -276,7 +276,7 @@ exportsContents (Just exports) =
             <> [ Content.Element $
                    Xml.element
                      "ul"
-                     [Xml.attribute "class" "list-unstyled"]
+                     [Xml.attribute "class" "list-group list-group-flush"]
                      (concatMap exportToContents exports)
                ]
         )
@@ -285,21 +285,21 @@ exportsContents (Just exports) =
 exportToContents :: Export.Export -> [Content.Content Element.Element]
 exportToContents export = case export of
   Export.Identifier ident ->
-    [Content.Element $ Xml.element "li" [] [Content.Element (exportIdentifierToHtml ident)]]
+    [Content.Element $ Xml.element "li" [liClass] [Content.Element (exportIdentifierToHtml ident)]]
   Export.Group section ->
-    [Content.Element $ Xml.element "li" [] [Content.Element (sectionToHtml section)]]
+    [Content.Element $ Xml.element "li" [liClass] [Content.Element (sectionToHtml section)]]
   Export.Doc doc ->
     [ Content.Element $
         Xml.element
           "li"
-          []
+          [liClass]
           [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-1"] (docToContents doc)]
     ]
   Export.DocNamed name ->
     [ Content.Element $
         Xml.element
           "li"
-          []
+          [liClass]
           [ Content.Element $
               Xml.element
                 "div"
@@ -307,6 +307,9 @@ exportToContents export = case export of
                 [Xml.text (Text.pack "\x00a7" <> name)]
           ]
     ]
+  where
+    liClass :: Attribute.Attribute
+    liClass = Xml.attribute "class" "list-group-item bg-transparent py-1 px-2"
 
 exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Element.Element
 exportIdentifierToHtml (ExportIdentifier.MkExportIdentifier name subs maybeWarning maybeDoc) =
@@ -394,7 +397,7 @@ importsContents imports =
                 <> [ Content.Element $
                        Xml.element
                          "ul"
-                         [Xml.attribute "class" "list-unstyled font-monospace small"]
+                         [Xml.attribute "class" "list-group list-group-flush font-monospace small"]
                          (fmap importToContent imports)
                    ]
             )
@@ -405,7 +408,7 @@ importToContent i =
   Content.Element $
     Xml.element
       "li"
-      []
+      [Xml.attribute "class" "list-group-item bg-transparent py-1 px-2"]
       ( packageContents (Import.package i)
           <> [Xml.text (ModuleName.unwrap $ Import.name i)]
           <> aliasContents (Import.alias i)
@@ -665,27 +668,29 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
   Xml.element
     "div"
     [ Xml.attribute "class" "card mb-3 border-start border-4",
+      Xml.attribute "style" (kindBorderStyle itemKind),
       Xml.attribute "id" ("item-" <> show (ItemKey.unwrap key)),
       lineAttribute loc
     ]
-    [ Content.Element $
-        Xml.element
-          "div"
-          [Xml.attribute "class" "card-body"]
-          ( nameContents
-              <> sigBeforeKind
-              <> [Content.Element kindElement]
-              <> sigAfterKind
-              <> [Content.Element (locationElement loc)]
-              <> docContents'
-          )
-    ]
+    ( [ Content.Element $
+          Xml.element
+            "div"
+            [Xml.attribute "class" "card-header bg-transparent d-flex align-items-center py-2"]
+            ( nameContents
+                <> sigBeforeKind
+                <> [Content.Element kindElement]
+                <> sigAfterKind
+                <> [Content.Element (locationElement loc)]
+            )
+      ]
+        <> docContents'
+    )
   where
     nameContents :: [Content.Content Element.Element]
     nameContents = case maybeName of
       Nothing -> []
       Just (ItemName.MkItemName n) ->
-        [Content.Element $ Xml.element "span" [Xml.attribute "class" "font-monospace fw-bold fs-6 text-success"] [Xml.text n]]
+        [Content.Element $ Xml.element "span" [Xml.attribute "class" "font-monospace fw-bold text-success"] [Xml.text n]]
 
     isTypeVarSignature :: Bool
     isTypeVarSignature = case itemKind of
@@ -700,8 +705,8 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     kindElement =
       Xml.element
         "span"
-        [Xml.attribute "class" "text-body-secondary small"]
-        [Xml.text (Text.pack " [" <> kindToText itemKind <> Text.pack "]")]
+        [Xml.attribute "class" ("badge " <> kindBadgeClass itemKind <> " ms-2")]
+        [Xml.text (kindToText itemKind)]
 
     sigBeforeKind :: [Content.Content Element.Element]
     sigBeforeKind =
@@ -719,14 +724,14 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
          in [ Content.Element $
                 Xml.element
                   "span"
-                  [Xml.attribute "class" "font-monospace"]
+                  [Xml.attribute "class" "font-monospace text-body-secondary"]
                   [Xml.text (prefix <> sig)]
             ]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of
       Doc.Empty -> []
-      _ -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-2"] (docToContents doc)]
+      _ -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "card-body"] (docToContents doc)]
 
 lineAttribute :: Location.Location -> Attribute.Attribute
 lineAttribute loc =
@@ -738,20 +743,20 @@ columnAttribute loc =
 
 locationElement :: Location.Location -> Element.Element
 locationElement loc =
-  Xml.element
-    "span"
-    [ Xml.attribute "class" "text-body-tertiary small ms-2",
-      lineAttribute loc,
-      columnAttribute loc
-    ]
-    [ Xml.text
-        ( Text.pack " (line "
-            <> Text.pack (show (Line.unwrap (Location.line loc)))
-            <> Text.pack ", col "
-            <> Text.pack (show (Column.unwrap (Location.column loc)))
-            <> Text.pack ")"
-        )
-    ]
+  let lineNum = Line.unwrap (Location.line loc)
+   in Xml.element
+        "button"
+        [ Xml.attribute "type" "button",
+          Xml.attribute "class" "item-location ms-auto text-body-tertiary small bg-transparent border-0 p-0",
+          Xml.attribute "aria-label" ("Go to line " <> show lineNum),
+          lineAttribute loc,
+          columnAttribute loc
+        ]
+        [ Xml.text
+            ( Text.pack "line "
+                <> Text.pack (show lineNum)
+            )
+        ]
 
 kindToText :: ItemKind.ItemKind -> Text.Text
 kindToText k = case k of
@@ -785,6 +790,62 @@ kindToText k = case k of
   ItemKind.Default -> Text.pack "default"
   ItemKind.Annotation -> Text.pack "annotation"
   ItemKind.Splice -> Text.pack "splice"
+
+data KindColor
+  = KindSuccess
+  | KindInfo
+  | KindSecondary
+  | KindPrimary
+  | KindWarning
+
+kindColor :: ItemKind.ItemKind -> KindColor
+kindColor k = case k of
+  ItemKind.Function -> KindSuccess
+  ItemKind.PatternBinding -> KindSuccess
+  ItemKind.PatternSynonym -> KindSuccess
+  ItemKind.DataType -> KindInfo
+  ItemKind.Newtype -> KindInfo
+  ItemKind.TypeData -> KindInfo
+  ItemKind.TypeSynonym -> KindInfo
+  ItemKind.DataConstructor -> KindSecondary
+  ItemKind.GADTConstructor -> KindSecondary
+  ItemKind.RecordField -> KindSecondary
+  ItemKind.Class -> KindPrimary
+  ItemKind.ClassMethod -> KindPrimary
+  ItemKind.ClassInstance -> KindPrimary
+  ItemKind.StandaloneDeriving -> KindPrimary
+  ItemKind.DerivedInstance -> KindPrimary
+  ItemKind.OpenTypeFamily -> KindInfo
+  ItemKind.ClosedTypeFamily -> KindInfo
+  ItemKind.DataFamily -> KindInfo
+  ItemKind.TypeFamilyInstance -> KindInfo
+  ItemKind.DataFamilyInstance -> KindInfo
+  ItemKind.ForeignImport -> KindWarning
+  ItemKind.ForeignExport -> KindWarning
+  ItemKind.FixitySignature -> KindSecondary
+  ItemKind.InlineSignature -> KindSecondary
+  ItemKind.SpecialiseSignature -> KindSecondary
+  ItemKind.StandaloneKindSig -> KindInfo
+  ItemKind.Rule -> KindSecondary
+  ItemKind.Default -> KindSecondary
+  ItemKind.Annotation -> KindSecondary
+  ItemKind.Splice -> KindSecondary
+
+kindBadgeClass :: ItemKind.ItemKind -> String
+kindBadgeClass k = case kindColor k of
+  KindSuccess -> "bg-success-subtle text-success-emphasis"
+  KindInfo -> "bg-info-subtle text-info-emphasis"
+  KindSecondary -> "bg-secondary-subtle text-body"
+  KindPrimary -> "bg-primary-subtle text-primary-emphasis"
+  KindWarning -> "bg-warning-subtle text-warning-emphasis"
+
+kindBorderStyle :: ItemKind.ItemKind -> String
+kindBorderStyle k = case kindColor k of
+  KindSuccess -> "border-left-color: var(--bs-success)"
+  KindInfo -> "border-left-color: var(--bs-info)"
+  KindSecondary -> "border-left-color: var(--bs-secondary)"
+  KindPrimary -> "border-left-color: var(--bs-primary)"
+  KindWarning -> "border-left-color: var(--bs-warning)"
 
 -- Doc to HTML conversion
 
@@ -831,7 +892,7 @@ docToContents doc = case doc of
           )
     ]
   Doc.CodeBlock d ->
-    [Content.Element $ Xml.element "pre" [] [Content.Element $ Xml.element "code" [] (docToContents d)]]
+    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "bg-body-secondary rounded p-3 my-3"] [Content.Element $ Xml.element "code" [] (docToContents d)]]
   Doc.Hyperlink h -> [Content.Element (hyperlinkToHtml h)]
   Doc.Pic p -> [Content.Element (pictureToHtml p)]
   Doc.MathInline t ->
@@ -841,7 +902,7 @@ docToContents doc = case doc of
   Doc.AName t ->
     [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->
-    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle p-3 my-3"] [Xml.text t]]
+    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3 font-monospace"] [Xml.text t]]
   Doc.Examples es -> [Content.Element (examplesToHtml es)]
   Doc.Header h -> [Content.Element (headerToHtml h)]
   Doc.Table t -> [Content.Element (tableToHtml t)]
@@ -880,7 +941,7 @@ examplesToHtml :: [Example.Example] -> Element.Element
 examplesToHtml examples =
   Xml.element
     "div"
-    [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle p-3 my-3"]
+    [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3"]
     (concatMap exampleToContents examples)
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
@@ -893,7 +954,13 @@ exampleToContents (Example.MkExample expr results) =
               Xml.element
                 "div"
                 [Xml.attribute "class" "font-monospace"]
-                [Xml.text expr]
+                [ Content.Element $
+                    Xml.element
+                      "span"
+                      [Xml.attribute "class" "text-warning-emphasis user-select-none"]
+                      [Xml.string ">>> "],
+                  Xml.text expr
+                ]
           ]
             <> fmap
               ( \r ->
@@ -922,7 +989,7 @@ levelToName level = case level of
 
 tableToHtml :: Table.Table Doc.Doc -> Element.Element
 tableToHtml (Table.MkTable headerRows bodyRows) =
-  Xml.element "table" [Xml.attribute "class" "table table-bordered"] (theadContents <> tbodyContents)
+  Xml.element "table" [Xml.attribute "class" "table table-bordered table-sm table-striped my-3"] (theadContents <> tbodyContents)
   where
     theadContents :: [Content.Content Element.Element]
     theadContents

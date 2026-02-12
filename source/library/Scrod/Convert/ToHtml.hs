@@ -99,14 +99,27 @@ headElement m =
         Xml.element
           "link"
           [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+            Xml.attribute "href" "https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css",
+            Xml.attribute "integrity" "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB",
+            Xml.attribute "crossorigin" "anonymous"
           ]
           [],
       Content.Element $
         Xml.element
           "link"
           [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/katex.min.css"
+            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/katex.min.css",
+            Xml.attribute "integrity" "sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP",
+            Xml.attribute "crossorigin" "anonymous"
+          ]
+          [],
+      Content.Element $
+        Xml.element
+          "link"
+          [ Xml.attribute "rel" "modulepreload",
+            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js",
+            Xml.attribute "integrity" "sha384-PV5j9Y/tL/HYr0HSxUY3afWRVHizeuTKLWTR+OwVlGHOBcN8jOZvCAS79+ULHoEU",
+            Xml.attribute "crossorigin" "anonymous"
           ]
           [],
       Content.Element $

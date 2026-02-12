@@ -89,3 +89,37 @@ instance
 
 instance (Generics.Generic a, GToJsonEnum (Generics.Rep a)) => ToJson (GenericEnum a) where
   toJson (GenericEnum x) = Json.string (gToJsonEnum (Generics.from x))
+
+-- | Wrapper for deriving 'ToJson' for tagged sum types. Each
+-- constructor produces @{\"type\": \"Name\", \"value\": \<value\>}@.
+-- Supports nullary constructors (value is @null@) and single-field
+-- constructors (value is the field encoded via 'ToJson').
+newtype GenericTagged a = GenericTagged a
+
+-- | Generic derivation helper for tagged sum types.
+class GToJsonTagged f where
+  gToJsonTagged :: f p -> Json.Value
+
+instance (GToJsonTagged f) => GToJsonTagged (Generics.M1 Generics.D c f) where
+  gToJsonTagged (Generics.M1 x) = gToJsonTagged x
+
+instance (GToJsonTagged f, GToJsonTagged g) => GToJsonTagged (f Generics.:+: g) where
+  gToJsonTagged (Generics.L1 x) = gToJsonTagged x
+  gToJsonTagged (Generics.R1 x) = gToJsonTagged x
+
+instance
+  (TypeLits.KnownSymbol name) =>
+  GToJsonTagged (Generics.M1 Generics.C ('Generics.MetaCons name fix rec) Generics.U1)
+  where
+  gToJsonTagged _ =
+    Json.tagged (TypeLits.symbolVal (Proxy.Proxy :: Proxy.Proxy name)) Json.null
+
+instance
+  (TypeLits.KnownSymbol name, ToJson a) =>
+  GToJsonTagged (Generics.M1 Generics.C ('Generics.MetaCons name fix rec) (Generics.M1 Generics.S sel (Generics.K1 i a)))
+  where
+  gToJsonTagged (Generics.M1 (Generics.M1 (Generics.K1 x))) =
+    Json.tagged (TypeLits.symbolVal (Proxy.Proxy :: Proxy.Proxy name)) (toJson x)
+
+instance (Generics.Generic a, GToJsonTagged (Generics.Rep a)) => ToJson (GenericTagged a) where
+  toJson (GenericTagged x) = gToJsonTagged (Generics.from x)

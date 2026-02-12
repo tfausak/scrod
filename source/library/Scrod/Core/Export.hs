@@ -1,6 +1,9 @@
+{-# LANGUAGE DeriveGeneric #-}
+
 module Scrod.Core.Export where
 
 import qualified Data.Text as Text
+import qualified GHC.Generics as Generics
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Core.Section as Section
@@ -15,4 +18,4 @@ data Export
     Doc Doc.Doc
   | -- | Named doc reference: @-- $chunkName@
     DocNamed Text.Text
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Generics.Generic, Ord, Show)

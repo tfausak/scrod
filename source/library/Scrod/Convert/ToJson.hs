@@ -55,7 +55,7 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import Scrod.Json.ToJson (GenericEnum (GenericEnum), ToJson (toJson))
+import Scrod.Json.ToJson (GenericEnum (GenericEnum), GenericTagged (GenericTagged), ToJson (toJson))
 import qualified Scrod.Json.Value as Json
 
 -- Simple newtype wrappers use @deriving via@ to get their instances
@@ -127,6 +127,8 @@ deriving via GenericEnum ItemKind.ItemKind instance ToJson ItemKind.ItemKind
 
 deriving via GenericEnum Namespace.Namespace instance ToJson Namespace.Namespace
 
+deriving via GenericTagged Export.Export instance ToJson Export.Export
+
 -- Hand-written instances for types that require special encoding.
 
 instance ToJson Module.Module where
@@ -179,13 +181,6 @@ instance ToJson Doc.Doc where
     Doc.Examples es -> Json.tagged "Examples" $ toJson es
     Doc.Header h -> Json.tagged "Header" $ toJson h
     Doc.Table t -> Json.tagged "Table" $ toJson t
-
-instance ToJson Export.Export where
-  toJson e = case e of
-    Export.Identifier ei -> Json.tagged "Identifier" $ toJson ei
-    Export.Group s -> Json.tagged "Group" $ toJson s
-    Export.Doc d -> Json.tagged "Doc" $ toJson d
-    Export.DocNamed t -> Json.tagged "DocNamed" $ Json.text t
 
 instance ToJson Level.Level where
   toJson l = Json.integer $ case l of

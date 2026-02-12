@@ -9,8 +9,7 @@ import qualified Scrod.Spec as Spec
 import qualified System.Console.GetOpt as GetOpt
 
 data Flag
-  = Format String
-  | Help (Maybe String)
+  = Help (Maybe String)
   | Literate (Maybe String)
   | Schema (Maybe String)
   | Signature (Maybe String)
@@ -29,7 +28,6 @@ optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
-    GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
     GetOpt.Option [] ["literate"] (GetOpt.OptArg Literate "BOOL") "Treats the input as Literate Haskell.",
     GetOpt.Option [] ["schema"] (GetOpt.OptArg Schema "BOOL") "Shows the JSON output schema.",
     GetOpt.Option [] ["signature"] (GetOpt.OptArg Signature "BOOL") "Treats the input as a Backpack signature."
@@ -46,16 +44,6 @@ spec s = do
 
     Spec.it s "fails with an unexpected argument" $ do
       Spec.assertEq s (fromArguments ["x"]) Nothing
-
-    Spec.describe s "format" $ do
-      Spec.it s "works with an argument" $ do
-        Spec.assertEq s (fromArguments ["--format=json"]) $ Just [Format "json"]
-
-      Spec.it s "works with html" $ do
-        Spec.assertEq s (fromArguments ["--format=html"]) $ Just [Format "html"]
-
-      Spec.it s "fails with no argument" $ do
-        Spec.assertEq s (fromArguments ["--format"]) Nothing
 
     Spec.describe s "help" $ do
       Spec.it s "works with no argument" $ do

@@ -54,7 +54,7 @@ convertNamespace ns = case ns of
 convertDoc :: Haddock.DocH Void.Void Identifier.Identifier -> Doc.Doc
 convertDoc doc = case doc of
   Haddock.DocEmpty -> Doc.Empty
-  Haddock.DocAppend a b -> Doc.Append (convertDoc a) (convertDoc b)
+  Haddock.DocAppend a b -> Doc.Append [convertDoc a, convertDoc b]
   Haddock.DocString s -> Doc.String $ Text.pack s
   Haddock.DocParagraph d -> Doc.Paragraph $ convertDoc d
   Haddock.DocIdentifier i -> Doc.Identifier i
@@ -141,7 +141,7 @@ spec s = do
     Spec.it s "works with append" $ do
       let input :: Haddock.DocH Void.Void Haddock.Identifier
           input = Haddock.DocAppend (Haddock.DocString "a") (Haddock.DocString "b")
-      let expected = Doc.Append (Doc.String $ Text.pack "a") (Doc.String $ Text.pack "b")
+      let expected = Doc.Append [Doc.String $ Text.pack "a", Doc.String $ Text.pack "b"]
       Spec.assertEq s (fromHaddock input) expected
 
     Spec.it s "works with string" $ do

@@ -7,7 +7,7 @@ function renderDoc(doc) {
     case "Empty":
       return "";
     case "Append":
-      return renderDoc(doc.value[0]) + renderDoc(doc.value[1]);
+      return doc.value.map(renderDoc).join("");
     case "String":
       return escapeHtml(doc.value);
     case "Paragraph":

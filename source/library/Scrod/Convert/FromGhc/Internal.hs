@@ -137,7 +137,7 @@ extractFieldOccName lFieldOcc =
 appendDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
 appendDoc Doc.Empty d = d
 appendDoc d Doc.Empty = d
-appendDoc d1 d2 = Doc.Append d1 d2
+appendDoc d1 d2 = Doc.Append [d1, d2]
 
 -- | Create an Item from a source span with the given properties.
 mkItemM ::

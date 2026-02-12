@@ -23,7 +23,6 @@ spec s = Spec.describe s "integration" $ do
       ""
       [ ("/extensions", "{}"),
         ("/documentation/type", "\"Empty\""),
-        ("/documentation/value", "null"),
         ("/imports", "[]"),
         ("/signature", "false"),
         ("/items", "[]")

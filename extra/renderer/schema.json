@@ -111,14 +111,10 @@
                     "properties": {
                         "type": {
                             "const": "Empty"
-                        },
-                        "value": {
-                            "type": "null"
                         }
                     },
                     "required": [
-                        "type",
-                        "value"
+                        "type"
                     ],
                     "additionalProperties": false
                 },
@@ -132,9 +128,7 @@
                             "type": "array",
                             "items": {
                                 "$ref": "#/$defs/doc"
-                            },
-                            "minItems": 2,
-                            "maxItems": 2
+                            }
                         }
                     },
                     "required": [

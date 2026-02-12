@@ -21,8 +21,8 @@ export interface Located<T> {
 // ---------------------------------------------------------------------------
 
 export type Doc =
-  | { type: "Empty"; value: null }
-  | { type: "Append"; value: [Doc, Doc] }
+  | { type: "Empty" }
+  | { type: "Append"; value: Doc[] }
   | { type: "String"; value: string }
   | { type: "Paragraph"; value: Doc }
   | { type: "Identifier"; value: Identifier }

@@ -26,7 +26,7 @@ export function renderDoc(doc: Doc): string {
       return "";
 
     case "Append":
-      return renderDoc(doc.value[0]) + renderDoc(doc.value[1]);
+      return doc.value.map(renderDoc).join("");
 
     case "String":
       return escapeHtml(doc.value);

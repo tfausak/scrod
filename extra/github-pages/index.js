@@ -17,7 +17,9 @@ var ready = false;
 function bootstrapLink() {
   var link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = 'vendor/bootstrap.min.css';
+  link.href = 'https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css';
+  link.integrity = 'sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB';
+  link.crossOrigin = 'anonymous';
   return link;
 }
 
@@ -74,6 +76,18 @@ function showError(message) {
   setShadowMessage(pre);
 }
 
+function renderMath() {
+  var el = shadow.firstElementChild;
+  if (!el) return;
+  import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
+    .then(function (m) {
+      m.default(el, { delimiters: [
+        { left: '\\(', right: '\\)', display: false },
+        { left: '\\[', right: '\\]', display: true }
+      ]});
+    });
+}
+
 function showJson(json) {
   var pre = document.createElement('pre');
   pre.className = 'font-monospace';
@@ -97,6 +111,7 @@ worker.onmessage = function (e) {
     } else {
       shadow.innerHTML = msg.value;
       syncShadowTheme();
+      renderMath();
     }
   } else if (msg.tag === 'error') {
     showError(msg.message);

@@ -8,6 +8,7 @@ mkdir -p "$dist"
 
 cp extra/github-pages/index.html "$dist/"
 cp extra/github-pages/index.js "$dist/"
+cp extra/github-pages/renderer.js "$dist/"
 cp extra/github-pages/worker.js "$dist/"
 cp extra/github-pages/style.css "$dist/"
 cp -r extra/github-pages/vendor "$dist/"
@@ -39,6 +40,7 @@ hash_asset() {
 hash_asset vendor/browser_wasi_shim.js worker.js
 hash_asset ghc_wasm_jsffi.js           worker.js
 hash_asset scrod-wasm.wasm              worker.js
+hash_asset renderer.js                  index.js
 hash_asset style.css                    index.html
 
 # Phase 2: files that reference leaf assets (content now includes hashed names)

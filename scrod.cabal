@@ -98,6 +98,7 @@ library
     Scrod.Convert.FromGhc.ItemKind
     Scrod.Convert.FromGhc.Merge
     Scrod.Convert.FromGhc.Names
+    Scrod.Convert.FromGhc.WarningParents
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml
     Scrod.Convert.ToJsonSchema

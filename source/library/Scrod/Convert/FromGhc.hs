@@ -36,6 +36,7 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
+import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
@@ -185,7 +186,9 @@ extractItems lHsModule =
   let rawItems = Internal.runConvert $ extractItemsM lHsModule
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes rawItems
-   in Merge.mergeItemsByName parentedItems
+      warningLocations = WarningParents.extractWarningLocations lHsModule
+      warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
+   in Merge.mergeItemsByName warningParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::

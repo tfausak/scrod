@@ -1380,7 +1380,8 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"O W2\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"anyclass\"")
         ]
 
     Spec.it s "standalone deriving via" $ do
@@ -1425,19 +1426,6 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
           ("/items/1/value/name", "\"Show\""),
           ("/items/1/value/signature", "\"stock\"")
-        ]
-
-    Spec.it s "data deriving anyclass" $ do
-      check
-        s
-        """
-        {-# LANGUAGE DerivingStrategies, DeriveAnyClass #-}
-        class C a
-        data R4
-        deriving anyclass instance C R4
-        """
-        [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
-          ("/items/2/value/name", "\"C R4\"")
         ]
 
     Spec.it s "data deriving via" $ do

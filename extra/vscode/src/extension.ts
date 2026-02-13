@@ -32,10 +32,6 @@ export function activate(context: vscode.ExtensionContext): void {
             if (pendingHtml !== undefined) {
               panel?.webview.postMessage({ type: "update", html: pendingHtml });
               pendingHtml = undefined;
-              const editor = vscode.window.activeTextEditor;
-              if (editor && isHaskell(editor.document)) {
-                syncScroll(editor);
-              }
             }
           } else if (msg.type === "goto") {
             gotoLocation(msg.line, msg.col);
@@ -59,16 +55,7 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.workspace.onDidSaveTextDocument((document) =>
       immediateUpdate(document)
-    ),
-    vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
-      if (
-        panel &&
-        event.textEditor === vscode.window.activeTextEditor &&
-        isHaskell(event.textEditor.document)
-      ) {
-        syncScroll(event.textEditor);
-      }
-    })
+    )
   );
 }
 
@@ -131,16 +118,6 @@ async function update(document: vscode.TextDocument): Promise<void> {
     return;
   }
   panel.webview.postMessage({ type: "update", html });
-  const editor = vscode.window.activeTextEditor;
-  if (editor && isHaskell(editor.document)) {
-    syncScroll(editor);
-  }
-}
-
-function syncScroll(editor: vscode.TextEditor): void {
-  if (!panel || !webviewReady) return;
-  const topLine = (editor.visibleRanges[0]?.start.line ?? 0) + 1;
-  panel.webview.postMessage({ type: "scroll", line: topLine });
 }
 
 async function gotoLocation(line: number, col: number): Promise<void> {
@@ -174,7 +151,7 @@ function wrapperHtml(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
   <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>
@@ -186,8 +163,6 @@ function wrapperHtml(): string {
         var msg = event.data;
         if (msg.type === 'update') {
           applyUpdate(msg.html);
-        } else if (msg.type === 'scroll') {
-          scrollToLine(msg.line);
         }
       });
 
@@ -259,25 +234,6 @@ function wrapperHtml(): string {
           target = target.parentElement;
         }
       });
-
-      function scrollToLine(line) {
-        var elements = document.querySelectorAll('[data-line]');
-        var best = null;
-        var bestLine = 0;
-        for (var i = 0; i < elements.length; i++) {
-          var el = elements[i];
-          var elLine = parseInt(el.getAttribute('data-line'), 10);
-          if (elLine <= line && elLine > bestLine) {
-            best = el;
-            bestLine = elLine;
-          }
-        }
-        if (best) {
-          best.scrollIntoView({ block: 'start' });
-        } else {
-          window.scrollTo(0, 0);
-        }
-      }
 
       vscode.postMessage({ type: 'ready' });
     })();

@@ -16,36 +16,37 @@ import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromHaddock as FromHaddock
 import qualified Scrod.Core.Doc as Doc
+import qualified Scrod.Core.Since as Since
 
--- | Convert export documentation.
+-- | Convert export documentation (doc only, discards @since).
 convertExportDoc ::
   SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
   Doc.Doc
-convertExportDoc lDoc =
+convertExportDoc = fst . convertLHsDoc
+
+-- | Convert a located HsDoc to our 'Doc' type and optional @since.
+convertLHsDoc ::
+  SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
+  (Doc.Doc, Maybe Since.Since)
+convertLHsDoc lDoc =
   let hsDoc = SrcLoc.unLoc lDoc
       hsDocString = HsDoc.hsDocString hsDoc
       rendered = DocString.renderHsDocString hsDocString
    in parseDoc rendered
 
--- | Convert a located HsDoc to our 'Doc' type.
-convertLHsDoc ::
-  SrcLoc.GenLocated l (HsDoc.WithHsDocIdentifiers DocString.HsDocString Ghc.GhcPs) ->
-  Doc.Doc
-convertLHsDoc = convertExportDoc
-
--- | Parse documentation string to our 'Doc' type.
-parseDoc :: String -> Doc.Doc
+-- | Parse documentation string to our 'Doc' type and optional @since.
+parseDoc :: String -> (Doc.Doc, Maybe Since.Since)
 parseDoc input =
   let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
       metaDoc = Haddock.parseParas Nothing input
-      haddockDoc :: Haddock.DocH m Haddock.Identifier
-      haddockDoc = Haddock._doc metaDoc
-   in FromHaddock.fromHaddock haddockDoc
+      doc = FromHaddock.fromHaddock $ Haddock._doc metaDoc
+      itemSince = Haddock._metaSince (Haddock._meta metaDoc) >>= Internal.metaSinceToSince
+   in (doc, itemSince)
 
 -- | Associate documentation comments with their target declarations.
 associateDocs ::
   [Syntax.LHsDecl Ghc.GhcPs] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
 associateDocs decls =
   let withNextDocs = associateNextDocs decls
       withAllDocs = associatePrevDocs withNextDocs
@@ -54,48 +55,50 @@ associateDocs decls =
 -- | Associate DocCommentNext with the following declaration.
 associateNextDocs ::
   [Syntax.LHsDecl Ghc.GhcPs] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocs = associateNextDocsLoop Doc.Empty
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
+associateNextDocs = associateNextDocsLoop Doc.Empty Nothing
 
 -- | Recursive helper for associating next-doc comments.
 associateNextDocsLoop ::
   Doc.Doc ->
+  Maybe Since.Since ->
   [Syntax.LHsDecl Ghc.GhcPs] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocsLoop _ [] = []
-associateNextDocsLoop pendingDoc (lDecl : rest) = case SrcLoc.unLoc lDecl of
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
+associateNextDocsLoop _ _ [] = []
+associateNextDocsLoop pendingDoc pendingSince (lDecl : rest) = case SrcLoc.unLoc lDecl of
   Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
-    let newDoc = Internal.appendDoc pendingDoc $ convertLHsDoc lDoc
-     in associateNextDocsLoop newDoc rest
+    let (newDoc, newSince) = convertLHsDoc lDoc
+     in associateNextDocsLoop (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
   Syntax.DocD _ (Hs.DocCommentPrev _) ->
-    (Doc.Empty, lDecl) : associateNextDocsLoop Doc.Empty rest
+    (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
   _ ->
-    (pendingDoc, lDecl) : associateNextDocsLoop Doc.Empty rest
+    (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
 
 -- | Associate DocCommentPrev with the preceding declaration.
 associatePrevDocs ::
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)] ->
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
 associatePrevDocs = reverse . associatePrevDocsLoop . reverse
 
 -- | Recursive helper for associating prev-doc comments.
 associatePrevDocsLoop ::
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)] ->
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
 associatePrevDocsLoop [] = []
-associatePrevDocsLoop ((doc, lDecl) : rest) = case SrcLoc.unLoc lDecl of
+associatePrevDocsLoop ((doc, docSince, lDecl) : rest) = case SrcLoc.unLoc lDecl of
   Syntax.DocD _ (Hs.DocCommentPrev lDoc) ->
-    let prevDoc = convertLHsDoc lDoc
-     in applyPrevDoc prevDoc $ associatePrevDocsLoop rest
+    let (prevDoc, prevSince) = convertLHsDoc lDoc
+     in applyPrevDoc prevDoc prevSince $ associatePrevDocsLoop rest
   _ ->
-    (doc, lDecl) : associatePrevDocsLoop rest
+    (doc, docSince, lDecl) : associatePrevDocsLoop rest
 
 -- | Apply a prev-doc comment to the nearest preceding non-doc declaration.
 applyPrevDoc ::
   Doc.Doc ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)] ->
-  [(Doc.Doc, Syntax.LHsDecl Ghc.GhcPs)]
-applyPrevDoc _ [] = []
-applyPrevDoc prevDoc ((existingDoc, lDecl) : rest) = case SrcLoc.unLoc lDecl of
-  Syntax.DocD {} -> (existingDoc, lDecl) : applyPrevDoc prevDoc rest
-  _ -> (Internal.appendDoc existingDoc prevDoc, lDecl) : rest
+  Maybe Since.Since ->
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)] ->
+  [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
+applyPrevDoc _ _ [] = []
+applyPrevDoc prevDoc prevSince ((existingDoc, existingSince, lDecl) : rest) = case SrcLoc.unLoc lDecl of
+  Syntax.DocD {} -> (existingDoc, existingSince, lDecl) : applyPrevDoc prevDoc prevSince rest
+  _ -> (Internal.appendDoc existingDoc prevDoc, Internal.appendSince existingSince prevSince, lDecl) : rest

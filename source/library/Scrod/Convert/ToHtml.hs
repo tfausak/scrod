@@ -666,7 +666,7 @@ itemsContents items =
                 ]
 
 itemToHtml :: Located.Located Item.Item -> Element.Element
-itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSig)) =
+itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =
   Xml.element
     "div"
     [ Xml.attribute "class" "card mb-3 border-start border-4",
@@ -682,6 +682,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
                 <> sigBeforeKind
                 <> [Content.Element kindElement]
                 <> sigAfterKind
+                <> sinceContents
                 <> [Content.Element (locationElement loc)]
             )
       ]
@@ -723,13 +724,24 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     signatureContents = case maybeSig of
       Nothing -> []
       Just sig ->
-        let prefix = if isTypeVarSignature then Text.pack " " else Text.pack " :: "
+        let prefix = if isTypeVarSignature then Text.pack "\x00a0" else Text.pack " :: "
          in [ Content.Element $
                 Xml.element
                   "span"
                   [Xml.attribute "class" "font-monospace text-body-secondary"]
                   [Xml.text (prefix <> sig)]
             ]
+
+    sinceContents :: [Content.Content Element.Element]
+    sinceContents = case maybeSince of
+      Nothing -> []
+      Just s ->
+        [ Content.Element $
+            Xml.element
+              "span"
+              [Xml.attribute "class" "text-body-secondary small ms-2"]
+              [Xml.text (Text.pack "since " <> sinceToText s)]
+        ]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of
@@ -905,20 +917,40 @@ docToContents doc = case doc of
   Doc.AName t ->
     [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->
-    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3 font-monospace"] [Xml.text t]]
+    [ Content.Element $
+        Xml.element
+          "div"
+          [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3"]
+          [ Content.Element $ Xml.element "div" [Xml.attribute "class" "fw-bold mb-1"] [Xml.string "Property:"],
+            Content.Element $ Xml.element "pre" [Xml.attribute "class" "mb-0 bg-transparent font-monospace"] [Xml.text t]
+          ]
+    ]
   Doc.Examples es -> [Content.Element (examplesToHtml es)]
   Doc.Header h -> [Content.Element (headerToHtml h)]
   Doc.Table t -> [Content.Element (tableToHtml t)]
 
 identifierToHtml :: Identifier.Identifier -> Element.Element
 identifierToHtml (Identifier.MkIdentifier ns val) =
-  Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text (prefix <> val)]
+  Xml.element
+    "span"
+    []
+    ( [Content.Element $ Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text val]]
+        <> namespaceBadge ns
+    )
   where
-    prefix :: Text.Text
-    prefix = case ns of
-      Nothing -> Text.empty
-      Just Namespace.Value -> Text.pack "v'"
-      Just Namespace.Type -> Text.pack "t'"
+    namespaceBadge :: Maybe Namespace.Namespace -> [Content.Content Element.Element]
+    namespaceBadge Nothing = []
+    namespaceBadge (Just n) =
+      [ Content.Element $
+          Xml.element
+            "span"
+            [Xml.attribute "class" "badge bg-secondary-subtle text-body ms-1"]
+            [Xml.text (namespaceToText n)]
+      ]
+
+    namespaceToText :: Namespace.Namespace -> Text.Text
+    namespaceToText Namespace.Value = Text.pack "value"
+    namespaceToText Namespace.Type = Text.pack "type"
 
 modLinkToHtml :: ModLink.ModLink Doc.Doc -> Element.Element
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =

@@ -1,4 +1,4 @@
-import ghcWasmJsffi from './ghc_wasm_jsffi.js';
+import ghcWasmJsffi from '../wasm/dist/ghc_wasm_jsffi.js';
 import { WASI, File, OpenFile, ConsoleStdout } from './vendor/browser_wasi_shim.js';
 
 let scrod;
@@ -26,7 +26,7 @@ async function initialize() {
 
   const jsffi = ghcWasmJsffi(exportsProxy);
 
-  const response = await fetch('scrod-wasm.wasm');
+  const response = await fetch(WASM_URL);
   if (!response.ok) {
     throw new Error(
       `Failed to fetch WASM module (status ${response.status} ${response.statusText})`

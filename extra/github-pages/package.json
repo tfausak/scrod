@@ -1,0 +1,9 @@
+{
+  "name": "scrod-github-pages",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

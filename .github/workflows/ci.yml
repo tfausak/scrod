@@ -195,6 +195,9 @@ jobs:
       - run: mkdir -p extra/wasm/dist
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/scrod-wasm.wasm
       - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
       - run: extra/github-pages/build.sh
       - uses: actions/upload-pages-artifact@v4
         with:

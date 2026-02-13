@@ -1752,6 +1752,7 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/0/value/name", "\"x\""),
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"Function\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/documentation/value/value", "\"w\"")
         ]

@@ -221,15 +221,16 @@ function wrapperHtml(): string {
         renderMath();
       }
 
+      var katexPromise = import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
+        .catch(function (e) { console.error('Failed to load KaTeX:', e); });
+
       function renderMath() {
-        import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
-          .then(function (m) {
-            m.default(document.body, { delimiters: [
-              { left: '\\\\(', right: '\\\\)', display: false },
-              { left: '\\\\[', right: '\\\\]', display: true }
-            ]});
-          })
-          .catch(function () {});
+        katexPromise.then(function (m) {
+          if (m) m.default(document.body, { delimiters: [
+            { left: '\\\\(', right: '\\\\)', display: false },
+            { left: '\\\\[', right: '\\\\]', display: true }
+          ]});
+        });
       }
 
       function syncTheme() {

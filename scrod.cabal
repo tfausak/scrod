@@ -1,6 +1,6 @@
 cabal-version: 3.12
 name: scrod
-version: 0.2026.2.12
+version: 0.2026.2.13
 synopsis: Worse Haskell documentation
 description:
   Scrod generates documentation for Haskell modules, similar to Haddock. Unlike

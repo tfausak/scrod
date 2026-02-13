@@ -1,10 +1,19 @@
 import { build } from 'esbuild';
 import { copyFile, readFile, writeFile, mkdir, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
-import { basename, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = import.meta.dirname;
+const root = dirname(fileURLToPath(import.meta.url));
 const dist = join(root, 'dist');
+
+// Find the entry-point output path from an esbuild metafile.
+function entryOutput(metafile) {
+  const entry = Object.entries(metafile.outputs).find(
+    ([, meta]) => meta.entryPoint
+  );
+  return basename(entry[0]);
+}
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(dist, { recursive: true });
@@ -31,9 +40,7 @@ const workerResult = await build({
   },
 });
 
-const workerFilename = basename(
-  Object.keys(workerResult.metafile.outputs).find((f) => f.endsWith('.js'))
-);
+const workerFilename = entryOutput(workerResult.metafile);
 
 // Phase 3: Bundle index.js (inlines renderer.js)
 
@@ -49,9 +56,7 @@ const indexResult = await build({
   },
 });
 
-const indexFilename = basename(
-  Object.keys(indexResult.metafile.outputs).find((f) => f.endsWith('.js'))
-);
+const indexFilename = entryOutput(indexResult.metafile);
 
 // Phase 4: Process style.css
 
@@ -63,9 +68,7 @@ const styleResult = await build({
   metafile: true,
 });
 
-const styleFilename = basename(
-  Object.keys(styleResult.metafile.outputs).find((f) => f.endsWith('.css'))
-);
+const styleFilename = entryOutput(styleResult.metafile);
 
 // Phase 5: Generate index.html with hashed references
 

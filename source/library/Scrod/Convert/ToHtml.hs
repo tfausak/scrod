@@ -722,7 +722,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     signatureContents = case maybeSig of
       Nothing -> []
       Just sig ->
-        let prefix = if isTypeVarSignature then Text.pack " " else Text.pack " :: "
+        let prefix = if isTypeVarSignature then Text.pack "\x00a0" else Text.pack " :: "
          in [ Content.Element $
                 Xml.element
                   "span"

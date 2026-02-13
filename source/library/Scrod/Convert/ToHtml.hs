@@ -904,7 +904,14 @@ docToContents doc = case doc of
   Doc.AName t ->
     [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
   Doc.Property t ->
-    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3 font-monospace"] [Xml.text t]]
+    [ Content.Element $
+        Xml.element
+          "div"
+          [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3"]
+          [ Content.Element $ Xml.element "div" [Xml.attribute "class" "fw-bold mb-1"] [Xml.string "Property:"],
+            Content.Element $ Xml.element "pre" [Xml.attribute "class" "mb-0 bg-transparent font-monospace"] [Xml.text t]
+          ]
+    ]
   Doc.Examples es -> [Content.Element (examplesToHtml es)]
   Doc.Header h -> [Content.Element (headerToHtml h)]
   Doc.Table t -> [Content.Element (tableToHtml t)]

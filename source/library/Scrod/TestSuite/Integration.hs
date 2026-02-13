@@ -1578,7 +1578,19 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
-    Spec.it s "fixity" $ do
+    Spec.it s "fixity merges into target" $ do
+      check
+        s
+        """
+        (%) = id
+        infixl 0 %
+        """
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/documentation/value/value", "\"infixl 0\"")
+        ]
+
+    Spec.it s "fixity preserves type signature" $ do
       check
         s
         """
@@ -1586,7 +1598,41 @@ spec s = Spec.describe s "integration" $ do
         (%) :: () -> () -> ()
         (%) _ _ = ()
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/documentation/value/value", "\"infixl 5\""),
+          ("/items/0/value/signature", "\"() -> () -> ()\"")
+        ]
+
+    Spec.it s "fixity produces single item" $ do
+      check
+        s
+        """
+        (%) = id
+        infixl 0 %
+        """
+        [ ("/items", "[{\"location\":{\"line\":1,\"column\":1},\"value\":{\"key\":0,\"kind\":{\"type\":\"Function\"},\"name\":\"%\",\"documentation\":{\"type\":\"Paragraph\",\"value\":{\"type\":\"String\",\"value\":\"infixl 0\"}}}}]")
+        ]
+
+    Spec.it s "fixity infixr" $ do
+      check
+        s
+        """
+        (%) = id
+        infixr 9 %
+        """
+        [ ("/items/0/value/documentation/value/value", "\"infixr 9\"")
+        ]
+
+    Spec.it s "fixity infix" $ do
+      check
+        s
+        """
+        (%) = id
+        infix 4 %
+        """
+        [ ("/items/0/value/documentation/value/value", "\"infix 4\"")
+        ]
 
     Spec.it s "inline pragma" $ do
       check

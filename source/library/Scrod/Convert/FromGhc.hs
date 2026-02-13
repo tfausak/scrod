@@ -29,6 +29,7 @@ import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
+import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
 import qualified Numeric.Natural as Natural
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
@@ -300,6 +301,9 @@ convertSigDeclM doc lDecl sig = case sig of
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
      in Maybe.catMaybes <$> traverse (convertSigNameM doc sigText) names
+  Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
+    let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
+     in Maybe.catMaybes <$> traverse (convertFixityNameM fixityDoc) names
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -310,6 +314,21 @@ convertSigNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertSigNameM doc sig lName =
   Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc sig ItemKind.Function
+
+-- | Convert a single name from a fixity signature.
+convertFixityNameM ::
+  Doc.Doc ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertFixityNameM fixityDoc lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing ItemKind.Function
+
+-- | Convert a fixity direction to text.
+fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text
+fixityDirectionToText dir = case dir of
+  SyntaxBasic.InfixL -> Text.pack "infixl"
+  SyntaxBasic.InfixR -> Text.pack "infixr"
+  SyntaxBasic.InfixN -> Text.pack "infix"
 
 -- | Convert a simple declaration without special handling.
 convertDeclSimpleM ::

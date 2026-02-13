@@ -938,6 +938,42 @@ spec s = Spec.describe s "integration" $ do
             ("/items/0/value/signature", "\"Int\"")
           ]
 
+      Spec.it s "works with @since annotation" $ do
+        check
+          s
+          """
+          -- | Docs
+          --
+          -- @since 1.2.3
+          x :: Int
+          x = 0
+          """
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/value/since/version", "[1,2,3]")
+          ]
+
+      Spec.it s "works with @since annotation with package" $ do
+        check
+          s
+          """
+          -- | Docs
+          --
+          -- @since base-4.16.0
+          x :: Int
+          x = 0
+          """
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/value/since/package", "\"base\""),
+            ("/items/0/value/since/version", "[4,16,0]")
+          ]
+
+      Spec.it s "defaults to no @since" $ do
+        check
+          s
+          "x = 0"
+          [ ("/items/0/value/since", "")
+          ]
+
     Spec.it s "open type family" $ do
       check s "{-# language TypeFamilies #-} type family A" [("/items/0/value/kind/type", "\"OpenTypeFamily\"")]
 

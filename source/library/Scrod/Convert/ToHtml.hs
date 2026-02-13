@@ -944,7 +944,14 @@ examplesToHtml examples =
   Xml.element
     "div"
     [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3"]
-    (concatMap exampleToContents examples)
+    ( [ Content.Element $
+          Xml.element
+            "div"
+            [Xml.attribute "class" "fw-bold mb-1"]
+            [Xml.string (if length examples == 1 then "Example:" else "Examples:")]
+      ]
+        <> concatMap exampleToContents examples
+    )
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
 exampleToContents (Example.MkExample expr results) =

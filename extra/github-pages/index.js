@@ -260,10 +260,18 @@ fileInput.addEventListener('change', function () {
   }
 });
 
+var copyLinkResetTimer;
+
 copyLink.addEventListener('click', function () {
   navigator.clipboard.writeText(location.href).then(function () {
     copyLink.textContent = 'Copied!';
-    setTimeout(function () { copyLink.textContent = 'Copy link'; }, 1500);
+  }).catch(function () {
+    copyLink.textContent = 'Copy failed';
+  }).finally(function () {
+    if (copyLinkResetTimer !== undefined) {
+      clearTimeout(copyLinkResetTimer);
+    }
+    copyLinkResetTimer = setTimeout(function () { copyLink.textContent = 'Copy link'; }, 1500);
   });
 });
 

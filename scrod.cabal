@@ -76,7 +76,6 @@ library
     Cabal-syntax ^>=3.16.0,
     bytestring ^>=0.12.2,
     containers ^>=0.8,
-    directory ^>=1.3.10,
     exceptions ^>=0.10.11,
     ghc ^>=9.14.1,
     ghc-boot-th ^>=9.14.1,

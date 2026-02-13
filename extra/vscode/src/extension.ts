@@ -174,7 +174,7 @@ function wrapperHtml(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
   <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>

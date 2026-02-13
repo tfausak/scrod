@@ -530,7 +530,7 @@ spec s = Spec.describe s "integration" $ do
         -- | a | b | c |
         -- +===+===+===+
         -- | d     | e |
-        -- |-------+   |
+        -- +---+---+   |
         -- | f | g |   |
         -- +---+---+---+
         module M where
@@ -551,11 +551,19 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/bodyRows/0/0/colspan", "2"),
           ("/documentation/value/bodyRows/0/0/rowspan", "1"),
           ("/documentation/value/bodyRows/0/0/contents/type", "\"String\""),
-          ("/documentation/value/bodyRows/0/0/contents/value", "\"d\\n-------\\nf | g\""),
+          ("/documentation/value/bodyRows/0/0/contents/value", "\"d\""),
           ("/documentation/value/bodyRows/0/1/colspan", "1"),
-          ("/documentation/value/bodyRows/0/1/rowspan", "1"),
+          ("/documentation/value/bodyRows/0/1/rowspan", "2"),
           ("/documentation/value/bodyRows/0/1/contents/type", "\"String\""),
-          ("/documentation/value/bodyRows/0/1/contents/value", "\"e\\n\\n\"")
+          ("/documentation/value/bodyRows/0/1/contents/value", "\"e\\n\\n\""),
+          ("/documentation/value/bodyRows/1/0/colspan", "1"),
+          ("/documentation/value/bodyRows/1/0/rowspan", "1"),
+          ("/documentation/value/bodyRows/1/0/contents/type", "\"String\""),
+          ("/documentation/value/bodyRows/1/0/contents/value", "\"f\""),
+          ("/documentation/value/bodyRows/1/1/colspan", "1"),
+          ("/documentation/value/bodyRows/1/1/rowspan", "1"),
+          ("/documentation/value/bodyRows/1/1/contents/type", "\"String\""),
+          ("/documentation/value/bodyRows/1/1/contents/value", "\"g\"")
         ]
 
   Spec.describe s "since" $ do

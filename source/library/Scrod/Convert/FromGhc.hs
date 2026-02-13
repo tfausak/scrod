@@ -223,6 +223,10 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
   Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
+  Syntax.DefD {} -> pure []
+  Syntax.DerivD _ derivDecl ->
+    let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) strategy lDecl
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.
@@ -476,26 +480,29 @@ convertDerivingClauseM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertDerivingClauseM parentKey lClause = do
   let clause = SrcLoc.unLoc lClause
+      strategy = extractDerivStrategy $ Syntax.deriv_clause_strategy clause
       derivClauseTys = SrcLoc.unLoc $ Syntax.deriv_clause_tys clause
-  convertDerivClauseTysM parentKey derivClauseTys
+  convertDerivClauseTysM parentKey strategy derivClauseTys
 
 -- | Convert deriving clause types.
 convertDerivClauseTysM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.DerivClauseTys Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertDerivClauseTysM parentKey dct = case dct of
-  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList <$> convertDerivedTypeM parentKey lSigTy
-  Syntax.DctMulti _ lSigTys -> Maybe.catMaybes <$> traverse (convertDerivedTypeM parentKey) lSigTys
+convertDerivClauseTysM parentKey strategy dct = case dct of
+  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList <$> convertDerivedTypeM parentKey strategy lSigTy
+  Syntax.DctMulti _ lSigTys -> Maybe.catMaybes <$> traverse (convertDerivedTypeM parentKey strategy) lSigTys
 
 -- | Convert a derived type to an item.
 convertDerivedTypeM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.LHsSigType Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertDerivedTypeM parentKey lSigTy =
+convertDerivedTypeM parentKey strategy lSigTy =
   let (doc, docSince) = extractDerivedTypeDocAndSince lSigTy
-   in Internal.mkItemM (Annotation.getLocA lSigTy) parentKey (extractDerivedTypeName lSigTy) doc docSince Nothing ItemKind.DerivedInstance
+   in Internal.mkItemM (Annotation.getLocA lSigTy) parentKey (extractDerivedTypeName lSigTy) doc docSince strategy ItemKind.DerivedInstance
 
 -- | Extract name from a derived type.
 extractDerivedTypeName :: Syntax.LHsSigType Ghc.GhcPs -> Maybe ItemName.ItemName
@@ -515,3 +522,9 @@ extractDerivedTypeDocAndSince lSigTy =
    in case bodyTy of
         Syntax.HsDocTy _ _ lDoc -> GhcDoc.convertLHsDoc lDoc
         _ -> (Doc.Empty, Nothing)
+
+-- | Extract deriving strategy text from a deriving clause.
+extractDerivStrategy ::
+  Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
+  Maybe Text.Text
+extractDerivStrategy = fmap (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)

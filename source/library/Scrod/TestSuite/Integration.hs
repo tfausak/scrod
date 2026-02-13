@@ -1380,7 +1380,8 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"O W2\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"anyclass\"")
         ]
 
     Spec.it s "standalone deriving via" $ do
@@ -1413,6 +1414,39 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"Show\""),
           ("/items/2/value/kind/type", "\"DerivedInstance\""),
           ("/items/2/value/name", "\"Eq\"")
+        ]
+
+    Spec.it s "data deriving stock" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies #-}
+        data R3 deriving stock Show
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"stock\"")
+        ]
+
+    Spec.it s "data deriving via" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies, DerivingVia #-}
+        data R5 deriving Show via ()
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"via ()\"")
+        ]
+
+    Spec.it s "data deriving no strategy" $ do
+      check
+        s
+        "data R6 deriving Show"
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "")
         ]
 
     Spec.it s "data GADT deriving" $ do
@@ -1722,7 +1756,7 @@ spec s = Spec.describe s "integration" $ do
         []
 
     Spec.it s "default declaration" $ do
-      check s "default ()" []
+      check s "default ()" [("/items", "[]")]
 
     Spec.it s "foreign import" $ do
       check

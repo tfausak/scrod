@@ -939,7 +939,7 @@ pictureToHtml (Picture.MkPicture uri maybeTitle) =
     )
     []
 
-examplesToHtml :: [Example.Example] -> Element.Element
+examplesToHtml :: NonEmpty.NonEmpty Example.Example -> Element.Element
 examplesToHtml examples =
   Xml.element
     "div"
@@ -948,9 +948,9 @@ examplesToHtml examples =
           Xml.element
             "div"
             [Xml.attribute "class" "fw-bold mb-1"]
-            [Xml.string (if length examples == 1 then "Example:" else "Examples:")]
+            [Xml.string (case examples of _ NonEmpty.:| [] -> "Example:"; _ -> "Examples:")]
       ]
-        <> concatMap exampleToContents examples
+        <> concatMap exampleToContents (NonEmpty.toList examples)
     )
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]

@@ -3,6 +3,7 @@
 
 module Scrod.Core.Doc where
 
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
 import qualified Scrod.Core.Definition as Definition
@@ -38,7 +39,7 @@ data Doc
   | MathDisplay Text.Text
   | AName Text.Text
   | Property Text.Text
-  | Examples [Example.Example]
+  | Examples (NonEmpty.NonEmpty Example.Example)
   | Header (Header.Header Doc)
   | Table (Table.Table Doc)
   deriving (Eq, Generics.Generic, Ord, Show)

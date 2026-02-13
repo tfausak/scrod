@@ -7,6 +7,7 @@
 -- examples, tables, etc.) to the corresponding @Scrod.Core.*@ constructors.
 module Scrod.Convert.FromHaddock where
 
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
@@ -89,7 +90,7 @@ convertDoc doc = case doc of
   Haddock.DocAName s -> Doc.AName $ Text.pack s
   Haddock.DocProperty s -> Doc.Property $ Text.pack s
   Haddock.DocExamples es ->
-    Doc.Examples $
+    Doc.Examples . NonEmpty.fromList $
       fmap
         ( \e ->
             Example.MkExample
@@ -259,7 +260,7 @@ spec s = do
     Spec.it s "works with examples" $ do
       let input :: Haddock.DocH Void.Void Haddock.Identifier
           input = Haddock.DocExamples [Haddock.Example {Haddock.exampleExpression = "1 + 1", Haddock.exampleResult = ["2"]}]
-      let expected = Doc.Examples [Example.MkExample {Example.expression = Text.pack "1 + 1", Example.result = [Text.pack "2"]}]
+      let expected = Doc.Examples (Example.MkExample {Example.expression = Text.pack "1 + 1", Example.result = [Text.pack "2"]} NonEmpty.:| [])
       Spec.assertEq s (fromHaddock input) expected
 
     Spec.it s "works with header" $ do

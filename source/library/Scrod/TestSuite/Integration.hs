@@ -1706,14 +1706,30 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"IO ()\"")
         ]
 
-    Spec.it s "warning pragma" $ do
+    Spec.it s "warning pragma merges into target" $ do
+      check
+        s
+        """
+        x = ()
+        {-# warning x "w" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/documentation/type", "\"Paragraph\""),
+          ("/items/0/value/documentation/value/type", "\"String\""),
+          ("/items/0/value/documentation/value/value", "\"w\"")
+        ]
+
+    Spec.it s "warning pragma produces single item" $ do
       check
         s
         """
         x = ()
         {-# warning x "" #-}
         """
-        []
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1", "")
+        ]
 
     Spec.it s "value annotation" $ do
       check

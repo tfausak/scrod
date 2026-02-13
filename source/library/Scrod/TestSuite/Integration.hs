@@ -1756,7 +1756,7 @@ spec s = Spec.describe s "integration" $ do
         []
 
     Spec.it s "default declaration" $ do
-      check s "default ()" []
+      check s "default ()" [("/items", "[]")]
 
     Spec.it s "foreign import" $ do
       check

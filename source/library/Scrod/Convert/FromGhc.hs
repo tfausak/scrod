@@ -219,6 +219,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SpliceD _ spliceDecl ->
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
+  Syntax.DefD {} -> pure []
   Syntax.DerivD _ derivDecl ->
     let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) strategy lDecl

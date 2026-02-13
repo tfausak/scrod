@@ -33,7 +33,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build commands, test filtering, linti
 - **`Scrod.Ghc.*`** — Wrappers around GHC API internals to set up parsing without a full GHC session.
 - **`Scrod.Json.*`** — Custom implementation for JSON generation (no external libraries).
 - **`Scrod.Xml.*`** — Custom XML generation library used by `ToHtml`.
-- **`Scrod.Css.*`** — Custom CSS generation library used by `ToHtml`.
 
 ### Testing
 

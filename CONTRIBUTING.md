@@ -53,7 +53,7 @@ cabal check                                          # validate .cabal file
 - **Formatting:** Ormolu (enforced in CI)
 - **Warnings:** `-Weverything` with specific exclusions; `-Werror` under `--flags=pedantic`
 - **HLint config:** `.hlint.yaml` — enables dollar/future/generalise groups; ignores "Use infix", "Use list comprehension", "Use tuple-section"
-- **No external dependencies** for JSON/HTML generation — uses custom in-tree implementations (`Scrod.Json.*`, `Scrod.Xml.*`, `Scrod.Css.*`)
+- **No external dependencies** for JSON/HTML generation — uses custom in-tree implementations (`Scrod.Json.*`, `Scrod.Xml.*`)
 
 ## Git Conventions
 

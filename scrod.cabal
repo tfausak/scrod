@@ -76,7 +76,6 @@ library
     Cabal-syntax ^>=3.16.0,
     bytestring ^>=0.12.2,
     containers ^>=0.8,
-    directory ^>=1.3.10,
     exceptions ^>=0.10.11,
     ghc ^>=9.14.1,
     ghc-boot-th ^>=9.14.1,
@@ -142,15 +141,6 @@ library
     Scrod.Cpp
     Scrod.Cpp.Directive
     Scrod.Cpp.Expr
-    Scrod.Css.AtRule
-    Scrod.Css.Block
-    Scrod.Css.BlockContent
-    Scrod.Css.Declaration
-    Scrod.Css.Item
-    Scrod.Css.Name
-    Scrod.Css.Rule
-    Scrod.Css.Selector
-    Scrod.Css.Stylesheet
     Scrod.Decimal
     Scrod.Executable.Config
     Scrod.Executable.Flag
@@ -164,7 +154,6 @@ library
     Scrod.Extra.Parsec
     Scrod.Extra.Read
     Scrod.Extra.Semigroup
-    Scrod.Extra.TemplateHaskell
     Scrod.Ghc.ArchOS
     Scrod.Ghc.DynFlags
     Scrod.Ghc.FileSettings

@@ -219,7 +219,6 @@ test-suite scrod-test-suite
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   type: exitcode-stdio-1.0
-  build-tool-depends: weeder:weeder ^>=2.10.0
 
 executable scrod
   import: executable

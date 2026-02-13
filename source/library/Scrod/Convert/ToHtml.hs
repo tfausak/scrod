@@ -28,7 +28,6 @@ import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
 import qualified Scrod.Core.Identifier as Identifier
 import qualified Scrod.Core.Import as Import
-import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -42,6 +41,7 @@ import qualified Scrod.Core.ModLink as ModLink
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
 import qualified Scrod.Core.Namespace as Namespace
+import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Section as Section

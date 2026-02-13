@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What is Scrod?
 
-Scrod is a Haskell documentation tool that parses Haskell source code using the GHC API and outputs documentation as JSON. HTML rendering is handled by a shared TypeScript renderer. It has a CLI tool (reads from stdin) and a WASM-based web app deployed to GitHub Pages with a live split-pane editor.
+Scrod is a Haskell documentation tool that parses Haskell source code using the GHC API and outputs documentation as HTML or JSON. It has a CLI tool (reads from stdin) and a WASM-based web app deployed to GitHub Pages with a live split-pane editor.
 
-**Pipeline:** Haskell Source → GHC Parser → GHC AST → Scrod Core Types → JSON → TypeScript Renderer → HTML
+**Pipeline:** Haskell Source → GHC Parser → GHC AST → Scrod Core Types → HTML or JSON
 
 ## Building, Testing, and Conventions
 
@@ -20,7 +20,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build commands, test filtering, linti
 - `source/executables/` — CLI (`scrod`), WASM (`scrod-wasm`), and WASI (`scrod-wasi`) entry points
 - `source/test-suite/` — test suite entry point (uses Tasty/HUnit via custom `Scrod.Spec` abstraction)
 - `extra/github-pages/` — web app frontend source (HTML, JS, CSS) deployed to GitHub Pages
-- `extra/renderer/` — shared TypeScript renderer (JSON → HTML) used by both GitHub Pages and VSCode
 - `extra/wasm/` — WASM cross-compilation build script and cabal project file
 - `extra/vscode/` — VSCode extension (TypeScript + esbuild) for live documentation preview
 
@@ -29,9 +28,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build commands, test filtering, linti
 - **`Scrod.Core.*`** — Data types for the intermediate representation (Module, Item, Doc, Export, etc.). Each type lives in its own module with a `Mk`-prefixed constructor (e.g., `MkModule`, `MkItem`).
 - **`Scrod.Convert.FromGhc`** — Converts GHC AST into Scrod Core types. Largest and most complex module. Uses a `ConvertM` state monad that assigns auto-incrementing `ItemKey`s.
 - **`Scrod.Convert.FromHaddock`** — Converts Haddock doc strings into Scrod's `Doc` type.
+- **`Scrod.Convert.ToHtml`** — Renders Core types as self-contained HTML (Bootstrap 5 + KaTeX).
 - **`Scrod.Convert.ToJson`** — Renders Core types to JSON output.
 - **`Scrod.Ghc.*`** — Wrappers around GHC API internals to set up parsing without a full GHC session.
 - **`Scrod.Json.*`** — Custom implementation for JSON generation (no external libraries).
+- **`Scrod.Xml.*`** — Custom XML generation library used by `ToHtml`.
+- **`Scrod.Css.*`** — Custom CSS generation library used by `ToHtml`.
 
 ### Testing
 
@@ -46,4 +48,4 @@ There are two kinds of tests:
 
 ### WASM web app
 
-The WASM build exports a `scrod` function via JavaScript FFI that outputs JSON. The web frontend source lives in `extra/github-pages/` and runs it in a Web Worker (`worker.js`) to avoid blocking the UI. The shared TypeScript renderer (`extra/renderer/`) converts the JSON output to HTML. Shareable URLs use base64-encoded hash fragments.
+The WASM build exports a `scrod` function via JavaScript FFI that supports both HTML and JSON output via `--format`. The web frontend source lives in `extra/github-pages/` and runs it in a Web Worker (`worker.js`) to avoid blocking the UI. Shareable URLs use base64-encoded hash fragments.

@@ -6,7 +6,8 @@
 cabal build                          # build library + CLI
 cabal build --flags=pedantic         # build with -Werror (used in CI)
 cabal test --test-options='--hide-successes' # run test suite
-cabal run scrod                      # run CLI (reads stdin, outputs JSON)
+cabal run scrod                      # run CLI (reads stdin, outputs JSON by default)
+cabal run scrod -- --format html     # output HTML instead of JSON
 ```
 
 ### Running a single test or test group
@@ -52,7 +53,7 @@ cabal check                                          # validate .cabal file
 - **Formatting:** Ormolu (enforced in CI)
 - **Warnings:** `-Weverything` with specific exclusions; `-Werror` under `--flags=pedantic`
 - **HLint config:** `.hlint.yaml` — enables dollar/future/generalise groups; ignores "Use infix", "Use list comprehension", "Use tuple-section"
-- **No external dependencies** for JSON generation — uses a custom in-tree implementation. HTML rendering is handled by the TypeScript renderer at `extra/renderer/`
+- **No external dependencies** for JSON/HTML generation — uses custom in-tree implementations (`Scrod.Json.*`, `Scrod.Xml.*`, `Scrod.Css.*`)
 
 ## Git Conventions
 

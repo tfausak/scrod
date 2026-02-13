@@ -174,7 +174,7 @@ function wrapperHtml(): string {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
   <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>
@@ -218,6 +218,19 @@ function wrapperHtml(): string {
         document.body.innerHTML = doc.body.innerHTML;
         document.documentElement.scrollTop = scrollTop;
         syncTheme();
+        renderMath();
+      }
+
+      var katexPromise = import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
+        .catch(function (e) { console.error('Failed to load KaTeX:', e); });
+
+      function renderMath() {
+        katexPromise.then(function (m) {
+          if (m) m.default(document.body, { delimiters: [
+            { left: '\\\\(', right: '\\\\)', display: false },
+            { left: '\\\\[', right: '\\\\]', display: true }
+          ]});
+        });
       }
 
       function syncTheme() {

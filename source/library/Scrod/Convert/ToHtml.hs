@@ -918,13 +918,26 @@ docToContents doc = case doc of
 
 identifierToHtml :: Identifier.Identifier -> Element.Element
 identifierToHtml (Identifier.MkIdentifier ns val) =
-  Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text (prefix <> val)]
+  Xml.element
+    "span"
+    []
+    ( [Content.Element $ Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text val]]
+        <> namespaceBadge ns
+    )
   where
-    prefix :: Text.Text
-    prefix = case ns of
-      Nothing -> Text.empty
-      Just Namespace.Value -> Text.pack "v'"
-      Just Namespace.Type -> Text.pack "t'"
+    namespaceBadge :: Maybe Namespace.Namespace -> [Content.Content Element.Element]
+    namespaceBadge Nothing = []
+    namespaceBadge (Just n) =
+      [ Content.Element $
+          Xml.element
+            "span"
+            [Xml.attribute "class" "badge bg-secondary-subtle text-body ms-1"]
+            [Xml.text (namespaceToText n)]
+      ]
+
+    namespaceToText :: Namespace.Namespace -> Text.Text
+    namespaceToText Namespace.Value = Text.pack "value"
+    namespaceToText Namespace.Type = Text.pack "type"
 
 modLinkToHtml :: ModLink.ModLink Doc.Doc -> Element.Element
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =

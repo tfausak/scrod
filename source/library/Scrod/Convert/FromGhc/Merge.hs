@@ -49,11 +49,14 @@ mergeItemGroup group =
   let sorted = NonEmpty.sortWith Located.location group
       firstItem = NonEmpty.head sorted
       combinedDoc = foldr (Internal.appendDoc . Item.documentation . Located.value) Doc.Empty sorted
+      combinedSince =
+        Maybe.listToMaybe . Maybe.mapMaybe (Item.since . Located.value) $ NonEmpty.toList sorted
       combinedSig =
         Maybe.listToMaybe . Maybe.mapMaybe (Item.signature . Located.value) $ NonEmpty.toList sorted
       mergedItem =
         (Located.value firstItem)
           { Item.documentation = combinedDoc,
+            Item.since = combinedSince,
             Item.signature = combinedSig
           }
    in firstItem {Located.value = mergedItem}

@@ -100,6 +100,7 @@ library
     Scrod.Convert.FromGhc.Merge
     Scrod.Convert.FromGhc.Names
     Scrod.Convert.FromHaddock
+    Scrod.Convert.ToHtml
     Scrod.Convert.ToJsonSchema
     Scrod.Core.Category
     Scrod.Core.Column
@@ -141,9 +142,19 @@ library
     Scrod.Cpp
     Scrod.Cpp.Directive
     Scrod.Cpp.Expr
+    Scrod.Css.AtRule
+    Scrod.Css.Block
+    Scrod.Css.BlockContent
+    Scrod.Css.Declaration
+    Scrod.Css.Item
+    Scrod.Css.Name
+    Scrod.Css.Rule
+    Scrod.Css.Selector
+    Scrod.Css.Stylesheet
     Scrod.Decimal
     Scrod.Executable.Config
     Scrod.Executable.Flag
+    Scrod.Executable.Format
     Scrod.Executable.Main
     Scrod.Extra.Builder
     Scrod.Extra.Either
@@ -185,6 +196,16 @@ library
     Scrod.TestSuite.Integration
     Scrod.Unlit
     Scrod.Version
+    Scrod.Xml.Attribute
+    Scrod.Xml.Comment
+    Scrod.Xml.Content
+    Scrod.Xml.Declaration
+    Scrod.Xml.Document
+    Scrod.Xml.Element
+    Scrod.Xml.Instruction
+    Scrod.Xml.Misc
+    Scrod.Xml.Name
+    Scrod.Xml.Text
 
   hs-source-dirs: source/library
   other-modules: PackageInfo_scrod

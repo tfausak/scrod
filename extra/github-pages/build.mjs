@@ -42,7 +42,7 @@ const workerResult = await build({
 
 const workerFilename = entryOutput(workerResult.metafile);
 
-// Phase 3: Bundle index.js (inlines renderer.js)
+// Phase 3: Bundle index.js
 
 const indexResult = await build({
   entryPoints: [join(root, 'index.js')],

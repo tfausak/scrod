@@ -4,8 +4,6 @@
 /a.out
 /cabal.project.*
 /dist-newstyle/
-/extra/renderer/node_modules/
-/extra/renderer/schema.json
 /extra/github-pages/node_modules/
 /extra/vscode/node_modules/
 /extra/vscode/dist/

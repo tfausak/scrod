@@ -1781,6 +1781,28 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
+  Spec.describe s "html" $ do
+    Spec.it s "generates html without error" $ do
+      checkHtml
+        s
+        []
+        """
+        -- | Module documentation.
+        module M
+          ( -- * Section
+            x
+          ) where
+
+        import Data.List
+
+        -- | A function.
+        x :: Int
+        x = 0
+
+        -- | A data type.
+        data T = C { field :: Bool }
+        """
+
   Spec.describe s "cpp" $ do
     Spec.it s "works with simple ifdef" $ do
       check
@@ -2041,3 +2063,13 @@ checkWith s arguments input assertions = do
           "expected " <> maybe "(nothing)" (Builder.toString . Json.encode) expected,
           " but got " <> maybe "(nothing)" (Builder.toString . Json.encode) actual
         ]
+
+checkHtml :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> m ()
+checkHtml s arguments input = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" ("--format" : "html" : arguments)
+      $ pure input
+  output <- either (Spec.assertFailure s) pure result
+  Monad.when (null $ Builder.toString output) $
+    Spec.assertFailure s "expected non-empty HTML output"

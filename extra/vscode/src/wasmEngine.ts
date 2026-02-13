@@ -53,7 +53,7 @@ export async function loadWasmEngine(extensionPath: string): Promise<Process> {
   ) => Promise<string>;
 
   return async (source, literate, signature) => {
-    const args: string[] = [];
+    const args = ["--format", "html"];
     if (literate) args.push("--literate");
     if (signature) args.push("--signature");
     return scrod(args, source);

@@ -971,12 +971,19 @@ pictureToHtml (Picture.MkPicture uri maybeTitle) =
     )
     []
 
-examplesToHtml :: [Example.Example] -> Element.Element
+examplesToHtml :: NonEmpty.NonEmpty Example.Example -> Element.Element
 examplesToHtml examples =
   Xml.element
     "div"
     [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3"]
-    (concatMap exampleToContents examples)
+    ( [ Content.Element $
+          Xml.element
+            "div"
+            [Xml.attribute "class" "fw-bold mb-1"]
+            [Xml.string (case examples of _ NonEmpty.:| [] -> "Example:"; _ -> "Examples:")]
+      ]
+        <> concatMap exampleToContents (NonEmpty.toList examples)
+    )
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
 exampleToContents (Example.MkExample expr results) =

@@ -6,15 +6,6 @@ import qualified Scrod.Convert.ToJsonSchema
 import qualified Scrod.Cpp
 import qualified Scrod.Cpp.Directive
 import qualified Scrod.Cpp.Expr
-import qualified Scrod.Css.AtRule
-import qualified Scrod.Css.Block
-import qualified Scrod.Css.BlockContent
-import qualified Scrod.Css.Declaration
-import qualified Scrod.Css.Item
-import qualified Scrod.Css.Name
-import qualified Scrod.Css.Rule
-import qualified Scrod.Css.Selector
-import qualified Scrod.Css.Stylesheet
 import qualified Scrod.Decimal
 import qualified Scrod.Executable.Config
 import qualified Scrod.Executable.Flag
@@ -64,15 +55,6 @@ spec s = do
   Scrod.Cpp.spec s
   Scrod.Cpp.Directive.spec s
   Scrod.Cpp.Expr.spec s
-  Scrod.Css.AtRule.spec s
-  Scrod.Css.Block.spec s
-  Scrod.Css.BlockContent.spec s
-  Scrod.Css.Declaration.spec s
-  Scrod.Css.Item.spec s
-  Scrod.Css.Name.spec s
-  Scrod.Css.Rule.spec s
-  Scrod.Css.Selector.spec s
-  Scrod.Css.Stylesheet.spec s
   Scrod.Decimal.spec s
   Scrod.Executable.Config.spec s
   Scrod.Executable.Format.spec s

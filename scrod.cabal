@@ -142,15 +142,6 @@ library
     Scrod.Cpp
     Scrod.Cpp.Directive
     Scrod.Cpp.Expr
-    Scrod.Css.AtRule
-    Scrod.Css.Block
-    Scrod.Css.BlockContent
-    Scrod.Css.Declaration
-    Scrod.Css.Item
-    Scrod.Css.Name
-    Scrod.Css.Rule
-    Scrod.Css.Selector
-    Scrod.Css.Stylesheet
     Scrod.Decimal
     Scrod.Executable.Config
     Scrod.Executable.Flag
@@ -164,7 +155,6 @@ library
     Scrod.Extra.Parsec
     Scrod.Extra.Read
     Scrod.Extra.Semigroup
-    Scrod.Extra.TemplateHaskell
     Scrod.Ghc.ArchOS
     Scrod.Ghc.DynFlags
     Scrod.Ghc.FileSettings
@@ -230,6 +220,7 @@ test-suite scrod-test-suite
   hs-source-dirs: source/test-suite
   main-is: Main.hs
   type: exitcode-stdio-1.0
+  build-tool-depends: weeder:weeder ^>=2.10.0
 
 executable scrod
   import: executable

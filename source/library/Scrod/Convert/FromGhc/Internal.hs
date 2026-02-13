@@ -7,7 +7,9 @@
 module Scrod.Convert.FromGhc.Internal where
 
 import qualified Control.Monad.Trans.State.Strict as State
+import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
+import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Hs.Doc as HsDoc
 import qualified GHC.Hs.Extension as Ghc
@@ -29,6 +31,9 @@ import qualified Scrod.Core.Line as Line
 import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Location as Location
 import qualified Scrod.Core.ModuleName as ModuleName
+import qualified Scrod.Core.PackageName as PackageName
+import qualified Scrod.Core.Since as Since
+import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 
 -- | State for tracking item keys during conversion.
@@ -139,17 +144,37 @@ appendDoc Doc.Empty d = d
 appendDoc d Doc.Empty = d
 appendDoc d1 d2 = Doc.Append [d1, d2]
 
+-- | Combine two 'Maybe Since.Since' values, preferring the first.
+appendSince :: Maybe Since.Since -> Maybe Since.Since -> Maybe Since.Since
+appendSince a b = case a of
+  Just _ -> a
+  Nothing -> b
+
+-- | Convert a Haddock MetaSince to our 'Since'.
+metaSinceToSince :: Haddock.MetaSince -> Maybe Since.Since
+metaSinceToSince metaSince = do
+  versionNE <- NonEmpty.nonEmpty $ Haddock.sinceVersion metaSince
+  Just
+    Since.MkSince
+      { Since.package =
+          PackageName.MkPackageName . Text.pack
+            <$> Haddock.sincePackage metaSince,
+        Since.version =
+          Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
+      }
+
 -- | Create an Item from a source span with the given properties.
 mkItemM ::
   SrcLoc.SrcSpan ->
   Maybe ItemKey.ItemKey ->
   Maybe ItemName.ItemName ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   ItemKind.ItemKind ->
   ConvertM (Maybe (Located.Located Item.Item))
-mkItemM srcSpan parentKey itemName doc sig itemKind =
-  fmap fst <$> mkItemWithKeyM srcSpan parentKey itemName doc sig itemKind
+mkItemM srcSpan parentKey itemName doc itemSince sig itemKind =
+  fmap fst <$> mkItemWithKeyM srcSpan parentKey itemName doc itemSince sig itemKind
 
 -- | Create an Item and return both the item and its allocated key.
 mkItemWithKeyM ::
@@ -157,10 +182,11 @@ mkItemWithKeyM ::
   Maybe ItemKey.ItemKey ->
   Maybe ItemName.ItemName ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   ItemKind.ItemKind ->
   ConvertM (Maybe (Located.Located Item.Item, ItemKey.ItemKey))
-mkItemWithKeyM srcSpan parentKey itemName doc sig itemKind =
+mkItemWithKeyM srcSpan parentKey itemName doc itemSince sig itemKind =
   case locationFromSrcSpan srcSpan of
     Nothing -> pure Nothing
     Just location -> do
@@ -176,6 +202,7 @@ mkItemWithKeyM srcSpan parentKey itemName doc sig itemKind =
                       Item.parentKey = parentKey,
                       Item.name = itemName,
                       Item.documentation = doc,
+                      Item.since = itemSince,
                       Item.signature = sig
                     }
               },

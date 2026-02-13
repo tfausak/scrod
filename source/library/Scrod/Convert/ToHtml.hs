@@ -666,7 +666,7 @@ itemsContents items =
                 ]
 
 itemToHtml :: Located.Located Item.Item -> Element.Element
-itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSig)) =
+itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =
   Xml.element
     "div"
     [ Xml.attribute "class" "card mb-3 border-start border-4",
@@ -682,6 +682,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
                 <> sigBeforeKind
                 <> [Content.Element kindElement]
                 <> sigAfterKind
+                <> sinceContents
                 <> [Content.Element (locationElement loc)]
             )
       ]
@@ -729,6 +730,17 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
                   [Xml.attribute "class" "font-monospace text-body-secondary"]
                   [Xml.text (prefix <> sig)]
             ]
+
+    sinceContents :: [Content.Content Element.Element]
+    sinceContents = case maybeSince of
+      Nothing -> []
+      Just s ->
+        [ Content.Element $
+            Xml.element
+              "span"
+              [Xml.attribute "class" "text-body-secondary small ms-2"]
+              [Xml.text (Text.pack "since " <> sinceToText s)]
+        ]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of

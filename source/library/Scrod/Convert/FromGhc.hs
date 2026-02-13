@@ -243,6 +243,7 @@ convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SpliceD _ spliceDecl ->
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc Nothing sig lDecl
+  Syntax.DefD {} -> pure []
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.

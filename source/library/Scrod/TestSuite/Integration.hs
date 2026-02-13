@@ -1379,6 +1379,52 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/name", "\"Eq\"")
         ]
 
+    Spec.it s "data deriving stock" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies #-}
+        data R3 deriving stock Show
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"stock\"")
+        ]
+
+    Spec.it s "data deriving anyclass" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies, DeriveAnyClass #-}
+        class C a
+        data R4
+        deriving anyclass instance C R4
+        """
+        [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
+          ("/items/2/value/name", "\"C R4\"")
+        ]
+
+    Spec.it s "data deriving via" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies, DerivingVia #-}
+        data R5 deriving Show via ()
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"via ()\"")
+        ]
+
+    Spec.it s "data deriving no strategy" $ do
+      check
+        s
+        "data R6 deriving Show"
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "")
+        ]
+
     Spec.it s "data GADT deriving" $ do
       check s "data T where deriving Show" []
 

@@ -1808,14 +1808,19 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/parentKey", "1")
         ]
 
-    Spec.it s "inline pragma" $ do
+    Spec.it s "inline pragma has parent set" $ do
       check
         s
         """
         i = ()
         {-# inline i #-}
         """
-        []
+        [ ("/items/0/value/name", "\"i\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"i\""),
+          ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "inline pragma with phase control" $ do
       check
@@ -1824,7 +1829,9 @@ spec s = Spec.describe s "integration" $ do
         j = ()
         {-# inline [1] j #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "inline pragma with inverted phase control" $ do
       check
@@ -1833,16 +1840,34 @@ spec s = Spec.describe s "integration" $ do
         k = ()
         {-# inline [~2] k #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
-    Spec.it s "noinline pragma" $ do
+    Spec.it s "noinline pragma has parent set" $ do
       check
         s
         """
         l = ()
         {-# noinline l #-}
         """
-        []
+        [ ("/items/0/value/name", "\"l\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"l\""),
+          ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "orphaned inline pragma has no parent" $ do
+      check
+        s
+        """
+        {-# inline x #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"InlineSignature\""),
+          ("/items/0/value/parentKey", "")
+        ]
 
     Spec.it s "specialize pragma" $ do
       check

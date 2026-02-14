@@ -33,6 +33,7 @@ import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
+import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
@@ -195,7 +196,9 @@ extractItems lHsModule =
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
       fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
-   in Merge.mergeItemsByName fixityParentedItems
+      inlineLocations = InlineParents.extractInlineLocations lHsModule
+      inlineParentedItems = InlineParents.associateInlineParents inlineLocations fixityParentedItems
+   in Merge.mergeItemsByName inlineParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -298,6 +301,8 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
      in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
+  Syntax.InlineSig _ lName _ ->
+    Maybe.maybeToList <$> convertInlineNameM doc docSince lName
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -317,6 +322,15 @@ convertFixityNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertFixityNameM fixityDoc lName =
   Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing Nothing ItemKind.FixitySignature
+
+-- | Convert a single name from an inline signature.
+convertInlineNameM ::
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertInlineNameM doc docSince lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince Nothing ItemKind.InlineSignature
 
 -- | Combine a user-written doc with a synthesized doc. If the user doc
 -- is empty, just use the synthesized one; otherwise append both.

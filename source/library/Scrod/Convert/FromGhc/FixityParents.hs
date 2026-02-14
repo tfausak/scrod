@@ -1,22 +1,18 @@
 -- | Resolve fixity parent relationships.
 --
 -- Associates fixity signature items with their target declarations when
--- those declarations are defined in the same module. Works like
--- 'Scrod.Convert.FromGhc.InstanceParents' but for @infixl@, @infixr@,
--- and @infix@ declarations.
+-- those declarations are defined in the same module. Uses the shared
+-- parent association logic from 'Scrod.Convert.FromGhc.ParentAssociation'.
 module Scrod.Convert.FromGhc.FixityParents where
 
-import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Convert.FromGhc.Internal as Internal
+import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Core.Item as Item
-import qualified Scrod.Core.ItemKey as ItemKey
-import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Location as Location
 
@@ -45,45 +41,4 @@ associateFixityParents ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateFixityParents allPragmaLocations fixityLocations items =
-  let nameToKey = buildNameToKeyMap allPragmaLocations items
-   in fmap (resolveFixityParent fixityLocations nameToKey) items
-
--- | Build a map from item names to their keys, excluding pragma items
--- and child items.
-buildNameToKeyMap ::
-  Set.Set Location.Location ->
-  [Located.Located Item.Item] ->
-  Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap allPragmaLocations =
-  Map.fromList . concatMap getNameAndKey
-  where
-    getNameAndKey locItem =
-      let val = Located.value locItem
-       in case Item.name val of
-            Nothing -> []
-            Just name ->
-              if Set.member (Located.location locItem) allPragmaLocations
-                || Maybe.isJust (Item.parentKey val)
-                then []
-                else [(name, Item.key val)]
-
--- | Set the parentKey on a fixity item by looking up the target name.
-resolveFixityParent ::
-  Set.Set Location.Location ->
-  Map.Map ItemName.ItemName ItemKey.ItemKey ->
-  Located.Located Item.Item ->
-  Located.Located Item.Item
-resolveFixityParent fixityLocations nameToKey locItem =
-  if Set.member (Located.location locItem) fixityLocations
-    then case Item.name (Located.value locItem) of
-      Nothing -> locItem
-      Just name ->
-        case Map.lookup name nameToKey of
-          Nothing -> locItem
-          Just parentKey ->
-            locItem
-              { Located.value =
-                  (Located.value locItem) {Item.parentKey = Just parentKey}
-              }
-    else locItem
+associateFixityParents = ParentAssociation.associateParents

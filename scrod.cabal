@@ -102,6 +102,7 @@ library
     Scrod.Convert.FromGhc.ItemKind
     Scrod.Convert.FromGhc.Merge
     Scrod.Convert.FromGhc.Names
+    Scrod.Convert.FromGhc.ParentAssociation
     Scrod.Convert.FromGhc.RoleParents
     Scrod.Convert.FromGhc.SpecialiseParents
     Scrod.Convert.FromGhc.WarningParents

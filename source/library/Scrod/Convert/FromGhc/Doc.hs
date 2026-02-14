@@ -71,6 +71,8 @@ associateNextDocsLoop pendingDoc pendingSince (lDecl : rest) = case SrcLoc.unLoc
      in associateNextDocsLoop (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
   Syntax.DocD _ (Hs.DocCommentPrev _) ->
     (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
+  Syntax.DocD _ (Hs.DocCommentNamed {}) ->
+    associateNextDocsLoop pendingDoc pendingSince rest
   _ ->
     (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
 

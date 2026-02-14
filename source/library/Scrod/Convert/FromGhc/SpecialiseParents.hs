@@ -6,6 +6,7 @@
 module Scrod.Convert.FromGhc.SpecialiseParents where
 
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -59,7 +60,10 @@ associateSpecialiseParents specialiseLocations items =
   let nameToKey = buildNameToKeyMap specialiseLocations items
    in fmap (resolveSpecialiseParent specialiseLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding specialise items.
+-- | Build a map from item names to their keys, excluding specialise
+-- items and child items. Only top-level declarations (those with no
+-- parentKey) are eligible parents, so that @data T = T@ maps to the
+-- type declaration rather than the constructor.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
@@ -73,6 +77,7 @@ buildNameToKeyMap specialiseLocations =
             Nothing -> []
             Just name ->
               if Set.member (Located.location locItem) specialiseLocations
+                || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]
 

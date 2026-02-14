@@ -7,6 +7,7 @@
 module Scrod.Convert.FromGhc.InlineParents where
 
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -47,7 +48,10 @@ associateInlineParents inlineLocations items =
   let nameToKey = buildNameToKeyMap inlineLocations items
    in fmap (resolveInlineParent inlineLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding inline items.
+-- | Build a map from item names to their keys, excluding inline
+-- items and child items. Only top-level declarations (those with no
+-- parentKey) are eligible parents, so that @data T = T@ maps to the
+-- type declaration rather than the constructor.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
@@ -61,6 +65,7 @@ buildNameToKeyMap inlineLocations =
             Nothing -> []
             Just name ->
               if Set.member (Located.location locItem) inlineLocations
+                || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]
 

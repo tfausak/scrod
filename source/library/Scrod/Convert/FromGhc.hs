@@ -307,6 +307,12 @@ convertSigDeclM doc docSince lDecl sig = case sig of
      in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
   Syntax.InlineSig _ lName _ ->
     Maybe.maybeToList <$> convertInlineNameM doc docSince lName
+  Syntax.CompleteMatchSig _ names mTyCon ->
+    let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
+        sigText = Just . Text.pack . Outputable.showSDocUnsafe $ case mTyCon of
+          Nothing -> namesSig
+          Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
+     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.

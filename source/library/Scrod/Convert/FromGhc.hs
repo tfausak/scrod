@@ -563,7 +563,5 @@ resolveNamedDocExport ::
   Export.Export
 resolveNamedDocExport namedChunks export = case export of
   Export.DocNamed name ->
-    case Map.lookup name namedChunks of
-      Just doc -> Export.Doc doc
-      Nothing -> export
+    maybe export Export.Doc (Map.lookup name namedChunks)
   _ -> export

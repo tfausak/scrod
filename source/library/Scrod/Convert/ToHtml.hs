@@ -22,7 +22,6 @@ import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Core.ExportName as ExportName
-import qualified Scrod.Core.ExportNameKind as ExportNameKind
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
@@ -46,7 +45,6 @@ import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Section as Section
 import qualified Scrod.Core.Since as Since
-import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
@@ -157,10 +155,9 @@ bodyElement m =
           [Xml.attribute "class" "container py-4 text-break"]
           ( [Content.Element (headerSection m)]
               <> metadataContents m
-              <> exportsContents (Module.exports m)
               <> importsContents (Module.imports m)
               <> extensionsContents (Module.extensions m)
-              <> itemsContents (Module.items m)
+              <> declarationsContents (Module.exports m) (Module.items m)
               <> [Content.Element (footerSection m)]
           )
     ]
@@ -264,99 +261,7 @@ footerSection m =
       Xml.text (versionToText (Module.version m))
     ]
 
--- Exports section
-
-exportsContents :: Maybe [Export.Export] -> [Content.Content Element.Element]
-exportsContents Nothing = []
-exportsContents (Just []) = []
-exportsContents (Just exports) =
-  [ Content.Element $
-      Xml.element
-        "section"
-        [Xml.attribute "class" "my-4"]
-        ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Exports"]]
-            <> [ Content.Element $
-                   Xml.element
-                     "ul"
-                     [Xml.attribute "class" "list-group list-group-flush"]
-                     (concatMap exportToContents exports)
-               ]
-        )
-  ]
-
-exportToContents :: Export.Export -> [Content.Content Element.Element]
-exportToContents export = case export of
-  Export.Identifier ident ->
-    [Content.Element $ Xml.element "li" [liClass] [Content.Element (exportIdentifierToHtml ident)]]
-  Export.Group section ->
-    [Content.Element $ Xml.element "li" [liClass] [Content.Element (sectionToHtml section)]]
-  Export.Doc doc ->
-    [ Content.Element $
-        Xml.element
-          "li"
-          [liClass]
-          [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-1"] (docToContents doc)]
-    ]
-  Export.DocNamed name ->
-    [ Content.Element $
-        Xml.element
-          "li"
-          [liClass]
-          [ Content.Element $
-              Xml.element
-                "div"
-                [Xml.attribute "class" "mt-1"]
-                [Xml.text (Text.pack "\x00a7" <> name)]
-          ]
-    ]
-  where
-    liClass :: Attribute.Attribute
-    liClass = Xml.attribute "class" "list-group-item bg-transparent py-1 px-2"
-
-exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Element.Element
-exportIdentifierToHtml (ExportIdentifier.MkExportIdentifier name subs maybeWarning maybeDoc) =
-  Xml.element
-    "div"
-    [Xml.attribute "class" "py-1"]
-    ( foldMap (\w -> [Content.Element (warningToHtml w)]) maybeWarning
-        <> [ Content.Element $
-               Xml.element
-                 "code"
-                 [Xml.attribute "class" "font-monospace"]
-                 ( [Xml.text (exportNameToText name)]
-                     <> subordinatesToContents subs
-                 )
-           ]
-        <> foldMap
-          ( \doc ->
-              [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-1"] (docToContents doc)]
-          )
-          maybeDoc
-    )
-
-exportNameToText :: ExportName.ExportName -> Text.Text
-exportNameToText (ExportName.MkExportName maybeKind name) =
-  kindPrefix <> name
-  where
-    kindPrefix :: Text.Text
-    kindPrefix = case maybeKind of
-      Nothing -> Text.empty
-      Just ExportNameKind.Pattern -> Text.pack "pattern "
-      Just ExportNameKind.Type -> Text.pack "type "
-      Just ExportNameKind.Module -> Text.pack "module "
-
-subordinatesToContents :: Maybe Subordinates.Subordinates -> [Content.Content Element.Element]
-subordinatesToContents Nothing = []
-subordinatesToContents (Just (Subordinates.MkSubordinates wildcard explicit)) =
-  let wildcardText :: Text.Text
-      wildcardText = Text.pack ".."
-      explicitTexts :: [Text.Text]
-      explicitTexts = fmap (\(ExportName.MkExportName _ n) -> n) explicit
-      allTexts :: [Text.Text]
-      allTexts = if wildcard then wildcardText : explicitTexts else explicitTexts
-      combined :: Text.Text
-      combined = Text.intercalate (Text.pack ", ") allTexts
-   in [Xml.text (Text.pack "(" <> combined <> Text.pack ")")]
+-- Declarations section
 
 sectionToHtml :: Section.Section -> Element.Element
 sectionToHtml (Section.MkSection (Header.MkHeader level title)) =
@@ -620,19 +525,13 @@ extensionUrlPaths =
         ("ViewPatterns", "exts/view_patterns.html#extension-ViewPatterns")
       ]
 
--- Items section
-
-itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
-itemsContents [] = []
-itemsContents items =
-  [ Content.Element $
-      Xml.element
-        "section"
-        [Xml.attribute "class" "my-4"]
-        ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Declarations"]]
-            <> concatMap renderItemWithChildren topLevelItems
-        )
-  ]
+declarationsContents :: Maybe [Export.Export] -> [Located.Located Item.Item] -> [Content.Content Element.Element]
+declarationsContents _ [] = []
+declarationsContents exports items =
+  case exports of
+    Nothing -> defaultDeclarations
+    Just [] -> defaultDeclarations
+    Just es -> exportDrivenDeclarations es
   where
     childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
     childrenMap = foldr addChild Map.empty items
@@ -664,6 +563,81 @@ itemsContents items =
                       [Xml.attribute "class" "ms-4 mt-2 border-start border-2 ps-3"]
                       (concatMap renderItemWithChildren children)
                 ]
+
+    -- \| Map from item name to top-level item for export matching.
+    nameMap :: Map.Map Text.Text (Located.Located Item.Item)
+    nameMap =
+      Map.fromList
+        [ (ItemName.unwrap n, li)
+        | li <- topLevelItems,
+          Just n <- [Item.name (Located.value li)]
+        ]
+
+    defaultDeclarations :: [Content.Content Element.Element]
+    defaultDeclarations =
+      [ Content.Element $
+          Xml.element
+            "section"
+            [Xml.attribute "class" "my-4"]
+            ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Declarations"]]
+                <> concatMap renderItemWithChildren topLevelItems
+            )
+      ]
+
+    exportDrivenDeclarations :: [Export.Export] -> [Content.Content Element.Element]
+    exportDrivenDeclarations es =
+      let (exportedContents, usedNames) = renderExports es Set.empty
+          unexported =
+            [ li
+            | li <- topLevelItems,
+              case Item.name (Located.value li) of
+                Nothing -> True
+                Just n -> not (Set.member (ItemName.unwrap n) usedNames)
+            ]
+          unexportedContents
+            | null unexported = []
+            | otherwise =
+                [ Content.Element $
+                    Xml.element
+                      "h3"
+                      [Xml.attribute "class" "border-bottom pb-1 mt-5 text-body-secondary"]
+                      [Xml.string "Unexported"]
+                ]
+                  <> concatMap renderItemWithChildren unexported
+       in [ Content.Element $
+              Xml.element
+                "section"
+                [Xml.attribute "class" "my-4"]
+                ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Declarations"]]
+                    <> exportedContents
+                    <> unexportedContents
+                )
+          ]
+
+    renderExports :: [Export.Export] -> Set.Set Text.Text -> ([Content.Content Element.Element], Set.Set Text.Text)
+    renderExports [] used = ([], used)
+    renderExports (e : es) used = case e of
+      Export.Identifier ident ->
+        let name = ExportName.name (ExportIdentifier.name ident)
+         in case Map.lookup name nameMap of
+              Just li
+                | not (Set.member name used) ->
+                    let here = renderItemWithChildren li
+                        (rest, used') = renderExports es (Set.insert name used)
+                     in (here <> rest, used')
+              _ -> renderExports es used
+      Export.Group section ->
+        let here = [Content.Element (sectionToHtml section)]
+            (rest, used') = renderExports es used
+         in (here <> rest, used')
+      Export.Doc doc ->
+        let here = [Content.Element $ Xml.element "div" [Xml.attribute "class" "my-3"] (docToContents doc)]
+            (rest, used') = renderExports es used
+         in (here <> rest, used')
+      Export.DocNamed name ->
+        let here = [Content.Element $ Xml.element "div" [Xml.attribute "class" "my-3"] [Xml.text (Text.pack "\x00a7" <> name)]]
+            (rest, used') = renderExports es used
+         in (here <> rest, used')
 
 itemToHtml :: Located.Located Item.Item -> Element.Element
 itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =

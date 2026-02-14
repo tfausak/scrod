@@ -25,7 +25,7 @@ itemKindFromDecl decl = case decl of
   Syntax.RuleD {} -> ItemKind.Rule
   Syntax.SpliceD {} -> ItemKind.Splice
   Syntax.DocD {} -> ItemKind.Function -- Doc comment
-  Syntax.RoleAnnotD {} -> ItemKind.Function -- Role annotation
+  Syntax.RoleAnnotD {} -> ItemKind.RoleAnnotation
   Syntax.DerivD {} -> ItemKind.StandaloneDeriving
 
 -- | Determine ItemKind from a type/class declaration.

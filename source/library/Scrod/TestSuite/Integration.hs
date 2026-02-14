@@ -1903,7 +1903,24 @@ spec s = Spec.describe s "integration" $ do
         j2 = id
         {-# specialize j2 :: () -> () #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"j2\""),
+          ("/items/1/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/1/value/name", "\"j2\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"() -> ()\"")
+        ]
+
+    Spec.it s "orphaned specialize pragma" $ do
+      check
+        s
+        """
+        {-# specialize j3 :: () -> () #-}
+        """
+        [ ("/items/0/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/0/value/name", "\"j3\""),
+          ("/items/0/value/signature", "\"() -> ()\"")
+        ]
 
     Spec.it s "specialize instance pragma" $ do
       check

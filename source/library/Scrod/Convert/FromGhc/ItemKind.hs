@@ -69,6 +69,7 @@ itemKindFromSig sig = case sig of
   Syntax.FixSig {} -> ItemKind.FixitySignature
   Syntax.InlineSig {} -> ItemKind.InlineSignature
   Syntax.SpecSig {} -> ItemKind.SpecialiseSignature
+  Syntax.SpecSigE {} -> ItemKind.SpecialiseSignature
   Syntax.MinimalSig {} -> ItemKind.MinimalPragma
   Syntax.CompleteMatchSig {} -> ItemKind.CompletePragma
   _ -> ItemKind.Function

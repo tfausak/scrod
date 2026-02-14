@@ -1246,7 +1246,35 @@ spec s = Spec.describe s "integration" $ do
         "data S = T { u :: () }"
         [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/1/value/kind/type", "\"DataConstructor\""),
-          ("/items/2/value/kind/type", "\"RecordField\"")
+          ("/items/2/value/kind/type", "\"RecordField\""),
+          ("/items/2/value/signature", "\"()\"")
+        ]
+
+    Spec.it s "record field with strict annotation" $ do
+      check
+        s
+        "data A = B { c :: !Int }"
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/2/value/kind/type", "\"RecordField\""),
+          ("/items/2/value/name", "\"c\""),
+          ("/items/2/value/signature", "\"!Int\"")
+        ]
+
+    Spec.it s "record field with lazy annotation" $ do
+      check
+        s
+        "data A = B { c :: ~Int }"
+        [ ("/items/2/value/kind/type", "\"RecordField\""),
+          ("/items/2/value/signature", "\"~Int\"")
+        ]
+
+    Spec.it s "record field with UNPACK pragma" $ do
+      check
+        s
+        "data A = B { c :: {-# UNPACK #-} !Int }"
+        [ ("/items/2/value/kind/type", "\"RecordField\""),
+          ("/items/2/value/signature", "\"{-# UNPACK #-} !Int\"")
         ]
 
     Spec.it s "record field GADT" $ do

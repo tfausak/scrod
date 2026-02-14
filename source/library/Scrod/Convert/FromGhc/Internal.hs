@@ -134,9 +134,9 @@ extractIdPName = ItemName.MkItemName . extractRdrName
 
 -- | Extract name from a field occurrence.
 extractFieldOccName :: Syntax.LFieldOcc Ghc.GhcPs -> ItemName.ItemName
-extractFieldOccName lFieldOcc =
-  let fieldOcc = SrcLoc.unLoc lFieldOcc
-   in ItemName.MkItemName . extractRdrName $ Syntax.foLabel fieldOcc
+extractFieldOccName lFieldOcc = case SrcLoc.unLoc lFieldOcc of
+  Syntax.FieldOcc _ lbl -> ItemName.MkItemName $ extractRdrName lbl
+  Syntax.XFieldOcc _ -> ItemName.MkItemName . Text.pack $ ""
 
 -- | Append two 'Doc' values.
 appendDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc

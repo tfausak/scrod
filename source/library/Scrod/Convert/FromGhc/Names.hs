@@ -31,9 +31,12 @@ extractDeclName lDecl = case SrcLoc.unLoc lDecl of
 extractStandaloneKindSigName :: Syntax.StandaloneKindSig Ghc.GhcPs -> ItemName.ItemName
 extractStandaloneKindSigName (Syntax.StandaloneKindSig _ lName _) = Internal.extractIdPName lName
 
--- | Extract signature from a kind signature.
+-- | Extract signature from a standalone kind signature.
+-- Only returns the kind type, not the name.
+-- For example, @type X :: a -> a@ produces @"a -> a"@.
 extractKindSigSignature :: Syntax.StandaloneKindSig Ghc.GhcPs -> Text.Text
-extractKindSigSignature = Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
+extractKindSigSignature (Syntax.StandaloneKindSig _ _ lSigType) =
+  Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ lSigType
 
 -- | Extract name from a type/class declaration.
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName

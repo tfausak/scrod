@@ -805,6 +805,9 @@ kindToText k = case k of
   ItemKind.Default -> Text.pack "default"
   ItemKind.Annotation -> Text.pack "annotation"
   ItemKind.Splice -> Text.pack "splice"
+  ItemKind.Warning -> Text.pack "warning"
+  ItemKind.MinimalPragma -> Text.pack "minimal"
+  ItemKind.CompletePragma -> Text.pack "complete"
   ItemKind.DefaultMethodSignature -> Text.pack "default"
 
 data KindColor
@@ -846,6 +849,9 @@ kindColor k = case k of
   ItemKind.Default -> KindSecondary
   ItemKind.Annotation -> KindSecondary
   ItemKind.Splice -> KindSecondary
+  ItemKind.Warning -> KindWarning
+  ItemKind.MinimalPragma -> KindSecondary
+  ItemKind.CompletePragma -> KindSecondary
   ItemKind.DefaultMethodSignature -> KindPrimary
 
 kindBadgeClass :: ItemKind.ItemKind -> String

@@ -69,6 +69,12 @@ data ItemKind
     Annotation
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
+  | -- | Warning pragma: @{-# WARNING x "msg" #-}@
+    Warning
+  | -- | Minimal pragma: @{-# MINIMAL size #-}@
+    MinimalPragma
+  | -- | Complete pragma: @{-# COMPLETE Nil, Cons #-}@
+    CompletePragma
   | -- | Default method signature: @default m :: Show a => a -> String@
     DefaultMethodSignature
   deriving (Eq, Generics.Generic, Ord, Show)

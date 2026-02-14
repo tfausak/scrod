@@ -1234,7 +1234,9 @@ spec s = Spec.describe s "integration" $ do
         class Z a
         instance Z ()
         """
-        [("/items/1/value/kind/type", "\"ClassInstance\"")]
+        [ ("/items/1/value/kind/type", "\"ClassInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "class instance parent is local type" $ do
       check
@@ -1256,7 +1258,20 @@ spec s = Spec.describe s "integration" $ do
         class C a
         instance C Int
         """
-        [ ("/items/1/value/kind/type", "\"ClassInstance\"")
+        [ ("/items/1/value/kind/type", "\"ClassInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "standalone deriving parent is local class when type is external" $ do
+      check
+        s
+        """
+        {-# language StandaloneDeriving #-}
+        class C a where
+        deriving instance C Int
+        """
+        [ ("/items/1/value/kind/type", "\"StandaloneDeriving\""),
+          ("/items/1/value/parentKey", "0")
         ]
 
     Spec.it s "data instance" $ do

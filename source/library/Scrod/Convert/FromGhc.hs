@@ -187,7 +187,8 @@ extractItems ::
 extractItems lHsModule =
   let rawItems = Internal.runConvert $ extractItemsM lHsModule
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
-      parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes rawItems
+      instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
+      parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
       warningLocations = WarningParents.extractWarningLocations lHsModule
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule

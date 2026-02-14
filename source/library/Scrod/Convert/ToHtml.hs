@@ -809,6 +809,7 @@ kindToText k = case k of
   ItemKind.MinimalPragma -> Text.pack "minimal"
   ItemKind.CompletePragma -> Text.pack "complete"
   ItemKind.DefaultMethodSignature -> Text.pack "default"
+  ItemKind.RoleAnnotation -> Text.pack "role"
 
 data KindColor
   = KindSuccess
@@ -853,6 +854,7 @@ kindColor k = case k of
   ItemKind.MinimalPragma -> KindSecondary
   ItemKind.CompletePragma -> KindSecondary
   ItemKind.DefaultMethodSignature -> KindPrimary
+  ItemKind.RoleAnnotation -> KindSecondary
 
 kindBadgeClass :: ItemKind.ItemKind -> String
 kindBadgeClass k = case kindColor k of

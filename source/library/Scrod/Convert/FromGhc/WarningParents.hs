@@ -1,3 +1,6 @@
+-- TODO: Figure out why this is necessary and remove it.
+{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
+
 -- | Resolve warning parent relationships.
 --
 -- Associates warning pragma items with their target declarations when

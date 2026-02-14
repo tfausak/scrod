@@ -90,6 +90,7 @@ library
     Scrod
     Scrod.Cabal
     Scrod.Convert.FromGhc
+    Scrod.Convert.FromGhc.CompleteParents
     Scrod.Convert.FromGhc.Constructors
     Scrod.Convert.FromGhc.Doc
     Scrod.Convert.FromGhc.Exports

@@ -2055,8 +2055,31 @@ spec s = Spec.describe s "integration" $ do
         pattern N2 = ()
         {-# complete N2 #-}
         """
-        [ ("/items/1/value/kind/type", "\"CompletePragma\""),
+        [ ("/items/0/value/kind/type", "\"PatternSynonym\""),
+          ("/items/0/value/parentKey", "2"),
+          ("/items/1/value/kind/type", "\"CompletePragma\""),
           ("/items/1/value/signature", "\"N2\"")
+        ]
+
+    Spec.it s "complete pragma with multiple patterns" $ do
+      check
+        s
+        """
+        {-# language PatternSynonyms #-}
+        pattern Nil :: [a]
+        pattern Nil = []
+        pattern Cons :: a -> [a] -> [a]
+        pattern Cons x xs = x : xs
+        {-# complete Nil, Cons #-}
+        """
+        [ ("/items/0/value/kind/type", "\"PatternSynonym\""),
+          ("/items/0/value/name", "\"Nil\""),
+          ("/items/0/value/parentKey", "4"),
+          ("/items/1/value/kind/type", "\"PatternSynonym\""),
+          ("/items/1/value/name", "\"Cons\""),
+          ("/items/1/value/parentKey", "4"),
+          ("/items/2/value/kind/type", "\"CompletePragma\""),
+          ("/items/2/value/signature", "\"Nil, Cons\"")
         ]
 
     Spec.it s "standalone kind signature" $ do

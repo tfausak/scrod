@@ -46,7 +46,7 @@ extractWarnDeclLocations ::
 extractWarnDeclLocations lWarnDecl = case SrcLoc.unLoc lWarnDecl of
   Syntax.Warning _ names _ ->
     concatMap (foldMap pure . Internal.locationFromSrcSpan . Annotation.getLocA) names
-  _ -> []
+  Syntax.XWarnDecl {} -> []
 
 -- | Associate warning items with their target declarations.
 associateWarningParents ::

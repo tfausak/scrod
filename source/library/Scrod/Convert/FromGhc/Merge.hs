@@ -14,6 +14,7 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
+import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Located as Located
 
@@ -37,10 +38,16 @@ buildMergeMap items =
    in Map.map mergeItemGroup groups
 
 -- | Check if an item is eligible for merging.
+--
+-- Standalone kind signatures are excluded because they should remain
+-- as separate items with the associated declaration parented to them,
+-- not merged into a single item (see 'KindSigParents').
 isMergeCandidate :: Located.Located Item.Item -> Bool
 isMergeCandidate item =
   let val = Located.value item
-   in Maybe.isNothing (Item.parentKey val) && Maybe.isJust (Item.name val)
+   in Maybe.isNothing (Item.parentKey val)
+        && Maybe.isJust (Item.name val)
+        && Item.kind val /= ItemKind.StandaloneKindSig
 
 -- | Merge a group of items sharing the same name into a single item.
 mergeItemGroup :: NonEmpty.NonEmpty (Located.Located Item.Item) -> Located.Located Item.Item

@@ -41,6 +41,7 @@ import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
+import qualified Scrod.Convert.FromGhc.KindSigParents as KindSigParents
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
@@ -218,6 +219,11 @@ extractItems lHsModule =
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems
+      -- Standalone kind signature association runs after merging so
+      -- that type signatures and bindings are merged first. This
+      -- parents associated declarations to their corresponding
+      -- standalone kind signature (see 'KindSigParents').
+      kindSigParentedItems = KindSigParents.associateKindSigParents mergedItems
       -- COMPLETE pragma association runs after merging and uses inverted
       -- semantics: pattern synonyms are parented to the COMPLETE pragma
       -- (not the pragma to the patterns). This is because COMPLETE
@@ -225,7 +231,7 @@ extractItems lHsModule =
       -- declaration. It must run after merging because pattern synonyms
       -- are merged with their type signatures first.
       completeNames = CompleteParents.extractCompleteNames lHsModule
-   in CompleteParents.associateCompleteParents completeNames mergedItems
+   in CompleteParents.associateCompleteParents completeNames kindSigParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::

@@ -1648,16 +1648,19 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
-    Spec.it s "fixity merges into target" $ do
+    Spec.it s "fixity has parent set" $ do
       check
         s
         """
         (%) = id
         infixl 0 %
         """
-        [ ("/items/0/value/kind/type", "\"Function\""),
-          ("/items/0/value/name", "\"%\""),
-          ("/items/0/value/documentation/value/value", "\"infixl 0\"")
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"%\""),
+          ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/documentation/value/value", "\"infixl 0\"")
         ]
 
     Spec.it s "fixity preserves type signature" $ do
@@ -1668,20 +1671,13 @@ spec s = Spec.describe s "integration" $ do
         (%) :: () -> () -> ()
         (%) _ _ = ()
         """
-        [ ("/items/0/value/kind/type", "\"Function\""),
-          ("/items/0/value/name", "\"%\""),
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"FixitySignature\""),
+          ("/items/0/value/parentKey", "1"),
           ("/items/0/value/documentation/value/value", "\"infixl 5\""),
-          ("/items/0/value/signature", "\"() -> () -> ()\"")
-        ]
-
-    Spec.it s "fixity produces single item" $ do
-      check
-        s
-        """
-        (%) = id
-        infixl 0 %
-        """
-        [ ("/items", "[{\"location\":{\"line\":1,\"column\":1},\"value\":{\"key\":0,\"kind\":{\"type\":\"Function\"},\"name\":\"%\",\"documentation\":{\"type\":\"Paragraph\",\"value\":{\"type\":\"String\",\"value\":\"infixl 0\"}}}}]")
+          ("/items/1/value/name", "\"%\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/signature", "\"() -> () -> ()\"")
         ]
 
     Spec.it s "fixity infixr" $ do
@@ -1691,7 +1687,8 @@ spec s = Spec.describe s "integration" $ do
         (%) = id
         infixr 9 %
         """
-        [ ("/items/0/value/documentation/value/value", "\"infixr 9\"")
+        [ ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/documentation/value/value", "\"infixr 9\"")
         ]
 
     Spec.it s "fixity infix" $ do
@@ -1701,7 +1698,20 @@ spec s = Spec.describe s "integration" $ do
         (%) = id
         infix 4 %
         """
-        [ ("/items/0/value/documentation/value/value", "\"infix 4\"")
+        [ ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/documentation/value/value", "\"infix 4\"")
+        ]
+
+    Spec.it s "orphaned fixity has no parent" $ do
+      check
+        s
+        """
+        infixl 0 %
+        """
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"FixitySignature\""),
+          ("/items/0/value/parentKey", ""),
+          ("/items/0/value/documentation/value/value", "\"infixl 0\"")
         ]
 
     Spec.it s "inline pragma" $ do

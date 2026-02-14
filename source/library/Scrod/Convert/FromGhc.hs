@@ -38,13 +38,13 @@ import qualified Scrod.Convert.FromGhc.Exports as Exports
 import qualified Scrod.Convert.FromGhc.FamilyInstanceParents as FamilyInstanceParents
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
 import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
-import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.KindSigParents as KindSigParents
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
+import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
 import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents

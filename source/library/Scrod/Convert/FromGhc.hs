@@ -198,11 +198,11 @@ extractItems lHsModule =
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
-      -- Parent association: associate pragma and annotation items with
-      -- their target declarations by matching names. Each pass handles
-      -- one pragma type (warning, fixity, inline, specialise, role).
-      -- These run before merging because merged items need their parent
-      -- relationships already established.
+      -- Parent-association passes: associate pragma/annotation items
+      -- (warning, fixity, inline, specialise, type role) and family
+      -- instance items with their target declarations by matching names.
+      -- These run before merging so that 'mergeItemsByName' can remap
+      -- already-established child 'parentKey's to the merged declaration key.
       warningLocations = WarningParents.extractWarningLocations lHsModule
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule

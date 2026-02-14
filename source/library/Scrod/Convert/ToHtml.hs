@@ -805,6 +805,7 @@ kindToText k = case k of
   ItemKind.Default -> Text.pack "default"
   ItemKind.Annotation -> Text.pack "annotation"
   ItemKind.Splice -> Text.pack "splice"
+  ItemKind.DefaultMethodSignature -> Text.pack "default"
 
 data KindColor
   = KindSuccess
@@ -845,6 +846,7 @@ kindColor k = case k of
   ItemKind.Default -> KindSecondary
   ItemKind.Annotation -> KindSecondary
   ItemKind.Splice -> KindSecondary
+  ItemKind.DefaultMethodSignature -> KindPrimary
 
 kindBadgeClass :: ItemKind.ItemKind -> String
 kindBadgeClass k = case kindColor k of

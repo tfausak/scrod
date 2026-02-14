@@ -702,7 +702,6 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       ItemKind.TypeData -> True
       ItemKind.TypeSynonym -> True
       ItemKind.Class -> True
-      ItemKind.DerivedInstance -> True
       _ -> False
 
     kindElement :: Element.Element

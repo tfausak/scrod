@@ -1325,7 +1325,9 @@ spec s = Spec.describe s "integration" $ do
         data family A a
         data instance A ()
         """
-        [("/items/1/value/kind/type", "\"DataFamilyInstance\"")]
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "data instance constructor" $ do
       check
@@ -1336,6 +1338,7 @@ spec s = Spec.describe s "integration" $ do
         data instance B () = C
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1349,6 +1352,7 @@ spec s = Spec.describe s "integration" $ do
         data instance D where E :: D
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1362,6 +1366,7 @@ spec s = Spec.describe s "integration" $ do
         newtype instance F = G ()
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1375,6 +1380,7 @@ spec s = Spec.describe s "integration" $ do
         newtype instance H where I :: () -> H
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1387,7 +1393,9 @@ spec s = Spec.describe s "integration" $ do
         type family J
         type instance J = ()
         """
-        [("/items/1/value/kind/type", "\"TypeFamilyInstance\"")]
+        [ ("/items/1/value/kind/type", "\"TypeFamilyInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "standalone deriving" $ do
       check
@@ -1625,13 +1633,22 @@ spec s = Spec.describe s "integration" $ do
       check s "(j :: ()) = ()" []
 
     Spec.it s "bidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern L = ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern L = ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "unidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern M <- ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern M <- ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "explicitly bidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern N <- () where N = ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern N <- () where N = ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "type signature" $ do
       check
@@ -1650,7 +1667,16 @@ spec s = Spec.describe s "integration" $ do
         pattern P :: ()
         pattern P = ()
         """
-        []
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
+
+    Spec.it s "pattern synonym signature without binding" $ do
+      check
+        s
+        """
+        {-# language PatternSynonyms #-}
+        pattern Q :: a
+        """
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.describe s "method signature" $ do
       Spec.it s "works" $ do
@@ -1704,7 +1730,36 @@ spec s = Spec.describe s "integration" $ do
           default t :: a
           t = undefined
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Class\""),
+          ("/items/0/value/name", "\"S\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
+          ("/items/1/value/name", "\"t\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/key", "1"),
+          ("/items/2/value/kind/type", "\"DefaultMethodSignature\""),
+          ("/items/2/value/name", "\"t\""),
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "default method signature with doc" $ do
+      check
+        s
+        """
+        {-# language DefaultSignatures #-}
+        class S a where
+          t :: a
+          -- | the default
+          default t :: a
+          t = undefined
+        """
+        [ ("/items/2/value/kind/type", "\"DefaultMethodSignature\""),
+          ("/items/2/value/name", "\"t\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/type", "\"String\""),
+          ("/items/2/value/documentation/value/value", "\"the default\"")
+        ]
 
     Spec.it s "fixity has parent set" $ do
       check
@@ -1808,14 +1863,19 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/parentKey", "1")
         ]
 
-    Spec.it s "inline pragma" $ do
+    Spec.it s "inline pragma has parent set" $ do
       check
         s
         """
         i = ()
         {-# inline i #-}
         """
-        []
+        [ ("/items/0/value/name", "\"i\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"i\""),
+          ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "inline pragma with phase control" $ do
       check
@@ -1824,7 +1884,9 @@ spec s = Spec.describe s "integration" $ do
         j = ()
         {-# inline [1] j #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "inline pragma with inverted phase control" $ do
       check
@@ -1833,16 +1895,34 @@ spec s = Spec.describe s "integration" $ do
         k = ()
         {-# inline [~2] k #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
-    Spec.it s "noinline pragma" $ do
+    Spec.it s "noinline pragma has parent set" $ do
       check
         s
         """
         l = ()
         {-# noinline l #-}
         """
-        []
+        [ ("/items/0/value/name", "\"l\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"l\""),
+          ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "orphaned inline pragma has no parent" $ do
+      check
+        s
+        """
+        {-# inline x #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"InlineSignature\""),
+          ("/items/0/value/parentKey", "")
+        ]
 
     Spec.it s "specialize pragma" $ do
       check
@@ -1852,7 +1932,24 @@ spec s = Spec.describe s "integration" $ do
         j2 = id
         {-# specialize j2 :: () -> () #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"j2\""),
+          ("/items/1/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/1/value/name", "\"j2\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"() -> ()\"")
+        ]
+
+    Spec.it s "orphaned specialize pragma" $ do
+      check
+        s
+        """
+        {-# specialize j3 :: () -> () #-}
+        """
+        [ ("/items/0/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/0/value/name", "\"j3\""),
+          ("/items/0/value/signature", "\"() -> ()\"")
+        ]
 
     Spec.it s "specialize instance pragma" $ do
       check
@@ -1874,7 +1971,14 @@ spec s = Spec.describe s "integration" $ do
           l2m :: a
           {-# minimal l2m #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Class\""),
+          ("/items/0/value/name", "\"L2\""),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/2/value/kind/type", "\"MinimalPragma\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"l2m\"")
+        ]
 
     Spec.it s "set cost center pragma" $ do
       check
@@ -1894,7 +1998,9 @@ spec s = Spec.describe s "integration" $ do
         pattern N2 = ()
         {-# complete N2 #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"CompletePragma\""),
+          ("/items/1/value/signature", "\"N2\"")
+        ]
 
     Spec.it s "standalone kind signature" $ do
       check
@@ -1903,7 +2009,16 @@ spec s = Spec.describe s "integration" $ do
         type O :: *
         data O
         """
-        []
+        [("/items/0/value/signature", "\"*\"")]
+
+    Spec.it s "standalone kind signature with data" $ do
+      check
+        s
+        """
+        type X :: a -> a
+        data X a = X
+        """
+        [("/items/0/value/signature", "\"a -> a\"")]
 
     Spec.it s "default declaration" $ do
       check s "default ()" [("/items", "[]")]
@@ -1936,7 +2051,7 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/0/value/name", "\"x\""),
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/1/value/name", "\"x\""),
-          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/kind/type", "\"Warning\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/documentation/value/value", "\"w\""),
           ("/items/1/value/warning/category", "\"deprecations\""),
@@ -1956,11 +2071,11 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"y\""),
           ("/items/1/value/kind/type", "\"Function\""),
           ("/items/2/value/name", "\"x\""),
-          ("/items/2/value/kind/type", "\"Function\""),
+          ("/items/2/value/kind/type", "\"Warning\""),
           ("/items/2/value/parentKey", "0"),
           ("/items/2/value/documentation/value/value", "\"z\""),
           ("/items/3/value/name", "\"y\""),
-          ("/items/3/value/kind/type", "\"Function\""),
+          ("/items/3/value/kind/type", "\"Warning\""),
           ("/items/3/value/parentKey", "1"),
           ("/items/3/value/documentation/value/value", "\"z\"")
         ]
@@ -1972,7 +2087,7 @@ spec s = Spec.describe s "integration" $ do
         {-# warning x "w" #-}
         """
         [ ("/items/0/value/name", "\"x\""),
-          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/kind/type", "\"Warning\""),
           ("/items/0/value/parentKey", ""),
           ("/items/0/value/documentation/value/value", "\"w\""),
           ("/items/0/value/warning/category", "\"deprecations\""),
@@ -2024,7 +2139,12 @@ spec s = Spec.describe s "integration" $ do
         x4 = id
         {-# rules "q" x4 = id #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"x4\""),
+          ("/items/1/value/kind/type", "\"Rule\""),
+          ("/items/1/value/name", "\"q\""),
+          ("/items/1/value/signature", "\"x4 = id\"")
+        ]
 
     Spec.it s "splice declaration" $ do
       check

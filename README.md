@@ -27,6 +27,7 @@ Download the latest release from [GitHub Releases](https://github.com/tfausak/sc
 | `scrod-*.vsix` | VSCode extension for live documentation preview |
 | `scrod-*-wasm.tar.gz` | WASM build (for use in browsers) |
 | `scrod-*-wasi.tar.gz` | WASI build (for use with runtimes like Wasmtime) |
+| `scrod-*-schema.json` | JSON schema for the JSON output format |
 | `scrod-*.tar.gz` | Source tarball |
 
 Or build from source with [GHC](https://www.haskell.org/ghc/) 9.14 and [Cabal](https://www.haskell.org/cabal/):

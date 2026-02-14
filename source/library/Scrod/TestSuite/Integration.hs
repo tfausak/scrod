@@ -1936,7 +1936,7 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/0/value/name", "\"x\""),
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/1/value/name", "\"x\""),
-          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/kind/type", "\"Warning\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/documentation/value/value", "\"w\"")
         ]
@@ -1954,11 +1954,11 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"y\""),
           ("/items/1/value/kind/type", "\"Function\""),
           ("/items/2/value/name", "\"x\""),
-          ("/items/2/value/kind/type", "\"Function\""),
+          ("/items/2/value/kind/type", "\"Warning\""),
           ("/items/2/value/parentKey", "0"),
           ("/items/2/value/documentation/value/value", "\"z\""),
           ("/items/3/value/name", "\"y\""),
-          ("/items/3/value/kind/type", "\"Function\""),
+          ("/items/3/value/kind/type", "\"Warning\""),
           ("/items/3/value/parentKey", "1"),
           ("/items/3/value/documentation/value/value", "\"z\"")
         ]
@@ -1970,7 +1970,7 @@ spec s = Spec.describe s "integration" $ do
         {-# warning x "w" #-}
         """
         [ ("/items/0/value/name", "\"x\""),
-          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/kind/type", "\"Warning\""),
           ("/items/0/value/parentKey", ""),
           ("/items/0/value/documentation/value/value", "\"w\"")
         ]

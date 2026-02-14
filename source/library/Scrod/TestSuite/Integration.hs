@@ -1938,7 +1938,9 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"x\""),
           ("/items/1/value/kind/type", "\"Function\""),
           ("/items/1/value/parentKey", "0"),
-          ("/items/1/value/documentation/value/value", "\"w\"")
+          ("/items/1/value/documentation/value/value", "\"w\""),
+          ("/items/1/value/warning/category", "\"deprecations\""),
+          ("/items/1/value/warning/value", "\"w\"")
         ]
 
     Spec.it s "warning pragma with multiple names" $ do
@@ -1972,7 +1974,25 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/0/value/name", "\"x\""),
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/0/value/parentKey", ""),
-          ("/items/0/value/documentation/value/value", "\"w\"")
+          ("/items/0/value/documentation/value/value", "\"w\""),
+          ("/items/0/value/warning/category", "\"deprecations\""),
+          ("/items/0/value/warning/value", "\"w\"")
+        ]
+
+    Spec.it s "warning pragma with custom category" $ do
+      check
+        s
+        """
+        x = ()
+        {-# warning in "c" x "w" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/warning/category", "\"c\""),
+          ("/items/1/value/warning/value", "\"w\"")
         ]
 
     Spec.it s "value annotation" $ do

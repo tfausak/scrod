@@ -376,16 +376,18 @@ convertWarnDeclM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertWarnDeclM lWarnDecl = case SrcLoc.unLoc lWarnDecl of
   Syntax.Warning _ names warningTxt ->
-    let warningDoc = Doc.Paragraph . Doc.String . Warning.value $ Internal.warningTxtToWarning warningTxt
-     in Maybe.catMaybes <$> traverse (convertWarnNameM warningDoc) names
+    let warning = Internal.warningTxtToWarning warningTxt
+     in Maybe.catMaybes <$> traverse (convertWarnNameM warning) names
 
 -- | Convert a single name from a warning declaration.
 convertWarnNameM ::
-  Doc.Doc ->
+  Warning.Warning ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertWarnNameM doc lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
+convertWarnNameM warning lName = do
+  let doc = Doc.Paragraph . Doc.String $ Warning.value warning
+  result <- Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
+  pure $ fmap (\li -> li {Located.value = (Located.value li) {Item.warning = Just warning}}) result
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

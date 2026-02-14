@@ -666,7 +666,7 @@ itemsContents items =
                 ]
 
 itemToHtml :: Located.Located Item.Item -> Element.Element
-itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =
+itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig maybeWarning)) =
   Xml.element
     "div"
     [ Xml.attribute "class" "card mb-3 border-start border-4",
@@ -744,9 +744,14 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
         ]
 
     docContents' :: [Content.Content Element.Element]
-    docContents' = case doc of
-      Doc.Empty -> []
-      _ -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "card-body"] (docToContents doc)]
+    docContents' =
+      let warnElems = warningContents maybeWarning
+          docElems = case doc of
+            Doc.Empty -> []
+            _ -> docToContents doc
+       in case warnElems <> docElems of
+            [] -> []
+            combined -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "card-body"] combined]
 
 lineAttribute :: Location.Location -> Attribute.Attribute
 lineAttribute loc =

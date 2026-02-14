@@ -1776,14 +1776,54 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"IO ()\"")
         ]
 
-    Spec.it s "warning pragma" $ do
+    Spec.it s "warning pragma has parent set" $ do
       check
         s
         """
         x = ()
-        {-# warning x "" #-}
+        {-# warning x "w" #-}
         """
-        []
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/documentation/value/value", "\"w\"")
+        ]
+
+    Spec.it s "warning pragma with multiple names" $ do
+      check
+        s
+        """
+        x = ()
+        y = ()
+        {-# warning x, y "z" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"y\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/2/value/name", "\"x\""),
+          ("/items/2/value/kind/type", "\"Function\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/documentation/value/value", "\"z\""),
+          ("/items/3/value/name", "\"y\""),
+          ("/items/3/value/kind/type", "\"Function\""),
+          ("/items/3/value/parentKey", "1"),
+          ("/items/3/value/documentation/value/value", "\"z\"")
+        ]
+
+    Spec.it s "orphaned warning pragma has no parent" $ do
+      check
+        s
+        """
+        {-# warning x "w" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/parentKey", ""),
+          ("/items/0/value/documentation/value/value", "\"w\"")
+        ]
 
     Spec.it s "value annotation" $ do
       check

@@ -36,6 +36,7 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
+import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
@@ -185,7 +186,9 @@ extractItems lHsModule =
   let rawItems = Internal.runConvert $ extractItemsM lHsModule
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes rawItems
-   in Merge.mergeItemsByName parentedItems
+      warningLocations = WarningParents.extractWarningLocations lHsModule
+      warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
+   in Merge.mergeItemsByName warningParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -219,6 +222,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SpliceD _ spliceDecl ->
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
+  Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
   Syntax.DefD {} -> pure []
   Syntax.DerivD _ derivDecl ->
     let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
@@ -326,6 +330,30 @@ convertRuleDeclM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
   Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing Nothing ItemKind.Rule
+
+-- | Convert warning declarations.
+convertWarnDeclsM ::
+  Syntax.WarnDecls Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertWarnDeclsM (Syntax.Warnings _ warnDecls) =
+  concat <$> traverse convertWarnDeclM warnDecls
+
+-- | Convert a single warning declaration.
+convertWarnDeclM ::
+  Syntax.LWarnDecl Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertWarnDeclM lWarnDecl = case SrcLoc.unLoc lWarnDecl of
+  Syntax.Warning _ names warningTxt ->
+    let warningDoc = Doc.Paragraph . Doc.String . Warning.value $ Internal.warningTxtToWarning warningTxt
+     in Maybe.catMaybes <$> traverse (convertWarnNameM warningDoc) names
+
+-- | Convert a single name from a warning declaration.
+convertWarnNameM ::
+  Doc.Doc ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertWarnNameM doc lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

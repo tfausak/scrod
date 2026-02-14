@@ -293,7 +293,8 @@ convertSigDeclM doc docSince lDecl sig = case sig of
      in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
-     in Maybe.catMaybes <$> traverse (convertFixityNameM fixityDoc) names
+        combinedDoc = combineDoc doc fixityDoc
+     in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -313,6 +314,12 @@ convertFixityNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertFixityNameM fixityDoc lName =
   Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing Nothing ItemKind.FixitySignature
+
+-- | Combine a user-written doc with a synthesized doc. If the user doc
+-- is empty, just use the synthesized one; otherwise append both.
+combineDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
+combineDoc Doc.Empty synth = synth
+combineDoc user synth = Doc.Append [user, synth]
 
 -- | Convert a fixity direction to text.
 fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text

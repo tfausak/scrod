@@ -2143,6 +2143,53 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/parentKey", "1")
         ]
 
+    Spec.it s "standalone kind signature with type synonym" $ do
+      check
+        s
+        """
+        type T :: * -> *
+        type T a = Maybe a
+        """
+        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+          ("/items/0/value/name", "\"T\""),
+          ("/items/0/value/signature", "\"* -> *\""),
+          ("/items/1/value/kind/type", "\"TypeSynonym\""),
+          ("/items/1/value/name", "\"T\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "standalone kind signature with class" $ do
+      check
+        s
+        """
+        {-# LANGUAGE ConstraintKinds #-}
+        type C :: * -> Constraint
+        class C a
+        """
+        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+          ("/items/0/value/name", "\"C\""),
+          ("/items/0/value/signature", "\"* -> Constraint\""),
+          ("/items/1/value/kind/type", "\"Class\""),
+          ("/items/1/value/name", "\"C\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "standalone kind signature with type family" $ do
+      check
+        s
+        """
+        {-# LANGUAGE TypeFamilies #-}
+        type F :: * -> *
+        type family F a
+        """
+        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+          ("/items/0/value/name", "\"F\""),
+          ("/items/0/value/signature", "\"* -> *\""),
+          ("/items/1/value/kind/type", "\"OpenTypeFamily\""),
+          ("/items/1/value/name", "\"F\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
     Spec.it s "default declaration" $ do
       check s "default ()" [("/items", "[]")]
 

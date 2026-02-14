@@ -1,9 +1,9 @@
 -- | Resolve standalone kind signature parent relationships.
 --
--- Associates type, data, newtype, and class declarations with their
--- corresponding standalone kind signature when both are defined in
--- the same module. This runs after merging so that type signatures
--- and bindings are merged first.
+-- Associates type, data, newtype, class, type family, and data family
+-- declarations with their corresponding standalone kind signature when
+-- both are defined in the same module. This runs after merging so that
+-- type signatures and bindings are merged first.
 module Scrod.Convert.FromGhc.KindSigParents where
 
 import qualified Data.Map as Map

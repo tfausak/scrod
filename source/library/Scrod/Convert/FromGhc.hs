@@ -221,8 +221,8 @@ extractItems lHsModule =
       mergedItems = Merge.mergeItemsByName familyParentedItems
       -- Standalone kind signature association runs after merging so
       -- that type signatures and bindings are merged first. This
-      -- parents data, newtype, type synonym, and class declarations
-      -- to their corresponding standalone kind signature.
+      -- parents associated declarations to their corresponding
+      -- standalone kind signature (see 'KindSigParents').
       kindSigParentedItems = KindSigParents.associateKindSigParents mergedItems
       -- COMPLETE pragma association runs after merging and uses inverted
       -- semantics: pattern synonyms are parented to the COMPLETE pragma

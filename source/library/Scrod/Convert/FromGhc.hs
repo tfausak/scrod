@@ -38,6 +38,7 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
+import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
@@ -195,7 +196,9 @@ extractItems lHsModule =
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
       fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
-   in Merge.mergeItemsByName fixityParentedItems
+      specialiseLocations = SpecialiseParents.extractSpecialiseLocations lHsModule
+      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents specialiseLocations fixityParentedItems
+   in Merge.mergeItemsByName specialiseParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -298,6 +301,12 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
      in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
+  Syntax.InlineSig _ lName _ ->
+    Maybe.maybeToList <$> convertInlineNameM doc docSince lName
+  Syntax.SpecSig _ lName sigTypes _ ->
+    let sigText = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
+     in Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
+  Syntax.SpecSigE _ _ lExpr _ -> convertSpecSigEM doc docSince lExpr
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -317,6 +326,42 @@ convertFixityNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertFixityNameM fixityDoc lName =
   Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing Nothing ItemKind.FixitySignature
+
+-- | Convert a single name from an inline signature.
+convertInlineNameM ::
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertInlineNameM doc docSince lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince Nothing ItemKind.InlineSignature
+
+-- | Convert a single name from a SPECIALIZE signature.
+convertSpecialiseNameM ::
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Maybe Text.Text ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertSpecialiseNameM doc docSince sig lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.SpecialiseSignature
+
+-- | Convert a SpecSigE expression to items.
+convertSpecSigEM ::
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Syntax.LHsExpr Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertSpecSigEM doc docSince lExpr = case SrcLoc.unLoc lExpr of
+  Syntax.ExprWithTySig _ body sigWcType ->
+    let sigText = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ sigWcType
+     in case SrcLoc.unLoc body of
+          Syntax.HsVar _ lName ->
+            Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
+          _ ->
+            Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lExpr) Nothing Nothing doc docSince sigText ItemKind.SpecialiseSignature
+  _ ->
+    Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lExpr) Nothing Nothing doc docSince Nothing ItemKind.SpecialiseSignature
 
 -- | Combine a user-written doc with a synthesized doc. If the user doc
 -- is empty, just use the synthesized one; otherwise append both.

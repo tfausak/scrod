@@ -12,9 +12,6 @@ import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Convert.FromGhc.Internal as Internal
-import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
-import qualified Scrod.Core.Item as Item
-import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Location as Location
 
 -- | Extract the set of source locations that correspond to names inside
@@ -43,11 +40,3 @@ extractWarnDeclLocations ::
 extractWarnDeclLocations lWarnDecl = case SrcLoc.unLoc lWarnDecl of
   Syntax.Warning _ names _ ->
     concatMap (foldMap pure . Internal.locationFromSrcSpan . Annotation.getLocA) names
-
--- | Associate warning items with their target declarations.
-associateWarningParents ::
-  Set.Set Location.Location ->
-  Set.Set Location.Location ->
-  [Located.Located Item.Item] ->
-  [Located.Located Item.Item]
-associateWarningParents = ParentAssociation.associateParents

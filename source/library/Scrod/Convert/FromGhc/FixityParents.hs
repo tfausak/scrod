@@ -7,7 +7,6 @@
 module Scrod.Convert.FromGhc.FixityParents where
 
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -63,10 +62,7 @@ buildNameToKeyMap fixityLocations =
             Just name ->
               if Set.member (Located.location locItem) fixityLocations
                 then []
-                else
-                  if Maybe.isNothing (Item.parentKey val)
-                    then [(name, Item.key val)]
-                    else []
+                else [(name, Item.key val)]
 
 -- | Set the parentKey on a fixity item by looking up the target name.
 resolveFixityParent ::

@@ -14,6 +14,7 @@ import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
+import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.Names as Names
@@ -232,7 +233,11 @@ convertConDeclFieldM parentKey lField =
   let recField = SrcLoc.unLoc lField
       fieldSpec = Syntax.cdrf_spec recField
       (doc, docSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc fieldSpec
-      sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ Syntax.cdf_type fieldSpec
+      sig =
+        Just . Text.pack . Outputable.showSDocUnsafe $
+          unpackednessDoc (Syntax.cdf_unpack fieldSpec)
+            Outputable.<> strictnessDoc (Syntax.cdf_bang fieldSpec)
+            Outputable.<> Outputable.ppr (Syntax.cdf_type fieldSpec)
    in Maybe.catMaybes <$> traverse (convertFieldNameM parentKey doc docSince sig) (Syntax.cdrf_names recField)
 
 -- | Convert a single field name to an item.
@@ -252,3 +257,17 @@ convertFieldNameM parentKey doc docSince sig lFieldOcc =
     docSince
     sig
     ItemKind.RecordField
+
+-- | Convert source unpackedness to its textual representation.
+unpackednessDoc :: SyntaxBasic.SrcUnpackedness -> Outputable.SDoc
+unpackednessDoc u = case u of
+  SyntaxBasic.SrcUnpack -> Outputable.text "{-# UNPACK #-} "
+  SyntaxBasic.SrcNoUnpack -> Outputable.text "{-# NOUNPACK #-} "
+  SyntaxBasic.NoSrcUnpack -> Outputable.empty
+
+-- | Convert source strictness to its textual representation.
+strictnessDoc :: SyntaxBasic.SrcStrictness -> Outputable.SDoc
+strictnessDoc s = case s of
+  SyntaxBasic.SrcLazy -> Outputable.text "~"
+  SyntaxBasic.SrcStrict -> Outputable.text "!"
+  SyntaxBasic.NoSrcStrict -> Outputable.empty

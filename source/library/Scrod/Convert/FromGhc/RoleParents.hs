@@ -6,6 +6,7 @@
 module Scrod.Convert.FromGhc.RoleParents where
 
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -63,7 +64,7 @@ buildNameToKeyMap roleLocations =
             Nothing -> []
             Just name ->
               if Set.member (Located.location locItem) roleLocations
-                || Item.parentKey val /= Nothing
+                || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]
 

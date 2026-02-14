@@ -1874,6 +1874,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/1/value/name", "\"i\""),
           ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"INLINE\""),
           ("/items/1/value/parentKey", "0")
         ]
 
@@ -1885,6 +1886,7 @@ spec s = Spec.describe s "integration" $ do
         {-# inline [1] j #-}
         """
         [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"INLINE\""),
           ("/items/1/value/parentKey", "0")
         ]
 
@@ -1896,6 +1898,7 @@ spec s = Spec.describe s "integration" $ do
         {-# inline [~2] k #-}
         """
         [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"INLINE\""),
           ("/items/1/value/parentKey", "0")
         ]
 
@@ -1910,6 +1913,31 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/kind/type", "\"Function\""),
           ("/items/1/value/name", "\"l\""),
           ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"NOINLINE\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "inlinable pragma" $ do
+      check
+        s
+        """
+        m = ()
+        {-# inlinable m #-}
+        """
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"INLINABLE\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "opaque pragma" $ do
+      check
+        s
+        """
+        n = ()
+        {-# opaque n #-}
+        """
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"OPAQUE\""),
           ("/items/1/value/parentKey", "0")
         ]
 
@@ -1921,6 +1949,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/0/value/name", "\"x\""),
           ("/items/0/value/kind/type", "\"InlineSignature\""),
+          ("/items/0/value/signature", "\"INLINE\""),
           ("/items/0/value/parentKey", "")
         ]
 

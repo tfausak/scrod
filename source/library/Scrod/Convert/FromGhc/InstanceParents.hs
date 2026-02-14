@@ -1,9 +1,10 @@
 -- | Resolve instance parent relationships.
 --
 -- Associates class instances and standalone deriving declarations with
--- their parent types when those types are defined in the same module.
--- Extracts the head type name from instance heads (e.g., @T@ from
--- @instance C T@) and maps them to the corresponding item key.
+-- their parent types or classes when those are defined in the same
+-- module. For @instance C T@, if @T@ is defined locally, the instance
+-- is parented under @T@. Otherwise, if @C@ is defined locally, the
+-- instance is parented under @C@.
 module Scrod.Convert.FromGhc.InstanceParents where
 
 import qualified Data.Map as Map
@@ -29,6 +30,34 @@ extractInstanceHeadTypeNames lHsModule =
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
    in Map.fromList $ Maybe.mapMaybe extractDeclInstanceHeadType decls
+
+-- | Extract the class name for each instance or standalone deriving
+-- declaration, keyed by source location.
+extractInstanceClassNames ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Map.Map Location.Location ItemName.ItemName
+extractInstanceClassNames lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+      decls = Syntax.hsmodDecls hsModule
+   in Map.fromList $ Maybe.mapMaybe extractDeclInstanceClass decls
+
+-- | Extract the class name from a single declaration, if it is an
+-- instance or standalone deriving declaration.
+extractDeclInstanceClass ::
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Maybe (Location.Location, ItemName.ItemName)
+extractDeclInstanceClass lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.InstD _ inst -> case inst of
+    Syntax.ClsInstD _ clsInst -> do
+      location <- Internal.locationFromSrcSpan (Annotation.getLocA lDecl)
+      className <- extractClassName . Syntax.sig_body . SrcLoc.unLoc $ Syntax.cid_poly_ty clsInst
+      Just (location, className)
+    _ -> Nothing
+  Syntax.DerivD _ derivDecl -> do
+    location <- Internal.locationFromSrcSpan (Annotation.getLocA lDecl)
+    className <- extractClassName . Syntax.sig_body . SrcLoc.unLoc . Syntax.hswc_body $ Syntax.deriv_type derivDecl
+    Just (location, className)
+  _ -> Nothing
 
 -- | Extract the head type name from a single declaration, if it is an
 -- instance or standalone deriving declaration.
@@ -59,6 +88,16 @@ extractHeadTypeName lTy = case SrcLoc.unLoc lTy of
   Syntax.HsParTy _ inner -> extractHeadTypeName inner
   _ -> Nothing
 
+-- | Extract the class name from an instance head. For @C T@ this
+-- returns @C@; for @Functor F@ this returns @Functor@.
+extractClassName :: Syntax.LHsType Ghc.GhcPs -> Maybe ItemName.ItemName
+extractClassName lTy = case SrcLoc.unLoc lTy of
+  Syntax.HsAppTy _ fun _ -> extractOutermostTyCon fun
+  Syntax.HsQualTy _ _ body -> extractClassName body
+  Syntax.HsForAllTy _ _ body -> extractClassName body
+  Syntax.HsParTy _ inner -> extractClassName inner
+  _ -> Nothing
+
 -- | Extract the outermost type constructor name from a type. For @T@
 -- this returns @T@; for @Maybe a@ this returns @Maybe@.
 extractOutermostTyCon :: Syntax.LHsType Ghc.GhcPs -> Maybe ItemName.ItemName
@@ -70,14 +109,15 @@ extractOutermostTyCon lTy = case SrcLoc.unLoc lTy of
   _ -> Nothing
 
 -- | Associate instances and standalone deriving declarations with their
--- parent types when those types are defined in the same module.
+-- parent types or classes when those are defined in the same module.
 associateInstanceParents ::
+  Map.Map Location.Location ItemName.ItemName ->
   Map.Map Location.Location ItemName.ItemName ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateInstanceParents headTypeNames items =
+associateInstanceParents headTypeNames classNames items =
   let typeNameToKey = buildTypeNameToKeyMap items
-   in fmap (resolveInstanceParent headTypeNames typeNameToKey) items
+   in fmap (resolveInstanceParent headTypeNames classNames typeNameToKey) items
 
 -- | Build a map from type/class names to their item keys.
 buildTypeNameToKeyMap ::
@@ -106,22 +146,36 @@ isTypeOrClassKind kind = case kind of
   _ -> False
 
 -- | Try to resolve an instance's parent from the head type maps.
+-- First tries the head type name (e.g., @T@ from @instance C T@),
+-- then falls back to the class name (e.g., @C@).
 resolveInstanceParent ::
+  Map.Map Location.Location ItemName.ItemName ->
   Map.Map Location.Location ItemName.ItemName ->
   Map.Map ItemName.ItemName ItemKey.ItemKey ->
   Located.Located Item.Item ->
   Located.Located Item.Item
-resolveInstanceParent headTypeNames typeNameToKey locItem =
+resolveInstanceParent headTypeNames classNames typeNameToKey locItem =
   let val = Located.value locItem
    in case Item.parentKey val of
         Just _ -> locItem
         Nothing ->
           if Item.kind val == ItemKind.ClassInstance || Item.kind val == ItemKind.StandaloneDeriving
-            then case Map.lookup (Located.location locItem) headTypeNames of
-              Nothing -> locItem
-              Just headTypeName ->
-                case Map.lookup headTypeName typeNameToKey of
-                  Nothing -> locItem
-                  Just parentKey ->
-                    locItem {Located.value = val {Item.parentKey = Just parentKey}}
+            then case lookupParentKey (Located.location locItem) headTypeNames typeNameToKey of
+              Just parentKey ->
+                locItem {Located.value = val {Item.parentKey = Just parentKey}}
+              Nothing -> case lookupParentKey (Located.location locItem) classNames typeNameToKey of
+                Just parentKey ->
+                  locItem {Located.value = val {Item.parentKey = Just parentKey}}
+                Nothing -> locItem
             else locItem
+
+-- | Look up a parent key by first resolving a location to a name,
+-- then resolving that name to a key.
+lookupParentKey ::
+  Location.Location ->
+  Map.Map Location.Location ItemName.ItemName ->
+  Map.Map ItemName.ItemName ItemKey.ItemKey ->
+  Maybe ItemKey.ItemKey
+lookupParentKey location nameMap keyMap = do
+  name <- Map.lookup location nameMap
+  Map.lookup name keyMap

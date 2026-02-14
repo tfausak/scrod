@@ -1873,7 +1873,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/documentation/value/1/value/value", "\"infixl 5\"")
         ]
 
-    Spec.it s "fixity on data constructor has parent set" $ do
+    Spec.it s "fixity on data constructor has no parent" $ do
       check
         s
         """
@@ -1887,8 +1887,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/key", "1"),
           ("/items/2/value/kind/type", "\"FixitySignature\""),
-          ("/items/2/value/name", "\":+:\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/name", "\":+:\"")
         ]
 
     Spec.it s "inline pragma has parent set" $ do
@@ -2338,10 +2337,10 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/key", "0"),
           ("/items/1/value/name", "\"f\""),
           ("/items/1/value/kind/type", "\"InlineSignature\""),
-          ("/items/1/value/parentKey", "3"),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/name", "\"f\""),
           ("/items/2/value/kind/type", "\"SpecialiseSignature\""),
-          ("/items/2/value/parentKey", "2")
+          ("/items/2/value/parentKey", "0")
         ]
 
     Spec.it s "warning and inline on same function" $ do
@@ -2358,10 +2357,10 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/key", "0"),
           ("/items/1/value/name", "\"g\""),
           ("/items/1/value/kind/type", "\"Warning\""),
-          ("/items/1/value/parentKey", "3"),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/name", "\"g\""),
           ("/items/2/value/kind/type", "\"InlineSignature\""),
-          ("/items/2/value/parentKey", "2")
+          ("/items/2/value/parentKey", "0")
         ]
 
     Spec.it s "multiple specialize pragmas on one function" $ do
@@ -2400,13 +2399,13 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/key", "0"),
           ("/items/1/value/name", "\"%\""),
           ("/items/1/value/kind/type", "\"FixitySignature\""),
-          ("/items/1/value/parentKey", "4"),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/name", "\"%\""),
           ("/items/2/value/kind/type", "\"InlineSignature\""),
-          ("/items/2/value/parentKey", "4"),
+          ("/items/2/value/parentKey", "0"),
           ("/items/3/value/name", "\"%\""),
           ("/items/3/value/kind/type", "\"SpecialiseSignature\""),
-          ("/items/3/value/parentKey", "3")
+          ("/items/3/value/parentKey", "0")
         ]
 
   Spec.describe s "html" $ do

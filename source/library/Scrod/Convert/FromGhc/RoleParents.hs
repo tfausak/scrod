@@ -41,21 +41,22 @@ extractDeclRoleLocations lDecl = case SrcLoc.unLoc lDecl of
 -- | Associate role annotation items with their target declarations.
 associateRoleParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateRoleParents roleLocations items =
-  let nameToKey = buildNameToKeyMap roleLocations items
+associateRoleParents allPragmaLocations roleLocations items =
+  let nameToKey = buildNameToKeyMap allPragmaLocations items
    in fmap (resolveRoleParent roleLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding role annotation
--- items and child items. Only top-level declarations (those with no
+-- | Build a map from item names to their keys, excluding pragma items
+-- and child items. Only top-level declarations (those with no
 -- parentKey) are eligible parents, so that @data T = T@ maps to the
 -- type declaration rather than the constructor.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap roleLocations =
+buildNameToKeyMap allPragmaLocations =
   Map.fromList . concatMap getNameAndKey
   where
     getNameAndKey locItem =
@@ -63,7 +64,7 @@ buildNameToKeyMap roleLocations =
        in case Item.name val of
             Nothing -> []
             Just name ->
-              if Set.member (Located.location locItem) roleLocations
+              if Set.member (Located.location locItem) allPragmaLocations
                 || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]

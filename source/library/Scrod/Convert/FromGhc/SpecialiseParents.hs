@@ -51,6 +51,7 @@ extractExprNameLocations lExpr = case SrcLoc.unLoc lExpr of
 -- | Associate specialise items with their target declarations.
 associateSpecialiseParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
 associateSpecialiseParents = ParentAssociation.associateParents

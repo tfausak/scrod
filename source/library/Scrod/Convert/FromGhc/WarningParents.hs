@@ -47,6 +47,7 @@ extractWarnDeclLocations lWarnDecl = case SrcLoc.unLoc lWarnDecl of
 -- | Associate warning items with their target declarations.
 associateWarningParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
 associateWarningParents = ParentAssociation.associateParents

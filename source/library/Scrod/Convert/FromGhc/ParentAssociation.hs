@@ -17,15 +17,16 @@ import qualified Scrod.Core.Location as Location
 
 -- | Associate pragma items with their target declarations by name.
 --
--- Items whose locations appear in the given set are considered pragma items.
--- For each pragma item, we look up its name in a map built from the
--- remaining top-level items and set the parentKey accordingly.
+-- The first set contains all pragma locations (used to exclude pragmas
+-- from the name-to-key map). The second set contains only the locations
+-- for the specific pragma type being resolved.
 associateParents ::
+  Set.Set Location.Location ->
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateParents pragmaLocations items =
-  let nameToKey = buildNameToKeyMap pragmaLocations items
+associateParents allPragmaLocations pragmaLocations items =
+  let nameToKey = buildNameToKeyMap allPragmaLocations items
    in fmap (resolveParent pragmaLocations nameToKey) items
 
 -- | Build a map from item names to their keys, excluding pragma items
@@ -36,7 +37,7 @@ buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap pragmaLocations =
+buildNameToKeyMap allPragmaLocations =
   Map.fromList . concatMap getNameAndKey
   where
     getNameAndKey locItem =
@@ -44,7 +45,7 @@ buildNameToKeyMap pragmaLocations =
        in case Item.name val of
             Nothing -> []
             Just name ->
-              if Set.member (Located.location locItem) pragmaLocations
+              if Set.member (Located.location locItem) allPragmaLocations
                 || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]

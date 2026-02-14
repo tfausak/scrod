@@ -38,6 +38,7 @@ extractDeclFixityLocations lDecl = case SrcLoc.unLoc lDecl of
 -- | Associate fixity items with their target declarations.
 associateFixityParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
 associateFixityParents = ParentAssociation.associateParents

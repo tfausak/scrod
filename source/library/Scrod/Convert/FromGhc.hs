@@ -10,6 +10,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Version
@@ -198,19 +199,31 @@ extractItems lHsModule =
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
+      -- Parent-association passes: associate pragma/annotation items
+      -- (warning, fixity, inline, specialise, type role) and family
+      -- instance items with their target declarations by matching names.
+      -- These run before merging so that 'mergeItemsByName' can remap
+      -- already-established child 'parentKey's to the merged declaration key.
       warningLocations = WarningParents.extractWarningLocations lHsModule
-      warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
-      fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
       inlineLocations = InlineParents.extractInlineLocations lHsModule
-      inlineParentedItems = InlineParents.associateInlineParents inlineLocations fixityParentedItems
       specialiseLocations = SpecialiseParents.extractSpecialiseLocations lHsModule
-      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents specialiseLocations inlineParentedItems
       roleLocations = RoleParents.extractRoleLocations lHsModule
-      roleParentedItems = RoleParents.associateRoleParents roleLocations specialiseParentedItems
+      allPragmaLocations = Set.unions [warningLocations, fixityLocations, inlineLocations, specialiseLocations, roleLocations]
+      warningParentedItems = WarningParents.associateWarningParents allPragmaLocations warningLocations parentedItems
+      fixityParentedItems = FixityParents.associateFixityParents allPragmaLocations fixityLocations warningParentedItems
+      inlineParentedItems = InlineParents.associateInlineParents allPragmaLocations inlineLocations fixityParentedItems
+      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents allPragmaLocations specialiseLocations inlineParentedItems
+      roleParentedItems = RoleParents.associateRoleParents allPragmaLocations roleLocations specialiseParentedItems
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems
+      -- COMPLETE pragma association runs after merging and uses inverted
+      -- semantics: pattern synonyms are parented to the COMPLETE pragma
+      -- (not the pragma to the patterns). This is because COMPLETE
+      -- pragmas group patterns together rather than annotating a single
+      -- declaration. It must run after merging because pattern synonyms
+      -- are merged with their type signatures first.
       completeNames = CompleteParents.extractCompleteNames lHsModule
    in CompleteParents.associateCompleteParents completeNames mergedItems
 
@@ -296,7 +309,12 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
   Syntax.DataFamInstD _ dataFamInst -> do
     parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
-    childItems <- convertDataDefnM parentKey Nothing (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
+        eqn = Syntax.dfid_eqn dataFamInst
+        parentType =
+          Just . Text.pack . Outputable.showSDocUnsafe $
+            Outputable.ppr (Syntax.feqn_tycon eqn)
+              Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
+    childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
     pure $ Maybe.maybeToList parentItem <> childItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
 
@@ -653,9 +671,15 @@ convertTyFamInstEqnM parentKey lEqn =
 extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
 extractTyFamInstEqnSig eqn =
   Outputable.ppr (Syntax.feqn_tycon eqn)
-    Outputable.<+> Outputable.hsep (Outputable.ppr <$> Syntax.feqn_pats eqn)
+    Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
     Outputable.<+> Outputable.text "="
     Outputable.<+> Outputable.ppr (Syntax.feqn_rhs eqn)
+
+-- | Pretty-print a type argument, stripping the 'HsArg' wrapper.
+pprHsTypeArg :: Syntax.LHsTypeArg Ghc.GhcPs -> Outputable.SDoc
+pprHsTypeArg (Syntax.HsValArg _ ty) = Outputable.ppr ty
+pprHsTypeArg (Syntax.HsTypeArg _ ki) = Outputable.text "@" Outputable.<> Outputable.ppr ki
+pprHsTypeArg (Syntax.HsArgPar _) = Outputable.empty
 
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::

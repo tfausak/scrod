@@ -38,6 +38,7 @@ extractDeclRoleLocations lDecl = case SrcLoc.unLoc lDecl of
 -- | Associate role annotation items with their target declarations.
 associateRoleParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
 associateRoleParents = ParentAssociation.associateParents

@@ -38,6 +38,7 @@ extractDeclInlineLocations lDecl = case SrcLoc.unLoc lDecl of
 -- | Associate inline items with their target declarations.
 associateInlineParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
 associateInlineParents = ParentAssociation.associateParents

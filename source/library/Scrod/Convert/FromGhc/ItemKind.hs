@@ -20,13 +20,13 @@ itemKindFromDecl decl = case decl of
   Syntax.KindSigD {} -> ItemKind.StandaloneKindSig
   Syntax.DefD {} -> ItemKind.Default
   Syntax.ForD _ foreignDecl -> itemKindFromForeignDecl foreignDecl
+  Syntax.WarningD {} -> ItemKind.Warning
   Syntax.AnnD {} -> ItemKind.Annotation
   Syntax.RuleD {} -> ItemKind.Rule
   Syntax.SpliceD {} -> ItemKind.Splice
   Syntax.DocD {} -> ItemKind.Function -- Doc comment
   Syntax.RoleAnnotD {} -> ItemKind.RoleAnnotation
   Syntax.DerivD {} -> ItemKind.StandaloneDeriving
-  _ -> ItemKind.Function
 
 -- | Determine ItemKind from a type/class declaration.
 itemKindFromTyClDecl :: Syntax.TyClDecl Ghc.GhcPs -> ItemKind.ItemKind

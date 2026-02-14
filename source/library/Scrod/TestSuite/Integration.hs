@@ -799,7 +799,7 @@ spec s = Spec.describe s "integration" $ do
           ]
 
     Spec.describe s "doc named" $ do
-      Spec.it s "works" $ do
+      Spec.it s "unresolved" $ do
         check
           s
           """
@@ -809,6 +809,49 @@ spec s = Spec.describe s "integration" $ do
           """
           [ ("/exports/0/type", "\"DocNamed\""),
             ("/exports/0/value", "\"foo\"")
+          ]
+
+      Spec.it s "resolved" $ do
+        check
+          s
+          """
+          module M
+            ( -- $foo
+              unit,
+            ) where
+
+          -- $foo
+          -- bar
+
+          unit :: ()
+          unit = ()
+          """
+          [ ("/exports/0/type", "\"Doc\""),
+            ("/exports/0/value/type", "\"Paragraph\""),
+            ("/exports/0/value/value/type", "\"String\""),
+            ("/exports/0/value/value/value", "\"bar\""),
+            ("/exports/1/type", "\"Identifier\""),
+            ("/exports/1/value/name/name", "\"unit\"")
+          ]
+
+      Spec.it s "does not create items for named chunks" $ do
+        check
+          s
+          """
+          module M
+            ( -- $foo
+              unit,
+            ) where
+
+          -- $foo
+          -- bar
+
+          unit :: ()
+          unit = ()
+          """
+          [ ("/items/0/value/name", "\"unit\""),
+            ("/items/0/value/kind/type", "\"Function\""),
+            ("/items/0/value/signature", "\"()\"")
           ]
 
   Spec.describe s "imports" $ do

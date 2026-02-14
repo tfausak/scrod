@@ -9,6 +9,7 @@ module Scrod.Convert.FromGhc.InstanceParents where
 
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import GHC.Hs ()
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc

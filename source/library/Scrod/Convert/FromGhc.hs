@@ -40,6 +40,7 @@ import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
+import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
@@ -66,6 +67,7 @@ fromGhc ::
 fromGhc isSignature ((language, extensions), lHsModule) = do
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
+      namedDocChunks = extractNamedDocChunks lHsModule
   Right
     Module.MkModule
       { Module.version = version,
@@ -76,7 +78,7 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.signature = isSignature,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
-        Module.exports = Exports.extractModuleExports lHsModule,
+        Module.exports = resolveNamedDocExports namedDocChunks <$> Exports.extractModuleExports lHsModule,
         Module.imports = extractModuleImports lHsModule,
         Module.items = extractItems lHsModule
       }
@@ -558,3 +560,38 @@ extractDerivStrategy ::
   Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
   Maybe Text.Text
 extractDerivStrategy = fmap (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)
+
+-- | Extract named documentation chunks from module declarations.
+extractNamedDocChunks ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Map.Map Text.Text Doc.Doc
+extractNamedDocChunks lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+      decls = Syntax.hsmodDecls hsModule
+   in Map.fromList $ Maybe.mapMaybe extractNamedDocChunk decls
+
+-- | Extract a named doc chunk from a declaration, if applicable.
+extractNamedDocChunk ::
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Maybe (Text.Text, Doc.Doc)
+extractNamedDocChunk lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.DocD _ (Hs.DocCommentNamed name lDoc) ->
+    Just (Text.pack name, GhcDoc.convertExportDoc lDoc)
+  _ -> Nothing
+
+-- | Resolve named documentation chunk references in an export list.
+resolveNamedDocExports ::
+  Map.Map Text.Text Doc.Doc ->
+  [Export.Export] ->
+  [Export.Export]
+resolveNamedDocExports namedChunks = fmap (resolveNamedDocExport namedChunks)
+
+-- | Resolve a single named documentation chunk reference.
+resolveNamedDocExport ::
+  Map.Map Text.Text Doc.Doc ->
+  Export.Export ->
+  Export.Export
+resolveNamedDocExport namedChunks export = case export of
+  Export.DocNamed name ->
+    maybe export Export.Doc (Map.lookup name namedChunks)
+  _ -> export

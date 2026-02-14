@@ -75,5 +75,7 @@ data ItemKind
     MinimalPragma
   | -- | Complete pragma: @{-# COMPLETE Nil, Cons #-}@
     CompletePragma
+  | -- | Default method signature: @default m :: Show a => a -> String@
+    DefaultMethodSignature
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

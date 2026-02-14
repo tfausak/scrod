@@ -43,6 +43,7 @@ import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
 import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
+import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
@@ -464,16 +465,18 @@ convertWarnDeclM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertWarnDeclM lWarnDecl = case SrcLoc.unLoc lWarnDecl of
   Syntax.Warning _ names warningTxt ->
-    let warningDoc = Doc.Paragraph . Doc.String . Warning.value $ Internal.warningTxtToWarning warningTxt
-     in Maybe.catMaybes <$> traverse (convertWarnNameM warningDoc) names
+    let warning = Internal.warningTxtToWarning warningTxt
+     in Maybe.catMaybes <$> traverse (convertWarnNameM warning) names
 
 -- | Convert a single name from a warning declaration.
 convertWarnNameM ::
-  Doc.Doc ->
+  Warning.Warning ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertWarnNameM doc lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Warning
+convertWarnNameM warning lName =
+  let doc = Doc.Paragraph . Doc.String $ Warning.value warning
+      sig = Just . Category.unwrap $ Warning.category warning
+   in Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing sig ItemKind.Warning
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

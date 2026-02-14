@@ -69,6 +69,7 @@ itemKindFromSig sig = case sig of
   Syntax.FixSig {} -> ItemKind.FixitySignature
   Syntax.InlineSig {} -> ItemKind.InlineSignature
   Syntax.SpecSig {} -> ItemKind.SpecialiseSignature
+  Syntax.MinimalSig {} -> ItemKind.MinimalPragma
   _ -> ItemKind.Function
 
 -- | Determine ItemKind from an instance declaration.

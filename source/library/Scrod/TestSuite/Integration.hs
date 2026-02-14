@@ -1899,7 +1899,14 @@ spec s = Spec.describe s "integration" $ do
           l2m :: a
           {-# minimal l2m #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Class\""),
+          ("/items/0/value/name", "\"L2\""),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/2/value/kind/type", "\"MinimalPragma\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"l2m\"")
+        ]
 
     Spec.it s "set cost center pragma" $ do
       check

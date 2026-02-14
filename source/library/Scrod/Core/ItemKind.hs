@@ -71,5 +71,7 @@ data ItemKind
     Splice
   | -- | Warning pragma: @{-# WARNING x "msg" #-}@
     Warning
+  | -- | Minimal pragma: @{-# MINIMAL size #-}@
+    MinimalPragma
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

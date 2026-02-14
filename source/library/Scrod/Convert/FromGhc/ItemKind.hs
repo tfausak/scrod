@@ -20,7 +20,7 @@ itemKindFromDecl decl = case decl of
   Syntax.KindSigD {} -> ItemKind.StandaloneKindSig
   Syntax.DefD {} -> ItemKind.Default
   Syntax.ForD _ foreignDecl -> itemKindFromForeignDecl foreignDecl
-  Syntax.WarningD {} -> ItemKind.Function -- Treat as function for now
+  Syntax.WarningD {} -> ItemKind.Warning
   Syntax.AnnD {} -> ItemKind.Annotation
   Syntax.RuleD {} -> ItemKind.Rule
   Syntax.SpliceD {} -> ItemKind.Splice
@@ -70,6 +70,8 @@ itemKindFromSig sig = case sig of
   Syntax.InlineSig {} -> ItemKind.InlineSignature
   Syntax.SpecSig {} -> ItemKind.SpecialiseSignature
   Syntax.SpecSigE {} -> ItemKind.SpecialiseSignature
+  Syntax.MinimalSig {} -> ItemKind.MinimalPragma
+  Syntax.CompleteMatchSig {} -> ItemKind.CompletePragma
   _ -> ItemKind.Function
 
 -- | Determine ItemKind from an instance declaration.

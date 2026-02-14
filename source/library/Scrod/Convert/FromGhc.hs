@@ -32,7 +32,9 @@ import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
+import qualified Scrod.Convert.FromGhc.FamilyInstanceParents as FamilyInstanceParents
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
+import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
@@ -196,9 +198,13 @@ extractItems lHsModule =
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
       fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
+      inlineLocations = InlineParents.extractInlineLocations lHsModule
+      inlineParentedItems = InlineParents.associateInlineParents inlineLocations fixityParentedItems
       specialiseLocations = SpecialiseParents.extractSpecialiseLocations lHsModule
-      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents specialiseLocations fixityParentedItems
-   in Merge.mergeItemsByName specialiseParentedItems
+      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents specialiseLocations inlineParentedItems
+      familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
+      familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames specialiseParentedItems
+   in Merge.mergeItemsByName familyParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -264,8 +270,9 @@ convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
     parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
+    minimalItems <- convertMinimalSigsM parentKey sigs
     familyItems <- convertFamilyDeclsM parentKey ats
-    pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
+    pure $ Maybe.maybeToList parentItem <> methodItems <> minimalItems <> familyItems
   Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractSynDeclSignature tyClDecl) lDecl
 
 -- | Convert an instance declaration with documentation.
@@ -293,10 +300,10 @@ convertSigDeclM ::
 convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.Function) names
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.PatternSynonym) names
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
@@ -307,6 +314,12 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let sigText = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
      in Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
   Syntax.SpecSigE _ _ lExpr _ -> convertSpecSigEM doc docSince lExpr
+  Syntax.CompleteMatchSig _ names mTyCon ->
+    let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
+        sigText = Just . Text.pack . Outputable.showSDocUnsafe $ case mTyCon of
+          Nothing -> namesSig
+          Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
+     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -314,10 +327,11 @@ convertSigNameM ::
   Doc.Doc ->
   Maybe Since.Since ->
   Maybe Text.Text ->
+  ItemKind.ItemKind ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc docSince sig lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.Function
+convertSigNameM doc docSince sig itemKind lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig itemKind
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -406,7 +420,15 @@ convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
-  Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing Nothing ItemKind.Rule
+  let ruleDecl = SrcLoc.unLoc lRuleDecl
+      name = Just . ItemName.MkItemName . Text.pack . FastString.unpackFS . SrcLoc.unLoc $ Syntax.rd_name ruleDecl
+      sig =
+        Just . Text.pack . Outputable.showSDocUnsafe $
+          Outputable.ppr (Syntax.rd_bndrs ruleDecl)
+            Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
+            Outputable.<+> Outputable.text "="
+            Outputable.<+> Outputable.ppr (Syntax.rd_rhs ruleDecl)
+   in Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing name Doc.Empty Nothing sig ItemKind.Rule
 
 -- | Convert warning declarations.
 convertWarnDeclsM ::
@@ -430,7 +452,7 @@ convertWarnNameM ::
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertWarnNameM doc lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Warning
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::
@@ -465,6 +487,24 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
        in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
     _ -> pure []
   _ -> pure []
+
+-- | Convert MINIMAL pragma signatures inside a class.
+convertMinimalSigsM ::
+  Maybe ItemKey.ItemKey ->
+  [Syntax.LSig Ghc.GhcPs] ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertMinimalSigsM parentKey = fmap Maybe.catMaybes . traverse (convertMinimalSigM parentKey)
+
+-- | Convert a single MINIMAL pragma signature.
+convertMinimalSigM ::
+  Maybe ItemKey.ItemKey ->
+  Syntax.LSig Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
+  Syntax.MinimalSig _ lBooleanFormula ->
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
+     in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
+  _ -> pure Nothing
 
 -- | Convert an identifier with parent key, documentation, and signature.
 convertIdPM ::

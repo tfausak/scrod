@@ -9,11 +9,11 @@ module Scrod.Convert.FromGhc.WarningParents where
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
+import GHC.Hs.Decls ()
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Language.Haskell.Syntax as Syntax
-import GHC.Hs.Decls ()
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey

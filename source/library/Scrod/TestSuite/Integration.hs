@@ -2164,6 +2164,25 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/signature", "\"nominal phantom\"")
         ]
 
+    Spec.it s "role annotation with name collision data T = T" $ do
+      check
+        s
+        """
+        {-# language RoleAnnotations #-}
+        data T = T
+        type role T nominal
+        """
+        [ ("/items/0/value/name", "\"T\""),
+          ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/1/value/name", "\"T\""),
+          ("/items/2/value/name", "\"T\""),
+          ("/items/2/value/kind/type", "\"RoleAnnotation\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"nominal\"")
+        ]
+
     Spec.it s "orphaned role annotation has no parent" $ do
       check
         s

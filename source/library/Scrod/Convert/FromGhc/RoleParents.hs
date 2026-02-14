@@ -46,7 +46,10 @@ associateRoleParents roleLocations items =
   let nameToKey = buildNameToKeyMap roleLocations items
    in fmap (resolveRoleParent roleLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding role annotation items.
+-- | Build a map from item names to their keys, excluding role annotation
+-- items and child items. Only top-level declarations (those with no
+-- parentKey) are eligible parents, so that @data T = T@ maps to the
+-- type declaration rather than the constructor.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
@@ -60,6 +63,7 @@ buildNameToKeyMap roleLocations =
             Nothing -> []
             Just name ->
               if Set.member (Located.location locItem) roleLocations
+                || Item.parentKey val /= Nothing
                 then []
                 else [(name, Item.key val)]
 

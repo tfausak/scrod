@@ -1934,7 +1934,9 @@ spec s = Spec.describe s "integration" $ do
         pattern N2 = ()
         {-# complete N2 #-}
         """
-        []
+        [ ("/items/1/value/kind/type", "\"CompletePragma\""),
+          ("/items/1/value/signature", "\"N2\"")
+        ]
 
     Spec.it s "standalone kind signature" $ do
       check

@@ -73,5 +73,7 @@ data ItemKind
     Warning
   | -- | Minimal pragma: @{-# MINIMAL size #-}@
     MinimalPragma
+  | -- | Complete pragma: @{-# COMPLETE Nil, Cons #-}@
+    CompletePragma
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

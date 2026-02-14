@@ -22,6 +22,7 @@ import qualified GHC.Hs.DocString as DocString
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
+import qualified GHC.Types.Basic as Basic
 import qualified GHC.Types.PkgQual as PkgQual
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
@@ -314,8 +315,9 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
      in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
-  Syntax.InlineSig _ lName _ ->
-    Maybe.maybeToList <$> convertInlineNameM doc docSince lName
+  Syntax.InlineSig _ lName inlinePragma ->
+    let sigText = Just . inlineSpecToText $ Basic.inl_inline inlinePragma
+     in Maybe.maybeToList <$> convertInlineNameM doc docSince sigText lName
   Syntax.SpecSig _ lName sigTypes _ ->
     let sigText = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
      in Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
@@ -351,10 +353,11 @@ convertFixityNameM fixityDoc lName =
 convertInlineNameM ::
   Doc.Doc ->
   Maybe Since.Since ->
+  Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertInlineNameM doc docSince lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince Nothing ItemKind.InlineSignature
+convertInlineNameM doc docSince sig lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.InlineSignature
 
 -- | Convert a single name from a SPECIALIZE signature.
 convertSpecialiseNameM ::
@@ -395,6 +398,15 @@ fixityDirectionToText dir = case dir of
   SyntaxBasic.InfixL -> Text.pack "infixl"
   SyntaxBasic.InfixR -> Text.pack "infixr"
   SyntaxBasic.InfixN -> Text.pack "infix"
+
+-- | Convert a GHC 'InlineSpec' to its pragma keyword text.
+inlineSpecToText :: Basic.InlineSpec -> Text.Text
+inlineSpecToText inlineSpec = case inlineSpec of
+  Basic.Inline {} -> Text.pack "INLINE"
+  Basic.Inlinable {} -> Text.pack "INLINABLE"
+  Basic.NoInline {} -> Text.pack "NOINLINE"
+  Basic.Opaque {} -> Text.pack "OPAQUE"
+  Basic.NoUserInlinePrag -> Text.pack "INLINE"
 
 -- | Convert a simple declaration without special handling.
 convertDeclSimpleM ::

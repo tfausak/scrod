@@ -452,10 +452,9 @@ convertWarnNameM ::
   Warning.Warning ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertWarnNameM warning lName = do
+convertWarnNameM warning lName =
   let doc = Doc.Paragraph . Doc.String $ Warning.value warning
-  result <- Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Warning
-  pure $ fmap (\li -> li {Located.value = (Located.value li) {Item.warning = Just warning}}) result
+   in Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing (ItemKind.Warning warning)
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

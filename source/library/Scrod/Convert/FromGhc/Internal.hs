@@ -203,8 +203,7 @@ mkItemWithKeyM srcSpan parentKey itemName doc itemSince sig itemKind =
                       Item.name = itemName,
                       Item.documentation = doc,
                       Item.since = itemSince,
-                      Item.signature = sig,
-                      Item.warning = Nothing
+                      Item.signature = sig
                     }
               },
             key

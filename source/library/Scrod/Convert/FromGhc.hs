@@ -198,6 +198,11 @@ extractItems lHsModule =
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
+      -- Parent association: associate pragma and annotation items with
+      -- their target declarations by matching names. Each pass handles
+      -- one pragma type (warning, fixity, inline, specialise, role).
+      -- These run before merging because merged items need their parent
+      -- relationships already established.
       warningLocations = WarningParents.extractWarningLocations lHsModule
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
@@ -211,6 +216,12 @@ extractItems lHsModule =
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems
+      -- COMPLETE pragma association runs after merging and uses inverted
+      -- semantics: pattern synonyms are parented to the COMPLETE pragma
+      -- (not the pragma to the patterns). This is because COMPLETE
+      -- pragmas group patterns together rather than annotating a single
+      -- declaration. It must run after merging because pattern synonyms
+      -- are merged with their type signatures first.
       completeNames = CompleteParents.extractCompleteNames lHsModule
    in CompleteParents.associateCompleteParents completeNames mergedItems
 

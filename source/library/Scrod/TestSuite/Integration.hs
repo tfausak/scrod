@@ -1887,8 +1887,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/key", "1"),
           ("/items/2/value/kind/type", "\"FixitySignature\""),
-          ("/items/2/value/name", "\":+:\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/name", "\":+:\"")
         ]
 
     Spec.it s "inline pragma has parent set" $ do

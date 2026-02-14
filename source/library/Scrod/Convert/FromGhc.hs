@@ -264,8 +264,9 @@ convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
     parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
+    minimalItems <- convertMinimalSigsM parentKey sigs
     familyItems <- convertFamilyDeclsM parentKey ats
-    pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
+    pure $ Maybe.maybeToList parentItem <> methodItems <> minimalItems <> familyItems
   Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractSynDeclSignature tyClDecl) lDecl
 
 -- | Convert an instance declaration with documentation.
@@ -434,6 +435,24 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
        in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
     _ -> pure []
   _ -> pure []
+
+-- | Convert MINIMAL pragma signatures inside a class.
+convertMinimalSigsM ::
+  Maybe ItemKey.ItemKey ->
+  [Syntax.LSig Ghc.GhcPs] ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertMinimalSigsM parentKey = fmap Maybe.catMaybes . traverse (convertMinimalSigM parentKey)
+
+-- | Convert a single MINIMAL pragma signature.
+convertMinimalSigM ::
+  Maybe ItemKey.ItemKey ->
+  Syntax.LSig Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
+  Syntax.MinimalSig _ lBooleanFormula ->
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
+     in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
+  _ -> pure Nothing
 
 -- | Convert an identifier with parent key, documentation, and signature.
 convertIdPM ::

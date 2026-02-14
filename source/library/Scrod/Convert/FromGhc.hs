@@ -30,6 +30,7 @@ import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
 import qualified PackageInfo_scrod as PackageInfo
+import qualified Scrod.Convert.FromGhc.CompleteParents as CompleteParents
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
@@ -209,7 +210,9 @@ extractItems lHsModule =
       roleParentedItems = RoleParents.associateRoleParents roleLocations specialiseParentedItems
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
-   in Merge.mergeItemsByName familyParentedItems
+      mergedItems = Merge.mergeItemsByName familyParentedItems
+      completeNames = CompleteParents.extractCompleteNames lHsModule
+   in CompleteParents.associateCompleteParents completeNames mergedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::

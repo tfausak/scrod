@@ -1963,7 +1963,16 @@ spec s = Spec.describe s "integration" $ do
         type O :: *
         data O
         """
-        []
+        [("/items/0/value/signature", "\"*\"")]
+
+    Spec.it s "standalone kind signature with data" $ do
+      check
+        s
+        """
+        type X :: a -> a
+        data X a = X
+        """
+        [("/items/0/value/signature", "\"a -> a\"")]
 
     Spec.it s "default declaration" $ do
       check s "default ()" [("/items", "[]")]

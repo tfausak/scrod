@@ -13,6 +13,7 @@ import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Hs.Doc as HsDoc
 import qualified GHC.Hs.Extension as Ghc
+import GHC.Hs.Type ()
 import qualified GHC.Types.Name.Reader as Reader
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
@@ -136,7 +137,6 @@ extractIdPName = ItemName.MkItemName . extractRdrName
 extractFieldOccName :: Syntax.LFieldOcc Ghc.GhcPs -> ItemName.ItemName
 extractFieldOccName lFieldOcc = case SrcLoc.unLoc lFieldOcc of
   Syntax.FieldOcc _ lbl -> ItemName.MkItemName $ extractRdrName lbl
-  Syntax.XFieldOcc _ -> ItemName.MkItemName . Text.pack $ ""
 
 -- | Append two 'Doc' values.
 appendDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc

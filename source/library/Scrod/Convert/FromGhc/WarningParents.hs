@@ -1,6 +1,3 @@
--- TODO: Figure out why this is necessary and remove it.
-{-# OPTIONS_GHC -Wno-overlapping-patterns #-}
-
 -- | Resolve warning parent relationships.
 --
 -- Associates warning pragma items with their target declarations when
@@ -16,6 +13,7 @@ import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Language.Haskell.Syntax as Syntax
+import GHC.Hs.Decls ()
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
@@ -49,7 +47,6 @@ extractWarnDeclLocations ::
 extractWarnDeclLocations lWarnDecl = case SrcLoc.unLoc lWarnDecl of
   Syntax.Warning _ names _ ->
     concatMap (foldMap pure . Internal.locationFromSrcSpan . Annotation.getLocA) names
-  Syntax.XWarnDecl {} -> []
 
 -- | Associate warning items with their target declarations.
 associateWarningParents ::

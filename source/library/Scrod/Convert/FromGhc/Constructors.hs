@@ -23,6 +23,7 @@ import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Located as Located
+import qualified Scrod.Core.Since as Since
 
 -- | Convert a constructor declaration.
 -- GADT constructors can declare multiple names (e.g. @A, B :: Int -> T@),
@@ -34,12 +35,12 @@ convertConDeclM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertConDeclM parentKey parentType lConDecl = do
   let conDecl = SrcLoc.unLoc lConDecl
-      conDoc = extractConDeclDoc conDecl
+      (conDoc, conSince) = extractConDeclDocAndSince conDecl
       conSig = extractConDeclSignature parentType conDecl
       conKind = constructorKind conDecl
       conNames = Names.extractConDeclNames conDecl
   fmap concat
-    . traverse (convertOneConNameM (Annotation.getLocA lConDecl) parentKey conDoc conSig conKind conDecl)
+    . traverse (convertOneConNameM (Annotation.getLocA lConDecl) parentKey conDoc conSince conSig conKind conDecl)
     $ NonEmpty.toList conNames
 
 -- | Create items for a single constructor name, plus any record fields.
@@ -47,18 +48,20 @@ convertOneConNameM ::
   SrcLoc.SrcSpan ->
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   ItemKind.ItemKind ->
   Syntax.ConDecl Ghc.GhcPs ->
   ItemName.ItemName ->
   Internal.ConvertM [Located.Located Item.Item]
-convertOneConNameM srcSpan parentKey conDoc conSig conKind conDecl conName = do
+convertOneConNameM srcSpan parentKey conDoc conSince conSig conKind conDecl conName = do
   result <-
     Internal.mkItemWithKeyM
       srcSpan
       parentKey
       (Just conName)
       conDoc
+      conSince
       conSig
       conKind
   case result of
@@ -73,13 +76,13 @@ constructorKind conDecl = case conDecl of
   Syntax.ConDeclH98 {} -> ItemKind.DataConstructor
   Syntax.ConDeclGADT {} -> ItemKind.GADTConstructor
 
--- | Extract documentation from a constructor declaration.
-extractConDeclDoc :: Syntax.ConDecl Ghc.GhcPs -> Doc.Doc
-extractConDeclDoc conDecl = case conDecl of
+-- | Extract documentation and @since from a constructor declaration.
+extractConDeclDocAndSince :: Syntax.ConDecl Ghc.GhcPs -> (Doc.Doc, Maybe Since.Since)
+extractConDeclDocAndSince conDecl = case conDecl of
   Syntax.ConDeclH98 {Syntax.con_doc = mDoc} ->
-    maybe Doc.Empty GhcDoc.convertLHsDoc mDoc
+    maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
   Syntax.ConDeclGADT {Syntax.con_doc = mDoc} ->
-    maybe Doc.Empty GhcDoc.convertLHsDoc mDoc
+    maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
 
 -- | Extract signature from a constructor declaration.
 -- Returns only the type portion (no constructor name or @::@).
@@ -228,22 +231,24 @@ convertConDeclFieldM ::
 convertConDeclFieldM parentKey lField =
   let recField = SrcLoc.unLoc lField
       fieldSpec = Syntax.cdrf_spec recField
-      doc = maybe Doc.Empty GhcDoc.convertLHsDoc $ Syntax.cdf_doc fieldSpec
+      (doc, docSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc fieldSpec
       sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ Syntax.cdf_type fieldSpec
-   in Maybe.catMaybes <$> traverse (convertFieldNameM parentKey doc sig) (Syntax.cdrf_names recField)
+   in Maybe.catMaybes <$> traverse (convertFieldNameM parentKey doc docSince sig) (Syntax.cdrf_names recField)
 
 -- | Convert a single field name to an item.
 convertFieldNameM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   Syntax.LFieldOcc Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertFieldNameM parentKey doc sig lFieldOcc =
+convertFieldNameM parentKey doc docSince sig lFieldOcc =
   Internal.mkItemM
     (Annotation.getLocA lFieldOcc)
     parentKey
     (Just $ Internal.extractFieldOccName lFieldOcc)
     doc
+    docSince
     sig
     ItemKind.RecordField

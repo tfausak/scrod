@@ -938,6 +938,42 @@ spec s = Spec.describe s "integration" $ do
             ("/items/0/value/signature", "\"Int\"")
           ]
 
+      Spec.it s "works with @since annotation" $ do
+        check
+          s
+          """
+          -- | Docs
+          --
+          -- @since 1.2.3
+          x :: Int
+          x = 0
+          """
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/value/since/version", "[1,2,3]")
+          ]
+
+      Spec.it s "works with @since annotation with package" $ do
+        check
+          s
+          """
+          -- | Docs
+          --
+          -- @since base-4.16.0
+          x :: Int
+          x = 0
+          """
+          [ ("/items/0/value/name", "\"x\""),
+            ("/items/0/value/since/package", "\"base\""),
+            ("/items/0/value/since/version", "[4,16,0]")
+          ]
+
+      Spec.it s "defaults to no @since" $ do
+        check
+          s
+          "x = 0"
+          [ ("/items/0/value/since", "")
+          ]
+
     Spec.it s "open type family" $ do
       check s "{-# language TypeFamilies #-} type family A" [("/items/0/value/kind/type", "\"OpenTypeFamily\"")]
 
@@ -1344,7 +1380,8 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/2/value/kind/type", "\"StandaloneDeriving\""),
           ("/items/2/value/name", "\"O W2\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"anyclass\"")
         ]
 
     Spec.it s "standalone deriving via" $ do
@@ -1377,6 +1414,39 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "\"Show\""),
           ("/items/2/value/kind/type", "\"DerivedInstance\""),
           ("/items/2/value/name", "\"Eq\"")
+        ]
+
+    Spec.it s "data deriving stock" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies #-}
+        data R3 deriving stock Show
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"stock\"")
+        ]
+
+    Spec.it s "data deriving via" $ do
+      check
+        s
+        """
+        {-# LANGUAGE DerivingStrategies, DerivingVia #-}
+        data R5 deriving Show via ()
+        """
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "\"via ()\"")
+        ]
+
+    Spec.it s "data deriving no strategy" $ do
+      check
+        s
+        "data R6 deriving Show"
+        [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
+          ("/items/1/value/name", "\"Show\""),
+          ("/items/1/value/signature", "")
         ]
 
     Spec.it s "data GADT deriving" $ do
@@ -1732,7 +1802,7 @@ spec s = Spec.describe s "integration" $ do
         []
 
     Spec.it s "default declaration" $ do
-      check s "default ()" []
+      check s "default ()" [("/items", "[]")]
 
     Spec.it s "foreign import" $ do
       check
@@ -1752,14 +1822,54 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"IO ()\"")
         ]
 
-    Spec.it s "warning pragma" $ do
+    Spec.it s "warning pragma has parent set" $ do
       check
         s
         """
         x = ()
-        {-# warning x "" #-}
+        {-# warning x "w" #-}
         """
-        []
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/documentation/value/value", "\"w\"")
+        ]
+
+    Spec.it s "warning pragma with multiple names" $ do
+      check
+        s
+        """
+        x = ()
+        y = ()
+        {-# warning x, y "z" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"y\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/2/value/name", "\"x\""),
+          ("/items/2/value/kind/type", "\"Function\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/documentation/value/value", "\"z\""),
+          ("/items/3/value/name", "\"y\""),
+          ("/items/3/value/kind/type", "\"Function\""),
+          ("/items/3/value/parentKey", "1"),
+          ("/items/3/value/documentation/value/value", "\"z\"")
+        ]
+
+    Spec.it s "orphaned warning pragma has no parent" $ do
+      check
+        s
+        """
+        {-# warning x "w" #-}
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/parentKey", ""),
+          ("/items/0/value/documentation/value/value", "\"w\"")
+        ]
 
     Spec.it s "value annotation" $ do
       check

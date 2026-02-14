@@ -99,11 +99,11 @@ convertIE lIe = case SrcLoc.unLoc lIe of
         { Section.header =
             Header.MkHeader
               { Header.level = levelFromInt level,
-                Header.title = GhcDoc.convertLHsDoc lDoc
+                Header.title = GhcDoc.convertExportDoc lDoc
               }
         }
   Syntax.IEDoc _ lDoc ->
-    Export.Doc $ GhcDoc.convertLHsDoc lDoc
+    Export.Doc $ GhcDoc.convertExportDoc lDoc
   Syntax.IEDocNamed _ name ->
     Export.DocNamed $ Text.pack name
 

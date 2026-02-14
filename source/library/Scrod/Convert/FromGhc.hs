@@ -13,8 +13,6 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Version
-import qualified Documentation.Haddock.Parser as Haddock
-import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Driver.DynFlags as DynFlags
 import qualified GHC.Driver.Session as Session
@@ -30,17 +28,17 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
-import qualified Numeric.Natural as Natural
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
+import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
-import qualified Scrod.Convert.FromHaddock as FromHaddock
+import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
@@ -126,19 +124,11 @@ extractModuleName lHsModule = do
   Internal.locatedFromGhc $ SrcLoc.L srcSpan moduleName
 
 -- | Extract module documentation and @since information from the parsed module.
--- Parses the Haddock MetaDoc once and extracts both the Doc and Since.
 extractModuleDocAndSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   (Doc.Doc, Maybe Since.Since)
 extractModuleDocAndSince lHsModule =
-  case extractRawDocString lHsModule of
-    Nothing -> (Doc.Empty, Nothing)
-    Just rawDocString ->
-      let metaDoc :: Haddock.MetaDoc m Haddock.Identifier
-          metaDoc = Haddock.parseParas Nothing rawDocString
-          doc = FromHaddock.fromHaddock $ Haddock._doc metaDoc
-          since = Haddock._metaSince (Haddock._meta metaDoc) >>= metaSinceToSince
-       in (doc, since)
+  maybe (Doc.Empty, Nothing) GhcDoc.parseDoc (extractRawDocString lHsModule)
 
 -- | Extract raw documentation string from the module header.
 extractRawDocString ::
@@ -151,19 +141,6 @@ extractRawDocString lHsModule = do
   let hsDoc = SrcLoc.unLoc lHsDoc
       hsDocString = HsDoc.hsDocString hsDoc
   Just $ DocString.renderHsDocString hsDocString
-
--- | Convert a Haddock MetaSince to our 'Since'.
-metaSinceToSince :: Haddock.MetaSince -> Maybe Since.Since
-metaSinceToSince metaSince = do
-  versionNE <- NonEmpty.nonEmpty $ Haddock.sinceVersion metaSince
-  Just
-    Since.MkSince
-      { Since.package =
-          PackageName.MkPackageName . Text.pack
-            <$> Haddock.sincePackage metaSince,
-        Since.version =
-          Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
-      }
 
 -- | Extract module deprecation warning.
 extractModuleWarning ::
@@ -211,7 +188,11 @@ extractItems lHsModule =
   let rawItems = Internal.runConvert $ extractItemsM lHsModule
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes rawItems
-   in Merge.mergeItemsByName parentedItems
+      warningLocations = WarningParents.extractWarningLocations lHsModule
+      warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
+      fixityLocations = FixityParents.extractFixityLocations lHsModule
+      fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
+   in Merge.mergeItemsByName fixityParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -221,99 +202,109 @@ extractItemsM lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
       declsWithDocs = GhcDoc.associateDocs decls
-  concat <$> traverse (uncurry convertDeclWithDocMaybeM) declsWithDocs
+  concat <$> traverse (\(doc, docSince, lDecl) -> convertDeclWithDocMaybeM doc docSince lDecl) declsWithDocs
 
 -- | Convert a declaration with documentation.
 convertDeclWithDocMaybeM ::
   Doc.Doc ->
+  Maybe Since.Since ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertDeclWithDocMaybeM doc lDecl = case SrcLoc.unLoc lDecl of
-  Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc lDecl tyClDecl
+convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc docSince lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
-  Syntax.SigD _ sig -> convertSigDeclM doc lDecl sig
+  Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
   Syntax.KindSigD _ kindSig ->
     let sig = Just $ Names.extractKindSigSignature kindSig
-     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Just $ Names.extractStandaloneKindSigName kindSig) sig lDecl
-  Syntax.InstD _ inst -> convertInstDeclWithDocM doc lDecl inst
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Just $ Names.extractStandaloneKindSigName kindSig) sig lDecl
+  Syntax.InstD _ inst -> convertInstDeclWithDocM doc docSince lDecl inst
   Syntax.ForD _ foreignDecl ->
     let name = Just $ Names.extractForeignDeclName foreignDecl
         sig = Just $ Names.extractForeignDeclSignature foreignDecl
-     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc name sig lDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince name sig lDecl
   Syntax.SpliceD _ spliceDecl ->
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
-     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc Nothing sig lDecl
-  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractDeclName lDecl) Nothing lDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
+  Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
+  Syntax.DefD {} -> pure []
+  Syntax.DerivD _ derivDecl ->
+    let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) strategy lDecl
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) Nothing lDecl
 
 -- | Convert a type/class declaration with documentation.
 convertTyClDeclWithDocM ::
   Doc.Doc ->
+  Maybe Since.Since ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Syntax.TyClDecl Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertTyClDeclWithDocM doc lDecl tyClDecl = case tyClDecl of
+convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
   Syntax.FamDecl _ famDecl -> case Syntax.fdInfo famDecl of
     Syntax.ClosedTypeFamily (Just eqns) -> do
-      parentItem <- convertDeclWithDocM Nothing doc (Names.extractTyClDeclName tyClDecl) Nothing lDecl
+      parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) Nothing lDecl
       let parentKey = fmap (Item.key . Located.value) parentItem
       eqnItems <- convertTyFamInstEqnsM parentKey eqns
       pure $ Maybe.maybeToList parentItem <> eqnItems
-    _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractTyClDeclName tyClDecl) Nothing lDecl
+    _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) Nothing lDecl
   Syntax.DataDecl _ _ _ _ dataDefn -> do
-    parentItem <- convertDeclWithDocM Nothing doc (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
+    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
         parentType = Names.extractParentTypeText tyClDecl
     childItems <- convertDataDefnM parentKey parentType dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
-    parentItem <- convertDeclWithDocM Nothing doc (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
+    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     familyItems <- convertFamilyDeclsM parentKey ats
     pure $ Maybe.maybeToList parentItem <> methodItems <> familyItems
-  Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractTyClDeclName tyClDecl) (Names.extractSynDeclSignature tyClDecl) lDecl
+  Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractSynDeclSignature tyClDecl) lDecl
 
 -- | Convert an instance declaration with documentation.
 convertInstDeclWithDocM ::
   Doc.Doc ->
+  Maybe Since.Since ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Syntax.InstDecl Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertInstDeclWithDocM doc lDecl inst = case inst of
+convertInstDeclWithDocM doc docSince lDecl inst = case inst of
   Syntax.DataFamInstD _ dataFamInst -> do
-    parentItem <- convertDeclWithDocM Nothing doc (Names.extractInstDeclName inst) Nothing lDecl
+    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     childItems <- convertDataDefnM parentKey Nothing (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
     pure $ Maybe.maybeToList parentItem <> childItems
-  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractInstDeclName inst) Nothing lDecl
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
 
 -- | Convert a signature declaration.
 convertSigDeclM ::
   Doc.Doc ->
+  Maybe Since.Since ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Syntax.Sig Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertSigDeclM doc lDecl sig = case sig of
+convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
      in Maybe.catMaybes <$> traverse (convertFixityNameM fixityDoc) names
-  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc (Names.extractSigName sig) Nothing lDecl
+  _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
 convertSigNameM ::
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc sig lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc sig ItemKind.Function
+convertSigNameM doc docSince sig lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.Function
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -321,7 +312,7 @@ convertFixityNameM ::
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertFixityNameM fixityDoc lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing ItemKind.Function
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing Nothing ItemKind.FixitySignature
 
 -- | Convert a fixity direction to text.
 fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text
@@ -334,19 +325,20 @@ fixityDirectionToText dir = case dir of
 convertDeclSimpleM ::
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertDeclSimpleM = convertDeclWithDocM Nothing Doc.Empty Nothing Nothing
+convertDeclSimpleM = convertDeclWithDocM Nothing Doc.Empty Nothing Nothing Nothing
 
 -- | Convert a declaration with documentation.
 convertDeclWithDocM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe ItemName.ItemName ->
   Maybe Text.Text ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertDeclWithDocM parentKey doc itemName sig lDecl =
+convertDeclWithDocM parentKey doc docSince itemName sig lDecl =
   let itemKind = ItemKindFrom.itemKindFromDecl $ SrcLoc.unLoc lDecl
-   in Internal.mkItemM (Annotation.getLocA lDecl) parentKey itemName doc sig itemKind
+   in Internal.mkItemM (Annotation.getLocA lDecl) parentKey itemName doc docSince sig itemKind
 
 -- | Convert rule declarations.
 convertRuleDeclsM ::
@@ -359,7 +351,31 @@ convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
-  Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing ItemKind.Rule
+  Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing Nothing ItemKind.Rule
+
+-- | Convert warning declarations.
+convertWarnDeclsM ::
+  Syntax.WarnDecls Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertWarnDeclsM (Syntax.Warnings _ warnDecls) =
+  concat <$> traverse convertWarnDeclM warnDecls
+
+-- | Convert a single warning declaration.
+convertWarnDeclM ::
+  Syntax.LWarnDecl Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertWarnDeclM lWarnDecl = case SrcLoc.unLoc lWarnDecl of
+  Syntax.Warning _ names warningTxt ->
+    let warningDoc = Doc.Paragraph . Doc.String . Warning.value $ Internal.warningTxtToWarning warningTxt
+     in Maybe.catMaybes <$> traverse (convertWarnNameM warningDoc) names
+
+-- | Convert a single name from a warning declaration.
+convertWarnNameM ::
+  Doc.Doc ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertWarnNameM doc lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::
@@ -373,7 +389,7 @@ convertClassSigsWithDocsM parentKey sigs docs =
       docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
       allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
       sigsWithDocs = GhcDoc.associateDocs allDecls
-   in concat <$> traverse (uncurry (convertClassDeclWithDocM parentKey)) sigsWithDocs
+   in concat <$> traverse (\(doc, docSince, lDecl) -> convertClassDeclWithDocM parentKey doc docSince lDecl) sigsWithDocs
   where
     isClassOpSig :: Syntax.LSig Ghc.GhcPs -> Bool
     isClassOpSig lSig = case SrcLoc.unLoc lSig of
@@ -384,13 +400,14 @@ convertClassSigsWithDocsM parentKey sigs docs =
 convertClassDeclWithDocM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertClassDeclWithDocM parentKey doc lDecl = case SrcLoc.unLoc lDecl of
+convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SigD _ sig -> case sig of
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
-       in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc sigText) names
+       in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
     _ -> pure []
   _ -> pure []
 
@@ -398,11 +415,12 @@ convertClassDeclWithDocM parentKey doc lDecl = case SrcLoc.unLoc lDecl of
 convertIdPM ::
   Maybe ItemKey.ItemKey ->
   Doc.Doc ->
+  Maybe Since.Since ->
   Maybe Text.Text ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertIdPM parentKey doc sig lIdP =
-  Internal.mkItemM (Annotation.getLocA lIdP) parentKey (Just $ Internal.extractIdPName lIdP) doc sig ItemKind.ClassMethod
+convertIdPM parentKey doc docSince sig lIdP =
+  Internal.mkItemM (Annotation.getLocA lIdP) parentKey (Just $ Internal.extractIdPName lIdP) doc docSince sig ItemKind.ClassMethod
 
 -- | Convert family declarations.
 convertFamilyDeclsM ::
@@ -425,6 +443,7 @@ convertFamilyDeclM parentKey lFamilyDecl =
         (Just $ Names.extractFamilyDeclName famDecl)
         Doc.Empty
         Nothing
+        Nothing
         itemKind
 
 -- | Convert type family instance equations.
@@ -442,7 +461,7 @@ convertTyFamInstEqnM ::
 convertTyFamInstEqnM parentKey lEqn =
   let eqn = SrcLoc.unLoc lEqn
       sig = Just . Text.pack . Outputable.showSDocUnsafe $ extractTyFamInstEqnSig eqn
-   in Internal.mkItemM (Annotation.getLocA lEqn) parentKey Nothing Doc.Empty sig ItemKind.TypeFamilyInstance
+   in Internal.mkItemM (Annotation.getLocA lEqn) parentKey Nothing Doc.Empty Nothing sig ItemKind.TypeFamilyInstance
 
 -- | Pretty-print a type family instance equation.
 extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
@@ -483,25 +502,29 @@ convertDerivingClauseM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertDerivingClauseM parentKey lClause = do
   let clause = SrcLoc.unLoc lClause
+      strategy = extractDerivStrategy $ Syntax.deriv_clause_strategy clause
       derivClauseTys = SrcLoc.unLoc $ Syntax.deriv_clause_tys clause
-  convertDerivClauseTysM parentKey derivClauseTys
+  convertDerivClauseTysM parentKey strategy derivClauseTys
 
 -- | Convert deriving clause types.
 convertDerivClauseTysM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.DerivClauseTys Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
-convertDerivClauseTysM parentKey dct = case dct of
-  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList <$> convertDerivedTypeM parentKey lSigTy
-  Syntax.DctMulti _ lSigTys -> Maybe.catMaybes <$> traverse (convertDerivedTypeM parentKey) lSigTys
+convertDerivClauseTysM parentKey strategy dct = case dct of
+  Syntax.DctSingle _ lSigTy -> Maybe.maybeToList <$> convertDerivedTypeM parentKey strategy lSigTy
+  Syntax.DctMulti _ lSigTys -> Maybe.catMaybes <$> traverse (convertDerivedTypeM parentKey strategy) lSigTys
 
 -- | Convert a derived type to an item.
 convertDerivedTypeM ::
   Maybe ItemKey.ItemKey ->
+  Maybe Text.Text ->
   Syntax.LHsSigType Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertDerivedTypeM parentKey lSigTy =
-  Internal.mkItemM (Annotation.getLocA lSigTy) parentKey (extractDerivedTypeName lSigTy) (extractDerivedTypeDoc lSigTy) Nothing ItemKind.DerivedInstance
+convertDerivedTypeM parentKey strategy lSigTy =
+  let (doc, docSince) = extractDerivedTypeDocAndSince lSigTy
+   in Internal.mkItemM (Annotation.getLocA lSigTy) parentKey (extractDerivedTypeName lSigTy) doc docSince strategy ItemKind.DerivedInstance
 
 -- | Extract name from a derived type.
 extractDerivedTypeName :: Syntax.LHsSigType Ghc.GhcPs -> Maybe ItemName.ItemName
@@ -513,11 +536,17 @@ extractDerivedTypeName lSigTy =
         _ -> bodyTy
    in Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ ty
 
--- | Extract documentation from a derived type.
-extractDerivedTypeDoc :: Syntax.LHsSigType Ghc.GhcPs -> Doc.Doc
-extractDerivedTypeDoc lSigTy =
+-- | Extract documentation and @since from a derived type.
+extractDerivedTypeDocAndSince :: Syntax.LHsSigType Ghc.GhcPs -> (Doc.Doc, Maybe Since.Since)
+extractDerivedTypeDocAndSince lSigTy =
   let sigTy = SrcLoc.unLoc lSigTy
       bodyTy = SrcLoc.unLoc $ Syntax.sig_body sigTy
    in case bodyTy of
         Syntax.HsDocTy _ _ lDoc -> GhcDoc.convertLHsDoc lDoc
-        _ -> Doc.Empty
+        _ -> (Doc.Empty, Nothing)
+
+-- | Extract deriving strategy text from a deriving clause.
+extractDerivStrategy ::
+  Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
+  Maybe Text.Text
+extractDerivStrategy = fmap (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)

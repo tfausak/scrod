@@ -309,7 +309,12 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
   Syntax.DataFamInstD _ dataFamInst -> do
     parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
-    childItems <- convertDataDefnM parentKey Nothing (Syntax.feqn_rhs $ Syntax.dfid_eqn dataFamInst)
+        eqn = Syntax.dfid_eqn dataFamInst
+        parentType =
+          Just . Text.pack . Outputable.showSDocUnsafe $
+            Outputable.ppr (Syntax.feqn_tycon eqn)
+              Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
+    childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
     pure $ Maybe.maybeToList parentItem <> childItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
 

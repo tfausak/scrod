@@ -1377,7 +1377,8 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"B ()\"")
         ]
 
     Spec.it s "data instance constructor GADT" $ do
@@ -1405,7 +1406,20 @@ spec s = Spec.describe s "integration" $ do
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"() -> F\"")
+        ]
+
+    Spec.it s "newtype instance with type argument" $ do
+      check
+        s
+        """
+        {-# language TypeFamilies #-}
+        data family Collection a
+        newtype instance Collection Int = CollectionInt [Int]
+        """
+        [ ("/items/2/value/kind/type", "\"DataConstructor\""),
+          ("/items/2/value/signature", "\"[Int] -> Collection Int\"")
         ]
 
     Spec.it s "newtype instance GADT" $ do

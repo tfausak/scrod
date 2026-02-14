@@ -2323,6 +2323,92 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"nominal\"")
         ]
 
+  Spec.describe s "pragma combinations" $ do
+    Spec.it s "inline and specialize on same function" $ do
+      check
+        s
+        """
+        f :: a -> a
+        f = id
+        {-# inline f #-}
+        {-# specialize f :: () -> () #-}
+        """
+        [ ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/name", "\"f\""),
+          ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/parentKey", "3"),
+          ("/items/2/value/name", "\"f\""),
+          ("/items/2/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/2/value/parentKey", "2")
+        ]
+
+    Spec.it s "warning and inline on same function" $ do
+      check
+        s
+        """
+        g :: a -> a
+        g = id
+        {-# warning g "deprecated" #-}
+        {-# inline g #-}
+        """
+        [ ("/items/0/value/name", "\"g\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/name", "\"g\""),
+          ("/items/1/value/kind/type", "\"Warning\""),
+          ("/items/1/value/parentKey", "3"),
+          ("/items/2/value/name", "\"g\""),
+          ("/items/2/value/kind/type", "\"InlineSignature\""),
+          ("/items/2/value/parentKey", "2")
+        ]
+
+    Spec.it s "multiple specialize pragmas on one function" $ do
+      check
+        s
+        """
+        h :: a -> a
+        h = id
+        {-# specialize h :: () -> () #-}
+        {-# specialize h :: Int -> Int #-}
+        """
+        [ ("/items/0/value/name", "\"h\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"h\""),
+          ("/items/1/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"() -> ()\""),
+          ("/items/2/value/name", "\"h\""),
+          ("/items/2/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"Int -> Int\"")
+        ]
+
+    Spec.it s "fixity and inline and specialize on same operator" $ do
+      check
+        s
+        """
+        (%) :: a -> a -> a
+        (%) = const
+        infixl 5 %
+        {-# inline (%) #-}
+        {-# specialize (%) :: () -> () -> () #-}
+        """
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/name", "\"%\""),
+          ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/parentKey", "4"),
+          ("/items/2/value/name", "\"%\""),
+          ("/items/2/value/kind/type", "\"InlineSignature\""),
+          ("/items/2/value/parentKey", "4"),
+          ("/items/3/value/name", "\"%\""),
+          ("/items/3/value/kind/type", "\"SpecialiseSignature\""),
+          ("/items/3/value/parentKey", "3")
+        ]
+
   Spec.describe s "html" $ do
     Spec.it s "generates html without error" $ do
       checkHtml

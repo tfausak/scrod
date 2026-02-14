@@ -89,10 +89,13 @@ extractHeadTypeName lTy = case SrcLoc.unLoc lTy of
   _ -> Nothing
 
 -- | Extract the class name from an instance head. For @C T@ this
--- returns @C@; for @Functor F@ this returns @Functor@.
+-- returns @C@; for @Functor F@ this returns @Functor@. For nullary
+-- classes (e.g., @instance C@) this returns @C@.
 extractClassName :: Syntax.LHsType Ghc.GhcPs -> Maybe ItemName.ItemName
 extractClassName lTy = case SrcLoc.unLoc lTy of
   Syntax.HsAppTy _ fun _ -> extractOutermostTyCon fun
+  Syntax.HsAppKindTy _ fun _ -> extractOutermostTyCon fun
+  Syntax.HsTyVar {} -> extractOutermostTyCon lTy
   Syntax.HsQualTy _ _ body -> extractClassName body
   Syntax.HsForAllTy _ _ body -> extractClassName body
   Syntax.HsParTy _ inner -> extractClassName inner

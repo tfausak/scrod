@@ -33,7 +33,8 @@ extractStandaloneKindSigName (Syntax.StandaloneKindSig _ lName _) = Internal.ext
 
 -- | Extract signature from a kind signature.
 extractKindSigSignature :: Syntax.StandaloneKindSig Ghc.GhcPs -> Text.Text
-extractKindSigSignature = Text.pack . Outputable.showSDocUnsafe . Outputable.ppr
+extractKindSigSignature (Syntax.StandaloneKindSig _ _ lSigType) =
+  Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ lSigType
 
 -- | Extract name from a type/class declaration.
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName

@@ -7,6 +7,7 @@
 module Scrod.Convert.FromGhc.FixityParents where
 
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -41,18 +42,20 @@ extractDeclFixityLocations lDecl = case SrcLoc.unLoc lDecl of
 -- | Associate fixity items with their target declarations.
 associateFixityParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateFixityParents fixityLocations items =
-  let nameToKey = buildNameToKeyMap fixityLocations items
+associateFixityParents allPragmaLocations fixityLocations items =
+  let nameToKey = buildNameToKeyMap allPragmaLocations items
    in fmap (resolveFixityParent fixityLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding fixity items.
+-- | Build a map from item names to their keys, excluding pragma items
+-- and child items.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap fixityLocations =
+buildNameToKeyMap allPragmaLocations =
   Map.fromList . concatMap getNameAndKey
   where
     getNameAndKey locItem =
@@ -60,7 +63,8 @@ buildNameToKeyMap fixityLocations =
        in case Item.name val of
             Nothing -> []
             Just name ->
-              if Set.member (Located.location locItem) fixityLocations
+              if Set.member (Located.location locItem) allPragmaLocations
+                || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]
 

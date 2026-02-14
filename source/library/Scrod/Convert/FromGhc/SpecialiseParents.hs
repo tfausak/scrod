@@ -6,6 +6,7 @@
 module Scrod.Convert.FromGhc.SpecialiseParents where
 
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -53,18 +54,20 @@ extractExprNameLocations lExpr = case SrcLoc.unLoc lExpr of
 -- | Associate specialise items with their target declarations.
 associateSpecialiseParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateSpecialiseParents specialiseLocations items =
-  let nameToKey = buildNameToKeyMap specialiseLocations items
+associateSpecialiseParents allPragmaLocations specialiseLocations items =
+  let nameToKey = buildNameToKeyMap allPragmaLocations items
    in fmap (resolveSpecialiseParent specialiseLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding specialise items.
+-- | Build a map from item names to their keys, excluding pragma items
+-- and child items.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap specialiseLocations =
+buildNameToKeyMap allPragmaLocations =
   Map.fromList . concatMap getNameAndKey
   where
     getNameAndKey locItem =
@@ -72,7 +75,8 @@ buildNameToKeyMap specialiseLocations =
        in case Item.name val of
             Nothing -> []
             Just name ->
-              if Set.member (Located.location locItem) specialiseLocations
+              if Set.member (Located.location locItem) allPragmaLocations
+                || Maybe.isJust (Item.parentKey val)
                 then []
                 else [(name, Item.key val)]
 

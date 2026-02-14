@@ -10,6 +10,7 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
 import qualified Data.Version
@@ -204,15 +205,16 @@ extractItems lHsModule =
       -- These run before merging so that 'mergeItemsByName' can remap
       -- already-established child 'parentKey's to the merged declaration key.
       warningLocations = WarningParents.extractWarningLocations lHsModule
-      warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
-      fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
       inlineLocations = InlineParents.extractInlineLocations lHsModule
-      inlineParentedItems = InlineParents.associateInlineParents inlineLocations fixityParentedItems
       specialiseLocations = SpecialiseParents.extractSpecialiseLocations lHsModule
-      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents specialiseLocations inlineParentedItems
       roleLocations = RoleParents.extractRoleLocations lHsModule
-      roleParentedItems = RoleParents.associateRoleParents roleLocations specialiseParentedItems
+      allPragmaLocations = Set.unions [warningLocations, fixityLocations, inlineLocations, specialiseLocations, roleLocations]
+      warningParentedItems = WarningParents.associateWarningParents allPragmaLocations warningLocations parentedItems
+      fixityParentedItems = FixityParents.associateFixityParents allPragmaLocations fixityLocations warningParentedItems
+      inlineParentedItems = InlineParents.associateInlineParents allPragmaLocations inlineLocations fixityParentedItems
+      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents allPragmaLocations specialiseLocations inlineParentedItems
+      roleParentedItems = RoleParents.associateRoleParents allPragmaLocations roleLocations specialiseParentedItems
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems

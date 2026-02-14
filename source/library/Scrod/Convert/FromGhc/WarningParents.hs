@@ -51,18 +51,20 @@ extractWarnDeclLocations lWarnDecl = case SrcLoc.unLoc lWarnDecl of
 -- | Associate warning items with their target declarations.
 associateWarningParents ::
   Set.Set Location.Location ->
+  Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-associateWarningParents warningLocations items =
-  let nameToKey = buildNameToKeyMap warningLocations items
+associateWarningParents allPragmaLocations warningLocations items =
+  let nameToKey = buildNameToKeyMap allPragmaLocations items
    in fmap (resolveWarningParent warningLocations nameToKey) items
 
--- | Build a map from item names to their keys, excluding warning items.
+-- | Build a map from item names to their keys, excluding pragma items
+-- and child items.
 buildNameToKeyMap ::
   Set.Set Location.Location ->
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
-buildNameToKeyMap warningLocations =
+buildNameToKeyMap allPragmaLocations =
   Map.fromList . concatMap getNameAndKey
   where
     getNameAndKey locItem =
@@ -70,12 +72,10 @@ buildNameToKeyMap warningLocations =
        in case Item.name val of
             Nothing -> []
             Just name ->
-              if Set.member (Located.location locItem) warningLocations
+              if Set.member (Located.location locItem) allPragmaLocations
+                || Maybe.isJust (Item.parentKey val)
                 then []
-                else
-                  if Maybe.isNothing (Item.parentKey val)
-                    then [(name, Item.key val)]
-                    else []
+                else [(name, Item.key val)]
 
 -- | Set the parentKey on a warning item by looking up the target name.
 resolveWarningParent ::

@@ -297,10 +297,10 @@ convertSigDeclM ::
 convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.Function) names
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
+     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.PatternSynonym) names
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
@@ -314,10 +314,11 @@ convertSigNameM ::
   Doc.Doc ->
   Maybe Since.Since ->
   Maybe Text.Text ->
+  ItemKind.ItemKind ->
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc docSince sig lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.Function
+convertSigNameM doc docSince sig itemKind lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig itemKind
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::

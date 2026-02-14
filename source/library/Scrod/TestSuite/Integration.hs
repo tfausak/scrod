@@ -1633,13 +1633,22 @@ spec s = Spec.describe s "integration" $ do
       check s "(j :: ()) = ()" []
 
     Spec.it s "bidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern L = ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern L = ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "unidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern M <- ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern M <- ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "explicitly bidirectional pattern synonym" $ do
-      check s "{-# language PatternSynonyms #-} pattern N <- () where N = ()" []
+      check
+        s
+        "{-# language PatternSynonyms #-} pattern N <- () where N = ()"
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.it s "type signature" $ do
       check
@@ -1658,7 +1667,16 @@ spec s = Spec.describe s "integration" $ do
         pattern P :: ()
         pattern P = ()
         """
-        []
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
+
+    Spec.it s "pattern synonym signature without binding" $ do
+      check
+        s
+        """
+        {-# language PatternSynonyms #-}
+        pattern Q :: a
+        """
+        [("/items/0/value/kind/type", "\"PatternSynonym\"")]
 
     Spec.describe s "method signature" $ do
       Spec.it s "works" $ do

@@ -2036,7 +2036,12 @@ spec s = Spec.describe s "integration" $ do
         x4 = id
         {-# rules "q" x4 = id #-}
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"x4\""),
+          ("/items/1/value/kind/type", "\"Rule\""),
+          ("/items/1/value/name", "\"q\""),
+          ("/items/1/value/signature", "\"x4 = id\"")
+        ]
 
     Spec.it s "splice declaration" $ do
       check

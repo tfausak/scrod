@@ -376,7 +376,15 @@ convertRuleDeclM ::
   Syntax.LRuleDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
-  Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing Nothing ItemKind.Rule
+  let ruleDecl = SrcLoc.unLoc lRuleDecl
+      name = Just . ItemName.MkItemName . Text.pack . FastString.unpackFS . SrcLoc.unLoc $ Syntax.rd_name ruleDecl
+      sig =
+        Just . Text.pack . Outputable.showSDocUnsafe $
+          Outputable.ppr (Syntax.rd_bndrs ruleDecl)
+            Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
+            Outputable.<+> Outputable.text "="
+            Outputable.<+> Outputable.ppr (Syntax.rd_rhs ruleDecl)
+   in Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing name Doc.Empty Nothing sig ItemKind.Rule
 
 -- | Convert warning declarations.
 convertWarnDeclsM ::

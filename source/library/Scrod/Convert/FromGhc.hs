@@ -385,7 +385,7 @@ convertWarnNameM ::
   Syntax.LIdP Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertWarnNameM doc lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Function
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing ItemKind.Warning
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

@@ -20,7 +20,7 @@ itemKindFromDecl decl = case decl of
   Syntax.KindSigD {} -> ItemKind.StandaloneKindSig
   Syntax.DefD {} -> ItemKind.Default
   Syntax.ForD _ foreignDecl -> itemKindFromForeignDecl foreignDecl
-  Syntax.WarningD {} -> ItemKind.Function -- Treat as function for now
+  Syntax.WarningD {} -> ItemKind.Warning
   Syntax.AnnD {} -> ItemKind.Annotation
   Syntax.RuleD {} -> ItemKind.Rule
   Syntax.SpliceD {} -> ItemKind.Splice

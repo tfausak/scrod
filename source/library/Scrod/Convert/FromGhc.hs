@@ -666,9 +666,15 @@ convertTyFamInstEqnM parentKey lEqn =
 extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
 extractTyFamInstEqnSig eqn =
   Outputable.ppr (Syntax.feqn_tycon eqn)
-    Outputable.<+> Outputable.hsep (Outputable.ppr <$> Syntax.feqn_pats eqn)
+    Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
     Outputable.<+> Outputable.text "="
     Outputable.<+> Outputable.ppr (Syntax.feqn_rhs eqn)
+
+-- | Pretty-print a type argument, stripping the 'HsArg' wrapper.
+pprHsTypeArg :: Syntax.LHsTypeArg Ghc.GhcPs -> Outputable.SDoc
+pprHsTypeArg (Syntax.HsValArg _ ty) = Outputable.ppr ty
+pprHsTypeArg (Syntax.HsTypeArg _ ki) = Outputable.text "@" Outputable.<> Outputable.ppr ki
+pprHsTypeArg (Syntax.HsArgPar _) = Outputable.empty
 
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::

@@ -1029,7 +1029,16 @@ spec s = Spec.describe s "integration" $ do
         "{-# language TypeFamilies #-} type family C a where C () = ()"
         [ ("/items/0/value/kind/type", "\"ClosedTypeFamily\""),
           ("/items/1/value/kind/type", "\"TypeFamilyInstance\""),
-          ("/items/1/value/parentKey", "0")
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"C () = ()\"")
+        ]
+
+    Spec.it s "closed type family with multiple equations" $ do
+      check
+        s
+        "{-# language TypeFamilies, DataKinds #-} type family IsUnit a where IsUnit () = 'True; IsUnit _ = 'False"
+        [ ("/items/1/value/signature", "\"IsUnit () = 'True\""),
+          ("/items/2/value/signature", "\"IsUnit _ = 'False\"")
         ]
 
     Spec.it s "data family" $ do

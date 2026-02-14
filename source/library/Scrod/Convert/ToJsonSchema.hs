@@ -19,18 +19,14 @@ import qualified Scrod.JsonPointer.Pointer as Pointer
 import qualified Scrod.Schema as ToSchema
 import qualified Scrod.Spec as Spec
 
--- | See 'moduleSchema'.
-toJsonSchema :: Json.Value
-toJsonSchema = moduleSchema
-
 -- | Schema for the top-level module object.
 --
 -- Runs the 'ToSchema.ToSchema' instance for 'Module.Module' in
 -- 'ToSchema.SchemaM', extracts the resulting object schema, and wraps
 -- it with JSON Schema metadata (@$schema@, @$id@, @title@,
 -- @description@) and any accumulated @$defs@.
-moduleSchema :: Json.Value
-moduleSchema =
+toJsonSchema :: Json.Value
+toJsonSchema =
   let (schema, defs) =
         ToSchema.runSchemaM $
           ToSchema.toSchema

@@ -38,6 +38,7 @@ import qualified Scrod.Convert.FromGhc.Exports as Exports
 import qualified Scrod.Convert.FromGhc.FamilyInstanceParents as FamilyInstanceParents
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
 import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
+import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
@@ -211,11 +212,11 @@ extractItems lHsModule =
       specialiseLocations = SpecialiseParents.extractSpecialiseLocations lHsModule
       roleLocations = RoleParents.extractRoleLocations lHsModule
       allPragmaLocations = Set.unions [warningLocations, fixityLocations, inlineLocations, specialiseLocations, roleLocations]
-      warningParentedItems = WarningParents.associateWarningParents allPragmaLocations warningLocations parentedItems
-      fixityParentedItems = FixityParents.associateFixityParents allPragmaLocations fixityLocations warningParentedItems
-      inlineParentedItems = InlineParents.associateInlineParents allPragmaLocations inlineLocations fixityParentedItems
-      specialiseParentedItems = SpecialiseParents.associateSpecialiseParents allPragmaLocations specialiseLocations inlineParentedItems
-      roleParentedItems = RoleParents.associateRoleParents allPragmaLocations roleLocations specialiseParentedItems
+      warningParentedItems = ParentAssociation.associateParents allPragmaLocations warningLocations parentedItems
+      fixityParentedItems = ParentAssociation.associateParents allPragmaLocations fixityLocations warningParentedItems
+      inlineParentedItems = ParentAssociation.associateParents allPragmaLocations inlineLocations fixityParentedItems
+      specialiseParentedItems = ParentAssociation.associateParents allPragmaLocations specialiseLocations inlineParentedItems
+      roleParentedItems = ParentAssociation.associateParents allPragmaLocations roleLocations specialiseParentedItems
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems

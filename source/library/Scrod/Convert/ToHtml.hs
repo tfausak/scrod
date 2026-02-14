@@ -45,6 +45,7 @@ import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Section as Section
 import qualified Scrod.Core.Since as Since
+import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
@@ -549,9 +550,12 @@ declarationsContents exports items =
       Nothing -> True
       Just _ -> False
 
+    itemNatKey :: Located.Located Item.Item -> Natural.Natural
+    itemNatKey = ItemKey.unwrap . Item.key . Located.value
+
     renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
     renderItemWithChildren li =
-      let k = ItemKey.unwrap (Item.key (Located.value li))
+      let k = itemNatKey li
           children = Map.findWithDefault [] k childrenMap
        in [Content.Element (itemToHtml li)]
             <> if null children
@@ -564,14 +568,23 @@ declarationsContents exports items =
                       (concatMap renderItemWithChildren children)
                 ]
 
-    -- \| Map from item name to top-level item for export matching.
+    -- \| Map from item name to item for export matching. All items are
+    -- included so that children (e.g. pattern synonyms inside a
+    -- COMPLETE pragma) can be matched. Top-level items are listed last
+    -- so that 'Map.fromList' gives them precedence over children when
+    -- the same name appears at both levels.
     nameMap :: Map.Map Text.Text (Located.Located Item.Item)
     nameMap =
-      Map.fromList
+      Map.fromList $
         [ (ItemName.unwrap n, li)
-        | li <- topLevelItems,
+        | li <- items,
+          not (isTopLevel (Located.value li)),
           Just n <- [Item.name (Located.value li)]
         ]
+          <> [ (ItemName.unwrap n, li)
+             | li <- topLevelItems,
+               Just n <- [Item.name (Located.value li)]
+             ]
 
     defaultDeclarations :: [Content.Content Element.Element]
     defaultDeclarations =
@@ -586,16 +599,43 @@ declarationsContents exports items =
 
     exportDrivenDeclarations :: [Export.Export] -> [Content.Content Element.Element]
     exportDrivenDeclarations es =
-      let (exportedContents, usedNames) = renderExports es Set.empty
-          unexported =
+      let (exportedContents, usedKeys) = renderExports es Set.empty
+          -- Top-level items whose keys weren't used.
+          unexportedTopLevel =
             [ li
             | li <- topLevelItems,
-              case Item.name (Located.value li) of
-                Nothing -> True
-                Just n -> not (Set.member (ItemName.unwrap n) usedNames)
+              not (Set.member (itemNatKey li) usedKeys)
             ]
+          -- Children whose parent was used but who were filtered out
+          -- by subordinate restrictions (e.g. non-exported constructors).
+          orphanedChildren =
+            [ li
+            | li <- items,
+              not (isTopLevel (Located.value li)),
+              not (Set.member (itemNatKey li) usedKeys),
+              case Item.parentKey (Located.value li) of
+                Nothing -> False
+                Just (ItemKey.MkItemKey pk) -> Set.member pk usedKeys
+            ]
+          -- Render an unexported top-level item, omitting any children
+          -- that were already rendered in the exported section.
+          renderUnexportedItem :: Located.Located Item.Item -> [Content.Content Element.Element]
+          renderUnexportedItem li =
+            let k = itemNatKey li
+                children = Map.findWithDefault [] k childrenMap
+                unusedChildren = filter (\c -> not (Set.member (itemNatKey c) usedKeys)) children
+             in [Content.Element (itemToHtml li)]
+                  <> if null unusedChildren
+                    then []
+                    else
+                      [ Content.Element $
+                          Xml.element
+                            "div"
+                            [Xml.attribute "class" "ms-4 mt-2 border-start border-2 ps-3"]
+                            (concatMap renderUnexportedItem unusedChildren)
+                      ]
           unexportedContents
-            | null unexported = []
+            | null unexportedTopLevel && null orphanedChildren = []
             | otherwise =
                 [ Content.Element $
                     Xml.element
@@ -603,7 +643,8 @@ declarationsContents exports items =
                       [Xml.attribute "class" "border-bottom pb-1 mt-5 text-body-secondary"]
                       [Xml.string "Unexported"]
                 ]
-                  <> concatMap renderItemWithChildren unexported
+                  <> concatMap renderUnexportedItem unexportedTopLevel
+                  <> fmap (\li -> Content.Element (itemToHtml li)) orphanedChildren
        in [ Content.Element $
               Xml.element
                 "section"
@@ -614,16 +655,100 @@ declarationsContents exports items =
                 )
           ]
 
-    renderExports :: [Export.Export] -> Set.Set Text.Text -> ([Content.Content Element.Element], Set.Set Text.Text)
+    -- \| Whether an item kind is a "subordinate" — something that can
+    -- appear in the parenthesised part of an export entry (constructors,
+    -- record fields, class methods).
+    isSubordinate :: Item.Item -> Bool
+    isSubordinate item = case Item.kind item of
+      ItemKind.DataConstructor -> True
+      ItemKind.GADTConstructor -> True
+      ItemKind.RecordField -> True
+      ItemKind.ClassMethod -> True
+      ItemKind.DefaultMethodSignature -> True
+      _ -> False
+
+    -- \| Decide whether a child should be rendered with its exported
+    -- parent, based on the export's subordinate information.
+    shouldShowChild :: Maybe Subordinates.Subordinates -> Located.Located Item.Item -> Bool
+    shouldShowChild Nothing li = not (isSubordinate (Located.value li))
+    shouldShowChild (Just (Subordinates.MkSubordinates True _)) _ = True
+    shouldShowChild (Just (Subordinates.MkSubordinates False explicit)) li
+      | isSubordinate (Located.value li) =
+          case Item.name (Located.value li) of
+            Nothing -> False
+            Just n -> Set.member (ItemName.unwrap n) explicitNames
+      | otherwise = True
+      where
+        explicitNames :: Set.Set Text.Text
+        explicitNames = Set.fromList $ fmap ExportName.name explicit
+
+    -- \| Render an exported item with its children filtered by
+    -- subordinates. Returns the HTML and the set of item keys that
+    -- were rendered (so they can be excluded from "Unexported").
+    renderExportedItem :: Maybe Subordinates.Subordinates -> Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
+    renderExportedItem subs li =
+      let k = itemNatKey li
+          allChildren = Map.findWithDefault [] k childrenMap
+          visibleChildren = filter (shouldShowChild subs) allChildren
+          (childHtml, childKeys) =
+            foldr
+              ( \c (accHtml, accKeys) ->
+                  let (h, ks) = renderItemCollectingKeys c
+                   in (h <> accHtml, Set.union ks accKeys)
+              )
+              ([], Set.empty)
+              visibleChildren
+       in ( [Content.Element (itemToHtml li)]
+              <> if null visibleChildren
+                then []
+                else
+                  [ Content.Element $
+                      Xml.element
+                        "div"
+                        [Xml.attribute "class" "ms-4 mt-2 border-start border-2 ps-3"]
+                        childHtml
+                  ],
+            Set.insert k childKeys
+          )
+
+    -- \| Render an item with all its children, collecting every
+    -- rendered key.
+    renderItemCollectingKeys :: Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
+    renderItemCollectingKeys li =
+      let k = itemNatKey li
+          children = Map.findWithDefault [] k childrenMap
+          (childHtml, childKeys) =
+            foldr
+              ( \c (accHtml, accKeys) ->
+                  let (h, ks) = renderItemCollectingKeys c
+                   in (h <> accHtml, Set.union ks accKeys)
+              )
+              ([], Set.empty)
+              children
+       in ( [Content.Element (itemToHtml li)]
+              <> if null children
+                then []
+                else
+                  [ Content.Element $
+                      Xml.element
+                        "div"
+                        [Xml.attribute "class" "ms-4 mt-2 border-start border-2 ps-3"]
+                        childHtml
+                  ],
+            Set.insert k childKeys
+          )
+
+    renderExports :: [Export.Export] -> Set.Set Natural.Natural -> ([Content.Content Element.Element], Set.Set Natural.Natural)
     renderExports [] used = ([], used)
     renderExports (e : es) used = case e of
       Export.Identifier ident ->
         let name = ExportName.name (ExportIdentifier.name ident)
+            subs = ExportIdentifier.subordinates ident
          in case Map.lookup name nameMap of
               Just li
-                | not (Set.member name used) ->
-                    let here = renderItemWithChildren li
-                        (rest, used') = renderExports es (Set.insert name used)
+                | not (Set.member (itemNatKey li) used) ->
+                    let (here, newKeys) = renderExportedItem subs li
+                        (rest, used') = renderExports es (Set.union newKeys used)
                      in (here <> rest, used')
               _ -> renderExports es used
       Export.Group section ->

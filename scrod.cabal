@@ -93,6 +93,7 @@ library
     Scrod.Convert.FromGhc.Constructors
     Scrod.Convert.FromGhc.Doc
     Scrod.Convert.FromGhc.Exports
+    Scrod.Convert.FromGhc.FamilyInstanceParents
     Scrod.Convert.FromGhc.FixityParents
     Scrod.Convert.FromGhc.InlineParents
     Scrod.Convert.FromGhc.InstanceParents

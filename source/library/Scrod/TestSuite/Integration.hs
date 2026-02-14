@@ -1325,7 +1325,9 @@ spec s = Spec.describe s "integration" $ do
         data family A a
         data instance A ()
         """
-        [("/items/1/value/kind/type", "\"DataFamilyInstance\"")]
+        [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "data instance constructor" $ do
       check
@@ -1336,6 +1338,7 @@ spec s = Spec.describe s "integration" $ do
         data instance B () = C
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1349,6 +1352,7 @@ spec s = Spec.describe s "integration" $ do
         data instance D where E :: D
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1362,6 +1366,7 @@ spec s = Spec.describe s "integration" $ do
         newtype instance F = G ()
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"DataConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1375,6 +1380,7 @@ spec s = Spec.describe s "integration" $ do
         newtype instance H where I :: () -> H
         """
         [ ("/items/1/value/kind/type", "\"DataFamilyInstance\""),
+          ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"GADTConstructor\""),
           ("/items/2/value/parentKey", "1")
         ]
@@ -1387,7 +1393,9 @@ spec s = Spec.describe s "integration" $ do
         type family J
         type instance J = ()
         """
-        [("/items/1/value/kind/type", "\"TypeFamilyInstance\"")]
+        [ ("/items/1/value/kind/type", "\"TypeFamilyInstance\""),
+          ("/items/1/value/parentKey", "0")
+        ]
 
     Spec.it s "standalone deriving" $ do
       check

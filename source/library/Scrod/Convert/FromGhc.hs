@@ -32,6 +32,7 @@ import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
+import qualified Scrod.Convert.FromGhc.FamilyInstanceParents as FamilyInstanceParents
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
 import qualified Scrod.Convert.FromGhc.InlineParents as InlineParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
@@ -198,7 +199,9 @@ extractItems lHsModule =
       fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
       inlineLocations = InlineParents.extractInlineLocations lHsModule
       inlineParentedItems = InlineParents.associateInlineParents inlineLocations fixityParentedItems
-   in Merge.mergeItemsByName inlineParentedItems
+      familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
+      familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames inlineParentedItems
+   in Merge.mergeItemsByName familyParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::

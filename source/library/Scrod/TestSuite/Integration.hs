@@ -1648,7 +1648,22 @@ spec s = Spec.describe s "integration" $ do
         """
         []
 
-    Spec.it s "fixity" $ do
+    Spec.it s "fixity has parent set" $ do
+      check
+        s
+        """
+        (%) = id
+        infixl 0 %
+        """
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/1/value/name", "\"%\""),
+          ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/documentation/value/value", "\"infixl 0\"")
+        ]
+
+    Spec.it s "fixity preserves type signature" $ do
       check
         s
         """
@@ -1656,7 +1671,84 @@ spec s = Spec.describe s "integration" $ do
         (%) :: () -> () -> ()
         (%) _ _ = ()
         """
-        []
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"FixitySignature\""),
+          ("/items/0/value/parentKey", "1"),
+          ("/items/0/value/documentation/value/value", "\"infixl 5\""),
+          ("/items/1/value/name", "\"%\""),
+          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/signature", "\"() -> () -> ()\"")
+        ]
+
+    Spec.it s "fixity infixr" $ do
+      check
+        s
+        """
+        (%) = id
+        infixr 9 %
+        """
+        [ ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/documentation/value/value", "\"infixr 9\"")
+        ]
+
+    Spec.it s "fixity infix" $ do
+      check
+        s
+        """
+        (%) = id
+        infix 4 %
+        """
+        [ ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/documentation/value/value", "\"infix 4\"")
+        ]
+
+    Spec.it s "orphaned fixity has no parent" $ do
+      check
+        s
+        """
+        infixl 0 %
+        """
+        [ ("/items/0/value/name", "\"%\""),
+          ("/items/0/value/kind/type", "\"FixitySignature\""),
+          ("/items/0/value/parentKey", ""),
+          ("/items/0/value/documentation/value/value", "\"infixl 0\"")
+        ]
+
+    Spec.it s "fixity preserves user documentation" $ do
+      check
+        s
+        """
+        (%) = id
+        -- | user doc
+        infixl 5 %
+        """
+        [ ("/items/1/value/kind/type", "\"FixitySignature\""),
+          ("/items/1/value/documentation/type", "\"Append\""),
+          ("/items/1/value/documentation/value/0/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/0/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/0/value/value", "\"user doc\""),
+          ("/items/1/value/documentation/value/1/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/1/value/type", "\"String\""),
+          ("/items/1/value/documentation/value/1/value/value", "\"infixl 5\"")
+        ]
+
+    Spec.it s "fixity on data constructor has parent set" $ do
+      check
+        s
+        """
+        data T = Int :+: Int
+        infixl 6 :+:
+        """
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/1/value/name", "\":+:\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/key", "1"),
+          ("/items/2/value/kind/type", "\"FixitySignature\""),
+          ("/items/2/value/name", "\":+:\""),
+          ("/items/2/value/parentKey", "1")
+        ]
 
     Spec.it s "inline pragma" $ do
       check

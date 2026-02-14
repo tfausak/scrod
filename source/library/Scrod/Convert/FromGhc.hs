@@ -27,10 +27,12 @@ import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
+import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
 import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
 import qualified Scrod.Convert.FromGhc.Exports as Exports
+import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
 import qualified Scrod.Convert.FromGhc.InstanceParents as InstanceParents
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
@@ -188,7 +190,9 @@ extractItems lHsModule =
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes rawItems
       warningLocations = WarningParents.extractWarningLocations lHsModule
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
-   in Merge.mergeItemsByName warningParentedItems
+      fixityLocations = FixityParents.extractFixityLocations lHsModule
+      fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
+   in Merge.mergeItemsByName fixityParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -287,6 +291,10 @@ convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
      in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText) names
+  Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
+    let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
+        combinedDoc = combineDoc doc fixityDoc
+     in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert a single name from a signature.
@@ -298,6 +306,27 @@ convertSigNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertSigNameM doc docSince sig lName =
   Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig ItemKind.Function
+
+-- | Convert a single name from a fixity signature.
+convertFixityNameM ::
+  Doc.Doc ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertFixityNameM fixityDoc lName =
+  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) fixityDoc Nothing Nothing ItemKind.FixitySignature
+
+-- | Combine a user-written doc with a synthesized doc. If the user doc
+-- is empty, just use the synthesized one; otherwise append both.
+combineDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
+combineDoc Doc.Empty synth = synth
+combineDoc user synth = Doc.Append [user, synth]
+
+-- | Convert a fixity direction to text.
+fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text
+fixityDirectionToText dir = case dir of
+  SyntaxBasic.InfixL -> Text.pack "infixl"
+  SyntaxBasic.InfixR -> Text.pack "infixr"
+  SyntaxBasic.InfixN -> Text.pack "infix"
 
 -- | Convert a simple declaration without special handling.
 convertDeclSimpleM ::

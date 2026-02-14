@@ -69,5 +69,7 @@ data ItemKind
     Annotation
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
+  | -- | Role annotation: @type role T nominal@
+    RoleAnnotation
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

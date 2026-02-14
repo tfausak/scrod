@@ -38,6 +38,7 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Convert.FromGhc.ItemKind as ItemKindFrom
 import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
+import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
@@ -195,7 +196,9 @@ extractItems lHsModule =
       warningParentedItems = WarningParents.associateWarningParents warningLocations parentedItems
       fixityLocations = FixityParents.extractFixityLocations lHsModule
       fixityParentedItems = FixityParents.associateFixityParents fixityLocations warningParentedItems
-   in Merge.mergeItemsByName fixityParentedItems
+      roleLocations = RoleParents.extractRoleLocations lHsModule
+      roleParentedItems = RoleParents.associateRoleParents roleLocations fixityParentedItems
+   in Merge.mergeItemsByName roleParentedItems
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
@@ -230,6 +233,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
   Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
+  Syntax.RoleAnnotD _ roleAnnotDecl -> Maybe.maybeToList <$> convertRoleAnnotM roleAnnotDecl
   Syntax.DefD {} -> pure []
   Syntax.DerivD _ derivDecl ->
     let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
@@ -362,6 +366,22 @@ convertRuleDeclM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertRuleDeclM lRuleDecl =
   Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing Nothing Doc.Empty Nothing Nothing ItemKind.Rule
+
+-- | Convert a role annotation declaration.
+convertRoleAnnotM ::
+  Syntax.RoleAnnotDecl Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertRoleAnnotM (Syntax.RoleAnnotDecl _ lName roles) =
+  let sig = Just . Text.intercalate (Text.pack " ") $ fmap (roleToText . SrcLoc.unLoc) roles
+   in Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) Doc.Empty Nothing sig ItemKind.RoleAnnotation
+
+-- | Convert a Maybe Role to its textual representation.
+roleToText :: Maybe SyntaxBasic.Role -> Text.Text
+roleToText r = case r of
+  Nothing -> Text.pack "_"
+  Just SyntaxBasic.Nominal -> Text.pack "nominal"
+  Just SyntaxBasic.Representational -> Text.pack "representational"
+  Just SyntaxBasic.Phantom -> Text.pack "phantom"
 
 -- | Convert warning declarations.
 convertWarnDeclsM ::

@@ -42,6 +42,7 @@ import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
+import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
@@ -454,7 +455,8 @@ convertWarnNameM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertWarnNameM warning lName =
   let doc = Doc.Paragraph . Doc.String $ Warning.value warning
-   in Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing Nothing (ItemKind.Warning warning)
+      sig = Just . Category.unwrap $ Warning.category warning
+   in Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc Nothing sig ItemKind.Warning
 
 -- | Convert class signatures with associated documentation.
 convertClassSigsWithDocsM ::

@@ -4,7 +4,6 @@
 module Scrod.Core.ItemKind where
 
 import qualified GHC.Generics as Generics
-import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Schema as Schema
 
@@ -70,13 +69,8 @@ data ItemKind
     Annotation
   | -- | Template Haskell splice or quasi-quote: @$(expr)@ or @[quoter|...|]@
     Splice
-  | -- | Warning pragma: @{-# WARNING x \"msg\" #-}@
-    --
-    -- Warnings are always separate items (parented to their target when
-    -- one exists).  The warning message and category live here in
-    -- 'ItemKind' rather than as a field on 'Item', because not every
-    -- item can have a warning attached.
-    Warning Warning.Warning
+  | -- | Warning pragma: @{-# WARNING x "msg" #-}@
+    Warning
   | -- | Minimal pragma: @{-# MINIMAL size #-}@
     MinimalPragma
   | -- | Complete pragma: @{-# COMPLETE Nil, Cons #-}@

@@ -274,9 +274,10 @@ convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
     parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
+    defaultSigItems <- convertDefaultSigsM methodItems sigs docs
     minimalItems <- convertMinimalSigsM parentKey sigs
     familyItems <- convertFamilyDeclsM parentKey ats
-    pure $ Maybe.maybeToList parentItem <> methodItems <> minimalItems <> familyItems
+    pure $ Maybe.maybeToList parentItem <> methodItems <> defaultSigItems <> minimalItems <> familyItems
   Syntax.SynDecl {} -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractSynDeclSignature tyClDecl) lDecl
 
 -- | Convert an instance declaration with documentation.
@@ -490,7 +491,7 @@ convertClassSigsWithDocsM parentKey sigs docs =
   where
     isClassOpSig :: Syntax.LSig Ghc.GhcPs -> Bool
     isClassOpSig lSig = case SrcLoc.unLoc lSig of
-      Syntax.ClassOpSig {} -> True
+      Syntax.ClassOpSig _ False _ _ -> True
       _ -> False
 
 -- | Convert a class body declaration with associated documentation.
@@ -507,6 +508,58 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
        in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
     _ -> pure []
   _ -> pure []
+
+-- | Convert default method signatures within a class, parenting them to the
+-- corresponding class method.
+convertDefaultSigsM ::
+  [Located.Located Item.Item] ->
+  [Syntax.LSig Ghc.GhcPs] ->
+  [Hs.LDocDecl Ghc.GhcPs] ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertDefaultSigsM methodItems sigs docs =
+  let nameToKey =
+        Map.fromList
+          [ (name, Item.key item)
+          | Located.MkLocated _ item <- methodItems,
+            Just name <- [Item.name item]
+          ]
+      defaultSigs = filter isDefaultSig sigs
+      sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) defaultSigs
+      docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
+      allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
+      sigsWithDocs = GhcDoc.associateDocs allDecls
+   in concat <$> traverse (\(doc, docSince, lDecl) -> convertDefaultSigDeclM nameToKey doc docSince lDecl) sigsWithDocs
+  where
+    isDefaultSig :: Syntax.LSig Ghc.GhcPs -> Bool
+    isDefaultSig lSig = case SrcLoc.unLoc lSig of
+      Syntax.ClassOpSig _ True _ _ -> True
+      _ -> False
+
+-- | Convert a single default method signature declaration with documentation.
+convertDefaultSigDeclM ::
+  Map.Map ItemName.ItemName ItemKey.ItemKey ->
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertDefaultSigDeclM nameToKey doc docSince lDecl = case SrcLoc.unLoc lDecl of
+  Syntax.SigD _ (Syntax.ClassOpSig _ True names sigTy) ->
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr sigTy
+     in Maybe.catMaybes <$> traverse (convertDefaultSigNameM nameToKey doc docSince sig) names
+  _ -> pure []
+
+-- | Convert a single name from a default method signature.
+convertDefaultSigNameM ::
+  Map.Map ItemName.ItemName ItemKey.ItemKey ->
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Maybe Text.Text ->
+  Syntax.LIdP Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertDefaultSigNameM nameToKey doc docSince sig lName =
+  let name = Internal.extractIdPName lName
+      parentKey = Map.lookup name nameToKey
+   in Internal.mkItemM (Annotation.getLocA lName) parentKey (Just name) doc docSince sig ItemKind.DefaultMethodSignature
 
 -- | Convert MINIMAL pragma signatures inside a class.
 convertMinimalSigsM ::

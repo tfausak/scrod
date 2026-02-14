@@ -1730,7 +1730,36 @@ spec s = Spec.describe s "integration" $ do
           default t :: a
           t = undefined
         """
-        []
+        [ ("/items/0/value/kind/type", "\"Class\""),
+          ("/items/0/value/name", "\"S\""),
+          ("/items/0/value/key", "0"),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
+          ("/items/1/value/name", "\"t\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/key", "1"),
+          ("/items/2/value/kind/type", "\"DefaultMethodSignature\""),
+          ("/items/2/value/name", "\"t\""),
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "default method signature with doc" $ do
+      check
+        s
+        """
+        {-# language DefaultSignatures #-}
+        class S a where
+          t :: a
+          -- | the default
+          default t :: a
+          t = undefined
+        """
+        [ ("/items/2/value/kind/type", "\"DefaultMethodSignature\""),
+          ("/items/2/value/name", "\"t\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/type", "\"String\""),
+          ("/items/2/value/documentation/value/value", "\"the default\"")
+        ]
 
     Spec.it s "fixity has parent set" $ do
       check

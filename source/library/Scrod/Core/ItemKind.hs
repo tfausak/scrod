@@ -75,6 +75,8 @@ data ItemKind
     MinimalPragma
   | -- | Complete pragma: @{-# COMPLETE Nil, Cons #-}@
     CompletePragma
+  | -- | Default method signature: @default m :: Show a => a -> String@
+    DefaultMethodSignature
   | -- | Role annotation: @type role T nominal@
     RoleAnnotation
   deriving (Eq, Generics.Generic, Ord, Show)

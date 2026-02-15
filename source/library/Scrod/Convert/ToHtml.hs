@@ -652,7 +652,7 @@ declarationsContents exports items =
                       [Xml.string "Unexported"]
                 ]
                   <> concatMap renderUnexportedItem unexportedTopLevel
-                  <> fmap (\li -> Content.Element (itemToHtml li)) orphanedChildren
+                  <> fmap (Content.Element . itemToHtml) orphanedChildren
        in [ Content.Element $
               Xml.element
                 "section"

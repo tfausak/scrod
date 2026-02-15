@@ -600,12 +600,20 @@ declarationsContents exports items =
     exportDrivenDeclarations :: [Export.Export] -> [Content.Content Element.Element]
     exportDrivenDeclarations es =
       let (exportedContents, usedKeys) = renderExports es Set.empty
-          -- Top-level items whose keys weren't used.
+          -- Top-level items whose keys weren't used, excluding
+          -- nameless items whose children were all claimed (e.g. a
+          -- COMPLETE pragma whose pattern synonyms are exported).
           unexportedTopLevel =
             [ li
             | li <- topLevelItems,
-              not (Set.member (itemNatKey li) usedKeys)
+              not (Set.member (itemNatKey li) usedKeys),
+              not (isEmptyShell li)
             ]
+          isEmptyShell :: Located.Located Item.Item -> Bool
+          isEmptyShell li =
+            Maybe.isNothing (Item.name (Located.value li))
+              && let cs = Map.findWithDefault [] (itemNatKey li) childrenMap
+                  in not (null cs) && all (\c -> Set.member (itemNatKey c) usedKeys) cs
           -- Children whose parent was used but who were filtered out
           -- by subordinate restrictions (e.g. non-exported constructors).
           orphanedChildren =

@@ -88,9 +88,9 @@ toHtml m =
     }
 
 moduleTitle :: Module.Module -> Text.Text
-moduleTitle m = case Module.name m of
-  Nothing -> t "Documentation"
-  Just (Located.MkLocated _ (ModuleName.MkModuleName n)) -> n
+moduleTitle =
+  maybe (t "Documentation") (ModuleName.unwrap . Located.value)
+    . Module.name
 
 headElement :: Module.Module -> Content.Content Element.Element
 headElement m =
@@ -173,7 +173,7 @@ headerSection m =
   element
     "header"
     ( [("class", "mb-4")]
-        <> foldMap (\(Located.MkLocated loc _) -> [lineAttribute loc]) (Module.name m)
+        <> foldMap (pure . lineAttribute . Located.location) (Module.name m)
     )
     ( [element "h1" [("class", "border-bottom border-2 pb-2 mt-0")] [Xml.text (moduleTitle m)]]
         <> warningContents (Module.warning m)
@@ -185,15 +185,15 @@ warningContents Nothing = []
 warningContents (Just w) = [warningToHtml w]
 
 warningToHtml :: Warning.Warning -> Content.Content Element.Element
-warningToHtml (Warning.MkWarning (Category.MkCategory cat) val) =
+warningToHtml w =
   element
     "div"
     [("class", "alert alert-warning")]
     [ element
         "span"
         [("class", "fw-bold")]
-        [Xml.text cat],
-      Xml.text (t ": " <> val)
+        [Xml.text (Category.unwrap $ Warning.category w)],
+      Xml.text (t ": " <> Warning.value w)
     ]
 
 moduleDocContents :: Doc.Doc -> [Content.Content Element.Element]
@@ -216,14 +216,14 @@ metadataContents m =
           ]
 
 versionToText :: Version.Version -> Text.Text
-versionToText (Version.MkVersion parts) =
-  Text.intercalate (t ".") . fmap (t . show) $ NonEmpty.toList parts
+versionToText v =
+  Text.intercalate (t ".") . fmap (t . show) $ NonEmpty.toList (Version.unwrap v)
 
 languageItem :: Maybe Language.Language -> [Content.Content Element.Element]
 languageItem Nothing = []
-languageItem (Just (Language.MkLanguage lang)) =
+languageItem (Just lang) =
   [ element "dt" [] [Xml.string "Language"],
-    element "dd" [] [Xml.text lang]
+    element "dd" [] [Xml.text (Language.unwrap lang)]
   ]
 
 sinceItem :: Maybe Since.Since -> [Content.Content Element.Element]
@@ -237,13 +237,13 @@ sinceItem (Just since) =
   ]
 
 sinceToText :: Since.Since -> Text.Text
-sinceToText (Since.MkSince maybePackage version) =
-  packageText <> versionToText version
+sinceToText s =
+  packageText <> versionToText (Since.version s)
   where
     packageText :: Text.Text
-    packageText = case maybePackage of
+    packageText = case Since.package s of
       Nothing -> Text.empty
-      Just (PackageName.MkPackageName pkg) -> pkg <> t "-"
+      Just pkg -> PackageName.unwrap pkg <> t "-"
 
 -- Footer section
 
@@ -294,31 +294,31 @@ exportToContents export = case export of
     liClass = ("class", "list-group-item bg-transparent py-1 px-2")
 
 exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Content.Content Element.Element
-exportIdentifierToHtml (ExportIdentifier.MkExportIdentifier name subs maybeWarning maybeDoc) =
+exportIdentifierToHtml ei =
   element
     "div"
     [("class", "py-1")]
-    ( foldMap (\w -> [warningToHtml w]) maybeWarning
+    ( foldMap (\w -> [warningToHtml w]) (ExportIdentifier.warning ei)
         <> [ element
                "code"
                [("class", "font-monospace")]
-               ( [Xml.text (exportNameToText name)]
-                   <> subordinatesToContents subs
+               ( [Xml.text (exportNameToText (ExportIdentifier.name ei))]
+                   <> subordinatesToContents (ExportIdentifier.subordinates ei)
                )
            ]
         <> foldMap
           ( \doc ->
               [element "div" [("class", "mt-1")] (docToContents doc)]
           )
-          maybeDoc
+          (ExportIdentifier.doc ei)
     )
 
 exportNameToText :: ExportName.ExportName -> Text.Text
-exportNameToText (ExportName.MkExportName maybeKind name) =
-  kindPrefix <> name
+exportNameToText en =
+  kindPrefix <> ExportName.name en
   where
     kindPrefix :: Text.Text
-    kindPrefix = case maybeKind of
+    kindPrefix = case ExportName.kind en of
       Nothing -> Text.empty
       Just ExportNameKind.Pattern -> t "pattern "
       Just ExportNameKind.Type -> t "type "
@@ -326,27 +326,29 @@ exportNameToText (ExportName.MkExportName maybeKind name) =
 
 subordinatesToContents :: Maybe Subordinates.Subordinates -> [Content.Content Element.Element]
 subordinatesToContents Nothing = []
-subordinatesToContents (Just (Subordinates.MkSubordinates wildcard explicit)) =
+subordinatesToContents (Just subs) =
   let wildcardText :: Text.Text
       wildcardText = t ".."
       explicitTexts :: [Text.Text]
-      explicitTexts = fmap (\(ExportName.MkExportName _ n) -> n) explicit
+      explicitTexts = fmap ExportName.name (Subordinates.explicit subs)
       allTexts :: [Text.Text]
-      allTexts = if wildcard then wildcardText : explicitTexts else explicitTexts
+      allTexts = if Subordinates.wildcard subs then wildcardText : explicitTexts else explicitTexts
       combined :: Text.Text
       combined = Text.intercalate (t ", ") allTexts
    in [Xml.text (t "(" <> combined <> t ")")]
 
 sectionToHtml :: Section.Section -> Content.Content Element.Element
-sectionToHtml (Section.MkSection (Header.MkHeader level title)) =
+sectionToHtml s =
   element
     "div"
     [("class", "my-3")]
     [ element
-        (sectionLevelToName level)
+        (sectionLevelToName (Header.level h))
         [("class", "fw-bold")]
-        (docToContents title)
+        (docToContents (Header.title h))
     ]
+  where
+    h = Section.header s
 
 sectionLevelToName :: Level.Level -> String
 sectionLevelToName l = case l of
@@ -423,7 +425,7 @@ extensionsContents extensions
           ]
 
 extToContents :: (Extension.Extension, Bool) -> [Content.Content Element.Element]
-extToContents (Extension.MkExtension name, enabled) =
+extToContents (ext, enabled) =
   let cls :: String
       cls =
         if enabled
@@ -432,9 +434,9 @@ extToContents (Extension.MkExtension name, enabled) =
    in [ element
           "a"
           [ ("class", cls),
-            ("href", extensionUrl name)
+            ("href", extensionUrl (Extension.unwrap ext))
           ]
-          [Xml.text name]
+          [Xml.text (Extension.unwrap ext)]
       ]
 
 extensionUrl :: Text.Text -> String
@@ -607,7 +609,7 @@ itemsContents items =
     addChild :: Located.Located Item.Item -> Map.Map Natural.Natural [Located.Located Item.Item] -> Map.Map Natural.Natural [Located.Located Item.Item]
     addChild li acc = case Item.parentKey (Located.value li) of
       Nothing -> acc
-      Just (ItemKey.MkItemKey pk) -> Map.insertWith (<>) pk [li] acc
+      Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
 
     topLevelItems :: [Located.Located Item.Item]
     topLevelItems = filter (isTopLevel . Located.value) items
@@ -632,13 +634,13 @@ itemsContents items =
                 ]
 
 itemToHtml :: Located.Located Item.Item -> Content.Content Element.Element
-itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =
+itemToHtml item =
   element
     "div"
     [ ("class", "card mb-3 border-start border-4"),
       ("style", kindBorderStyle itemKind),
-      ("id", "item-" <> show (ItemKey.unwrap key)),
-      lineAttribute loc
+      ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item)),
+      lineAttribute $ Located.location item
     ]
     ( [ element
           "div"
@@ -648,17 +650,19 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
               <> [kindContent]
               <> sigAfterKind
               <> sinceContents
-              <> [locationElement loc]
+              <> [locationElement $ Located.location item]
           )
       ]
         <> docContents'
     )
   where
+    itemKind = Item.kind $ Located.value item
+
     nameContents :: [Content.Content Element.Element]
-    nameContents = case maybeName of
+    nameContents = case Item.name $ Located.value item of
       Nothing -> []
-      Just (ItemName.MkItemName n) ->
-        [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text n]]
+      Just n ->
+        [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text (ItemName.unwrap n)]]
 
     isTypeVarSignature :: Bool
     isTypeVarSignature = case itemKind of
@@ -685,7 +689,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       if isTypeVarSignature then [] else signatureContents
 
     signatureContents :: [Content.Content Element.Element]
-    signatureContents = case maybeSig of
+    signatureContents = case Item.signature $ Located.value item of
       Nothing -> []
       Just sig ->
         let prefix = if isTypeVarSignature then t "\x00a0" else t " :: "
@@ -696,7 +700,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
             ]
 
     sinceContents :: [Content.Content Element.Element]
-    sinceContents = case maybeSince of
+    sinceContents = case Item.since $ Located.value item of
       Nothing -> []
       Just s ->
         [ element
@@ -706,9 +710,9 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
         ]
 
     docContents' :: [Content.Content Element.Element]
-    docContents' = case doc of
+    docContents' = case Item.documentation $ Located.value item of
       Doc.Empty -> []
-      _ -> [element "div" [("class", "card-body")] (docToContents doc)]
+      doc -> [element "div" [("class", "card-body")] (docToContents doc)]
 
 lineAttribute :: Location.Location -> (String, String)
 lineAttribute loc =
@@ -896,12 +900,12 @@ docToContents doc = case doc of
   Doc.Table x -> [tableToHtml x]
 
 identifierToHtml :: Identifier.Identifier -> Content.Content Element.Element
-identifierToHtml (Identifier.MkIdentifier ns val) =
+identifierToHtml ident =
   element
     "span"
     []
-    ( [element "code" [("class", "font-monospace text-success")] [Xml.text val]]
-        <> namespaceBadge ns
+    ( [element "code" [("class", "font-monospace text-success")] [Xml.text (Identifier.value ident)]]
+        <> namespaceBadge (Identifier.namespace ident)
     )
   where
     namespaceBadge :: Maybe Namespace.Namespace -> [Content.Content Element.Element]
@@ -918,22 +922,22 @@ identifierToHtml (Identifier.MkIdentifier ns val) =
     namespaceToText Namespace.Type = t "type"
 
 modLinkToHtml :: ModLink.ModLink Doc.Doc -> Content.Content Element.Element
-modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =
+modLinkToHtml ml =
   element "code" [("class", "font-monospace text-info")] $
-    maybe [Xml.text modName] docToContents maybeLabel
+    maybe [Xml.text (ModuleName.unwrap $ ModLink.name ml)] docToContents (ModLink.label ml)
 
 hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
-hyperlinkToHtml (Hyperlink.MkHyperlink url maybeLabel) =
-  element "a" [("href", Text.unpack url)] $
-    maybe [Xml.text url] docToContents maybeLabel
+hyperlinkToHtml h =
+  element "a" [("href", Text.unpack (Hyperlink.url h))] $
+    maybe [Xml.text (Hyperlink.url h)] docToContents (Hyperlink.label h)
 
 pictureToHtml :: Picture.Picture -> Content.Content Element.Element
-pictureToHtml (Picture.MkPicture uri maybeTitle) =
+pictureToHtml p =
   element
     "img"
-    ( [("src", Text.unpack uri)]
-        <> [("alt", Text.unpack (Maybe.fromMaybe Text.empty maybeTitle))]
-        <> foldMap (\x -> [("title", Text.unpack x)]) maybeTitle
+    ( [("src", Text.unpack (Picture.uri p))]
+        <> [("alt", Text.unpack (Maybe.fromMaybe Text.empty (Picture.title p)))]
+        <> foldMap (\x -> [("title", Text.unpack x)]) (Picture.title p)
     )
     []
 
@@ -951,7 +955,7 @@ examplesToHtml examples =
     )
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
-exampleToContents (Example.MkExample expr results) =
+exampleToContents ex =
   [ element
       "div"
       [("class", "my-1")]
@@ -962,7 +966,7 @@ exampleToContents (Example.MkExample expr results) =
                 "span"
                 [("class", "text-warning-emphasis user-select-none")]
                 [Xml.string ">>> "],
-              Xml.text expr
+              Xml.text (Example.expression ex)
             ]
         ]
           <> fmap
@@ -972,13 +976,13 @@ exampleToContents (Example.MkExample expr results) =
                   [("class", "font-monospace text-body-secondary ps-3")]
                   [Xml.text r]
             )
-            results
+            (Example.result ex)
       )
   ]
 
 headerToHtml :: Header.Header Doc.Doc -> Content.Content Element.Element
-headerToHtml (Header.MkHeader level title) =
-  element (levelToName level) [] (docToContents title)
+headerToHtml h =
+  element (levelToName (Header.level h)) [] (docToContents (Header.title h))
 
 levelToName :: Level.Level -> String
 levelToName level = case level of
@@ -990,20 +994,20 @@ levelToName level = case level of
   Level.Six -> "h6"
 
 tableToHtml :: Table.Table Doc.Doc -> Content.Content Element.Element
-tableToHtml (Table.MkTable headerRows bodyRows) =
+tableToHtml tbl =
   element "table" [("class", "table table-bordered table-sm table-striped my-3")] (theadContents <> tbodyContents)
   where
     theadContents :: [Content.Content Element.Element]
     theadContents
-      | null headerRows = []
+      | null (Table.headerRows tbl) = []
       | otherwise =
-          [element "thead" [] (fmap headerRowToHtml headerRows)]
+          [element "thead" [] (fmap headerRowToHtml (Table.headerRows tbl))]
 
     tbodyContents :: [Content.Content Element.Element]
     tbodyContents
-      | null bodyRows = []
+      | null (Table.bodyRows tbl) = []
       | otherwise =
-          [element "tbody" [] (fmap bodyRowToHtml bodyRows)]
+          [element "tbody" [] (fmap bodyRowToHtml (Table.bodyRows tbl))]
 
     headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Content.Content Element.Element
     headerRowToHtml cells =
@@ -1014,12 +1018,12 @@ tableToHtml (Table.MkTable headerRows bodyRows) =
       element "tr" [] (fmap bodyCellToHtml cells)
 
     headerCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
-    headerCellToHtml (TableCell.MkCell colspan rowspan contents) =
-      element "th" (cellAttrs colspan rowspan) (docToContents contents)
+    headerCellToHtml cell =
+      element "th" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docToContents (TableCell.contents cell))
 
     bodyCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
-    bodyCellToHtml (TableCell.MkCell colspan rowspan contents) =
-      element "td" (cellAttrs colspan rowspan) (docToContents contents)
+    bodyCellToHtml cell =
+      element "td" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docToContents (TableCell.contents cell))
 
     cellAttrs :: Natural.Natural -> Natural.Natural -> [(String, String)]
     cellAttrs c r =

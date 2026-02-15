@@ -1,6 +1,6 @@
 # Scrod
 
-[![CI](https://github.com/tfausak/scrod/actions/workflows/ci.yml/badge.svg)](https://github.com/tfausak/scrod/actions/workflows/ci.yml)
+[![CI](https://github.com/tfausak/scrod/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tfausak/scrod/actions/workflows/ci.yml)
 
 :fish: Worse Haskell documentation.
 

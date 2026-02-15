@@ -51,13 +51,22 @@ import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
-import qualified Scrod.Xml.Attribute as Attribute
 import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Declaration as XmlDeclaration
 import qualified Scrod.Xml.Document as Xml
 import qualified Scrod.Xml.Element as Element
 import qualified Scrod.Xml.Misc as Misc
 import qualified Scrod.Xml.Name as XmlName
+
+t :: String -> Text.Text
+t = Text.pack
+
+element ::
+  String ->
+  [(String, String)] ->
+  [Content.Content Element.Element] ->
+  Content.Content Element.Element
+element x ys = Content.Element . Xml.element x (fmap (uncurry Xml.attribute) ys)
 
 -- | Convert a Module to a complete HTML document.
 toHtml :: Module.Module -> Xml.Document
@@ -66,140 +75,131 @@ toHtml m =
     { Xml.prolog =
         [ Misc.Declaration $
             XmlDeclaration.MkDeclaration
-              (XmlName.MkName $ Text.pack "doctype")
-              (Text.pack "html")
+              (XmlName.MkName $ t "doctype")
+              (t "html")
         ],
       Xml.root =
         Xml.element
           "html"
           []
-          [ Content.Element (headElement m),
-            Content.Element (bodyElement m)
+          [ headElement m,
+            bodyElement m
           ]
     }
 
 moduleTitle :: Module.Module -> Text.Text
 moduleTitle m = case Module.name m of
-  Nothing -> Text.pack "Documentation"
+  Nothing -> t "Documentation"
   Just (Located.MkLocated _ (ModuleName.MkModuleName n)) -> n
 
-headElement :: Module.Module -> Element.Element
+headElement :: Module.Module -> Content.Content Element.Element
 headElement m =
-  Xml.element
+  element
     "head"
     []
-    [ Content.Element $
-        Xml.element "meta" [Xml.attribute "charset" "utf-8"] [],
-      Content.Element $
-        Xml.element
-          "meta"
-          [ Xml.attribute "name" "viewport",
-            Xml.attribute "content" "width=device-width, initial-scale=1"
-          ]
-          [],
-      Content.Element $
-        Xml.element "title" [] [Xml.text (moduleTitle m)],
-      Content.Element $
-        Xml.element
-          "link"
-          [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css",
-            Xml.attribute "integrity" "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB",
-            Xml.attribute "crossorigin" "anonymous"
-          ]
-          [],
-      Content.Element $
-        Xml.element
-          "link"
-          [ Xml.attribute "rel" "stylesheet",
-            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/katex.min.css",
-            Xml.attribute "integrity" "sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP",
-            Xml.attribute "crossorigin" "anonymous"
-          ]
-          [],
-      Content.Element $
-        Xml.element
-          "link"
-          [ Xml.attribute "rel" "modulepreload",
-            Xml.attribute "href" "https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js",
-            Xml.attribute "integrity" "sha384-PV5j9Y/tL/HYr0HSxUY3afWRVHizeuTKLWTR+OwVlGHOBcN8jOZvCAS79+ULHoEU",
-            Xml.attribute "crossorigin" "anonymous"
-          ]
-          [],
-      Content.Element $
-        Xml.element
-          "script"
-          []
-          [ Xml.raw . Text.pack $
-              """
-              const dark = matchMedia('(prefers-color-scheme: dark)');
-              const setTheme = (e) =>
-                document.documentElement.dataset.bsTheme = e.matches ? 'dark' : 'light';
-              setTheme(dark);
-              dark.addEventListener('change', setTheme);
-              import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
-                .then((m) => m.default(document.body, { delimiters: [
-                  { left: '\\\\(', right: '\\\\)', display: false },
-                  { left: '\\\\[', right: '\\\\]', display: true }
-                ]}));
-              """
-          ]
+    [ element "meta" [("charset", "utf-8")] [],
+      element
+        "meta"
+        [ ("name", "viewport"),
+          ("content", "width=device-width, initial-scale=1")
+        ]
+        [],
+      element "title" [] [Xml.text (moduleTitle m)],
+      element
+        "link"
+        [ ("rel", "stylesheet"),
+          ("href", "https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css"),
+          ("integrity", "sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"),
+          ("crossorigin", "anonymous")
+        ]
+        [],
+      element
+        "link"
+        [ ("rel", "stylesheet"),
+          ("href", "https://esm.sh/katex@0.16.22/dist/katex.min.css"),
+          ("integrity", "sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP"),
+          ("crossorigin", "anonymous")
+        ]
+        [],
+      element
+        "link"
+        [ ("rel", "modulepreload"),
+          ("href", "https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js"),
+          ("integrity", "sha384-PV5j9Y/tL/HYr0HSxUY3afWRVHizeuTKLWTR+OwVlGHOBcN8jOZvCAS79+ULHoEU"),
+          ("crossorigin", "anonymous")
+        ]
+        [],
+      element
+        "script"
+        []
+        [ Xml.raw . t $
+            """
+            const dark = matchMedia('(prefers-color-scheme: dark)');
+            const setTheme = (e) =>
+              document.documentElement.dataset.bsTheme = e.matches ? 'dark' : 'light';
+            setTheme(dark);
+            dark.addEventListener('change', setTheme);
+            import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
+              .then((m) => m.default(document.body, { delimiters: [
+                { left: '\\\\(', right: '\\\\)', display: false },
+                { left: '\\\\[', right: '\\\\]', display: true }
+              ]}));
+            """
+        ]
     ]
 
-bodyElement :: Module.Module -> Element.Element
+bodyElement :: Module.Module -> Content.Content Element.Element
 bodyElement m =
-  Xml.element
+  element
     "body"
     []
-    [ Content.Element $
-        Xml.element
-          "div"
-          [Xml.attribute "class" "container py-4 text-break"]
-          ( [Content.Element (headerSection m)]
-              <> metadataContents m
-              <> exportsContents (Module.exports m)
-              <> importsContents (Module.imports m)
-              <> extensionsContents (Module.extensions m)
-              <> itemsContents (Module.items m)
-              <> [Content.Element (footerSection m)]
-          )
+    [ element
+        "div"
+        [("class", "container py-4 text-break")]
+        ( [headerSection m]
+            <> metadataContents m
+            <> exportsContents (Module.exports m)
+            <> importsContents (Module.imports m)
+            <> extensionsContents (Module.extensions m)
+            <> itemsContents (Module.items m)
+            <> [footerSection m]
+        )
     ]
 
 -- Header section
 
-headerSection :: Module.Module -> Element.Element
+headerSection :: Module.Module -> Content.Content Element.Element
 headerSection m =
-  Xml.element
+  element
     "header"
-    ( [Xml.attribute "class" "mb-4"]
+    ( [("class", "mb-4")]
         <> foldMap (\(Located.MkLocated loc _) -> [lineAttribute loc]) (Module.name m)
     )
-    ( [Content.Element $ Xml.element "h1" [Xml.attribute "class" "border-bottom border-2 pb-2 mt-0"] [Xml.text (moduleTitle m)]]
+    ( [element "h1" [("class", "border-bottom border-2 pb-2 mt-0")] [Xml.text (moduleTitle m)]]
         <> warningContents (Module.warning m)
         <> moduleDocContents (Module.documentation m)
     )
 
 warningContents :: Maybe Warning.Warning -> [Content.Content Element.Element]
 warningContents Nothing = []
-warningContents (Just w) = [Content.Element (warningToHtml w)]
+warningContents (Just w) = [warningToHtml w]
 
-warningToHtml :: Warning.Warning -> Element.Element
+warningToHtml :: Warning.Warning -> Content.Content Element.Element
 warningToHtml (Warning.MkWarning (Category.MkCategory cat) val) =
-  Xml.element
+  element
     "div"
-    [Xml.attribute "class" "alert alert-warning"]
-    [ Content.Element $
-        Xml.element
-          "span"
-          [Xml.attribute "class" "fw-bold"]
-          [Xml.text cat],
-      Xml.text (Text.pack ": " <> val)
+    [("class", "alert alert-warning")]
+    [ element
+        "span"
+        [("class", "fw-bold")]
+        [Xml.text cat],
+      Xml.text (t ": " <> val)
     ]
 
 moduleDocContents :: Doc.Doc -> [Content.Content Element.Element]
 moduleDocContents Doc.Empty = []
 moduleDocContents doc =
-  [Content.Element $ Xml.element "div" [Xml.attribute "class" "my-3"] (docToContents doc)]
+  [element "div" [("class", "my-3")] (docToContents doc)]
 
 -- Metadata section
 
@@ -209,33 +209,31 @@ metadataContents m =
    in if null items
         then []
         else
-          [ Content.Element $
-              Xml.element
-                "section"
-                [Xml.attribute "class" "card border-start border-primary border-4 mb-3"]
-                [Content.Element $ Xml.element "dl" [Xml.attribute "class" "card-body mb-0"] items]
+          [ element
+              "section"
+              [("class", "card border-start border-primary border-4 mb-3")]
+              [element "dl" [("class", "card-body mb-0")] items]
           ]
 
 versionToText :: Version.Version -> Text.Text
 versionToText (Version.MkVersion parts) =
-  Text.intercalate (Text.pack ".") . fmap (Text.pack . show) $ NonEmpty.toList parts
+  Text.intercalate (t ".") . fmap (t . show) $ NonEmpty.toList parts
 
 languageItem :: Maybe Language.Language -> [Content.Content Element.Element]
 languageItem Nothing = []
 languageItem (Just (Language.MkLanguage lang)) =
-  [ Content.Element $ Xml.element "dt" [] [Xml.string "Language"],
-    Content.Element $ Xml.element "dd" [] [Xml.text lang]
+  [ element "dt" [] [Xml.string "Language"],
+    element "dd" [] [Xml.text lang]
   ]
 
 sinceItem :: Maybe Since.Since -> [Content.Content Element.Element]
 sinceItem Nothing = []
 sinceItem (Just since) =
-  [ Content.Element $ Xml.element "dt" [] [Xml.string "Since"],
-    Content.Element $
-      Xml.element
-        "dd"
-        [Xml.attribute "class" "text-body-secondary small"]
-        [Xml.text (sinceToText since)]
+  [ element "dt" [] [Xml.string "Since"],
+    element
+      "dd"
+      [("class", "text-body-secondary small")]
+      [Xml.text (sinceToText since)]
   ]
 
 sinceToText :: Since.Since -> Text.Text
@@ -245,21 +243,20 @@ sinceToText (Since.MkSince maybePackage version) =
     packageText :: Text.Text
     packageText = case maybePackage of
       Nothing -> Text.empty
-      Just (PackageName.MkPackageName pkg) -> pkg <> Text.pack "-"
+      Just (PackageName.MkPackageName pkg) -> pkg <> t "-"
 
 -- Footer section
 
-footerSection :: Module.Module -> Element.Element
+footerSection :: Module.Module -> Content.Content Element.Element
 footerSection m =
-  Xml.element
+  element
     "footer"
-    [Xml.attribute "class" "mt-5 pt-3 border-top text-body-secondary small"]
+    [("class", "mt-5 pt-3 border-top text-body-secondary small")]
     [ Xml.string "Generated by ",
-      Content.Element $
-        Xml.element
-          "a"
-          [Xml.attribute "href" "https://github.com/tfausak/scrod"]
-          [Xml.string "Scrod"],
+      element
+        "a"
+        [("href", "https://github.com/tfausak/scrod")]
+        [Xml.string "Scrod"],
       Xml.string " version ",
       Xml.text (versionToText (Module.version m))
     ]
@@ -270,66 +267,48 @@ exportsContents :: Maybe [Export.Export] -> [Content.Content Element.Element]
 exportsContents Nothing = []
 exportsContents (Just []) = []
 exportsContents (Just exports) =
-  [ Content.Element $
-      Xml.element
-        "section"
-        [Xml.attribute "class" "my-4"]
-        ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Exports"]]
-            <> [ Content.Element $
-                   Xml.element
-                     "ul"
-                     [Xml.attribute "class" "list-group list-group-flush"]
-                     (concatMap exportToContents exports)
-               ]
-        )
+  [ element
+      "section"
+      [("class", "my-4")]
+      ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Exports"]]
+          <> [ element
+                 "ul"
+                 [("class", "list-group list-group-flush")]
+                 (concatMap exportToContents exports)
+             ]
+      )
   ]
 
 exportToContents :: Export.Export -> [Content.Content Element.Element]
 exportToContents export = case export of
   Export.Identifier ident ->
-    [Content.Element $ Xml.element "li" [liClass] [Content.Element (exportIdentifierToHtml ident)]]
+    [element "li" [liClass] [exportIdentifierToHtml ident]]
   Export.Group section ->
-    [Content.Element $ Xml.element "li" [liClass] [Content.Element (sectionToHtml section)]]
+    [element "li" [liClass] [sectionToHtml section]]
   Export.Doc doc ->
-    [ Content.Element $
-        Xml.element
-          "li"
-          [liClass]
-          [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-1"] (docToContents doc)]
-    ]
+    [element "li" [liClass] [element "div" [("class", "mt-1")] (docToContents doc)]]
   Export.DocNamed name ->
-    [ Content.Element $
-        Xml.element
-          "li"
-          [liClass]
-          [ Content.Element $
-              Xml.element
-                "div"
-                [Xml.attribute "class" "mt-1"]
-                [Xml.text (Text.pack "\x00a7" <> name)]
-          ]
-    ]
+    [element "li" [liClass] [element "div" [("class", "mt-1")] [Xml.text (t "\x00a7" <> name)]]]
   where
-    liClass :: Attribute.Attribute
-    liClass = Xml.attribute "class" "list-group-item bg-transparent py-1 px-2"
+    liClass :: (String, String)
+    liClass = ("class", "list-group-item bg-transparent py-1 px-2")
 
-exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Element.Element
+exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Content.Content Element.Element
 exportIdentifierToHtml (ExportIdentifier.MkExportIdentifier name subs maybeWarning maybeDoc) =
-  Xml.element
+  element
     "div"
-    [Xml.attribute "class" "py-1"]
-    ( foldMap (\w -> [Content.Element (warningToHtml w)]) maybeWarning
-        <> [ Content.Element $
-               Xml.element
-                 "code"
-                 [Xml.attribute "class" "font-monospace"]
-                 ( [Xml.text (exportNameToText name)]
-                     <> subordinatesToContents subs
-                 )
+    [("class", "py-1")]
+    ( foldMap (\w -> [warningToHtml w]) maybeWarning
+        <> [ element
+               "code"
+               [("class", "font-monospace")]
+               ( [Xml.text (exportNameToText name)]
+                   <> subordinatesToContents subs
+               )
            ]
         <> foldMap
           ( \doc ->
-              [Content.Element $ Xml.element "div" [Xml.attribute "class" "mt-1"] (docToContents doc)]
+              [element "div" [("class", "mt-1")] (docToContents doc)]
           )
           maybeDoc
     )
@@ -341,33 +320,32 @@ exportNameToText (ExportName.MkExportName maybeKind name) =
     kindPrefix :: Text.Text
     kindPrefix = case maybeKind of
       Nothing -> Text.empty
-      Just ExportNameKind.Pattern -> Text.pack "pattern "
-      Just ExportNameKind.Type -> Text.pack "type "
-      Just ExportNameKind.Module -> Text.pack "module "
+      Just ExportNameKind.Pattern -> t "pattern "
+      Just ExportNameKind.Type -> t "type "
+      Just ExportNameKind.Module -> t "module "
 
 subordinatesToContents :: Maybe Subordinates.Subordinates -> [Content.Content Element.Element]
 subordinatesToContents Nothing = []
 subordinatesToContents (Just (Subordinates.MkSubordinates wildcard explicit)) =
   let wildcardText :: Text.Text
-      wildcardText = Text.pack ".."
+      wildcardText = t ".."
       explicitTexts :: [Text.Text]
       explicitTexts = fmap (\(ExportName.MkExportName _ n) -> n) explicit
       allTexts :: [Text.Text]
       allTexts = if wildcard then wildcardText : explicitTexts else explicitTexts
       combined :: Text.Text
-      combined = Text.intercalate (Text.pack ", ") allTexts
-   in [Xml.text (Text.pack "(" <> combined <> Text.pack ")")]
+      combined = Text.intercalate (t ", ") allTexts
+   in [Xml.text (t "(" <> combined <> t ")")]
 
-sectionToHtml :: Section.Section -> Element.Element
+sectionToHtml :: Section.Section -> Content.Content Element.Element
 sectionToHtml (Section.MkSection (Header.MkHeader level title)) =
-  Xml.element
+  element
     "div"
-    [Xml.attribute "class" "my-3"]
-    [ Content.Element $
-        Xml.element
-          (sectionLevelToName level)
-          [Xml.attribute "class" "fw-bold"]
-          (docToContents title)
+    [("class", "my-3")]
+    [ element
+        (sectionLevelToName level)
+        [("class", "fw-bold")]
+        (docToContents title)
     ]
 
 sectionLevelToName :: Level.Level -> String
@@ -389,42 +367,37 @@ importsContents imports =
         "Imports ("
           <> show uniqueCount
           <> if uniqueCount == 1 then " module)" else " modules)"
-   in [ Content.Element $
-          Xml.element
-            "details"
-            [Xml.attribute "class" "my-4"]
-            ( [ Content.Element $
-                  Xml.element "summary" [Xml.attribute "class" "fs-4 fw-bold"] [Xml.string summary]
-              ]
-                <> [ Content.Element $
-                       Xml.element
-                         "ul"
-                         [Xml.attribute "class" "list-group list-group-flush font-monospace small"]
-                         (fmap importToContent imports)
-                   ]
-            )
+   in [ element
+          "details"
+          [("class", "my-4")]
+          ( [element "summary" [("class", "fs-4 fw-bold")] [Xml.string summary]]
+              <> [ element
+                     "ul"
+                     [("class", "list-group list-group-flush font-monospace small")]
+                     (fmap importToContent imports)
+                 ]
+          )
       ]
 
 importToContent :: Import.Import -> Content.Content Element.Element
 importToContent i =
-  Content.Element $
-    Xml.element
-      "li"
-      [Xml.attribute "class" "list-group-item bg-transparent py-1 px-2"]
-      ( packageContents (Import.package i)
-          <> [Xml.text (ModuleName.unwrap $ Import.name i)]
-          <> aliasContents (Import.alias i)
-      )
+  element
+    "li"
+    [("class", "list-group-item bg-transparent py-1 px-2")]
+    ( packageContents (Import.package i)
+        <> [Xml.text (ModuleName.unwrap $ Import.name i)]
+        <> aliasContents (Import.alias i)
+    )
   where
     packageContents :: Maybe PackageName.PackageName -> [Content.Content Element.Element]
     packageContents Nothing = []
     packageContents (Just pkg) =
-      [Xml.text (Text.pack "\"" <> PackageName.unwrap pkg <> Text.pack "\" ")]
+      [Xml.text (t "\"" <> PackageName.unwrap pkg <> t "\" ")]
 
     aliasContents :: Maybe ModuleName.ModuleName -> [Content.Content Element.Element]
     aliasContents Nothing = []
     aliasContents (Just a) =
-      [Xml.text (Text.pack " as " <> ModuleName.unwrap a)]
+      [Xml.text (t " as " <> ModuleName.unwrap a)]
 
 -- Extensions section
 
@@ -437,20 +410,16 @@ extensionsContents extensions
             "Extensions ("
               <> show count
               <> if count == 1 then " extension)" else " extensions)"
-       in [ Content.Element $
-              Xml.element
-                "details"
-                [Xml.attribute "class" "my-3"]
-                ( [ Content.Element $
-                      Xml.element "summary" [Xml.attribute "class" "fs-4 fw-bold"] [Xml.string summary]
-                  ]
-                    <> [ Content.Element $
-                           Xml.element
-                             "div"
-                             [Xml.attribute "class" "mt-2"]
-                             (concatMap extToContents $ Map.toList extensions)
-                       ]
-                )
+       in [ element
+              "details"
+              [("class", "my-3")]
+              ( [element "summary" [("class", "fs-4 fw-bold")] [Xml.string summary]]
+                  <> [ element
+                         "div"
+                         [("class", "mt-2")]
+                         (concatMap extToContents $ Map.toList extensions)
+                     ]
+              )
           ]
 
 extToContents :: (Extension.Extension, Bool) -> [Content.Content Element.Element]
@@ -460,13 +429,12 @@ extToContents (Extension.MkExtension name, enabled) =
         if enabled
           then "badge bg-secondary-subtle text-body font-monospace me-1 mb-1"
           else "badge bg-danger-subtle text-body text-decoration-line-through font-monospace me-1 mb-1"
-   in [ Content.Element $
-          Xml.element
-            "a"
-            [ Xml.attribute "class" cls,
-              Xml.attribute "href" (extensionUrl name)
-            ]
-            [Xml.text name]
+   in [ element
+          "a"
+          [ ("class", cls),
+            ("href", extensionUrl name)
+          ]
+          [Xml.text name]
       ]
 
 extensionUrl :: Text.Text -> String
@@ -481,7 +449,7 @@ ghcUserGuideBaseUrl = "https://downloads.haskell.org/ghc/latest/docs/users_guide
 extensionUrlPaths :: Map.Map Text.Text String
 extensionUrlPaths =
   Map.fromList
-    . fmap (Bifunctor.first Text.pack)
+    . fmap (Bifunctor.first t)
     $ [ ("AllowAmbiguousTypes", "exts/ambiguous_types.html#extension-AllowAmbiguousTypes"),
         ("ApplicativeDo", "exts/applicative_do.html#extension-ApplicativeDo"),
         ("Arrows", "exts/arrows.html#extension-Arrows"),
@@ -625,13 +593,12 @@ extensionUrlPaths =
 itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 itemsContents [] = []
 itemsContents items =
-  [ Content.Element $
-      Xml.element
-        "section"
-        [Xml.attribute "class" "my-4"]
-        ( [Content.Element $ Xml.element "h2" [Xml.attribute "class" "border-bottom pb-1 mt-4"] [Xml.string "Declarations"]]
-            <> concatMap renderItemWithChildren topLevelItems
-        )
+  [ element
+      "section"
+      [("class", "my-4")]
+      ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Declarations"]]
+          <> concatMap renderItemWithChildren topLevelItems
+      )
   ]
   where
     childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
@@ -654,37 +621,35 @@ itemsContents items =
     renderItemWithChildren li =
       let k = ItemKey.unwrap (Item.key (Located.value li))
           children = Map.findWithDefault [] k childrenMap
-       in [Content.Element (itemToHtml li)]
+       in [itemToHtml li]
             <> if null children
               then []
               else
-                [ Content.Element $
-                    Xml.element
-                      "div"
-                      [Xml.attribute "class" "ms-4 mt-2 border-start border-2 ps-3"]
-                      (concatMap renderItemWithChildren children)
+                [ element
+                    "div"
+                    [("class", "ms-4 mt-2 border-start border-2 ps-3")]
+                    (concatMap renderItemWithChildren children)
                 ]
 
-itemToHtml :: Located.Located Item.Item -> Element.Element
+itemToHtml :: Located.Located Item.Item -> Content.Content Element.Element
 itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName doc maybeSince maybeSig)) =
-  Xml.element
+  element
     "div"
-    [ Xml.attribute "class" "card mb-3 border-start border-4",
-      Xml.attribute "style" (kindBorderStyle itemKind),
-      Xml.attribute "id" ("item-" <> show (ItemKey.unwrap key)),
+    [ ("class", "card mb-3 border-start border-4"),
+      ("style", kindBorderStyle itemKind),
+      ("id", "item-" <> show (ItemKey.unwrap key)),
       lineAttribute loc
     ]
-    ( [ Content.Element $
-          Xml.element
-            "div"
-            [Xml.attribute "class" "card-header bg-transparent d-flex align-items-center py-2"]
-            ( nameContents
-                <> sigBeforeKind
-                <> [Content.Element kindElement]
-                <> sigAfterKind
-                <> sinceContents
-                <> [Content.Element (locationElement loc)]
-            )
+    ( [ element
+          "div"
+          [("class", "card-header bg-transparent d-flex align-items-center py-2")]
+          ( nameContents
+              <> sigBeforeKind
+              <> [kindContent]
+              <> sigAfterKind
+              <> sinceContents
+              <> [locationElement loc]
+          )
       ]
         <> docContents'
     )
@@ -693,7 +658,7 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     nameContents = case maybeName of
       Nothing -> []
       Just (ItemName.MkItemName n) ->
-        [Content.Element $ Xml.element "span" [Xml.attribute "class" "font-monospace fw-bold text-success"] [Xml.text n]]
+        [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text n]]
 
     isTypeVarSignature :: Bool
     isTypeVarSignature = case itemKind of
@@ -704,11 +669,11 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
       ItemKind.Class -> True
       _ -> False
 
-    kindElement :: Element.Element
-    kindElement =
-      Xml.element
+    kindContent :: Content.Content Element.Element
+    kindContent =
+      element
         "span"
-        [Xml.attribute "class" ("badge " <> kindBadgeClass itemKind <> " ms-2")]
+        [("class", "badge " <> kindBadgeClass itemKind <> " ms-2")]
         [Xml.text (kindToText itemKind)]
 
     sigBeforeKind :: [Content.Content Element.Element]
@@ -723,92 +688,90 @@ itemToHtml (Located.MkLocated loc (Item.MkItem key itemKind _parentKey maybeName
     signatureContents = case maybeSig of
       Nothing -> []
       Just sig ->
-        let prefix = if isTypeVarSignature then Text.pack "\x00a0" else Text.pack " :: "
-         in [ Content.Element $
-                Xml.element
-                  "span"
-                  [Xml.attribute "class" "font-monospace text-body-secondary"]
-                  [Xml.text (prefix <> sig)]
+        let prefix = if isTypeVarSignature then t "\x00a0" else t " :: "
+         in [ element
+                "span"
+                [("class", "font-monospace text-body-secondary")]
+                [Xml.text (prefix <> sig)]
             ]
 
     sinceContents :: [Content.Content Element.Element]
     sinceContents = case maybeSince of
       Nothing -> []
       Just s ->
-        [ Content.Element $
-            Xml.element
-              "span"
-              [Xml.attribute "class" "text-body-secondary small ms-2"]
-              [Xml.text (Text.pack "since " <> sinceToText s)]
+        [ element
+            "span"
+            [("class", "text-body-secondary small ms-2")]
+            [Xml.text (t "since " <> sinceToText s)]
         ]
 
     docContents' :: [Content.Content Element.Element]
     docContents' = case doc of
       Doc.Empty -> []
-      _ -> [Content.Element $ Xml.element "div" [Xml.attribute "class" "card-body"] (docToContents doc)]
+      _ -> [element "div" [("class", "card-body")] (docToContents doc)]
 
-lineAttribute :: Location.Location -> Attribute.Attribute
+lineAttribute :: Location.Location -> (String, String)
 lineAttribute loc =
-  Xml.attribute "data-line" (show (Line.unwrap (Location.line loc)))
+  ("data-line", show (Line.unwrap (Location.line loc)))
 
-columnAttribute :: Location.Location -> Attribute.Attribute
+columnAttribute :: Location.Location -> (String, String)
 columnAttribute loc =
-  Xml.attribute "data-col" (show (Column.unwrap (Location.column loc)))
+  ("data-col", show (Column.unwrap (Location.column loc)))
 
-locationElement :: Location.Location -> Element.Element
+locationElement :: Location.Location -> Content.Content Element.Element
 locationElement loc =
   let lineNum = Line.unwrap (Location.line loc)
-   in Xml.element
+   in element
         "button"
-        [ Xml.attribute "type" "button",
-          Xml.attribute "class" "item-location ms-auto text-body-tertiary small bg-transparent border-0 p-0",
-          Xml.attribute "aria-label" ("Go to line " <> show lineNum),
+        [ ("type", "button"),
+          ("class", "item-location ms-auto text-body-tertiary small bg-transparent border-0 p-0"),
+          ("aria-label", "Go to line " <> show lineNum),
           lineAttribute loc,
           columnAttribute loc
         ]
         [ Xml.text
-            ( Text.pack "line "
-                <> Text.pack (show lineNum)
+            ( t "line "
+                <> t (show lineNum)
             )
         ]
 
 kindToText :: ItemKind.ItemKind -> Text.Text
-kindToText k = case k of
-  ItemKind.Function -> Text.pack "function"
-  ItemKind.PatternBinding -> Text.pack "pattern binding"
-  ItemKind.PatternSynonym -> Text.pack "pattern"
-  ItemKind.DataType -> Text.pack "data"
-  ItemKind.Newtype -> Text.pack "newtype"
-  ItemKind.TypeData -> Text.pack "type data"
-  ItemKind.TypeSynonym -> Text.pack "type"
-  ItemKind.DataConstructor -> Text.pack "constructor"
-  ItemKind.GADTConstructor -> Text.pack "GADT constructor"
-  ItemKind.RecordField -> Text.pack "field"
-  ItemKind.Class -> Text.pack "class"
-  ItemKind.ClassMethod -> Text.pack "method"
-  ItemKind.ClassInstance -> Text.pack "instance"
-  ItemKind.StandaloneDeriving -> Text.pack "standalone deriving"
-  ItemKind.DerivedInstance -> Text.pack "deriving"
-  ItemKind.OpenTypeFamily -> Text.pack "type family"
-  ItemKind.ClosedTypeFamily -> Text.pack "type family"
-  ItemKind.DataFamily -> Text.pack "data family"
-  ItemKind.TypeFamilyInstance -> Text.pack "type instance"
-  ItemKind.DataFamilyInstance -> Text.pack "data instance"
-  ItemKind.ForeignImport -> Text.pack "foreign import"
-  ItemKind.ForeignExport -> Text.pack "foreign export"
-  ItemKind.FixitySignature -> Text.pack "fixity"
-  ItemKind.InlineSignature -> Text.pack "inline"
-  ItemKind.SpecialiseSignature -> Text.pack "specialise"
-  ItemKind.StandaloneKindSig -> Text.pack "kind"
-  ItemKind.Rule -> Text.pack "rule"
-  ItemKind.Default -> Text.pack "default"
-  ItemKind.Annotation -> Text.pack "annotation"
-  ItemKind.Splice -> Text.pack "splice"
-  ItemKind.Warning -> Text.pack "warning"
-  ItemKind.MinimalPragma -> Text.pack "minimal"
-  ItemKind.CompletePragma -> Text.pack "complete"
-  ItemKind.DefaultMethodSignature -> Text.pack "default"
-  ItemKind.RoleAnnotation -> Text.pack "role"
+kindToText k = t $ case k of
+  ItemKind.Function -> "function"
+  ItemKind.PatternBinding -> "pattern binding"
+  ItemKind.PatternSynonym -> "pattern"
+  ItemKind.DataType -> "data"
+  ItemKind.Newtype -> "newtype"
+  ItemKind.TypeData -> "type data"
+  ItemKind.TypeSynonym -> "type"
+  ItemKind.DataConstructor -> "constructor"
+  ItemKind.GADTConstructor -> "GADT constructor"
+  ItemKind.RecordField -> "field"
+  ItemKind.Class -> "class"
+  ItemKind.ClassMethod -> "method"
+  ItemKind.ClassInstance -> "instance"
+  ItemKind.StandaloneDeriving -> "standalone deriving"
+  ItemKind.DerivedInstance -> "deriving"
+  ItemKind.OpenTypeFamily -> "type family"
+  ItemKind.ClosedTypeFamily -> "type family"
+  ItemKind.DataFamily -> "data family"
+  ItemKind.TypeFamilyInstance -> "type instance"
+  ItemKind.DataFamilyInstance -> "data instance"
+  ItemKind.ForeignImport -> "foreign import"
+  ItemKind.ForeignExport -> "foreign export"
+  ItemKind.FixitySignature -> "fixity"
+  ItemKind.InlineSignature -> "inline"
+  ItemKind.SpecialiseSignature -> "specialise"
+  ItemKind.StandaloneKindSig -> "kind"
+  ItemKind.Rule -> "rule"
+  ItemKind.Default -> "default"
+  ItemKind.Annotation -> "annotation"
+  ItemKind.Splice -> "splice"
+  ItemKind.Warning -> "warning"
+  ItemKind.MinimalPragma -> "minimal"
+  ItemKind.CompletePragma -> "complete"
+  ItemKind.DefaultMethodSignature -> "default"
+  ItemKind.RoleAnnotation -> "role"
 
 data KindColor
   = KindSuccess
@@ -877,157 +840,145 @@ docToContents :: Doc.Doc -> [Content.Content Element.Element]
 docToContents doc = case doc of
   Doc.Empty -> []
   Doc.Append ds -> concatMap docToContents ds
-  Doc.String t -> [Xml.text t]
-  Doc.Paragraph d -> [Content.Element $ Xml.element "p" [] (docToContents d)]
-  Doc.Identifier i -> [Content.Element (identifierToHtml i)]
-  Doc.Module m -> [Content.Element (modLinkToHtml m)]
-  Doc.Emphasis d -> [Content.Element $ Xml.element "em" [] (docToContents d)]
-  Doc.Monospaced d -> [Content.Element $ Xml.element "code" [] (docToContents d)]
-  Doc.Bold d -> [Content.Element $ Xml.element "strong" [] (docToContents d)]
+  Doc.String x -> [Xml.text x]
+  Doc.Paragraph d -> [element "p" [] (docToContents d)]
+  Doc.Identifier i -> [identifierToHtml i]
+  Doc.Module m -> [modLinkToHtml m]
+  Doc.Emphasis d -> [element "em" [] (docToContents d)]
+  Doc.Monospaced d -> [element "code" [] (docToContents d)]
+  Doc.Bold d -> [element "strong" [] (docToContents d)]
   Doc.UnorderedList items ->
-    [ Content.Element $
-        Xml.element "ul" [] (concatMap (\item -> [Content.Element $ Xml.element "li" [] (docToContents item)]) items)
-    ]
+    [element "ul" [] (concatMap (\item -> [element "li" [] (docToContents item)]) items)]
   Doc.OrderedList items ->
-    [ Content.Element $
-        Xml.element
-          "ol"
-          []
-          ( fmap
-              ( \ni ->
-                  Content.Element $
-                    Xml.element "li" [Xml.attribute "value" (show $ NumberedItem.index ni)] (docToContents $ NumberedItem.item ni)
-              )
-              items
-          )
+    [ element
+        "ol"
+        []
+        ( fmap
+            ( \ni ->
+                element "li" [("value", show $ NumberedItem.index ni)] (docToContents $ NumberedItem.item ni)
+            )
+            items
+        )
     ]
   Doc.DefList defs ->
-    [ Content.Element $
-        Xml.element
-          "dl"
-          []
-          ( concatMap
-              ( \d ->
-                  [ Content.Element $ Xml.element "dt" [] (docToContents $ Definition.term d),
-                    Content.Element $ Xml.element "dd" [] (docToContents $ Definition.definition d)
-                  ]
-              )
-              defs
-          )
+    [ element
+        "dl"
+        []
+        ( concatMap
+            ( \d ->
+                [ element "dt" [] (docToContents $ Definition.term d),
+                  element "dd" [] (docToContents $ Definition.definition d)
+                ]
+            )
+            defs
+        )
     ]
   Doc.CodeBlock d ->
-    [Content.Element $ Xml.element "pre" [Xml.attribute "class" "bg-body-secondary rounded p-3 my-3"] [Content.Element $ Xml.element "code" [] (docToContents d)]]
-  Doc.Hyperlink h -> [Content.Element (hyperlinkToHtml h)]
-  Doc.Pic p -> [Content.Element (pictureToHtml p)]
-  Doc.MathInline t ->
-    [Xml.text $ Text.pack "\\(" <> t <> Text.pack "\\)"]
-  Doc.MathDisplay t ->
-    [Xml.text $ Text.pack "\\[" <> t <> Text.pack "\\]"]
-  Doc.AName t ->
-    [Content.Element $ Xml.element "a" [Xml.attribute "id" (Text.unpack t)] []]
-  Doc.Property t ->
-    [ Content.Element $
-        Xml.element
-          "div"
-          [Xml.attribute "class" "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3"]
-          [ Content.Element $ Xml.element "div" [Xml.attribute "class" "fw-bold mb-1"] [Xml.string "Property:"],
-            Content.Element $ Xml.element "pre" [Xml.attribute "class" "mb-0 bg-transparent font-monospace"] [Xml.text t]
-          ]
+    [element "pre" [("class", "bg-body-secondary rounded p-3 my-3")] [element "code" [] (docToContents d)]]
+  Doc.Hyperlink h -> [hyperlinkToHtml h]
+  Doc.Pic p -> [pictureToHtml p]
+  Doc.MathInline x ->
+    [Xml.text $ t "\\(" <> x <> t "\\)"]
+  Doc.MathDisplay x ->
+    [Xml.text $ t "\\[" <> x <> t "\\]"]
+  Doc.AName x ->
+    [element "a" [("id", Text.unpack x)] []]
+  Doc.Property x ->
+    [ element
+        "div"
+        [("class", "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3")]
+        [ element "div" [("class", "fw-bold mb-1")] [Xml.string "Property:"],
+          element "pre" [("class", "mb-0 bg-transparent font-monospace")] [Xml.text x]
+        ]
     ]
-  Doc.Examples es -> [Content.Element (examplesToHtml es)]
-  Doc.Header h -> [Content.Element (headerToHtml h)]
-  Doc.Table t -> [Content.Element (tableToHtml t)]
+  Doc.Examples es -> [examplesToHtml es]
+  Doc.Header h -> [headerToHtml h]
+  Doc.Table x -> [tableToHtml x]
 
-identifierToHtml :: Identifier.Identifier -> Element.Element
+identifierToHtml :: Identifier.Identifier -> Content.Content Element.Element
 identifierToHtml (Identifier.MkIdentifier ns val) =
-  Xml.element
+  element
     "span"
     []
-    ( [Content.Element $ Xml.element "code" [Xml.attribute "class" "font-monospace text-success"] [Xml.text val]]
+    ( [element "code" [("class", "font-monospace text-success")] [Xml.text val]]
         <> namespaceBadge ns
     )
   where
     namespaceBadge :: Maybe Namespace.Namespace -> [Content.Content Element.Element]
     namespaceBadge Nothing = []
     namespaceBadge (Just n) =
-      [ Content.Element $
-          Xml.element
-            "span"
-            [Xml.attribute "class" "badge bg-secondary-subtle text-body ms-1"]
-            [Xml.text (namespaceToText n)]
+      [ element
+          "span"
+          [("class", "badge bg-secondary-subtle text-body ms-1")]
+          [Xml.text (namespaceToText n)]
       ]
 
     namespaceToText :: Namespace.Namespace -> Text.Text
-    namespaceToText Namespace.Value = Text.pack "value"
-    namespaceToText Namespace.Type = Text.pack "type"
+    namespaceToText Namespace.Value = t "value"
+    namespaceToText Namespace.Type = t "type"
 
-modLinkToHtml :: ModLink.ModLink Doc.Doc -> Element.Element
+modLinkToHtml :: ModLink.ModLink Doc.Doc -> Content.Content Element.Element
 modLinkToHtml (ModLink.MkModLink (ModuleName.MkModuleName modName) maybeLabel) =
-  Xml.element "code" [Xml.attribute "class" "font-monospace text-info"] $
+  element "code" [("class", "font-monospace text-info")] $
     maybe [Xml.text modName] docToContents maybeLabel
 
-hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Element.Element
+hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
 hyperlinkToHtml (Hyperlink.MkHyperlink url maybeLabel) =
-  Xml.element "a" [Xml.attribute "href" (Text.unpack url)] $
+  element "a" [("href", Text.unpack url)] $
     maybe [Xml.text url] docToContents maybeLabel
 
-pictureToHtml :: Picture.Picture -> Element.Element
+pictureToHtml :: Picture.Picture -> Content.Content Element.Element
 pictureToHtml (Picture.MkPicture uri maybeTitle) =
-  Xml.element
+  element
     "img"
-    ( [Xml.attribute "src" (Text.unpack uri)]
-        <> [Xml.attribute "alt" (Text.unpack (Maybe.fromMaybe Text.empty maybeTitle))]
-        <> foldMap (\t -> [Xml.attribute "title" (Text.unpack t)]) maybeTitle
+    ( [("src", Text.unpack uri)]
+        <> [("alt", Text.unpack (Maybe.fromMaybe Text.empty maybeTitle))]
+        <> foldMap (\x -> [("title", Text.unpack x)]) maybeTitle
     )
     []
 
-examplesToHtml :: NonEmpty.NonEmpty Example.Example -> Element.Element
+examplesToHtml :: NonEmpty.NonEmpty Example.Example -> Content.Content Element.Element
 examplesToHtml examples =
-  Xml.element
+  element
     "div"
-    [Xml.attribute "class" "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3"]
-    ( [ Content.Element $
-          Xml.element
-            "div"
-            [Xml.attribute "class" "fw-bold mb-1"]
-            [Xml.string (case examples of _ NonEmpty.:| [] -> "Example:"; _ -> "Examples:")]
+    [("class", "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3")]
+    ( [ element
+          "div"
+          [("class", "fw-bold mb-1")]
+          [Xml.string (case examples of _ NonEmpty.:| [] -> "Example:"; _ -> "Examples:")]
       ]
         <> concatMap exampleToContents (NonEmpty.toList examples)
     )
 
 exampleToContents :: Example.Example -> [Content.Content Element.Element]
 exampleToContents (Example.MkExample expr results) =
-  [ Content.Element $
-      Xml.element
-        "div"
-        [Xml.attribute "class" "my-1"]
-        ( [ Content.Element $
-              Xml.element
-                "div"
-                [Xml.attribute "class" "font-monospace"]
-                [ Content.Element $
-                    Xml.element
-                      "span"
-                      [Xml.attribute "class" "text-warning-emphasis user-select-none"]
-                      [Xml.string ">>> "],
-                  Xml.text expr
-                ]
-          ]
-            <> fmap
-              ( \r ->
-                  Content.Element $
-                    Xml.element
-                      "div"
-                      [Xml.attribute "class" "font-monospace text-body-secondary ps-3"]
-                      [Xml.text r]
-              )
-              results
-        )
+  [ element
+      "div"
+      [("class", "my-1")]
+      ( [ element
+            "div"
+            [("class", "font-monospace")]
+            [ element
+                "span"
+                [("class", "text-warning-emphasis user-select-none")]
+                [Xml.string ">>> "],
+              Xml.text expr
+            ]
+        ]
+          <> fmap
+            ( \r ->
+                element
+                  "div"
+                  [("class", "font-monospace text-body-secondary ps-3")]
+                  [Xml.text r]
+            )
+            results
+      )
   ]
 
-headerToHtml :: Header.Header Doc.Doc -> Element.Element
+headerToHtml :: Header.Header Doc.Doc -> Content.Content Element.Element
 headerToHtml (Header.MkHeader level title) =
-  Xml.element (levelToName level) [] (docToContents title)
+  element (levelToName level) [] (docToContents title)
 
 levelToName :: Level.Level -> String
 levelToName level = case level of
@@ -1038,44 +989,40 @@ levelToName level = case level of
   Level.Five -> "h5"
   Level.Six -> "h6"
 
-tableToHtml :: Table.Table Doc.Doc -> Element.Element
+tableToHtml :: Table.Table Doc.Doc -> Content.Content Element.Element
 tableToHtml (Table.MkTable headerRows bodyRows) =
-  Xml.element "table" [Xml.attribute "class" "table table-bordered table-sm table-striped my-3"] (theadContents <> tbodyContents)
+  element "table" [("class", "table table-bordered table-sm table-striped my-3")] (theadContents <> tbodyContents)
   where
     theadContents :: [Content.Content Element.Element]
     theadContents
       | null headerRows = []
       | otherwise =
-          [ Content.Element $
-              Xml.element "thead" [] (fmap (Content.Element . headerRowToHtml) headerRows)
-          ]
+          [element "thead" [] (fmap headerRowToHtml headerRows)]
 
     tbodyContents :: [Content.Content Element.Element]
     tbodyContents
       | null bodyRows = []
       | otherwise =
-          [ Content.Element $
-              Xml.element "tbody" [] (fmap (Content.Element . bodyRowToHtml) bodyRows)
-          ]
+          [element "tbody" [] (fmap bodyRowToHtml bodyRows)]
 
-    headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Element.Element
+    headerRowToHtml :: [TableCell.Cell Doc.Doc] -> Content.Content Element.Element
     headerRowToHtml cells =
-      Xml.element "tr" [] (fmap (Content.Element . headerCellToHtml) cells)
+      element "tr" [] (fmap headerCellToHtml cells)
 
-    bodyRowToHtml :: [TableCell.Cell Doc.Doc] -> Element.Element
+    bodyRowToHtml :: [TableCell.Cell Doc.Doc] -> Content.Content Element.Element
     bodyRowToHtml cells =
-      Xml.element "tr" [] (fmap (Content.Element . bodyCellToHtml) cells)
+      element "tr" [] (fmap bodyCellToHtml cells)
 
-    headerCellToHtml :: TableCell.Cell Doc.Doc -> Element.Element
+    headerCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
     headerCellToHtml (TableCell.MkCell colspan rowspan contents) =
-      Xml.element "th" (cellAttrs colspan rowspan) (docToContents contents)
+      element "th" (cellAttrs colspan rowspan) (docToContents contents)
 
-    bodyCellToHtml :: TableCell.Cell Doc.Doc -> Element.Element
+    bodyCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
     bodyCellToHtml (TableCell.MkCell colspan rowspan contents) =
-      Xml.element "td" (cellAttrs colspan rowspan) (docToContents contents)
+      element "td" (cellAttrs colspan rowspan) (docToContents contents)
 
-    cellAttrs :: Natural.Natural -> Natural.Natural -> [Attribute.Attribute]
+    cellAttrs :: Natural.Natural -> Natural.Natural -> [(String, String)]
     cellAttrs c r =
-      [ Xml.attribute "colspan" (show c),
-        Xml.attribute "rowspan" (show r)
+      [ ("colspan", show c),
+        ("rowspan", show r)
       ]

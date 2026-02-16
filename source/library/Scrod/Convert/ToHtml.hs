@@ -809,6 +809,7 @@ kindToText k = case k of
   ItemKind.CompletePragma -> Text.pack "complete"
   ItemKind.DefaultMethodSignature -> Text.pack "default"
   ItemKind.RoleAnnotation -> Text.pack "role"
+  ItemKind.DocumentationChunk -> Text.pack "doc chunk"
 
 data KindColor
   = KindSuccess
@@ -854,6 +855,7 @@ kindColor k = case k of
   ItemKind.CompletePragma -> KindSecondary
   ItemKind.DefaultMethodSignature -> KindPrimary
   ItemKind.RoleAnnotation -> KindSecondary
+  ItemKind.DocumentationChunk -> KindSecondary
 
 kindBadgeClass :: ItemKind.ItemKind -> String
 kindBadgeClass k = case kindColor k of

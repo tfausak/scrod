@@ -78,6 +78,8 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
       namedDocChunks = extractNamedDocChunks lHsModule
+      rawExports = Exports.extractModuleExports lHsModule
+      referencedChunkNames = extractReferencedChunkNames rawExports
   Right
     Module.MkModule
       { Module.version = version,
@@ -88,9 +90,9 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.signature = isSignature,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
-        Module.exports = resolveNamedDocExports namedDocChunks <$> Exports.extractModuleExports lHsModule,
+        Module.exports = resolveNamedDocExports namedDocChunks <$> rawExports,
         Module.imports = extractModuleImports lHsModule,
-        Module.items = extractItems lHsModule
+        Module.items = extractItems referencedChunkNames lHsModule
       }
 
 -- | Convert base version to our 'Version' type.
@@ -194,10 +196,11 @@ packageFromPkgQual pkgQual = case pkgQual of
 
 -- | Extract items from the module.
 extractItems ::
+  Set.Set Text.Text ->
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   [Located.Located Item.Item]
-extractItems lHsModule =
-  let rawItems = Internal.runConvert $ extractItemsM lHsModule
+extractItems referencedChunkNames lHsModule =
+  let rawItems = Internal.runConvert $ extractItemsM referencedChunkNames lHsModule
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
       parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
@@ -236,12 +239,13 @@ extractItems lHsModule =
 
 -- | Extract items in the conversion monad.
 extractItemsM ::
+  Set.Set Text.Text ->
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Internal.ConvertM [Located.Located Item.Item]
-extractItemsM lHsModule = do
+extractItemsM referencedChunkNames lHsModule = do
   let hsModule = SrcLoc.unLoc lHsModule
       decls = Syntax.hsmodDecls hsModule
-      declsWithDocs = GhcDoc.associateDocs decls
+      declsWithDocs = GhcDoc.associateDocs referencedChunkNames decls
   concat <$> traverse (\(doc, docSince, lDecl) -> convertDeclWithDocMaybeM doc docSince lDecl) declsWithDocs
 
 -- | Convert a declaration with documentation.
@@ -253,6 +257,10 @@ convertDeclWithDocMaybeM ::
 convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.TyClD _ tyClDecl -> convertTyClDeclWithDocM doc docSince lDecl tyClDecl
   Syntax.RuleD _ ruleDecls -> convertRuleDeclsM ruleDecls
+  Syntax.DocD _ (Hs.DocCommentNamed name lNamedDoc) ->
+    let chunkName = Just . ItemName.MkItemName . Text.pack $ '$' : name
+        chunkDoc = GhcDoc.convertExportDoc lNamedDoc
+     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing chunkName (Internal.appendDoc doc chunkDoc) docSince Nothing ItemKind.Function
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
   Syntax.KindSigD _ kindSig ->
@@ -529,7 +537,7 @@ convertClassSigsWithDocsM parentKey sigs docs =
       sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) classOpSigs
       docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
       allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
-      sigsWithDocs = GhcDoc.associateDocs allDecls
+      sigsWithDocs = GhcDoc.associateDocs Set.empty allDecls
    in concat <$> traverse (\(doc, docSince, lDecl) -> convertClassDeclWithDocM parentKey doc docSince lDecl) sigsWithDocs
   where
     isClassOpSig :: Syntax.LSig Ghc.GhcPs -> Bool
@@ -570,7 +578,7 @@ convertDefaultSigsM methodItems sigs docs =
       sigDecls = fmap (fmap (Syntax.SigD Hs.noExtField)) defaultSigs
       docDecls = fmap (fmap (Syntax.DocD Hs.noExtField)) docs
       allDecls = List.sortBy (\a b -> SrcLoc.leftmost_smallest (Annotation.getLocA a) (Annotation.getLocA b)) (sigDecls <> docDecls)
-      sigsWithDocs = GhcDoc.associateDocs allDecls
+      sigsWithDocs = GhcDoc.associateDocs Set.empty allDecls
    in concat <$> traverse (\(doc, docSince, lDecl) -> convertDefaultSigDeclM nameToKey doc docSince lDecl) sigsWithDocs
   where
     isDefaultSig :: Syntax.LSig Ghc.GhcPs -> Bool
@@ -785,6 +793,12 @@ extractNamedDocChunk lDecl = case SrcLoc.unLoc lDecl of
   Syntax.DocD _ (Hs.DocCommentNamed name lDoc) ->
     Just (Text.pack name, GhcDoc.convertExportDoc lDoc)
   _ -> Nothing
+
+-- | Extract the set of named chunk names referenced in an export list.
+extractReferencedChunkNames :: Maybe [Export.Export] -> Set.Set Text.Text
+extractReferencedChunkNames Nothing = Set.empty
+extractReferencedChunkNames (Just exports) =
+  Set.fromList [name | Export.DocNamed name <- exports]
 
 -- | Resolve named documentation chunk references in an export list.
 resolveNamedDocExports ::

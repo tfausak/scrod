@@ -5,6 +5,8 @@
 -- 'Doc.Doc' type via the Haddock parser.
 module Scrod.Convert.FromGhc.Doc where
 
+import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Hs as Hs
@@ -44,37 +46,46 @@ parseDoc input =
    in (doc, itemSince)
 
 -- | Associate documentation comments with their target declarations.
+--
+-- Named doc chunks whose name appears in @referencedChunkNames@ (i.e. they
+-- are referenced in the export list) are skipped so they don't create items.
+-- Unreferenced named chunks pass through as declarations so they become
+-- top-level items.
 associateDocs ::
+  Set.Set Text.Text ->
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-associateDocs decls =
-  let withNextDocs = associateNextDocs decls
+associateDocs referencedChunkNames decls =
+  let withNextDocs = associateNextDocs referencedChunkNames decls
       withAllDocs = associatePrevDocs withNextDocs
    in withAllDocs
 
 -- | Associate DocCommentNext with the following declaration.
 associateNextDocs ::
+  Set.Set Text.Text ->
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocs = associateNextDocsLoop Doc.Empty Nothing
+associateNextDocs referencedChunkNames = associateNextDocsLoop referencedChunkNames Doc.Empty Nothing
 
 -- | Recursive helper for associating next-doc comments.
 associateNextDocsLoop ::
+  Set.Set Text.Text ->
   Doc.Doc ->
   Maybe Since.Since ->
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocsLoop _ _ [] = []
-associateNextDocsLoop pendingDoc pendingSince (lDecl : rest) = case SrcLoc.unLoc lDecl of
+associateNextDocsLoop _ _ _ [] = []
+associateNextDocsLoop referencedChunkNames pendingDoc pendingSince (lDecl : rest) = case SrcLoc.unLoc lDecl of
   Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
     let (newDoc, newSince) = convertLHsDoc lDoc
-     in associateNextDocsLoop (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
+     in associateNextDocsLoop referencedChunkNames (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
   Syntax.DocD _ (Hs.DocCommentPrev _) ->
-    (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
-  Syntax.DocD _ (Hs.DocCommentNamed {}) ->
-    associateNextDocsLoop pendingDoc pendingSince rest
+    (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+  Syntax.DocD _ (Hs.DocCommentNamed name _)
+    | Set.member (Text.pack name) referencedChunkNames ->
+        associateNextDocsLoop referencedChunkNames pendingDoc pendingSince rest
   _ ->
-    (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop Doc.Empty Nothing rest
+    (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
 
 -- | Associate DocCommentPrev with the preceding declaration.
 associatePrevDocs ::

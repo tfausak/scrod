@@ -588,134 +588,78 @@ itemContent item =
     [ element
         "div"
         [("class", "align-items-center card-header d-flex")]
-        [ element
-            "div"
-            []
-            [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
-            ],
-          element
-            "div"
-            [("class", "mx-1")]
-            [ element "span" [("class", "badge text-bg-secondary")] [Xml.string . kindToString . Item.kind $ Located.value item]
-            ],
-          -- TODO: Signature goes before kind for some things, like type variables.
-          case Item.signature $ Located.value item of
-            Nothing -> Xml.string ""
-            Just signature ->
-              element
-                "div"
-                [("class", "mx-1")]
-                [ element
-                    "code"
-                    [("class", "text-break text-secondary")]
-                    -- TODO: Signature prefix is different depending on the kind.
-                    [ Xml.string ":: ",
-                      Xml.text signature
-                    ]
-                ],
-          element
-            "div"
-            [("class", "ms-auto")]
-            [ element
-                "button"
-                [ ("class", "btn btn-outline-secondary btn-sm"),
-                  ("data-col", show . Column.unwrap . Location.column $ Located.location item),
-                  ("data-line", show . Line.unwrap . Location.line $ Located.location item),
-                  ("type", "button")
-                ]
-                [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
-                  Xml.string ":",
-                  Xml.string . show . Column.unwrap . Location.column $ Located.location item
-                ]
-            ]
-        ],
+        $ [ element
+              "div"
+              []
+              [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
+              ]
+          ]
+          <> earlySignature
+          <> [ element
+                 "div"
+                 [("class", "mx-1")]
+                 [ element "span" [("class", "badge text-bg-secondary")] [Xml.string $ kindToString kind]
+                 ]
+             ]
+          <> lateSignature
+          <> [ element
+                 "div"
+                 [("class", "ms-auto")]
+                 [ element
+                     "button"
+                     [ ("class", "btn btn-outline-secondary btn-sm"),
+                       ("data-col", show . Column.unwrap . Location.column $ Located.location item),
+                       ("data-line", show . Line.unwrap . Location.line $ Located.location item),
+                       ("type", "button")
+                     ]
+                     [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
+                       Xml.string ":",
+                       Xml.string . show . Column.unwrap . Location.column $ Located.location item
+                     ]
+                 ]
+             ],
       element
         "div"
         [("class", "card-body")]
         $ foldMap (pure . sinceAlert) (Item.since $ Located.value item)
           <> docContents (Item.documentation $ Located.value item)
     ]
+  where
+    kind :: ItemKind.ItemKind
+    kind = Item.kind $ Located.value item
 
--- itemToHtml :: Located.Located Item.Item -> Content.Content Element.Element
--- itemToHtml item =
---   element
---     "div"
---     [ ("class", "card mb-3 border-start border-4"),
---       ("style", kindBorderStyle itemKind),
---       ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item)),
---       lineAttribute $ Located.location item
---     ]
---     ( [ element
---           "div"
---           [("class", "card-header bg-transparent d-flex align-items-center py-2")]
---           ( nameContents
---               <> sigBeforeKind
---               <> [kindContent]
---               <> sigAfterKind
---               <> sinceContents
---               <> [locationElement $ Located.location item]
---           )
---       ]
---         <> docContents'
---     )
---   where
---     itemKind = Item.kind $ Located.value item
+    isEarly :: Bool
+    isEarly = case kind of
+      ItemKind.DataType -> True
+      ItemKind.Newtype -> True
+      ItemKind.TypeData -> True
+      ItemKind.TypeSynonym -> True
+      ItemKind.Class -> True
+      _ -> False
 
---     nameContents :: [Content.Content Element.Element]
---     nameContents = case Item.name $ Located.value item of
---       Nothing -> []
---       Just n ->
---         [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text (ItemName.unwrap n)]]
+    earlySignature :: [Content.Content Element.Element]
+    earlySignature =
+      if isEarly then signature else []
 
---     isTypeVarSignature :: Bool
---     isTypeVarSignature = case itemKind of
---       ItemKind.DataType -> True
---       ItemKind.Newtype -> True
---       ItemKind.TypeData -> True
---       ItemKind.TypeSynonym -> True
---       ItemKind.Class -> True
---       _ -> False
+    lateSignature :: [Content.Content Element.Element]
+    lateSignature =
+      if isEarly then [] else signature
 
---     kindContent :: Content.Content Element.Element
---     kindContent =
---       element
---         "span"
---         [("class", "badge " <> kindBadgeClass itemKind <> " ms-2")]
---         [Xml.string (kindToString itemKind)]
+    prefix = t $ if isEarly then "" else ":: "
 
---     sigBeforeKind :: [Content.Content Element.Element]
---     sigBeforeKind =
---       if isTypeVarSignature then signatureContents else []
-
---     sigAfterKind :: [Content.Content Element.Element]
---     sigAfterKind =
---       if isTypeVarSignature then [] else signatureContents
-
---     signatureContents :: [Content.Content Element.Element]
---     signatureContents = case Item.signature $ Located.value item of
---       Nothing -> []
---       Just sig ->
---         let prefix = if isTypeVarSignature then t "\x00a0" else t " :: "
---          in [ element
---                 "span"
---                 [("class", "font-monospace text-body-secondary")]
---                 [Xml.text (prefix <> sig)]
---             ]
-
---     sinceContents :: [Content.Content Element.Element]
---     sinceContents = case Item.since $ Located.value item of
---       Nothing -> []
---       Just s ->
---         [ element
---             "span"
---             [("class", "text-body-secondary small ms-2")]
---             [Xml.text (t "since " <> sinceToText s)]
---         ]
-
---     docContents' :: [Content.Content Element.Element]
---     docContents' = case Item.documentation $ Located.value item of
---       Doc.Empty -> []
---       doc -> [element "div" [("class", "card-body")] (docContents doc)]
+    signature :: [Content.Content Element.Element]
+    signature = case Item.signature $ Located.value item of
+      Nothing -> []
+      Just sig ->
+        [ element
+            "div"
+            [("class", "mx-2")]
+            [ element
+                "code"
+                [("class", "text-break text-secondary")]
+                [Xml.text $ prefix <> sig]
+            ]
+        ]
 
 kindToString :: ItemKind.ItemKind -> String
 kindToString x = case x of
@@ -761,7 +705,7 @@ docContents :: Doc.Doc -> [Content.Content Element.Element]
 docContents doc = case doc of
   Doc.Empty -> [Xml.string ""]
   Doc.Append xs -> foldMap docContents xs
-  Doc.String x -> [Xml.text x]
+  Doc.String x -> [element "span" [("class", "text-break")] [Xml.text x]]
   Doc.Paragraph x -> [element "p" [] $ docContents x]
   Doc.Identifier x -> [identifierContent x]
   Doc.Module x -> [modLinkContent x]
@@ -823,7 +767,7 @@ propertyContent x =
         [ element
             "pre"
             [("class", "mb-0")]
-            [ element "code" [] [Xml.text $ Text.stripEnd x]
+            [ element "code" [("class", "text-break")] [Xml.text $ Text.stripEnd x]
             ]
         ]
     ]
@@ -833,7 +777,7 @@ identifierContent x =
   element
     "span"
     []
-    [ element "code" [] [Xml.text $ Identifier.value x],
+    [ element "code" [("class", "text-break")] [Xml.text $ Identifier.value x],
       case Identifier.namespace x of
         Nothing -> Xml.string ""
         Just ns ->
@@ -850,13 +794,13 @@ identifierContent x =
 
 modLinkContent :: ModLink.ModLink Doc.Doc -> Content.Content Element.Element
 modLinkContent x =
-  element "code" []
+  element "code" [("class", "text-break")]
     . maybe [Xml.text . ModuleName.unwrap $ ModLink.name x] docContents
     $ ModLink.label x
 
 hyperlinkContent :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
 hyperlinkContent x =
-  element "a" [("href", Text.unpack $ Hyperlink.url x)]
+  element "a" [("class", "text-break"), ("href", Text.unpack $ Hyperlink.url x)]
     . maybe [Xml.text $ Hyperlink.url x] docContents
     $ Hyperlink.label x
 
@@ -887,7 +831,7 @@ exampleContent x =
             [("class", "mb-0")]
             [ element
                 "code"
-                []
+                [("class", "text-break")]
                 [ Xml.string ">>> ",
                   element "strong" [] [Xml.text $ Example.expression x],
                   Xml.text . foldMap (t "\n" <>) $ Example.result x

@@ -5,13 +5,11 @@
 -- Produces a complete @\<html\>@ document with Bootstrap 5 and KaTeX
 -- loaded from CDNs. The output uses the custom XML types in
 -- @Scrod.Xml.*@ and can be serialized with 'Xml.encode'.
-module Scrod.Convert.ToHtml where
+module Scrod.Convert.ToHtml (toHtml) where
 
-import qualified Data.Bifunctor as Bifunctor
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
-import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
@@ -70,30 +68,22 @@ element x ys = Content.Element . Xml.element x (fmap (uncurry Xml.attribute) ys)
 
 -- | Convert a Module to a complete HTML document.
 toHtml :: Module.Module -> Xml.Document
-toHtml m =
+toHtml x =
   Xml.MkDocument
     { Xml.prolog =
-        [ Misc.Declaration $
-            XmlDeclaration.MkDeclaration
-              (XmlName.MkName $ t "doctype")
-              (t "html")
+        [ Misc.Declaration . XmlDeclaration.MkDeclaration (XmlName.MkName $ t "doctype") $ t "html"
         ],
       Xml.root =
         Xml.element
           "html"
           []
-          [ headElement m,
-            bodyElement m
+          [ headElement x,
+            bodyElement x
           ]
     }
 
-moduleTitle :: Module.Module -> Text.Text
-moduleTitle =
-  maybe (t "Documentation") (ModuleName.unwrap . Located.value)
-    . Module.name
-
 headElement :: Module.Module -> Content.Content Element.Element
-headElement m =
+headElement x =
   element
     "head"
     []
@@ -104,7 +94,7 @@ headElement m =
           ("content", "width=device-width, initial-scale=1")
         ]
         [],
-      element "title" [] [Xml.text (moduleTitle m)],
+      element "title" [] [Xml.text $ moduleTitle x],
       element
         "link"
         [ ("rel", "stylesheet"),
@@ -135,115 +125,74 @@ headElement m =
         [ Xml.raw . t $
             """
             const dark = matchMedia('(prefers-color-scheme: dark)');
-            const setTheme = (e) =>
-              document.documentElement.dataset.bsTheme = e.matches ? 'dark' : 'light';
+            const setTheme = (x) => document.documentElement.dataset.bsTheme = x.matches ? 'dark' : 'light';
             setTheme(dark);
             dark.addEventListener('change', setTheme);
-            import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
-              .then((m) => m.default(document.body, { delimiters: [
-                { left: '\\\\(', right: '\\\\)', display: false },
-                { left: '\\\\[', right: '\\\\]', display: true }
-              ]}));
+            import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js').then((x) => x.default(document.body));
             """
         ]
     ]
 
+moduleTitle :: Module.Module -> Text.Text
+moduleTitle =
+  maybe (t "Documentation") (ModuleName.unwrap . Located.value)
+    . Module.name
+
 bodyElement :: Module.Module -> Content.Content Element.Element
-bodyElement m =
+bodyElement x =
   element
     "body"
     []
     [ element
         "div"
-        [("class", "container py-4 text-break")]
-        ( [headerSection m]
-            <> metadataContents m
-            <> exportsContents (Module.exports m)
-            <> importsContents (Module.imports m)
-            <> extensionsContents (Module.extensions m)
-            <> itemsContents (Module.items m)
-            <> [footerSection m]
+        [("class", "container py-5")]
+        ( [element "h1" [("class", "text-break")] [Xml.text $ moduleTitle x]]
+            <> foldMap (pure . warningAlert) (Module.warning x)
+            <> foldMap (pure . sinceAlert) (Module.since x)
+            <> extensionsContents (Module.language x) (Module.extensions x)
+            <> importsContents (Module.imports x)
+            <> [element "hr" [] []]
+            <> docContents (Module.documentation x)
+            <> exportsContents (Module.exports x)
+            <> itemsContents (Module.items x)
+            <> [element "hr" [] []]
+            <> [footerSection x]
         )
     ]
 
--- Header section
-
-headerSection :: Module.Module -> Content.Content Element.Element
-headerSection m =
-  element
-    "header"
-    ( [("class", "mb-4")]
-        <> foldMap (pure . lineAttribute . Located.location) (Module.name m)
-    )
-    ( [element "h1" [("class", "border-bottom border-2 pb-2 mt-0")] [Xml.text (moduleTitle m)]]
-        <> warningContents (Module.warning m)
-        <> moduleDocContents (Module.documentation m)
-    )
-
-warningContents :: Maybe Warning.Warning -> [Content.Content Element.Element]
-warningContents Nothing = []
-warningContents (Just w) = [warningToHtml w]
-
-warningToHtml :: Warning.Warning -> Content.Content Element.Element
-warningToHtml w =
+warningAlert :: Warning.Warning -> Content.Content Element.Element
+warningAlert x =
   element
     "div"
-    [("class", "alert alert-warning")]
-    [ element
-        "span"
-        [("class", "fw-bold")]
-        [Xml.text (Category.unwrap $ Warning.category w)],
-      Xml.text (t ": " <> Warning.value w)
+    [ ("class", "alert alert-warning"),
+      ("role", "alert")
+    ]
+    [ element "strong" [] [Xml.string "Warning"],
+      Xml.string " (",
+      element "span" [("class", "text-break")] [Xml.text . Category.unwrap $ Warning.category x],
+      Xml.string "): ",
+      element "span" [("class", "text-break")] [Xml.text $ Warning.value x]
     ]
 
-moduleDocContents :: Doc.Doc -> [Content.Content Element.Element]
-moduleDocContents Doc.Empty = []
-moduleDocContents doc =
-  [element "div" [("class", "my-3")] (docToContents doc)]
-
--- Metadata section
-
-metadataContents :: Module.Module -> [Content.Content Element.Element]
-metadataContents m =
-  let items = languageItem (Module.language m) <> sinceItem (Module.since m)
-   in if null items
-        then []
-        else
-          [ element
-              "section"
-              [("class", "card border-start border-primary border-4 mb-3")]
-              [element "dl" [("class", "card-body mb-0")] items]
-          ]
+sinceAlert :: Since.Since -> Content.Content Element.Element
+sinceAlert x =
+  element
+    "div"
+    [ ("class", "alert alert-info"),
+      ("role", "alert")
+    ]
+    [ element "strong" [] [Xml.string "Since"],
+      Xml.string ": ",
+      element "span" [("class", "text-break")] [Xml.text $ sinceToText x]
+    ]
 
 versionToText :: Version.Version -> Text.Text
-versionToText v =
-  Text.intercalate (t ".") . fmap (t . show) $ NonEmpty.toList (Version.unwrap v)
-
-languageItem :: Maybe Language.Language -> [Content.Content Element.Element]
-languageItem Nothing = []
-languageItem (Just lang) =
-  [ element "dt" [] [Xml.string "Language"],
-    element "dd" [] [Xml.text (Language.unwrap lang)]
-  ]
-
-sinceItem :: Maybe Since.Since -> [Content.Content Element.Element]
-sinceItem Nothing = []
-sinceItem (Just since) =
-  [ element "dt" [] [Xml.string "Since"],
-    element
-      "dd"
-      [("class", "text-body-secondary small")]
-      [Xml.text (sinceToText since)]
-  ]
+versionToText = t . List.intercalate "." . NonEmpty.toList . fmap show . Version.unwrap
 
 sinceToText :: Since.Since -> Text.Text
-sinceToText s =
-  packageText <> versionToText (Since.version s)
-  where
-    packageText :: Text.Text
-    packageText = case Since.package s of
-      Nothing -> Text.empty
-      Just pkg -> PackageName.unwrap pkg <> t "-"
+sinceToText x =
+  foldMap ((<> t "-") . PackageName.unwrap) (Since.package x)
+    <> versionToText (Since.version x)
 
 -- Footer section
 
@@ -251,14 +200,15 @@ footerSection :: Module.Module -> Content.Content Element.Element
 footerSection m =
   element
     "footer"
-    [("class", "mt-5 pt-3 border-top text-body-secondary small")]
+    []
     [ Xml.string "Generated by ",
       element
         "a"
         [("href", "https://github.com/tfausak/scrod")]
         [Xml.string "Scrod"],
       Xml.string " version ",
-      Xml.text (versionToText (Module.version m))
+      element "spam" [("class", "text-break")] [Xml.text . versionToText $ Module.version m],
+      Xml.string "."
     ]
 
 -- Exports section
@@ -284,9 +234,9 @@ exportToContents export = case export of
   Export.Identifier ident ->
     [element "li" [liClass] [exportIdentifierToHtml ident]]
   Export.Group section ->
-    [element "li" [liClass] [sectionToHtml section]]
+    [element "li" [liClass] [sectionContent section]]
   Export.Doc doc ->
-    [element "li" [liClass] [element "div" [("class", "mt-1")] (docToContents doc)]]
+    [element "li" [liClass] [element "div" [("class", "mt-1")] (docContents doc)]]
   Export.DocNamed name ->
     [element "li" [liClass] [element "div" [("class", "mt-1")] [Xml.text (t "\x00a7" <> name)]]]
   where
@@ -298,7 +248,7 @@ exportIdentifierToHtml ei =
   element
     "div"
     [("class", "py-1")]
-    ( foldMap (\w -> [warningToHtml w]) (ExportIdentifier.warning ei)
+    ( foldMap (\w -> [warningAlert w]) (ExportIdentifier.warning ei)
         <> [ element
                "code"
                [("class", "font-monospace")]
@@ -308,7 +258,7 @@ exportIdentifierToHtml ei =
            ]
         <> foldMap
           ( \doc ->
-              [element "div" [("class", "mt-1")] (docToContents doc)]
+              [element "div" [("class", "mt-1")] (docContents doc)]
           )
           (ExportIdentifier.doc ei)
     )
@@ -337,655 +287,629 @@ subordinatesToContents (Just subs) =
       combined = Text.intercalate (t ", ") allTexts
    in [Xml.text (t "(" <> combined <> t ")")]
 
-sectionToHtml :: Section.Section -> Content.Content Element.Element
-sectionToHtml s =
-  element
-    "div"
-    [("class", "my-3")]
-    [ element
-        (sectionLevelToName (Header.level h))
-        [("class", "fw-bold")]
-        (docToContents (Header.title h))
-    ]
-  where
-    h = Section.header s
-
-sectionLevelToName :: Level.Level -> String
-sectionLevelToName l = case l of
-  Level.One -> "h3"
-  Level.Two -> "h4"
-  Level.Three -> "h5"
-  Level.Four -> "h6"
-  Level.Five -> "h6"
-  Level.Six -> "h6"
+sectionContent :: Section.Section -> Content.Content Element.Element
+sectionContent x =
+  element (levelToName . Header.level $ Section.header x) []
+    . docContents
+    . Header.title
+    $ Section.header x
 
 -- Imports section
 
 importsContents :: [Import.Import] -> [Content.Content Element.Element]
-importsContents [] = []
 importsContents imports =
-  let uniqueCount = Set.size . Set.fromList $ fmap Import.name imports
-      summary =
-        "Imports ("
-          <> show uniqueCount
-          <> if uniqueCount == 1 then " module)" else " modules)"
-   in [ element
+  [ element "h2" [] [Xml.string "Imports"],
+    case length imports of
+      0 -> Xml.string "None."
+      count ->
+        element
           "details"
-          [("class", "my-4")]
-          ( [element "summary" [("class", "fs-4 fw-bold")] [Xml.string summary]]
-              <> [ element
-                     "ul"
-                     [("class", "list-group list-group-flush font-monospace small")]
-                     (fmap importToContent imports)
-                 ]
-          )
-      ]
+          []
+          [ element
+              "summary"
+              []
+              [ Xml.string "Show/hide ",
+                Xml.string $ pluralize count "import",
+                Xml.string "."
+              ],
+            element "ul" [] . fmap importContent $ List.sortOn Import.name imports
+          ]
+  ]
 
-importToContent :: Import.Import -> Content.Content Element.Element
-importToContent i =
+importContent :: Import.Import -> Content.Content Element.Element
+importContent x =
   element
     "li"
-    [("class", "list-group-item bg-transparent py-1 px-2")]
-    ( packageContents (Import.package i)
-        <> [Xml.text (ModuleName.unwrap $ Import.name i)]
-        <> aliasContents (Import.alias i)
-    )
-  where
-    packageContents :: Maybe PackageName.PackageName -> [Content.Content Element.Element]
-    packageContents Nothing = []
-    packageContents (Just pkg) =
-      [Xml.text (t "\"" <> PackageName.unwrap pkg <> t "\" ")]
-
-    aliasContents :: Maybe ModuleName.ModuleName -> [Content.Content Element.Element]
-    aliasContents Nothing = []
-    aliasContents (Just a) =
-      [Xml.text (t " as " <> ModuleName.unwrap a)]
+    []
+    [ element "span" [("class", "text-break")] [Xml.text . ModuleName.unwrap $ Import.name x],
+      case Import.package x of
+        Nothing -> Xml.string ""
+        Just p ->
+          element
+            "span"
+            [("class", "text-body-secondary")]
+            [ Xml.string " (",
+              element "span" [("class", "text-break")] [Xml.text $ PackageName.unwrap p],
+              Xml.string ")"
+            ]
+    ]
 
 -- Extensions section
 
-extensionsContents :: Map.Map Extension.Extension Bool -> [Content.Content Element.Element]
-extensionsContents extensions
-  | Map.null extensions = []
-  | otherwise =
-      let count = Map.size extensions
-          summary =
-            "Extensions ("
-              <> show count
-              <> if count == 1 then " extension)" else " extensions)"
-       in [ element
-              "details"
-              [("class", "my-3")]
-              ( [element "summary" [("class", "fs-4 fw-bold")] [Xml.string summary]]
-                  <> [ element
-                         "div"
-                         [("class", "mt-2")]
-                         (concatMap extToContents $ Map.toList extensions)
-                     ]
-              )
+extensionsContents ::
+  Maybe Language.Language ->
+  Map.Map Extension.Extension Bool ->
+  [Content.Content Element.Element]
+extensionsContents language extensions =
+  [ element "h2" [] [Xml.string "Extensions"],
+    case length language + length extensions of
+      0 -> Xml.string "None."
+      count ->
+        element
+          "details"
+          []
+          [ element
+              "summary"
+              []
+              [ Xml.string "Show/hide ",
+                Xml.string $ pluralize count "extension",
+                Xml.string "."
+              ],
+            element "ul" []
+              . fmap (uncurry extensionContent)
+              $ foldMap (\x -> [(Language.unwrap x, True)]) language
+                <> Map.toList (Map.mapKeys Extension.unwrap extensions)
           ]
+  ]
 
-extToContents :: (Extension.Extension, Bool) -> [Content.Content Element.Element]
-extToContents (ext, enabled) =
-  let cls :: String
-      cls =
-        if enabled
-          then "badge bg-secondary-subtle text-body font-monospace me-1 mb-1"
-          else "badge bg-danger-subtle text-body text-decoration-line-through font-monospace me-1 mb-1"
-   in [ element
-          "a"
-          [ ("class", cls),
-            ("href", extensionUrl (Extension.unwrap ext))
-          ]
-          [Xml.text (Extension.unwrap ext)]
-      ]
+extensionContent :: Text.Text -> Bool -> Content.Content Element.Element
+extensionContent x y =
+  element
+    "li"
+    []
+    [ element
+        "a"
+        [ ("class", "link-underline link-underline-opacity-25 text-break"),
+          ("href", extensionUrl x)
+        ]
+        [ Xml.string $ if y then "" else "No",
+          Xml.text x
+        ]
+    ]
+
+pluralize :: Int -> String -> String
+pluralize count singular = pluralizeWith count singular (singular <> "s")
+
+pluralizeWith :: Int -> String -> String -> String
+pluralizeWith count singular plural =
+  show count <> " " <> if count == 1 then singular else plural
 
 extensionUrl :: Text.Text -> String
 extensionUrl name =
-  case Map.lookup name extensionUrlPaths of
-    Just path -> ghcUserGuideBaseUrl <> path
-    Nothing -> ghcUserGuideBaseUrl <> "exts/table.html"
+  ghcUserGuideBaseUrl <> Map.findWithDefault "exts/table.html" name extensionUrlPaths
 
 ghcUserGuideBaseUrl :: String
 ghcUserGuideBaseUrl = "https://downloads.haskell.org/ghc/latest/docs/users_guide/"
 
 extensionUrlPaths :: Map.Map Text.Text String
 extensionUrlPaths =
-  Map.fromList
-    . fmap (Bifunctor.first t)
-    $ [ ("AllowAmbiguousTypes", "exts/ambiguous_types.html#extension-AllowAmbiguousTypes"),
-        ("ApplicativeDo", "exts/applicative_do.html#extension-ApplicativeDo"),
-        ("Arrows", "exts/arrows.html#extension-Arrows"),
-        ("BangPatterns", "exts/strict.html#extension-BangPatterns"),
-        ("BinaryLiterals", "exts/binary_literals.html#extension-BinaryLiterals"),
-        ("BlockArguments", "exts/block_arguments.html#extension-BlockArguments"),
-        ("CApiFFI", "exts/ffi.html#extension-CApiFFI"),
-        ("ConstrainedClassMethods", "exts/constrained_class_methods.html#extension-ConstrainedClassMethods"),
-        ("ConstraintKinds", "exts/constraint_kind.html#extension-ConstraintKinds"),
-        ("Cpp", "phases.html#extension-CPP"),
-        ("CUSKs", "exts/poly_kinds.html#extension-CUSKs"),
-        ("DataKinds", "exts/data_kinds.html#extension-DataKinds"),
-        ("DatatypeContexts", "exts/datatype_contexts.html#extension-DatatypeContexts"),
-        ("DeepSubsumption", "exts/rank_polymorphism.html#extension-DeepSubsumption"),
-        ("DefaultSignatures", "exts/default_signatures.html#extension-DefaultSignatures"),
-        ("DeriveAnyClass", "exts/derive_any_class.html#extension-DeriveAnyClass"),
-        ("DeriveDataTypeable", "exts/deriving_extra.html#extension-DeriveDataTypeable"),
-        ("DeriveFoldable", "exts/deriving_extra.html#extension-DeriveFoldable"),
-        ("DeriveFunctor", "exts/deriving_extra.html#extension-DeriveFunctor"),
-        ("DeriveGeneric", "exts/generics.html#extension-DeriveGeneric"),
-        ("DeriveLift", "exts/deriving_extra.html#extension-DeriveLift"),
-        ("DeriveTraversable", "exts/deriving_extra.html#extension-DeriveTraversable"),
-        ("DerivingStrategies", "exts/deriving_strategies.html#extension-DerivingStrategies"),
-        ("DerivingVia", "exts/deriving_via.html#extension-DerivingVia"),
-        ("DisambiguateRecordFields", "exts/disambiguate_record_fields.html#extension-DisambiguateRecordFields"),
-        ("DoAndIfThenElse", "exts/doandifthenelse.html#extension-DoAndIfThenElse"),
-        ("DuplicateRecordFields", "exts/duplicate_record_fields.html#extension-DuplicateRecordFields"),
-        ("EmptyCase", "exts/empty_case.html#extension-EmptyCase"),
-        ("EmptyDataDecls", "exts/nullary_types.html#extension-EmptyDataDecls"),
-        ("EmptyDataDeriving", "exts/empty_data_deriving.html#extension-EmptyDataDeriving"),
-        ("ExistentialQuantification", "exts/existential_quantification.html#extension-ExistentialQuantification"),
-        ("ExplicitForAll", "exts/explicit_forall.html#extension-ExplicitForAll"),
-        ("ExplicitLevelImports", "exts/template_haskell.html#extension-ExplicitLevelImports"),
-        ("ExplicitNamespaces", "exts/explicit_namespaces.html#extension-ExplicitNamespaces"),
-        ("ExtendedDefaultRules", "ghci.html#extension-ExtendedDefaultRules"),
-        ("ExtendedLiterals", "exts/extended_literals.html#extension-ExtendedLiterals"),
-        ("FieldSelectors", "exts/field_selectors.html#extension-FieldSelectors"),
-        ("FlexibleContexts", "exts/flexible_contexts.html#extension-FlexibleContexts"),
-        ("FlexibleInstances", "exts/instances.html#extension-FlexibleInstances"),
-        ("ForeignFunctionInterface", "exts/ffi.html#extension-ForeignFunctionInterface"),
-        ("FunctionalDependencies", "exts/functional_dependencies.html#extension-FunctionalDependencies"),
-        ("GADTs", "exts/gadt.html#extension-GADTs"),
-        ("GADTSyntax", "exts/gadt_syntax.html#extension-GADTSyntax"),
-        ("GeneralisedNewtypeDeriving", "exts/newtype_deriving.html#extension-GeneralisedNewtypeDeriving"),
-        ("GHC2021", "exts/control.html#extension-GHC2021"),
-        ("GHC2024", "exts/control.html#extension-GHC2024"),
-        ("GHCForeignImportPrim", "exts/ffi.html#extension-GHCForeignImportPrim"),
-        ("Haskell2010", "exts/control.html#extension-Haskell2010"),
-        ("Haskell98", "exts/control.html#extension-Haskell98"),
-        ("HexFloatLiterals", "exts/hex_float_literals.html#extension-HexFloatLiterals"),
-        ("ImplicitParams", "exts/implicit_parameters.html#extension-ImplicitParams"),
-        ("ImplicitPrelude", "exts/rebindable_syntax.html#extension-ImplicitPrelude"),
-        ("ImplicitStagePersistence", "exts/template_haskell.html#extension-ImplicitStagePersistence"),
-        ("ImportQualifiedPost", "exts/import_qualified_post.html#extension-ImportQualifiedPost"),
-        ("ImpredicativeTypes", "exts/impredicative_types.html#extension-ImpredicativeTypes"),
-        ("IncoherentInstances", "exts/instances.html#extension-IncoherentInstances"),
-        ("InstanceSigs", "exts/instances.html#extension-InstanceSigs"),
-        ("InterruptibleFFI", "exts/ffi.html#extension-InterruptibleFFI"),
-        ("KindSignatures", "exts/kind_signatures.html#extension-KindSignatures"),
-        ("LambdaCase", "exts/lambda_case.html#extension-LambdaCase"),
-        ("LexicalNegation", "exts/lexical_negation.html#extension-LexicalNegation"),
-        ("LiberalTypeSynonyms", "exts/liberal_type_synonyms.html#extension-LiberalTypeSynonyms"),
-        ("LinearTypes", "exts/linear_types.html#extension-LinearTypes"),
-        ("ListTuplePuns", "exts/data_kinds.html#extension-ListTuplePuns"),
-        ("MagicHash", "exts/magic_hash.html#extension-MagicHash"),
-        ("MonadComprehensions", "exts/monad_comprehensions.html#extension-MonadComprehensions"),
-        ("MonoLocalBinds", "exts/let_generalisation.html#extension-MonoLocalBinds"),
-        ("MonomorphismRestriction", "exts/monomorphism.html#extension-MonomorphismRestriction"),
-        ("MultilineStrings", "exts/multiline_strings.html#extension-MultilineStrings"),
-        ("MultiParamTypeClasses", "exts/multi_param_type_classes.html#extension-MultiParamTypeClasses"),
-        ("MultiWayIf", "exts/multiway_if.html#extension-MultiWayIf"),
-        ("NamedDefaults", "exts/named_defaults.html#extension-NamedDefaults"),
-        ("NamedFieldPuns", "exts/record_puns.html#extension-NamedFieldPuns"),
-        ("NamedWildCards", "exts/partial_type_signatures.html#extension-NamedWildCards"),
-        ("NegativeLiterals", "exts/negative_literals.html#extension-NegativeLiterals"),
-        ("NondecreasingIndentation", "bugs.html#extension-NondecreasingIndentation"),
-        ("NPlusKPatterns", "exts/nk_patterns.html#extension-NPlusKPatterns"),
-        ("NullaryTypeClasses", "exts/multi_param_type_classes.html#extension-NullaryTypeClasses"),
-        ("NumDecimals", "exts/num_decimals.html#extension-NumDecimals"),
-        ("NumericUnderscores", "exts/numeric_underscores.html#extension-NumericUnderscores"),
-        ("OrPatterns", "exts/or_patterns.html#extension-OrPatterns"),
-        ("OverlappingInstances", "exts/instances.html#extension-OverlappingInstances"),
-        ("OverloadedLabels", "exts/overloaded_labels.html#extension-OverloadedLabels"),
-        ("OverloadedLists", "exts/overloaded_lists.html#extension-OverloadedLists"),
-        ("OverloadedRecordDot", "exts/overloaded_record_dot.html#extension-OverloadedRecordDot"),
-        ("OverloadedRecordUpdate", "exts/overloaded_record_update.html#extension-OverloadedRecordUpdate"),
-        ("OverloadedStrings", "exts/overloaded_strings.html#extension-OverloadedStrings"),
-        ("PackageImports", "exts/package_qualified_imports.html#extension-PackageImports"),
-        ("ParallelListComp", "exts/parallel_list_comprehensions.html#extension-ParallelListComp"),
-        ("PartialTypeSignatures", "exts/partial_type_signatures.html#extension-PartialTypeSignatures"),
-        ("PatternGuards", "exts/pattern_guards.html#extension-PatternGuards"),
-        ("PatternSynonyms", "exts/pattern_synonyms.html#extension-PatternSynonyms"),
-        ("PolyKinds", "exts/poly_kinds.html#extension-PolyKinds"),
-        ("PostfixOperators", "exts/rebindable_syntax.html#extension-PostfixOperators"),
-        ("QualifiedDo", "exts/qualified_do.html#extension-QualifiedDo"),
-        ("QuantifiedConstraints", "exts/quantified_constraints.html#extension-QuantifiedConstraints"),
-        ("QuasiQuotes", "exts/template_haskell.html#extension-QuasiQuotes"),
-        ("Rank2Types", "exts/rank_polymorphism.html#extension-Rank2Types"),
-        ("RankNTypes", "exts/rank_polymorphism.html#extension-RankNTypes"),
-        ("RebindableSyntax", "exts/rebindable_syntax.html#extension-RebindableSyntax"),
-        ("RecordWildCards", "exts/record_wildcards.html#extension-RecordWildCards"),
-        ("RecursiveDo", "exts/recursive_do.html#extension-RecursiveDo"),
-        ("RequiredTypeArguments", "exts/required_type_arguments.html#extension-RequiredTypeArguments"),
-        ("RoleAnnotations", "exts/roles.html#extension-RoleAnnotations"),
-        ("Safe", "exts/safe_haskell.html#extension-Safe"),
-        ("ScopedTypeVariables", "exts/scoped_type_variables.html#extension-ScopedTypeVariables"),
-        ("StandaloneDeriving", "exts/standalone_deriving.html#extension-StandaloneDeriving"),
-        ("StandaloneKindSignatures", "exts/poly_kinds.html#extension-StandaloneKindSignatures"),
-        ("StarIsType", "exts/poly_kinds.html#extension-StarIsType"),
-        ("StaticPointers", "exts/static_pointers.html#extension-StaticPointers"),
-        ("Strict", "exts/strict.html#extension-Strict"),
-        ("StrictData", "exts/strict.html#extension-StrictData"),
-        ("TemplateHaskell", "exts/template_haskell.html#extension-TemplateHaskell"),
-        ("TemplateHaskellQuotes", "exts/template_haskell.html#extension-TemplateHaskellQuotes"),
-        ("TraditionalRecordSyntax", "exts/traditional_record_syntax.html#extension-TraditionalRecordSyntax"),
-        ("TransformListComp", "exts/generalised_list_comprehensions.html#extension-TransformListComp"),
-        ("Trustworthy", "exts/safe_haskell.html#extension-Trustworthy"),
-        ("TupleSections", "exts/tuple_sections.html#extension-TupleSections"),
-        ("TypeAbstractions", "exts/type_abstractions.html#extension-TypeAbstractions"),
-        ("TypeApplications", "exts/type_applications.html#extension-TypeApplications"),
-        ("TypeData", "exts/type_data.html#extension-TypeData"),
-        ("TypeFamilies", "exts/type_families.html#extension-TypeFamilies"),
-        ("TypeFamilyDependencies", "exts/type_families.html#extension-TypeFamilyDependencies"),
-        ("TypeInType", "exts/poly_kinds.html#extension-TypeInType"),
-        ("TypeOperators", "exts/type_operators.html#extension-TypeOperators"),
-        ("TypeSynonymInstances", "exts/instances.html#extension-TypeSynonymInstances"),
-        ("UnboxedSums", "exts/primitives.html#extension-UnboxedSums"),
-        ("UnboxedTuples", "exts/primitives.html#extension-UnboxedTuples"),
-        ("UndecidableInstances", "exts/instances.html#extension-UndecidableInstances"),
-        ("UndecidableSuperClasses", "exts/undecidable_super_classes.html#extension-UndecidableSuperClasses"),
-        ("UnicodeSyntax", "exts/unicode_syntax.html#extension-UnicodeSyntax"),
-        ("UnliftedDatatypes", "exts/primitives.html#extension-UnliftedDatatypes"),
-        ("UnliftedFFITypes", "exts/ffi.html#extension-UnliftedFFITypes"),
-        ("UnliftedNewtypes", "exts/primitives.html#extension-UnliftedNewtypes"),
-        ("Unsafe", "exts/safe_haskell.html#extension-Unsafe"),
-        ("ViewPatterns", "exts/view_patterns.html#extension-ViewPatterns")
-      ]
+  Map.mapKeys t . Map.fromList $
+    [ ("AllowAmbiguousTypes", "exts/ambiguous_types.html#extension-AllowAmbiguousTypes"),
+      ("ApplicativeDo", "exts/applicative_do.html#extension-ApplicativeDo"),
+      ("Arrows", "exts/arrows.html#extension-Arrows"),
+      ("BangPatterns", "exts/strict.html#extension-BangPatterns"),
+      ("BinaryLiterals", "exts/binary_literals.html#extension-BinaryLiterals"),
+      ("BlockArguments", "exts/block_arguments.html#extension-BlockArguments"),
+      ("CApiFFI", "exts/ffi.html#extension-CApiFFI"),
+      ("ConstrainedClassMethods", "exts/constrained_class_methods.html#extension-ConstrainedClassMethods"),
+      ("ConstraintKinds", "exts/constraint_kind.html#extension-ConstraintKinds"),
+      ("Cpp", "phases.html#extension-CPP"),
+      ("CUSKs", "exts/poly_kinds.html#extension-CUSKs"),
+      ("DataKinds", "exts/data_kinds.html#extension-DataKinds"),
+      ("DatatypeContexts", "exts/datatype_contexts.html#extension-DatatypeContexts"),
+      ("DeepSubsumption", "exts/rank_polymorphism.html#extension-DeepSubsumption"),
+      ("DefaultSignatures", "exts/default_signatures.html#extension-DefaultSignatures"),
+      ("DeriveAnyClass", "exts/derive_any_class.html#extension-DeriveAnyClass"),
+      ("DeriveDataTypeable", "exts/deriving_extra.html#extension-DeriveDataTypeable"),
+      ("DeriveFoldable", "exts/deriving_extra.html#extension-DeriveFoldable"),
+      ("DeriveFunctor", "exts/deriving_extra.html#extension-DeriveFunctor"),
+      ("DeriveGeneric", "exts/generics.html#extension-DeriveGeneric"),
+      ("DeriveLift", "exts/deriving_extra.html#extension-DeriveLift"),
+      ("DeriveTraversable", "exts/deriving_extra.html#extension-DeriveTraversable"),
+      ("DerivingStrategies", "exts/deriving_strategies.html#extension-DerivingStrategies"),
+      ("DerivingVia", "exts/deriving_via.html#extension-DerivingVia"),
+      ("DisambiguateRecordFields", "exts/disambiguate_record_fields.html#extension-DisambiguateRecordFields"),
+      ("DoAndIfThenElse", "exts/doandifthenelse.html#extension-DoAndIfThenElse"),
+      ("DuplicateRecordFields", "exts/duplicate_record_fields.html#extension-DuplicateRecordFields"),
+      ("EmptyCase", "exts/empty_case.html#extension-EmptyCase"),
+      ("EmptyDataDecls", "exts/nullary_types.html#extension-EmptyDataDecls"),
+      ("EmptyDataDeriving", "exts/empty_data_deriving.html#extension-EmptyDataDeriving"),
+      ("ExistentialQuantification", "exts/existential_quantification.html#extension-ExistentialQuantification"),
+      ("ExplicitForAll", "exts/explicit_forall.html#extension-ExplicitForAll"),
+      ("ExplicitLevelImports", "exts/template_haskell.html#extension-ExplicitLevelImports"),
+      ("ExplicitNamespaces", "exts/explicit_namespaces.html#extension-ExplicitNamespaces"),
+      ("ExtendedDefaultRules", "ghci.html#extension-ExtendedDefaultRules"),
+      ("ExtendedLiterals", "exts/extended_literals.html#extension-ExtendedLiterals"),
+      ("FieldSelectors", "exts/field_selectors.html#extension-FieldSelectors"),
+      ("FlexibleContexts", "exts/flexible_contexts.html#extension-FlexibleContexts"),
+      ("FlexibleInstances", "exts/instances.html#extension-FlexibleInstances"),
+      ("ForeignFunctionInterface", "exts/ffi.html#extension-ForeignFunctionInterface"),
+      ("FunctionalDependencies", "exts/functional_dependencies.html#extension-FunctionalDependencies"),
+      ("GADTs", "exts/gadt.html#extension-GADTs"),
+      ("GADTSyntax", "exts/gadt_syntax.html#extension-GADTSyntax"),
+      ("GeneralisedNewtypeDeriving", "exts/newtype_deriving.html#extension-GeneralisedNewtypeDeriving"),
+      ("GHC2021", "exts/control.html#extension-GHC2021"),
+      ("GHC2024", "exts/control.html#extension-GHC2024"),
+      ("GHCForeignImportPrim", "exts/ffi.html#extension-GHCForeignImportPrim"),
+      ("Haskell2010", "exts/control.html#extension-Haskell2010"),
+      ("Haskell98", "exts/control.html#extension-Haskell98"),
+      ("HexFloatLiterals", "exts/hex_float_literals.html#extension-HexFloatLiterals"),
+      ("ImplicitParams", "exts/implicit_parameters.html#extension-ImplicitParams"),
+      ("ImplicitPrelude", "exts/rebindable_syntax.html#extension-ImplicitPrelude"),
+      ("ImplicitStagePersistence", "exts/template_haskell.html#extension-ImplicitStagePersistence"),
+      ("ImportQualifiedPost", "exts/import_qualified_post.html#extension-ImportQualifiedPost"),
+      ("ImpredicativeTypes", "exts/impredicative_types.html#extension-ImpredicativeTypes"),
+      ("IncoherentInstances", "exts/instances.html#extension-IncoherentInstances"),
+      ("InstanceSigs", "exts/instances.html#extension-InstanceSigs"),
+      ("InterruptibleFFI", "exts/ffi.html#extension-InterruptibleFFI"),
+      ("KindSignatures", "exts/kind_signatures.html#extension-KindSignatures"),
+      ("LambdaCase", "exts/lambda_case.html#extension-LambdaCase"),
+      ("LexicalNegation", "exts/lexical_negation.html#extension-LexicalNegation"),
+      ("LiberalTypeSynonyms", "exts/liberal_type_synonyms.html#extension-LiberalTypeSynonyms"),
+      ("LinearTypes", "exts/linear_types.html#extension-LinearTypes"),
+      ("ListTuplePuns", "exts/data_kinds.html#extension-ListTuplePuns"),
+      ("MagicHash", "exts/magic_hash.html#extension-MagicHash"),
+      ("MonadComprehensions", "exts/monad_comprehensions.html#extension-MonadComprehensions"),
+      ("MonoLocalBinds", "exts/let_generalisation.html#extension-MonoLocalBinds"),
+      ("MonomorphismRestriction", "exts/monomorphism.html#extension-MonomorphismRestriction"),
+      ("MultilineStrings", "exts/multiline_strings.html#extension-MultilineStrings"),
+      ("MultiParamTypeClasses", "exts/multi_param_type_classes.html#extension-MultiParamTypeClasses"),
+      ("MultiWayIf", "exts/multiway_if.html#extension-MultiWayIf"),
+      ("NamedDefaults", "exts/named_defaults.html#extension-NamedDefaults"),
+      ("NamedFieldPuns", "exts/record_puns.html#extension-NamedFieldPuns"),
+      ("NamedWildCards", "exts/partial_type_signatures.html#extension-NamedWildCards"),
+      ("NegativeLiterals", "exts/negative_literals.html#extension-NegativeLiterals"),
+      ("NondecreasingIndentation", "bugs.html#extension-NondecreasingIndentation"),
+      ("NPlusKPatterns", "exts/nk_patterns.html#extension-NPlusKPatterns"),
+      ("NullaryTypeClasses", "exts/multi_param_type_classes.html#extension-NullaryTypeClasses"),
+      ("NumDecimals", "exts/num_decimals.html#extension-NumDecimals"),
+      ("NumericUnderscores", "exts/numeric_underscores.html#extension-NumericUnderscores"),
+      ("OrPatterns", "exts/or_patterns.html#extension-OrPatterns"),
+      ("OverlappingInstances", "exts/instances.html#extension-OverlappingInstances"),
+      ("OverloadedLabels", "exts/overloaded_labels.html#extension-OverloadedLabels"),
+      ("OverloadedLists", "exts/overloaded_lists.html#extension-OverloadedLists"),
+      ("OverloadedRecordDot", "exts/overloaded_record_dot.html#extension-OverloadedRecordDot"),
+      ("OverloadedRecordUpdate", "exts/overloaded_record_update.html#extension-OverloadedRecordUpdate"),
+      ("OverloadedStrings", "exts/overloaded_strings.html#extension-OverloadedStrings"),
+      ("PackageImports", "exts/package_qualified_imports.html#extension-PackageImports"),
+      ("ParallelListComp", "exts/parallel_list_comprehensions.html#extension-ParallelListComp"),
+      ("PartialTypeSignatures", "exts/partial_type_signatures.html#extension-PartialTypeSignatures"),
+      ("PatternGuards", "exts/pattern_guards.html#extension-PatternGuards"),
+      ("PatternSynonyms", "exts/pattern_synonyms.html#extension-PatternSynonyms"),
+      ("PolyKinds", "exts/poly_kinds.html#extension-PolyKinds"),
+      ("PostfixOperators", "exts/rebindable_syntax.html#extension-PostfixOperators"),
+      ("QualifiedDo", "exts/qualified_do.html#extension-QualifiedDo"),
+      ("QuantifiedConstraints", "exts/quantified_constraints.html#extension-QuantifiedConstraints"),
+      ("QuasiQuotes", "exts/template_haskell.html#extension-QuasiQuotes"),
+      ("Rank2Types", "exts/rank_polymorphism.html#extension-Rank2Types"),
+      ("RankNTypes", "exts/rank_polymorphism.html#extension-RankNTypes"),
+      ("RebindableSyntax", "exts/rebindable_syntax.html#extension-RebindableSyntax"),
+      ("RecordWildCards", "exts/record_wildcards.html#extension-RecordWildCards"),
+      ("RecursiveDo", "exts/recursive_do.html#extension-RecursiveDo"),
+      ("RequiredTypeArguments", "exts/required_type_arguments.html#extension-RequiredTypeArguments"),
+      ("RoleAnnotations", "exts/roles.html#extension-RoleAnnotations"),
+      ("Safe", "exts/safe_haskell.html#extension-Safe"),
+      ("ScopedTypeVariables", "exts/scoped_type_variables.html#extension-ScopedTypeVariables"),
+      ("StandaloneDeriving", "exts/standalone_deriving.html#extension-StandaloneDeriving"),
+      ("StandaloneKindSignatures", "exts/poly_kinds.html#extension-StandaloneKindSignatures"),
+      ("StarIsType", "exts/poly_kinds.html#extension-StarIsType"),
+      ("StaticPointers", "exts/static_pointers.html#extension-StaticPointers"),
+      ("Strict", "exts/strict.html#extension-Strict"),
+      ("StrictData", "exts/strict.html#extension-StrictData"),
+      ("TemplateHaskell", "exts/template_haskell.html#extension-TemplateHaskell"),
+      ("TemplateHaskellQuotes", "exts/template_haskell.html#extension-TemplateHaskellQuotes"),
+      ("TraditionalRecordSyntax", "exts/traditional_record_syntax.html#extension-TraditionalRecordSyntax"),
+      ("TransformListComp", "exts/generalised_list_comprehensions.html#extension-TransformListComp"),
+      ("Trustworthy", "exts/safe_haskell.html#extension-Trustworthy"),
+      ("TupleSections", "exts/tuple_sections.html#extension-TupleSections"),
+      ("TypeAbstractions", "exts/type_abstractions.html#extension-TypeAbstractions"),
+      ("TypeApplications", "exts/type_applications.html#extension-TypeApplications"),
+      ("TypeData", "exts/type_data.html#extension-TypeData"),
+      ("TypeFamilies", "exts/type_families.html#extension-TypeFamilies"),
+      ("TypeFamilyDependencies", "exts/type_families.html#extension-TypeFamilyDependencies"),
+      ("TypeInType", "exts/poly_kinds.html#extension-TypeInType"),
+      ("TypeOperators", "exts/type_operators.html#extension-TypeOperators"),
+      ("TypeSynonymInstances", "exts/instances.html#extension-TypeSynonymInstances"),
+      ("UnboxedSums", "exts/primitives.html#extension-UnboxedSums"),
+      ("UnboxedTuples", "exts/primitives.html#extension-UnboxedTuples"),
+      ("UndecidableInstances", "exts/instances.html#extension-UndecidableInstances"),
+      ("UndecidableSuperClasses", "exts/undecidable_super_classes.html#extension-UndecidableSuperClasses"),
+      ("UnicodeSyntax", "exts/unicode_syntax.html#extension-UnicodeSyntax"),
+      ("UnliftedDatatypes", "exts/primitives.html#extension-UnliftedDatatypes"),
+      ("UnliftedFFITypes", "exts/ffi.html#extension-UnliftedFFITypes"),
+      ("UnliftedNewtypes", "exts/primitives.html#extension-UnliftedNewtypes"),
+      ("Unsafe", "exts/safe_haskell.html#extension-Unsafe"),
+      ("ViewPatterns", "exts/view_patterns.html#extension-ViewPatterns")
+    ]
 
 -- Items section
 
 itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
-itemsContents [] = []
+-- itemsContents [] = []
+-- itemsContents items =
+--   [ element
+--       "section"
+--       [("class", "my-4")]
+--       ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Declarations"]]
+--           <> concatMap renderItemWithChildren topLevelItems
+--       )
+--   ]
+--   where
+--     childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
+--     childrenMap = foldr addChild Map.empty items
+
+--     addChild :: Located.Located Item.Item -> Map.Map Natural.Natural [Located.Located Item.Item] -> Map.Map Natural.Natural [Located.Located Item.Item]
+--     addChild li acc = case Item.parentKey (Located.value li) of
+--       Nothing -> acc
+--       Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
+
+--     topLevelItems :: [Located.Located Item.Item]
+--     topLevelItems = filter (isTopLevel . Located.value) items
+
+--     isTopLevel :: Item.Item -> Bool
+--     isTopLevel item = case Item.parentKey item of
+--       Nothing -> True
+--       Just _ -> False
+
+--     renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
+--     renderItemWithChildren li =
+--       let k = ItemKey.unwrap (Item.key (Located.value li))
+--           children = Map.findWithDefault [] k childrenMap
+--        in [itemToHtml li]
+--             <> if null children
+--               then []
+--               else
+--                 [ element
+--                     "div"
+--                     [("class", "ms-4 mt-2 border-start border-2 ps-3")]
+--                     (concatMap renderItemWithChildren children)
+--                 ]
 itemsContents items =
-  [ element
-      "section"
-      [("class", "my-4")]
-      ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Declarations"]]
-          <> concatMap renderItemWithChildren topLevelItems
-      )
-  ]
-  where
-    childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
-    childrenMap = foldr addChild Map.empty items
+  element "h2" [] [Xml.string "Declarations"]
+    -- TODO: Group children under parent, but keep new styling of cards.
+    : fmap itemContent items
 
-    addChild :: Located.Located Item.Item -> Map.Map Natural.Natural [Located.Located Item.Item] -> Map.Map Natural.Natural [Located.Located Item.Item]
-    addChild li acc = case Item.parentKey (Located.value li) of
-      Nothing -> acc
-      Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
-
-    topLevelItems :: [Located.Located Item.Item]
-    topLevelItems = filter (isTopLevel . Located.value) items
-
-    isTopLevel :: Item.Item -> Bool
-    isTopLevel item = case Item.parentKey item of
-      Nothing -> True
-      Just _ -> False
-
-    renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
-    renderItemWithChildren li =
-      let k = ItemKey.unwrap (Item.key (Located.value li))
-          children = Map.findWithDefault [] k childrenMap
-       in [itemToHtml li]
-            <> if null children
-              then []
-              else
-                [ element
-                    "div"
-                    [("class", "ms-4 mt-2 border-start border-2 ps-3")]
-                    (concatMap renderItemWithChildren children)
-                ]
-
-itemToHtml :: Located.Located Item.Item -> Content.Content Element.Element
-itemToHtml item =
+itemContent :: Located.Located Item.Item -> Content.Content Element.Element
+itemContent item =
   element
     "div"
-    [ ("class", "card mb-3 border-start border-4"),
-      ("style", kindBorderStyle itemKind),
-      ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item)),
-      lineAttribute $ Located.location item
+    [ ("class", "card my-3"),
+      ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item))
     ]
-    ( [ element
-          "div"
-          [("class", "card-header bg-transparent d-flex align-items-center py-2")]
-          ( nameContents
-              <> sigBeforeKind
-              <> [kindContent]
-              <> sigAfterKind
-              <> sinceContents
-              <> [locationElement $ Located.location item]
-          )
-      ]
-        <> docContents'
-    )
-  where
-    itemKind = Item.kind $ Located.value item
-
-    nameContents :: [Content.Content Element.Element]
-    nameContents = case Item.name $ Located.value item of
-      Nothing -> []
-      Just n ->
-        [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text (ItemName.unwrap n)]]
-
-    isTypeVarSignature :: Bool
-    isTypeVarSignature = case itemKind of
-      ItemKind.DataType -> True
-      ItemKind.Newtype -> True
-      ItemKind.TypeData -> True
-      ItemKind.TypeSynonym -> True
-      ItemKind.Class -> True
-      _ -> False
-
-    kindContent :: Content.Content Element.Element
-    kindContent =
-      element
-        "span"
-        [("class", "badge " <> kindBadgeClass itemKind <> " ms-2")]
-        [Xml.text (kindToText itemKind)]
-
-    sigBeforeKind :: [Content.Content Element.Element]
-    sigBeforeKind =
-      if isTypeVarSignature then signatureContents else []
-
-    sigAfterKind :: [Content.Content Element.Element]
-    sigAfterKind =
-      if isTypeVarSignature then [] else signatureContents
-
-    signatureContents :: [Content.Content Element.Element]
-    signatureContents = case Item.signature $ Located.value item of
-      Nothing -> []
-      Just sig ->
-        let prefix = if isTypeVarSignature then t "\x00a0" else t " :: "
-         in [ element
-                "span"
-                [("class", "font-monospace text-body-secondary")]
-                [Xml.text (prefix <> sig)]
-            ]
-
-    sinceContents :: [Content.Content Element.Element]
-    sinceContents = case Item.since $ Located.value item of
-      Nothing -> []
-      Just s ->
+    [ element
+        "div"
+        [("class", "align-items-center card-header d-flex")]
         [ element
-            "span"
-            [("class", "text-body-secondary small ms-2")]
-            [Xml.text (t "since " <> sinceToText s)]
-        ]
+            "div"
+            []
+            [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
+            ],
+          element
+            "div"
+            [("class", "mx-1")]
+            [ element "span" [("class", "badge text-bg-secondary")] [Xml.string . kindToString . Item.kind $ Located.value item]
+            ],
+          -- TODO: Signature goes before kind for some things, like type variables.
+          case Item.signature $ Located.value item of
+            Nothing -> Xml.string ""
+            Just signature ->
+              element
+                "div"
+                [("class", "mx-1")]
+                [ element
+                    "code"
+                    [("class", "text-break text-secondary")]
+                    -- TODO: Signature prefix is different depending on the kind.
+                    [ Xml.string ":: ",
+                      Xml.text signature
+                    ]
+                ],
+          element
+            "div"
+            [("class", "ms-auto")]
+            [ element
+                "button"
+                [ ("class", "btn btn-outline-secondary btn-sm"),
+                  ("data-col", show . Column.unwrap . Location.column $ Located.location item),
+                  ("data-line", show . Line.unwrap . Location.line $ Located.location item),
+                  ("type", "button")
+                ]
+                [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
+                  Xml.string ":",
+                  Xml.string . show . Column.unwrap . Location.column $ Located.location item
+                ]
+            ]
+        ],
+      element
+        "div"
+        [("class", "card-body")]
+        $ foldMap (pure . sinceAlert) (Item.since $ Located.value item)
+          <> docContents (Item.documentation $ Located.value item)
+    ]
 
-    docContents' :: [Content.Content Element.Element]
-    docContents' = case Item.documentation $ Located.value item of
-      Doc.Empty -> []
-      doc -> [element "div" [("class", "card-body")] (docToContents doc)]
+-- itemToHtml :: Located.Located Item.Item -> Content.Content Element.Element
+-- itemToHtml item =
+--   element
+--     "div"
+--     [ ("class", "card mb-3 border-start border-4"),
+--       ("style", kindBorderStyle itemKind),
+--       ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item)),
+--       lineAttribute $ Located.location item
+--     ]
+--     ( [ element
+--           "div"
+--           [("class", "card-header bg-transparent d-flex align-items-center py-2")]
+--           ( nameContents
+--               <> sigBeforeKind
+--               <> [kindContent]
+--               <> sigAfterKind
+--               <> sinceContents
+--               <> [locationElement $ Located.location item]
+--           )
+--       ]
+--         <> docContents'
+--     )
+--   where
+--     itemKind = Item.kind $ Located.value item
 
-lineAttribute :: Location.Location -> (String, String)
-lineAttribute loc =
-  ("data-line", show (Line.unwrap (Location.line loc)))
+--     nameContents :: [Content.Content Element.Element]
+--     nameContents = case Item.name $ Located.value item of
+--       Nothing -> []
+--       Just n ->
+--         [element "span" [("class", "font-monospace fw-bold text-success")] [Xml.text (ItemName.unwrap n)]]
 
-columnAttribute :: Location.Location -> (String, String)
-columnAttribute loc =
-  ("data-col", show (Column.unwrap (Location.column loc)))
+--     isTypeVarSignature :: Bool
+--     isTypeVarSignature = case itemKind of
+--       ItemKind.DataType -> True
+--       ItemKind.Newtype -> True
+--       ItemKind.TypeData -> True
+--       ItemKind.TypeSynonym -> True
+--       ItemKind.Class -> True
+--       _ -> False
 
-locationElement :: Location.Location -> Content.Content Element.Element
-locationElement loc =
-  let lineNum = Line.unwrap (Location.line loc)
-   in element
-        "button"
-        [ ("type", "button"),
-          ("class", "item-location ms-auto text-body-tertiary small bg-transparent border-0 p-0"),
-          ("aria-label", "Go to line " <> show lineNum),
-          lineAttribute loc,
-          columnAttribute loc
-        ]
-        [ Xml.text
-            ( t "line "
-                <> t (show lineNum)
-            )
-        ]
+--     kindContent :: Content.Content Element.Element
+--     kindContent =
+--       element
+--         "span"
+--         [("class", "badge " <> kindBadgeClass itemKind <> " ms-2")]
+--         [Xml.string (kindToString itemKind)]
 
-kindToText :: ItemKind.ItemKind -> Text.Text
-kindToText k = t $ case k of
-  ItemKind.Function -> "function"
-  ItemKind.PatternBinding -> "pattern binding"
-  ItemKind.PatternSynonym -> "pattern"
-  ItemKind.DataType -> "data"
-  ItemKind.Newtype -> "newtype"
-  ItemKind.TypeData -> "type data"
-  ItemKind.TypeSynonym -> "type"
-  ItemKind.DataConstructor -> "constructor"
-  ItemKind.GADTConstructor -> "GADT constructor"
-  ItemKind.RecordField -> "field"
-  ItemKind.Class -> "class"
-  ItemKind.ClassMethod -> "method"
-  ItemKind.ClassInstance -> "instance"
-  ItemKind.StandaloneDeriving -> "standalone deriving"
-  ItemKind.DerivedInstance -> "deriving"
-  ItemKind.OpenTypeFamily -> "type family"
-  ItemKind.ClosedTypeFamily -> "type family"
-  ItemKind.DataFamily -> "data family"
-  ItemKind.TypeFamilyInstance -> "type instance"
-  ItemKind.DataFamilyInstance -> "data instance"
-  ItemKind.ForeignImport -> "foreign import"
-  ItemKind.ForeignExport -> "foreign export"
-  ItemKind.FixitySignature -> "fixity"
-  ItemKind.InlineSignature -> "inline"
-  ItemKind.SpecialiseSignature -> "specialise"
-  ItemKind.StandaloneKindSig -> "kind"
-  ItemKind.Rule -> "rule"
-  ItemKind.Default -> "default"
+--     sigBeforeKind :: [Content.Content Element.Element]
+--     sigBeforeKind =
+--       if isTypeVarSignature then signatureContents else []
+
+--     sigAfterKind :: [Content.Content Element.Element]
+--     sigAfterKind =
+--       if isTypeVarSignature then [] else signatureContents
+
+--     signatureContents :: [Content.Content Element.Element]
+--     signatureContents = case Item.signature $ Located.value item of
+--       Nothing -> []
+--       Just sig ->
+--         let prefix = if isTypeVarSignature then t "\x00a0" else t " :: "
+--          in [ element
+--                 "span"
+--                 [("class", "font-monospace text-body-secondary")]
+--                 [Xml.text (prefix <> sig)]
+--             ]
+
+--     sinceContents :: [Content.Content Element.Element]
+--     sinceContents = case Item.since $ Located.value item of
+--       Nothing -> []
+--       Just s ->
+--         [ element
+--             "span"
+--             [("class", "text-body-secondary small ms-2")]
+--             [Xml.text (t "since " <> sinceToText s)]
+--         ]
+
+--     docContents' :: [Content.Content Element.Element]
+--     docContents' = case Item.documentation $ Located.value item of
+--       Doc.Empty -> []
+--       doc -> [element "div" [("class", "card-body")] (docContents doc)]
+
+kindToString :: ItemKind.ItemKind -> String
+kindToString x = case x of
   ItemKind.Annotation -> "annotation"
-  ItemKind.Splice -> "splice"
-  ItemKind.Warning -> "warning"
-  ItemKind.MinimalPragma -> "minimal"
+  ItemKind.Class -> "class"
+  ItemKind.ClassInstance -> "instance"
+  ItemKind.ClassMethod -> "method"
+  ItemKind.ClosedTypeFamily -> "type family"
   ItemKind.CompletePragma -> "complete"
+  ItemKind.DataConstructor -> "constructor"
+  ItemKind.DataFamily -> "data family"
+  ItemKind.DataFamilyInstance -> "data instance"
+  ItemKind.DataType -> "data"
+  ItemKind.Default -> "default"
   ItemKind.DefaultMethodSignature -> "default"
+  ItemKind.DerivedInstance -> "instance"
+  ItemKind.FixitySignature -> "fixity"
+  ItemKind.ForeignExport -> "foreign export"
+  ItemKind.ForeignImport -> "foreign import"
+  ItemKind.Function -> "function"
+  ItemKind.GADTConstructor -> "constructor"
+  ItemKind.InlineSignature -> "inline"
+  ItemKind.MinimalPragma -> "minimal"
+  ItemKind.Newtype -> "newtype"
+  ItemKind.OpenTypeFamily -> "type family"
+  ItemKind.PatternBinding -> "pattern"
+  ItemKind.PatternSynonym -> "pattern"
+  ItemKind.RecordField -> "field"
   ItemKind.RoleAnnotation -> "role"
-
-data KindColor
-  = KindSuccess
-  | KindInfo
-  | KindSecondary
-  | KindPrimary
-  | KindWarning
-
-kindColor :: ItemKind.ItemKind -> KindColor
-kindColor k = case k of
-  ItemKind.Function -> KindSuccess
-  ItemKind.PatternBinding -> KindSuccess
-  ItemKind.PatternSynonym -> KindSuccess
-  ItemKind.DataType -> KindInfo
-  ItemKind.Newtype -> KindInfo
-  ItemKind.TypeData -> KindInfo
-  ItemKind.TypeSynonym -> KindInfo
-  ItemKind.DataConstructor -> KindSecondary
-  ItemKind.GADTConstructor -> KindSecondary
-  ItemKind.RecordField -> KindSecondary
-  ItemKind.Class -> KindPrimary
-  ItemKind.ClassMethod -> KindPrimary
-  ItemKind.ClassInstance -> KindPrimary
-  ItemKind.StandaloneDeriving -> KindPrimary
-  ItemKind.DerivedInstance -> KindPrimary
-  ItemKind.OpenTypeFamily -> KindInfo
-  ItemKind.ClosedTypeFamily -> KindInfo
-  ItemKind.DataFamily -> KindInfo
-  ItemKind.TypeFamilyInstance -> KindInfo
-  ItemKind.DataFamilyInstance -> KindInfo
-  ItemKind.ForeignImport -> KindWarning
-  ItemKind.ForeignExport -> KindWarning
-  ItemKind.FixitySignature -> KindSecondary
-  ItemKind.InlineSignature -> KindSecondary
-  ItemKind.SpecialiseSignature -> KindSecondary
-  ItemKind.StandaloneKindSig -> KindInfo
-  ItemKind.Rule -> KindSecondary
-  ItemKind.Default -> KindSecondary
-  ItemKind.Annotation -> KindSecondary
-  ItemKind.Splice -> KindSecondary
-  ItemKind.Warning -> KindWarning
-  ItemKind.MinimalPragma -> KindSecondary
-  ItemKind.CompletePragma -> KindSecondary
-  ItemKind.DefaultMethodSignature -> KindPrimary
-  ItemKind.RoleAnnotation -> KindSecondary
-
-kindBadgeClass :: ItemKind.ItemKind -> String
-kindBadgeClass k = case kindColor k of
-  KindSuccess -> "bg-success-subtle text-success-emphasis"
-  KindInfo -> "bg-info-subtle text-info-emphasis"
-  KindSecondary -> "bg-secondary-subtle text-body"
-  KindPrimary -> "bg-primary-subtle text-primary-emphasis"
-  KindWarning -> "bg-warning-subtle text-warning-emphasis"
-
-kindBorderStyle :: ItemKind.ItemKind -> String
-kindBorderStyle k = case kindColor k of
-  KindSuccess -> "border-left-color: var(--bs-success)"
-  KindInfo -> "border-left-color: var(--bs-info)"
-  KindSecondary -> "border-left-color: var(--bs-secondary)"
-  KindPrimary -> "border-left-color: var(--bs-primary)"
-  KindWarning -> "border-left-color: var(--bs-warning)"
+  ItemKind.Rule -> "rule"
+  ItemKind.SpecialiseSignature -> "specialise"
+  ItemKind.Splice -> "splice"
+  ItemKind.StandaloneDeriving -> "instance"
+  ItemKind.StandaloneKindSig -> "kind"
+  ItemKind.TypeData -> "type data"
+  ItemKind.TypeFamilyInstance -> "type instance"
+  ItemKind.TypeSynonym -> "type"
+  ItemKind.Warning -> "warning"
 
 -- Doc to HTML conversion
 
-docToContents :: Doc.Doc -> [Content.Content Element.Element]
-docToContents doc = case doc of
-  Doc.Empty -> []
-  Doc.Append ds -> concatMap docToContents ds
+docContents :: Doc.Doc -> [Content.Content Element.Element]
+docContents doc = case doc of
+  Doc.Empty -> [Xml.string ""]
+  Doc.Append xs -> foldMap docContents xs
   Doc.String x -> [Xml.text x]
-  Doc.Paragraph d -> [element "p" [] (docToContents d)]
-  Doc.Identifier i -> [identifierToHtml i]
-  Doc.Module m -> [modLinkToHtml m]
-  Doc.Emphasis d -> [element "em" [] (docToContents d)]
-  Doc.Monospaced d -> [element "code" [] (docToContents d)]
-  Doc.Bold d -> [element "strong" [] (docToContents d)]
-  Doc.UnorderedList items ->
-    [element "ul" [] (concatMap (\item -> [element "li" [] (docToContents item)]) items)]
-  Doc.OrderedList items ->
-    [ element
-        "ol"
-        []
-        ( fmap
-            ( \ni ->
-                element "li" [("value", show $ NumberedItem.index ni)] (docToContents $ NumberedItem.item ni)
-            )
-            items
-        )
-    ]
-  Doc.DefList defs ->
-    [ element
-        "dl"
-        []
-        ( concatMap
-            ( \d ->
-                [ element "dt" [] (docToContents $ Definition.term d),
-                  element "dd" [] (docToContents $ Definition.definition d)
-                ]
-            )
-            defs
-        )
-    ]
-  Doc.CodeBlock d ->
-    [element "pre" [("class", "bg-body-secondary rounded p-3 my-3")] [element "code" [] (docToContents d)]]
-  Doc.Hyperlink h -> [hyperlinkToHtml h]
-  Doc.Pic p -> [pictureToHtml p]
-  Doc.MathInline x ->
-    [Xml.text $ t "\\(" <> x <> t "\\)"]
-  Doc.MathDisplay x ->
-    [Xml.text $ t "\\[" <> x <> t "\\]"]
-  Doc.AName x ->
-    [element "a" [("id", Text.unpack x)] []]
-  Doc.Property x ->
+  Doc.Paragraph x -> [element "p" [] $ docContents x]
+  Doc.Identifier x -> [identifierContent x]
+  Doc.Module x -> [modLinkContent x]
+  Doc.Emphasis x -> [element "em" [] $ docContents x]
+  Doc.Monospaced x -> [element "code" [] $ docContents x]
+  Doc.Bold x -> [element "strong" [] $ docContents x]
+  Doc.UnorderedList xs -> [element "ul" [] $ foldMap (pure . element "li" [] . docContents) xs]
+  Doc.OrderedList xs -> [element "ol" [] $ fmap orderedListItemContent xs]
+  Doc.DefList xs -> [defListContent xs]
+  Doc.CodeBlock x -> [codeBlockContent x]
+  Doc.Hyperlink x -> [hyperlinkContent x]
+  Doc.Pic x -> [pictureContent x]
+  Doc.MathInline x -> [Xml.string "\\(", Xml.text x, Xml.string "\\)"]
+  Doc.MathDisplay x -> [Xml.string "\\[", Xml.text x, Xml.string "\\]"]
+  Doc.AName x -> [element "a" [("id", Text.unpack x)] [Xml.string ""]]
+  Doc.Property x -> [propertyContent x]
+  Doc.Examples xs -> exampleContent <$> NonEmpty.toList xs
+  Doc.Header x -> [headerContent x]
+  Doc.Table x -> [tableToHtml x] -- TODO
+
+defListContent :: [Definition.Definition Doc.Doc] -> Content.Content Element.Element
+defListContent xs =
+  element
+    "dl"
+    []
+    $ foldMap
+      ( \x ->
+          [ element "dt" [] . docContents $ Definition.term x,
+            element "dd" [] . docContents $ Definition.definition x
+          ]
+      )
+      xs
+
+codeBlockContent :: Doc.Doc -> Content.Content Element.Element
+codeBlockContent x =
+  element
+    "div"
+    [("class", "card my-3")]
     [ element
         "div"
-        [("class", "border-start border-4 border-primary bg-primary-subtle rounded-end p-3 my-3")]
-        [ element "div" [("class", "fw-bold mb-1")] [Xml.string "Property:"],
-          element "pre" [("class", "mb-0 bg-transparent font-monospace")] [Xml.text x]
+        [("class", "card-body")]
+        [ element
+            "pre"
+            [("class", "mb-0")]
+            [ element "code" [] $ docContents x
+            ]
         ]
     ]
-  Doc.Examples es -> [examplesToHtml es]
-  Doc.Header h -> [headerToHtml h]
-  Doc.Table x -> [tableToHtml x]
 
-identifierToHtml :: Identifier.Identifier -> Content.Content Element.Element
-identifierToHtml ident =
+orderedListItemContent :: NumberedItem.NumberedItem Doc.Doc -> Content.Content Element.Element
+orderedListItemContent x = element "li" [("value", show $ NumberedItem.index x)] . docContents $ NumberedItem.item x
+
+propertyContent :: Text.Text -> Content.Content Element.Element
+propertyContent x =
+  element
+    "div"
+    [("class", "card my-3")]
+    [ element
+        "div"
+        [("class", "card-header")]
+        [ element "strong" [] [Xml.string "Property"]
+        ],
+      element
+        "div"
+        [("class", "card-body")]
+        [ element
+            "pre"
+            [("class", "mb-0")]
+            [ element "code" [] [Xml.text $ Text.stripEnd x]
+            ]
+        ]
+    ]
+
+identifierContent :: Identifier.Identifier -> Content.Content Element.Element
+identifierContent x =
   element
     "span"
     []
-    ( [element "code" [("class", "font-monospace text-success")] [Xml.text (Identifier.value ident)]]
-        <> namespaceBadge (Identifier.namespace ident)
-    )
-  where
-    namespaceBadge :: Maybe Namespace.Namespace -> [Content.Content Element.Element]
-    namespaceBadge Nothing = []
-    namespaceBadge (Just n) =
-      [ element
-          "span"
-          [("class", "badge bg-secondary-subtle text-body ms-1")]
-          [Xml.text (namespaceToText n)]
-      ]
+    [ element "code" [] [Xml.text $ Identifier.value x],
+      case Identifier.namespace x of
+        Nothing -> Xml.string ""
+        Just ns ->
+          element
+            "span"
+            [("class", "text-body-secondary")]
+            [ Xml.string " (",
+              Xml.string $ case ns of
+                Namespace.Value -> "value"
+                Namespace.Type -> "type",
+              Xml.string ")"
+            ]
+    ]
 
-    namespaceToText :: Namespace.Namespace -> Text.Text
-    namespaceToText Namespace.Value = t "value"
-    namespaceToText Namespace.Type = t "type"
+modLinkContent :: ModLink.ModLink Doc.Doc -> Content.Content Element.Element
+modLinkContent x =
+  element "code" []
+    . maybe [Xml.text . ModuleName.unwrap $ ModLink.name x] docContents
+    $ ModLink.label x
 
-modLinkToHtml :: ModLink.ModLink Doc.Doc -> Content.Content Element.Element
-modLinkToHtml ml =
-  element "code" [("class", "font-monospace text-info")] $
-    maybe [Xml.text (ModuleName.unwrap $ ModLink.name ml)] docToContents (ModLink.label ml)
+hyperlinkContent :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
+hyperlinkContent x =
+  element "a" [("href", Text.unpack $ Hyperlink.url x)]
+    . maybe [Xml.text $ Hyperlink.url x] docContents
+    $ Hyperlink.label x
 
-hyperlinkToHtml :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
-hyperlinkToHtml h =
-  element "a" [("href", Text.unpack (Hyperlink.url h))] $
-    maybe [Xml.text (Hyperlink.url h)] docToContents (Hyperlink.label h)
-
-pictureToHtml :: Picture.Picture -> Content.Content Element.Element
-pictureToHtml p =
+pictureContent :: Picture.Picture -> Content.Content Element.Element
+pictureContent x =
   element
     "img"
-    ( [("src", Text.unpack (Picture.uri p))]
-        <> [("alt", Text.unpack (Maybe.fromMaybe Text.empty (Picture.title p)))]
-        <> foldMap (\x -> [("title", Text.unpack x)]) (Picture.title p)
+    ( ("src", Text.unpack $ Picture.uri x)
+        : foldMap (\y -> [("title", Text.unpack y)]) (Picture.title x)
     )
     []
 
-examplesToHtml :: NonEmpty.NonEmpty Example.Example -> Content.Content Element.Element
-examplesToHtml examples =
+exampleContent :: Example.Example -> Content.Content Element.Element
+exampleContent x =
   element
     "div"
-    [("class", "border-start border-4 border-warning bg-warning-subtle rounded-end p-3 my-3")]
-    ( [ element
-          "div"
-          [("class", "fw-bold mb-1")]
-          [Xml.string (case examples of _ NonEmpty.:| [] -> "Example:"; _ -> "Examples:")]
-      ]
-        <> concatMap exampleToContents (NonEmpty.toList examples)
-    )
-
-exampleToContents :: Example.Example -> [Content.Content Element.Element]
-exampleToContents ex =
-  [ element
-      "div"
-      [("class", "my-1")]
-      ( [ element
-            "div"
-            [("class", "font-monospace")]
+    [("class", "card my-3")]
+    [ element
+        "div"
+        [("class", "card-header")]
+        [ element "strong" [] [Xml.string "Example"]
+        ],
+      element
+        "div"
+        [("class", "card-body")]
+        [ element
+            "pre"
+            [("class", "mb-0")]
             [ element
-                "span"
-                [("class", "text-warning-emphasis user-select-none")]
-                [Xml.string ">>> "],
-              Xml.text (Example.expression ex)
+                "code"
+                []
+                [ Xml.string ">>> ",
+                  element "strong" [] [Xml.text $ Example.expression x],
+                  Xml.text . mconcat . fmap (t "\n" <>) $ Example.result x
+                ]
             ]
         ]
-          <> fmap
-            ( \r ->
-                element
-                  "div"
-                  [("class", "font-monospace text-body-secondary ps-3")]
-                  [Xml.text r]
-            )
-            (Example.result ex)
-      )
-  ]
+    ]
 
-headerToHtml :: Header.Header Doc.Doc -> Content.Content Element.Element
-headerToHtml h =
-  element (levelToName (Header.level h)) [] (docToContents (Header.title h))
+headerContent :: Header.Header Doc.Doc -> Content.Content Element.Element
+headerContent x =
+  element (levelToName $ Header.level x) [] . docContents $ Header.title x
 
 levelToName :: Level.Level -> String
-levelToName level = case level of
+levelToName x = case x of
   Level.One -> "h1"
   Level.Two -> "h2"
   Level.Three -> "h3"
@@ -1019,11 +943,11 @@ tableToHtml tbl =
 
     headerCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
     headerCellToHtml cell =
-      element "th" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docToContents (TableCell.contents cell))
+      element "th" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docContents (TableCell.contents cell))
 
     bodyCellToHtml :: TableCell.Cell Doc.Doc -> Content.Content Element.Element
     bodyCellToHtml cell =
-      element "td" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docToContents (TableCell.contents cell))
+      element "td" (cellAttrs (TableCell.colspan cell) (TableCell.rowspan cell)) (docContents (TableCell.contents cell))
 
     cellAttrs :: Natural.Natural -> Natural.Natural -> [(String, String)]
     cellAttrs c r =

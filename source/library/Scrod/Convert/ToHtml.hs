@@ -207,7 +207,7 @@ footerSection m =
         [("href", "https://github.com/tfausak/scrod")]
         [Xml.string "Scrod"],
       Xml.string " version ",
-      element "spam" [("class", "text-break")] [Xml.text . versionToText $ Module.version m],
+      element "span" [("class", "text-break")] [Xml.text . versionToText $ Module.version m],
       Xml.string "."
     ]
 

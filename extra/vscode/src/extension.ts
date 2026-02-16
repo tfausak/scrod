@@ -226,8 +226,8 @@ function wrapperHtml(): string {
           if (line && col) {
             event.preventDefault();
             vscode.postMessage({ type: 'goto', line: line, col: col });
+            return;
           }
-          return;
           target = target.parentElement;
         }
       });

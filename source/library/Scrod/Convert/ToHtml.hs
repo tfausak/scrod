@@ -10,6 +10,7 @@ module Scrod.Convert.ToHtml (toHtml) where
 import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
@@ -534,52 +535,33 @@ extensionUrlPaths =
 -- Items section
 
 itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
--- itemsContents [] = []
--- itemsContents items =
---   [ element
---       "section"
---       [("class", "my-4")]
---       ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Declarations"]]
---           <> concatMap renderItemWithChildren topLevelItems
---       )
---   ]
---   where
---     childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
---     childrenMap = foldr addChild Map.empty items
-
---     addChild :: Located.Located Item.Item -> Map.Map Natural.Natural [Located.Located Item.Item] -> Map.Map Natural.Natural [Located.Located Item.Item]
---     addChild li acc = case Item.parentKey (Located.value li) of
---       Nothing -> acc
---       Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
-
---     topLevelItems :: [Located.Located Item.Item]
---     topLevelItems = filter (isTopLevel . Located.value) items
-
---     isTopLevel :: Item.Item -> Bool
---     isTopLevel item = case Item.parentKey item of
---       Nothing -> True
---       Just _ -> False
-
---     renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
---     renderItemWithChildren li =
---       let k = ItemKey.unwrap (Item.key (Located.value li))
---           children = Map.findWithDefault [] k childrenMap
---        in [itemToHtml li]
---             <> if null children
---               then []
---               else
---                 [ element
---                     "div"
---                     [("class", "ms-4 mt-2 border-start border-2 ps-3")]
---                     (concatMap renderItemWithChildren children)
---                 ]
 itemsContents items =
   element "h2" [] [Xml.string "Declarations"]
-    -- TODO: Group children under parent, but keep new styling of cards.
-    : fmap itemContent items
+    : concatMap renderItemWithChildren topLevelItems
+  where
+    childrenMap :: Map.Map ItemKey.ItemKey [Located.Located Item.Item]
+    childrenMap = foldr addChild Map.empty items
 
-itemContent :: Located.Located Item.Item -> Content.Content Element.Element
-itemContent item =
+    addChild :: Located.Located Item.Item -> Map.Map ItemKey.ItemKey [Located.Located Item.Item] -> Map.Map ItemKey.ItemKey [Located.Located Item.Item]
+    addChild li acc = case Item.parentKey (Located.value li) of
+      Nothing -> acc
+      Just pk -> Map.insertWith (<>) pk [li] acc
+
+    topLevelItems :: [Located.Located Item.Item]
+    topLevelItems = filter (isTopLevel . Located.value) items
+
+    isTopLevel :: Item.Item -> Bool
+    isTopLevel = Maybe.isNothing . Item.parentKey
+
+    renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
+    renderItemWithChildren li =
+      [ itemContent li
+          . foldMap renderItemWithChildren
+          $ Map.findWithDefault [] (Item.key $ Located.value li) childrenMap
+      ]
+
+itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> Content.Content Element.Element
+itemContent item children =
   element
     "div"
     [ ("class", "card my-3"),
@@ -598,7 +580,7 @@ itemContent item =
           <> [ element
                  "div"
                  [("class", "mx-1")]
-                 [ element "span" [("class", "badge text-bg-secondary")] [Xml.string $ kindToString kind]
+                 [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
                  ]
              ]
           <> lateSignature
@@ -623,8 +605,21 @@ itemContent item =
         [("class", "card-body")]
         $ foldMap (pure . sinceAlert) (Item.since $ Located.value item)
           <> docContents (Item.documentation $ Located.value item)
+          <> children
     ]
   where
+    badgeColor = case kind of
+      ItemKind.Annotation -> "text-bg-info"
+      ItemKind.CompletePragma -> "text-bg-info"
+      ItemKind.DefaultMethodSignature -> "text-bg-info"
+      ItemKind.FixitySignature -> "text-bg-info"
+      ItemKind.InlineSignature -> "text-bg-info"
+      ItemKind.MinimalPragma -> "text-bg-info"
+      ItemKind.Rule -> "text-bg-info"
+      ItemKind.SpecialiseSignature -> "text-bg-info"
+      ItemKind.Warning -> "text-bg-warning"
+      _ -> "text-bg-secondary"
+
     kind :: ItemKind.ItemKind
     kind = Item.kind $ Located.value item
 

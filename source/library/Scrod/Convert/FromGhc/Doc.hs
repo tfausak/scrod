@@ -83,7 +83,9 @@ associateNextDocsLoop referencedChunkNames pendingDoc pendingSince (lDecl : rest
     (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
   Syntax.DocD _ (Hs.DocCommentNamed name _)
     | Set.member (Text.pack name) referencedChunkNames ->
-        associateNextDocsLoop referencedChunkNames pendingDoc pendingSince rest
+        associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+    | otherwise ->
+        (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
   _ ->
     (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
 

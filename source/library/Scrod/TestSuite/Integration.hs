@@ -868,6 +868,41 @@ spec s = Spec.describe s "integration" $ do
             ("/items/1/value/name", "\"x\"")
           ]
 
+      Spec.it s "preceding doc comment does not leak past named chunk" $ do
+        check
+          s
+          """
+          module M
+            ( -- $bar
+              unit,
+            ) where
+
+          -- | foo
+          -- $bar
+          -- qux
+          unit :: ()
+          unit = ()
+          """
+          [ ("/exports/0/value/value/value", "\"qux\""),
+            ("/items/0/value/name", "\"unit\""),
+            ("/items/0/value/documentation/type", "\"Empty\"")
+          ]
+
+      Spec.it s "preceding doc comment does not leak past unreferenced named chunk" $ do
+        check
+          s
+          """
+          -- | foo
+          -- $a
+          -- chunk
+          x=0
+          """
+          [ ("/items/0/value/name", "\"$a\""),
+            ("/items/0/value/documentation/value/value", "\"chunk\""),
+            ("/items/1/value/name", "\"x\""),
+            ("/items/1/value/documentation/type", "\"Empty\"")
+          ]
+
       Spec.it s "creates items for unreferenced named chunks with explicit exports" $ do
         check
           s

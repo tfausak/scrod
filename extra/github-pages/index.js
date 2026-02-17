@@ -9,7 +9,6 @@ var signature = document.getElementById('signature');
 var theme = document.getElementById('theme');
 var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
-var copyLink = document.getElementById('copy-link');
 var dropOverlay = document.getElementById('drop-overlay');
 var shadow = output.attachShadow({ mode: 'open' });
 var debounceTimer;
@@ -258,21 +257,6 @@ fileInput.addEventListener('change', function () {
     loadFile(fileInput.files[0]);
     fileInput.value = '';
   }
-});
-
-var copyLinkResetTimer;
-
-copyLink.addEventListener('click', function () {
-  navigator.clipboard.writeText(location.href).then(function () {
-    copyLink.textContent = 'Copied!';
-  }).catch(function () {
-    copyLink.textContent = 'Copy failed';
-  }).finally(function () {
-    if (copyLinkResetTimer !== undefined) {
-      clearTimeout(copyLinkResetTimer);
-    }
-    copyLinkResetTimer = setTimeout(function () { copyLink.textContent = 'Copy link'; }, 1500);
-  });
 });
 
 // Drag and drop support

@@ -253,9 +253,9 @@ buildArgNameMap lHsModule =
         [ (name, argNames)
           | lDecl <- decls,
             Syntax.ValD _ bind <- [SrcLoc.unLoc lDecl],
-            Just name <- [Names.extractBindName bind],
             let argNames = Names.extractBindArgNames bind,
-            not (null argNames)
+            not (null argNames),
+            Just name <- [Names.extractBindName bind]
         ]
 
 -- | Patch argument names from function bindings into 'Argument' items.

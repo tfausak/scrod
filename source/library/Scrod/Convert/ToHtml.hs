@@ -671,6 +671,7 @@ kindToString x = case x of
   ItemKind.Default -> "default"
   ItemKind.DefaultMethodSignature -> "default"
   ItemKind.DerivedInstance -> "instance"
+  ItemKind.DocumentationChunk -> "doc chunk"
   ItemKind.FixitySignature -> "fixity"
   ItemKind.ForeignExport -> "foreign export"
   ItemKind.ForeignImport -> "foreign import"

@@ -834,7 +834,7 @@ spec s = Spec.describe s "integration" $ do
             ("/exports/1/value/name/name", "\"unit\"")
           ]
 
-      Spec.it s "does not create items for named chunks" $ do
+      Spec.it s "does not create items for referenced named chunks" $ do
         check
           s
           """
@@ -852,6 +852,80 @@ spec s = Spec.describe s "integration" $ do
           [ ("/items/0/value/name", "\"unit\""),
             ("/items/0/value/kind/type", "\"Function\""),
             ("/items/0/value/signature", "\"()\"")
+          ]
+
+      Spec.it s "creates items for unreferenced named chunks" $ do
+        check
+          s
+          """
+          -- $a
+          -- b
+          x=0
+          """
+          [ ("/items/0/value/name", "\"$a\""),
+            ("/items/0/value/documentation/type", "\"Paragraph\""),
+            ("/items/0/value/documentation/value/value", "\"b\""),
+            ("/items/1/value/name", "\"x\"")
+          ]
+
+      Spec.it s "preceding doc comment does not leak past named chunk" $ do
+        check
+          s
+          """
+          module M
+            ( -- $bar
+              unit,
+            ) where
+
+          -- | foo
+          -- $bar
+          -- qux
+          unit :: ()
+          unit = ()
+          """
+          [ ("/exports/0/value/value/value", "\"qux\""),
+            ("/items/0/value/name", "\"unit\""),
+            ("/items/0/value/documentation/type", "\"Empty\"")
+          ]
+
+      Spec.it s "preceding doc comment does not leak past unreferenced named chunk" $ do
+        check
+          s
+          """
+          -- | foo
+          -- $a
+          -- chunk
+          x=0
+          """
+          [ ("/items/0/value/name", "\"$a\""),
+            ("/items/0/value/documentation/value/value", "\"chunk\""),
+            ("/items/1/value/name", "\"x\""),
+            ("/items/1/value/documentation/type", "\"Empty\"")
+          ]
+
+      Spec.it s "creates items for unreferenced named chunks with explicit exports" $ do
+        check
+          s
+          """
+          module M
+            ( -- $foo
+              unit,
+            ) where
+
+          -- $foo
+          -- bar
+
+          -- $baz
+          -- quux
+
+          unit :: ()
+          unit = ()
+          """
+          [ ("/exports/0/type", "\"Doc\""),
+            ("/exports/0/value/value/value", "\"bar\""),
+            ("/items/0/value/name", "\"$baz\""),
+            ("/items/0/value/documentation/value/value", "\"quux\""),
+            ("/items/1/value/name", "\"unit\"")
           ]
 
   Spec.describe s "imports" $ do

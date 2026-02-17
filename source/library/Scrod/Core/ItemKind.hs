@@ -79,5 +79,7 @@ data ItemKind
     DefaultMethodSignature
   | -- | Role annotation: @type role T nominal@
     RoleAnnotation
+  | -- | Named documentation chunk: @-- $name@
+    DocumentationChunk
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

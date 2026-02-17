@@ -826,7 +826,7 @@ hyperlinkContents x =
               ]
        in case Hyperlink.label x of
             Nothing -> [url]
-            Just doc -> docContents doc <> [url]
+            Just doc -> docContents doc <> [Xml.string " ", url]
 
 isSafeUrl :: Text.Text -> Bool
 isSafeUrl url =

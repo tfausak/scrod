@@ -147,12 +147,12 @@ bodyElement x =
         "div"
         [("class", "container py-5")]
         ( [element "h1" [("class", "text-break")] [Xml.text $ moduleTitle x]]
-            <> foldMap (pure . warningContent) (Module.warning x)
-            <> foldMap (pure . sinceContent) (Module.since x)
+            <> foldMap (List.singleton . warningContent) (Module.warning x)
+            <> foldMap (List.singleton . sinceContent) (Module.since x)
             <> docContents (Module.documentation x)
             <> extensionsContents (Module.language x) (Module.extensions x)
             <> importsContents (Module.imports x)
-            <> exportsContents2 (Module.exports x)
+            <> exportsContents (Module.exports x)
             <> itemsContents (Module.items x)
             <> [footerContent x]
         )
@@ -211,8 +211,8 @@ footerContent m =
 
 -- Exports section
 
-exportsContents2 :: Maybe [Export.Export] -> [Content.Content Element.Element]
-exportsContents2 exports =
+exportsContents :: Maybe [Export.Export] -> [Content.Content Element.Element]
+exportsContents exports =
   [ element "h2" [] [Xml.string "Exports"],
     case exports of
       Nothing -> Xml.string "Everything is implicitly exported."
@@ -247,7 +247,7 @@ exportIdentifierContents :: ExportIdentifier.ExportIdentifier -> [Content.Conten
 exportIdentifierContents x =
   exportNameContents (ExportIdentifier.name x)
     <> foldMap subordinatesContents (ExportIdentifier.subordinates x)
-    <> foldMap (pure . warningContent) (ExportIdentifier.warning x)
+    <> foldMap (List.singleton . warningContent) (ExportIdentifier.warning x)
     <> foldMap docContents (ExportIdentifier.doc x)
 
 sectionContent :: Section.Section -> Content.Content Element.Element
@@ -611,7 +611,7 @@ itemContent item children =
       element
         "div"
         [("class", "card-body")]
-        $ foldMap (pure . sinceContent) (Item.since $ Located.value item)
+        $ foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
           <> docContents (Item.documentation $ Located.value item)
           <> children
     ]
@@ -844,8 +844,9 @@ pictureContent :: Picture.Picture -> Content.Content Element.Element
 pictureContent x =
   element
     "img"
-    ( ("src", Text.unpack $ Picture.uri x)
-        : foldMap (\y -> [("title", Text.unpack y)]) (Picture.title x)
+    ( ("alt", maybe "" Text.unpack $ Picture.title x)
+        : ("src", Text.unpack $ Picture.uri x)
+        : foldMap (List.singleton . (,) "title" . Text.unpack) (Picture.title x)
     )
     []
 

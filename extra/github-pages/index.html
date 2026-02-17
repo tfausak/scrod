@@ -5,38 +5,65 @@
   <meta charset='utf-8'>
   <meta name='viewport' content='initial-scale = 1, width = device-width'>
   <title>Scrod</title>
-  <link rel='stylesheet' href='https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css' integrity='sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB' crossorigin='anonymous'>
+  <link rel='stylesheet' href='https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css'
+    integrity='sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB' crossorigin='anonymous'>
   <link rel='stylesheet' href='style.css'>
 </head>
 
 <body class='d-flex flex-column vh-100'>
-  <div class='d-flex align-items-center gap-2 p-2 border-bottom bg-body-tertiary flex-shrink-0'>
-    <label for='format' class='visually-hidden'>Output format</label>
-    <select id='format' class='form-select form-select-sm w-auto'>
-      <option value='html' selected>HTML</option>
-      <option value='json'>JSON</option>
-    </select>
-    <label class='form-check-label'><input type='checkbox' id='literate' class='form-check-input'> Literate</label>
-    <label class='form-check-label'><input type='checkbox' id='signature' class='form-check-input'> Signature</label>
-    <label for='theme' class='visually-hidden'>Color scheme</label>
-    <select id='theme' class='form-select form-select-sm w-auto'>
-      <option value='auto' selected>Auto</option>
-      <option value='light'>Light</option>
-      <option value='dark'>Dark</option>
-    </select>
-    <button type='button' id='file-button' class='btn btn-outline-secondary btn-sm'>Upload file</button>
-    <input type='file' id='file-input' class='visually-hidden' accept='.hs,.lhs,.hsig,.lhsig'>
-  </div>
+  <nav class='navbar navbar-expand bg-body-tertiary'>
+    <div class='container-fluid'>
+      <ul class='navbar-nav align-items-center gap-2'>
+        <li class='nav-item'>
+          <button type='button' id='file-button' class='btn btn-outline-primary btn-sm'>Upload</button>
+          <input type='file' id='file-input' class='visually-hidden' accept='.hs,.lhs,.hsig,.lhsig'>
+        </li>
+        <li class='nav-item'>
+          <label class='form-check-label small'>
+            <input type='checkbox' id='literate' class='form-check-input'>
+            Literate
+          </label>
+        </li>
+        <li class='nav-item'>
+          <label class='form-check-label small'>
+            <input type='checkbox' id='signature' class='form-check-input'>
+            Signature
+          </label>
+        </li>
+      </ul>
+      <ul class='navbar-nav align-items-center gap-3 ms-auto'>
+        <li class='nav-item'>
+          <label for='format' class='visually-hidden'>Output format</label>
+          <select id='format' class='form-select form-select-sm w-auto'>
+            <option value='html' selected>HTML</option>
+            <option value='json'>JSON</option>
+          </select>
+        </li>
+        <li class='nav-item'>
+          <label for='theme' class='visually-hidden'>Color scheme</label>
+          <select id='theme' class='form-select form-select-sm w-auto'>
+            <option value='auto' selected>Auto</option>
+            <option value='light'>Light</option>
+            <option value='dark'>Dark</option>
+          </select>
+        </li>
+      </ul>
+    </div>
+  </nav>
   <div class='d-flex flex-grow-1 overflow-hidden'>
     <div class='w-50 h-100 overflow-auto border-end'>
       <label for='source' class='visually-hidden'>Haskell source code or URL</label>
-      <textarea id='source' class='w-100 h-100 border-0 font-monospace small bg-body text-body p-3' placeholder='Enter Haskell source or a URL...' spellcheck='false'></textarea>
+      <textarea id='source' class='w-100 h-100 border-0 font-monospace small bg-body text-body p-3'
+        placeholder='Paste or type Haskell source&#10;Enter a URL to fetch&#10;Drop or upload a file'
+        spellcheck='false'></textarea>
     </div>
     <div class='w-50 h-100 d-flex flex-column'>
       <div id='output' class='flex-grow-1 overflow-auto p-3' role='region' aria-live='polite' aria-label='Output'></div>
     </div>
   </div>
-  <div id='drop-overlay' class='drop-overlay d-none position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center fs-4 text-primary pe-none' aria-hidden='true'>Drop Haskell file here</div>
+  <div id='drop-overlay'
+    class='drop-overlay d-none position-fixed top-0 start-0 w-100 h-100 align-items-center justify-content-center fs-4 text-primary pe-none'
+    aria-hidden='true'>Drop Haskell file here</div>
   <script type='module' src='index.js'></script>
 </body>
 

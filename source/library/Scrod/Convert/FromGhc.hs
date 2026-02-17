@@ -202,9 +202,11 @@ extractItems ::
   [Located.Located Item.Item]
 extractItems referencedChunkNames lHsModule =
   let rawItems = Internal.runConvert $ extractItemsM referencedChunkNames lHsModule
+      argNameMap = buildArgNameMap lHsModule
+      patchedItems = patchArgumentNames argNameMap rawItems
       instanceHeadTypes = InstanceParents.extractInstanceHeadTypeNames lHsModule
       instanceClassNames = InstanceParents.extractInstanceClassNames lHsModule
-      parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames rawItems
+      parentedItems = InstanceParents.associateInstanceParents instanceHeadTypes instanceClassNames patchedItems
       -- Parent-association passes: associate pragma/annotation items
       -- (warning, fixity, inline, specialise, type role) and family
       -- instance items with their target declarations by matching names.
@@ -237,6 +239,77 @@ extractItems referencedChunkNames lHsModule =
       -- are merged with their type signatures first.
       completeNames = CompleteParents.extractCompleteNames lHsModule
    in CompleteParents.associateCompleteParents completeNames kindSigParentedItems
+
+-- | Build a map from function name to argument names extracted from
+-- 'FunBind' patterns. Each function maps to a list of 'Maybe Text'
+-- with one entry per argument position.
+buildArgNameMap ::
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Map.Map ItemName.ItemName [Maybe Text.Text]
+buildArgNameMap lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+      decls = Syntax.hsmodDecls hsModule
+   in Map.fromList
+        [ (name, argNames)
+        | lDecl <- decls,
+          Syntax.ValD _ bind <- [SrcLoc.unLoc lDecl],
+          let argNames = Names.extractBindArgNames bind,
+          not (null argNames),
+          Just name <- [Names.extractBindName bind]
+        ]
+
+-- | Patch argument names from function bindings into 'Argument' items.
+--
+-- For each 'Function' item whose name appears in the map, finds its
+-- child 'Argument' items (by matching 'parentKey') and sets their
+-- 'name' field from the corresponding position in the argument name
+-- list.
+patchArgumentNames ::
+  Map.Map ItemName.ItemName [Maybe Text.Text] ->
+  [Located.Located Item.Item] ->
+  [Located.Located Item.Item]
+patchArgumentNames argNameMap items =
+  let -- Map from function key to arg names
+      funcKeyToArgNames =
+        Map.fromList
+          [ (Item.key val, names)
+          | locItem <- items,
+            let val = Located.value locItem,
+            Item.kind val == ItemKind.Function,
+            Just itemName <- [Item.name val],
+            Just names <- [Map.lookup itemName argNameMap]
+          ]
+      -- Group argument items by parent key, preserving order
+      argsByParent =
+        Map.fromListWith
+          (flip (<>))
+          [ (pk, [locItem])
+          | locItem <- items,
+            let val = Located.value locItem,
+            Item.kind val == ItemKind.Argument,
+            Just pk <- [Item.parentKey val]
+          ]
+      -- Build update map: item key -> updated item
+      updates =
+        Map.fromList
+          [ (Item.key (Located.value updated), updated)
+          | (funcKey, names) <- Map.toList funcKeyToArgNames,
+            Just argItems <- [Map.lookup funcKey argsByParent],
+            updated <- zipWith setArgName (names <> repeat Nothing) argItems
+          ]
+   in fmap (\item -> Maybe.fromMaybe item $ Map.lookup (Item.key (Located.value item)) updates) items
+
+-- | Set the name of an argument item if a name is provided.
+setArgName :: Maybe Text.Text -> Located.Located Item.Item -> Located.Located Item.Item
+setArgName mName locItem = case mName of
+  Nothing -> locItem
+  Just name ->
+    locItem
+      { Located.value =
+          (Located.value locItem)
+            { Item.name = Just $ ItemName.MkItemName name
+            }
+      }
 
 -- | Extract items in the conversion monad.
 extractItemsM ::

@@ -5,7 +5,9 @@
 -- by the main conversion module and by 'Scrod.Convert.FromGhc.Constructors'.
 module Scrod.Convert.FromGhc.Names where
 
+import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import GHC.Hs ()
 import qualified GHC.Hs.Doc as HsDoc
@@ -110,6 +112,62 @@ extractBindName bind = case bind of
 -- | Extract name from a pattern synonym binding.
 extractPatSynName :: Syntax.PatSynBind Ghc.GhcPs Ghc.GhcPs -> ItemName.ItemName
 extractPatSynName patSyn = Internal.extractIdPName $ Syntax.psb_id patSyn
+
+-- | Extract argument names from a function binding's patterns.
+--
+-- For each argument position, scans across all equations and picks
+-- the first variable pattern name found (skipping wildcards,
+-- constructor patterns, and literals). Returns one entry per
+-- argument position; 'Nothing' when no variable name was found.
+extractBindArgNames :: Syntax.HsBindLR Ghc.GhcPs Ghc.GhcPs -> [Maybe Text.Text]
+extractBindArgNames bind = case bind of
+  Syntax.FunBind {Syntax.fun_matches = mg} ->
+    let lMatches = SrcLoc.unLoc (Syntax.mg_alts mg)
+        patNameLists = fmap extractMatchPatNames lMatches
+     in mergePatNames patNameLists
+  _ -> []
+
+-- | Extract the variable name (if any) from each pattern in a match.
+extractMatchPatNames ::
+  SrcLoc.GenLocated l (Syntax.Match Ghc.GhcPs body) ->
+  [Maybe Text.Text]
+extractMatchPatNames lMatch =
+  let match = SrcLoc.unLoc lMatch
+   in fmap (extractPatVarName . SrcLoc.unLoc) (SrcLoc.unLoc (Syntax.m_pats match))
+
+-- | Extract a variable name from a pattern, unwrapping wrapper nodes.
+--
+-- Handles 'VarPat' directly, and recurses through 'AsPat' (using the
+-- as-binding name), 'BangPat', 'LazyPat', 'ParPat', and 'SigPat'.
+-- Returns 'Nothing' for wildcards, constructor patterns, literals, etc.
+extractPatVarName :: Syntax.Pat Ghc.GhcPs -> Maybe Text.Text
+extractPatVarName pat = case pat of
+  Syntax.VarPat _ lId -> Just $ Internal.extractRdrName lId
+  Syntax.AsPat _ lId _ -> Just $ Internal.extractRdrName lId
+  Syntax.BangPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
+  Syntax.LazyPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
+  Syntax.ParPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
+  Syntax.SigPat _ lPat _ -> extractPatVarName $ SrcLoc.unLoc lPat
+  _ -> Nothing
+
+-- | Merge pattern names across multiple equations.
+--
+-- For each argument position, takes the first 'Just' name found
+-- across the equations. This handles cases like:
+--
+-- @
+-- or True _ = True
+-- or _ x = x
+-- @
+--
+-- where position 0 yields 'Nothing' (no variable in either equation)
+-- and position 1 yields @Just "x"@ (from the second equation).
+mergePatNames :: [[Maybe Text.Text]] -> [Maybe Text.Text]
+mergePatNames [] = []
+mergePatNames patNameLists =
+  let maxLen = maximum (fmap length patNameLists)
+      padded = fmap (\ns -> ns <> replicate (maxLen - length ns) Nothing) patNameLists
+   in fmap (Maybe.listToMaybe . Maybe.catMaybes) (List.transpose padded)
 
 -- | Extract name from a signature.
 extractSigName :: Syntax.Sig Ghc.GhcPs -> Maybe ItemName.ItemName

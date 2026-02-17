@@ -592,7 +592,21 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
   Syntax.SigD _ sig -> case sig of
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
-       in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
+          args = Names.extractSigArguments sig
+       in fmap concat . flip traverse names $ \lName -> do
+            parentResult <- Internal.mkItemWithKeyM
+              (Annotation.getLocA lName)
+              parentKey
+              (Just $ Internal.extractIdPName lName)
+              doc
+              docSince
+              sigText
+              ItemKind.ClassMethod
+            case parentResult of
+              Nothing -> pure []
+              Just (methodItem, methodKey) -> do
+                argItems <- convertArguments (Just methodKey) (Annotation.getLocA lName) args
+                pure $ [methodItem] <> argItems
     _ -> pure []
   _ -> pure []
 
@@ -665,17 +679,6 @@ convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
      in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
   _ -> pure Nothing
-
--- | Convert an identifier with parent key, documentation, and signature.
-convertIdPM ::
-  Maybe ItemKey.ItemKey ->
-  Doc.Doc ->
-  Maybe Since.Since ->
-  Maybe Text.Text ->
-  Syntax.LIdP Ghc.GhcPs ->
-  Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertIdPM parentKey doc docSince sig lIdP =
-  Internal.mkItemM (Annotation.getLocA lIdP) parentKey (Just $ Internal.extractIdPName lIdP) doc docSince sig ItemKind.ClassMethod
 
 -- | Convert family declarations.
 convertFamilyDeclsM ::

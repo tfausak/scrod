@@ -147,6 +147,7 @@ extractPatVarName pat = case pat of
   Syntax.BangPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
   Syntax.LazyPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
   Syntax.ParPat _ lPat -> extractPatVarName $ SrcLoc.unLoc lPat
+  Syntax.SigPat _ lPat _ -> extractPatVarName $ SrcLoc.unLoc lPat
   _ -> Nothing
 
 -- | Merge pattern names across multiple equations.

@@ -687,6 +687,7 @@ itemContent item children =
 kindToString :: ItemKind.ItemKind -> String
 kindToString x = case x of
   ItemKind.Annotation -> "annotation"
+  ItemKind.Argument -> "argument"
   ItemKind.Class -> "class"
   ItemKind.ClassInstance -> "instance"
   ItemKind.ClassMethod -> "method"

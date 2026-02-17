@@ -81,5 +81,7 @@ data ItemKind
     RoleAnnotation
   | -- | Named documentation chunk: @-- $name@
     DocumentationChunk
+  | -- | Positional argument of a function or constructor
+    Argument
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind

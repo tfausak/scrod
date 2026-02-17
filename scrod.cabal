@@ -193,7 +193,6 @@ library
     Scrod.TestSuite.All
     Scrod.TestSuite.Integration
     Scrod.Unlit
-    Scrod.Version
     Scrod.Xml.Attribute
     Scrod.Xml.Comment
     Scrod.Xml.Content

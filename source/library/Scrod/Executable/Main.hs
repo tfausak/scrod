@@ -25,7 +25,6 @@ import qualified Scrod.Ghc.Parse as Parse
 import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Json.Value as Json
 import qualified Scrod.Unlit as Unlit
-import qualified Scrod.Version as Version
 import qualified Scrod.Xml.Document as Xml
 import qualified System.Console.GetOpt as GetOpt
 import qualified System.Environment as Environment
@@ -47,7 +46,7 @@ mainWith ::
 mainWith name arguments myGetContents = ExceptT.runExceptT $ do
   flags <- Trans.lift $ Flag.fromArguments arguments
   config <- Trans.lift $ Config.fromFlags flags
-  let version = Version.showVersion Version.version
+  let version = Version.showVersion PackageInfo.version
   Monad.when (Config.help config) $ do
     let header =
           unlines

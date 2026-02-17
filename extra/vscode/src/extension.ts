@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 }
 
-export function deactivate(): void {}
+export function deactivate(): void { }
 
 function extname(doc: vscode.TextDocument): string {
   return path.extname(doc.fileName).toLowerCase();
@@ -152,7 +152,6 @@ function wrapperHtml(): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
-  <style>.item-location { cursor: pointer; } .item-location:hover { text-decoration: underline; }</style>
 </head>
 <body>
   <script nonce="${nonce}">
@@ -222,13 +221,11 @@ function wrapperHtml(): string {
       document.addEventListener('click', function(event) {
         var target = event.target;
         while (target && target !== document.body) {
-          if (target.classList && target.classList.contains('item-location')) {
-            var line = parseInt(target.getAttribute('data-line'), 10);
-            var col = parseInt(target.getAttribute('data-col'), 10);
-            if (line && col) {
-              event.preventDefault();
-              vscode.postMessage({ type: 'goto', line: line, col: col });
-            }
+          var line = parseInt(target.getAttribute('data-line'), 10);
+          var col = parseInt(target.getAttribute('data-col'), 10);
+          if (line && col) {
+            event.preventDefault();
+            vscode.postMessage({ type: 'goto', line: line, col: col });
             return;
           }
           target = target.parentElement;

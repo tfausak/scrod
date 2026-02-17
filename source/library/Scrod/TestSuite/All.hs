@@ -35,7 +35,6 @@ import qualified Scrod.Schema
 import qualified Scrod.Spec as Spec
 import qualified Scrod.TestSuite.Integration
 import qualified Scrod.Unlit
-import qualified Scrod.Version
 import qualified Scrod.Xml.Attribute
 import qualified Scrod.Xml.Comment
 import qualified Scrod.Xml.Content
@@ -83,7 +82,6 @@ spec s = do
   Scrod.JsonPointer.Token.spec s
   Scrod.TestSuite.Integration.spec s
   Scrod.Unlit.spec s
-  Scrod.Version.spec s
   Scrod.Xml.Attribute.spec s
   Scrod.Xml.Comment.spec s
   Scrod.Xml.Content.spec s

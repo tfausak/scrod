@@ -3086,3 +3086,29 @@ checkHtml s arguments input = do
   output <- either (Spec.assertFailure s) pure result
   Monad.when (null $ Builder.toString output) $
     Spec.assertFailure s "expected non-empty HTML output"
+
+checkHtmlContains :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
+checkHtmlContains s input expected = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" ["--format", "html"]
+      $ pure input
+  output <- either (Spec.assertFailure s) pure result
+  let html = Builder.toString output
+  Monad.forM_ expected $ \needle ->
+    Monad.unless (needle `List.isInfixOf` html)
+      . Spec.assertFailure s
+      $ "expected HTML to contain: " <> needle
+
+checkHtmlNotContains :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
+checkHtmlNotContains s input forbidden = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" ["--format", "html"]
+      $ pure input
+  output <- either (Spec.assertFailure s) pure result
+  let html = Builder.toString output
+  Monad.forM_ forbidden $ \needle ->
+    Monad.when (needle `List.isInfixOf` html)
+      . Spec.assertFailure s
+      $ "expected HTML NOT to contain: " <> needle

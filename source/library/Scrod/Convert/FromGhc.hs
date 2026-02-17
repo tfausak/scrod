@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Traversable as Traversable
 import qualified Data.Tuple as Tuple
 import qualified Data.Version
 import qualified GHC.Data.FastString as FastString
@@ -343,10 +344,40 @@ convertSigDeclM ::
 convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.Function) names
+        args = Names.extractSigArguments sig
+     in fmap concat . Traversable.for names $ \lName -> do
+          parentResult <-
+            Internal.mkItemWithKeyM
+              (Annotation.getLocA lName)
+              Nothing
+              (Just $ Internal.extractIdPName lName)
+              doc
+              docSince
+              sigText
+              ItemKind.Function
+          case parentResult of
+            Nothing -> pure []
+            Just (parentItem, parentKey) -> do
+              argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
+              pure $ [parentItem] <> argItems
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-     in Maybe.catMaybes <$> traverse (convertSigNameM doc docSince sigText ItemKind.PatternSynonym) names
+        args = Names.extractSigArguments sig
+     in fmap concat . Traversable.for names $ \lName -> do
+          parentResult <-
+            Internal.mkItemWithKeyM
+              (Annotation.getLocA lName)
+              Nothing
+              (Just $ Internal.extractIdPName lName)
+              doc
+              docSince
+              sigText
+              ItemKind.PatternSynonym
+          case parentResult of
+            Nothing -> pure []
+            Just (parentItem, parentKey) -> do
+              argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
+              pure $ [parentItem] <> argItems
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
@@ -366,16 +397,24 @@ convertSigDeclM doc docSince lDecl sig = case sig of
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
--- | Convert a single name from a signature.
-convertSigNameM ::
-  Doc.Doc ->
-  Maybe Since.Since ->
-  Maybe Text.Text ->
-  ItemKind.ItemKind ->
-  Syntax.LIdP Ghc.GhcPs ->
+-- | Convert extracted argument data into child Argument items.
+convertArguments ::
+  Maybe ItemKey.ItemKey ->
+  SrcLoc.SrcSpan ->
+  [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))] ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertArguments parentKey srcSpan args =
+  Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+
+-- | Convert a single argument to an Argument item.
+convertOneArgument ::
+  Maybe ItemKey.ItemKey ->
+  SrcLoc.SrcSpan ->
+  (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs)) ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertSigNameM doc docSince sig itemKind lName =
-  Internal.mkItemM (Annotation.getLocA lName) Nothing (Just $ Internal.extractIdPName lName) doc docSince sig itemKind
+convertOneArgument parentKey srcSpan (sigText, mDoc) =
+  let (argDoc, argSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
+   in Internal.mkItemM srcSpan parentKey Nothing argDoc argSince (Just sigText) ItemKind.Argument
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -556,7 +595,22 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
   Syntax.SigD _ sig -> case sig of
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
-       in Maybe.catMaybes <$> traverse (convertIdPM parentKey doc docSince sigText) names
+          args = Names.extractSigArguments sig
+       in fmap concat . Traversable.for names $ \lName -> do
+            parentResult <-
+              Internal.mkItemWithKeyM
+                (Annotation.getLocA lName)
+                parentKey
+                (Just $ Internal.extractIdPName lName)
+                doc
+                docSince
+                sigText
+                ItemKind.ClassMethod
+            case parentResult of
+              Nothing -> pure []
+              Just (methodItem, methodKey) -> do
+                argItems <- convertArguments (Just methodKey) (Annotation.getLocA lName) args
+                pure $ [methodItem] <> argItems
     _ -> pure []
   _ -> pure []
 
@@ -629,17 +683,6 @@ convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
     let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
      in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
   _ -> pure Nothing
-
--- | Convert an identifier with parent key, documentation, and signature.
-convertIdPM ::
-  Maybe ItemKey.ItemKey ->
-  Doc.Doc ->
-  Maybe Since.Since ->
-  Maybe Text.Text ->
-  Syntax.LIdP Ghc.GhcPs ->
-  Internal.ConvertM (Maybe (Located.Located Item.Item))
-convertIdPM parentKey doc docSince sig lIdP =
-  Internal.mkItemM (Annotation.getLocA lIdP) parentKey (Just $ Internal.extractIdPName lIdP) doc docSince sig ItemKind.ClassMethod
 
 -- | Convert family declarations.
 convertFamilyDeclsM ::

@@ -204,8 +204,8 @@ extractFieldsFromH98DetailsM ::
   Syntax.HsConDeclH98Details Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
 extractFieldsFromH98DetailsM parentKey details = case details of
-  Syntax.PrefixCon _ -> pure []
-  Syntax.InfixCon _ _ -> pure []
+  Syntax.PrefixCon fields -> convertPrefixArgsM parentKey fields
+  Syntax.InfixCon l r -> convertPrefixArgsM parentKey [l, r]
   Syntax.RecCon lFields -> convertConDeclFieldsM parentKey (SrcLoc.unLoc lFields)
 
 -- | Extract fields from GADT-style constructor details.
@@ -214,8 +214,36 @@ extractFieldsFromGADTDetailsM ::
   Syntax.HsConDeclGADTDetails Ghc.GhcPs ->
   Internal.ConvertM [Located.Located Item.Item]
 extractFieldsFromGADTDetailsM parentKey details = case details of
-  Syntax.PrefixConGADT _ _ -> pure []
+  Syntax.PrefixConGADT _ fields -> convertPrefixArgsM parentKey fields
   Syntax.RecConGADT _ lFields -> convertConDeclFieldsM parentKey (SrcLoc.unLoc lFields)
+
+-- | Convert prefix constructor arguments to Argument items.
+convertPrefixArgsM ::
+  Maybe ItemKey.ItemKey ->
+  [Syntax.HsConDeclField Ghc.GhcPs] ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertPrefixArgsM parentKey = fmap Maybe.catMaybes . traverse (convertPrefixArgM parentKey)
+
+-- | Convert a single prefix constructor argument to an Argument item.
+convertPrefixArgM ::
+  Maybe ItemKey.ItemKey ->
+  Syntax.HsConDeclField Ghc.GhcPs ->
+  Internal.ConvertM (Maybe (Located.Located Item.Item))
+convertPrefixArgM parentKey field =
+  let (argDoc, argSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc field
+      sig =
+        Just . Text.pack . Outputable.showSDocUnsafe $
+          unpackednessDoc (Syntax.cdf_unpack field)
+            Outputable.<> strictnessDoc (Syntax.cdf_bang field)
+            Outputable.<> Outputable.ppr (Syntax.cdf_type field)
+   in Internal.mkItemM
+        (Annotation.getLocA (Syntax.cdf_type field))
+        parentKey
+        Nothing
+        argDoc
+        argSince
+        sig
+        ItemKind.Argument
 
 -- | Convert a list of record fields.
 convertConDeclFieldsM ::

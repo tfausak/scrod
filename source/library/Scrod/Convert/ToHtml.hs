@@ -720,7 +720,7 @@ docContents doc = case doc of
   Doc.OrderedList xs -> [element "ol" [] $ fmap orderedListItemContent xs]
   Doc.DefList xs -> [element "dl" [] $ foldMap definitionContents xs]
   Doc.CodeBlock x -> [codeBlockContent x]
-  Doc.Hyperlink x -> [hyperlinkContent x]
+  Doc.Hyperlink x -> hyperlinkContents x
   Doc.Pic x -> [pictureContent x]
   Doc.MathInline x -> [Xml.string "\\(", Xml.text x, Xml.string "\\)"]
   Doc.MathDisplay x -> [Xml.string "\\[", Xml.text x, Xml.string "\\]"]
@@ -802,11 +802,43 @@ modLinkContent x =
     . maybe [Xml.text . ModuleName.unwrap $ ModLink.name x] docContents
     $ ModLink.label x
 
-hyperlinkContent :: Hyperlink.Hyperlink Doc.Doc -> Content.Content Element.Element
-hyperlinkContent x =
-  element "a" [("class", "text-break"), ("href", Text.unpack $ Hyperlink.url x)]
-    . maybe [Xml.text $ Hyperlink.url x] docContents
-    $ Hyperlink.label x
+hyperlinkContents :: Hyperlink.Hyperlink Doc.Doc -> [Content.Content Element.Element]
+hyperlinkContents x =
+  if isSafeUrl (Hyperlink.url x)
+    then
+      [ element
+          "a"
+          [ ("class", "text-break"),
+            ("href", Text.unpack $ Hyperlink.url x),
+            ("rel", "nofollow")
+          ]
+          . maybe [Xml.text $ Hyperlink.url x] docContents
+          $ Hyperlink.label x
+      ]
+    else
+      let url =
+            element
+              "code"
+              [("class", "text-break")]
+              [ Xml.string "<",
+                Xml.text $ Hyperlink.url x,
+                Xml.string ">"
+              ]
+       in case Hyperlink.label x of
+            Nothing -> [url]
+            Just doc -> docContents doc <> [url]
+
+isSafeUrl :: Text.Text -> Bool
+isSafeUrl url =
+  let lower = Text.toLower url
+   in any
+        (`Text.isPrefixOf` lower)
+        [ t "https:",
+          t "http:",
+          t "mailto:",
+          t "//",
+          t "#"
+        ]
 
 pictureContent :: Picture.Picture -> Content.Content Element.Element
 pictureContent x =

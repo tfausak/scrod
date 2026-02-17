@@ -146,14 +146,14 @@ bodyElement x =
     [ element
         "div"
         [("class", "container py-5")]
-        ( [element "h1" [("class", "text-break")] [Xml.text $ moduleTitle x]]
+        ( [element "h1" [("class", "mb-3 text-break")] [Xml.text $ moduleTitle x]]
             <> foldMap (List.singleton . warningContent) (Module.warning x)
             <> foldMap (List.singleton . sinceContent) (Module.since x)
             <> docContents (Module.documentation x)
-            <> extensionsContents (Module.language x) (Module.extensions x)
-            <> importsContents (Module.imports x)
-            <> exportsContents (Module.exports x)
-            <> itemsContents (Module.items x)
+            <> [element "section" [("class", "my-3")] . extensionsContents (Module.language x) $ Module.extensions x]
+            <> [element "section" [("class", "my-3")] . importsContents $ Module.imports x]
+            <> [element "section" [("class", "my-3")] . exportsContents $ Module.exports x]
+            <> [element "section" [("class", "my-3")] . itemsContents $ Module.items x]
             <> [footerContent x]
         )
     ]
@@ -228,7 +228,7 @@ exportsContents exports =
                 Xml.string $ pluralize (length xs) "export",
                 Xml.string "."
               ],
-            element "ul" [] $ fmap exportContent xs
+            element "ul" [("class", "list-group list-group-flush")] $ fmap exportContent xs
           ]
   ]
 
@@ -236,7 +236,7 @@ exportContent :: Export.Export -> Content.Content Element.Element
 exportContent export =
   element
     "li"
-    []
+    [("class", "list-group-item")]
     $ case export of
       Export.Doc x -> docContents x
       Export.DocNamed x -> [docNamedContent x]
@@ -336,9 +336,17 @@ importContent x =
           element
             "span"
             [("class", "text-body-secondary")]
-            [ Xml.string " (",
-              element "span" [("class", "text-break")] [Xml.text $ PackageName.unwrap p],
-              Xml.string ")"
+            [ Xml.string " from ",
+              element "span" [("class", "text-break")] [Xml.text $ PackageName.unwrap p]
+            ],
+      case Import.alias x of
+        Nothing -> Xml.string ""
+        Just a ->
+          element
+            "span"
+            [("class", "text-body-secondary")]
+            [ Xml.string " as ",
+              element "span" [("class", "text-break")] [Xml.text $ ModuleName.unwrap a]
             ]
     ]
 
@@ -544,8 +552,20 @@ extensionUrlPaths =
 
 itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 itemsContents items =
-  element "h2" [] [Xml.string "Declarations"]
-    : concatMap renderItemWithChildren topLevelItems
+  [ element "h2" [] [Xml.string "Declarations"],
+    element "details" [("open", "open")] $
+      case length items of
+        0 -> [Xml.string "None."]
+        count ->
+          element
+            "summary"
+            []
+            [ Xml.string "Show/hide ",
+              Xml.string $ pluralize count "declaration",
+              Xml.string "."
+            ]
+            : foldMap renderItemWithChildren topLevelItems
+  ]
   where
     childrenMap :: Map.Map ItemKey.ItemKey [Located.Located Item.Item]
     childrenMap = foldr addChild Map.empty items

@@ -553,10 +553,10 @@ extensionUrlPaths =
 itemsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 itemsContents items =
   [ element "h2" [] [Xml.string "Declarations"],
-    element "details" [("open", "open")] $
-      case length items of
-        0 -> [Xml.string "None."]
-        count ->
+    case length items of
+      0 -> Xml.string "None."
+      count ->
+        element "details" [("open", "open")] $
           element
             "summary"
             []

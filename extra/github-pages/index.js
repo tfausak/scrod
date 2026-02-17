@@ -9,8 +9,10 @@ var signature = document.getElementById('signature');
 var theme = document.getElementById('theme');
 var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
-var copyLink = document.getElementById('copy-link');
 var dropOverlay = document.getElementById('drop-overlay');
+var panes = document.getElementById('panes');
+var tabInput = document.getElementById('tab-input');
+var tabOutput = document.getElementById('tab-output');
 var shadow = output.attachShadow({ mode: 'open' });
 var debounceTimer;
 var ready = false;
@@ -81,10 +83,12 @@ function renderMath() {
   if (!shadow.firstElementChild) return;
   import('https://esm.sh/katex@0.16.22/dist/contrib/auto-render.min.js')
     .then(function (m) {
-      m.default(shadow, { delimiters: [
-        { left: '\\(', right: '\\)', display: false },
-        { left: '\\[', right: '\\]', display: true }
-      ]});
+      m.default(shadow, {
+        delimiters: [
+          { left: '\\(', right: '\\)', display: false },
+          { left: '\\[', right: '\\]', display: true }
+        ]
+      });
     })
     .catch(function (e) {
       console.error('Failed to load KaTeX:', e);
@@ -260,19 +264,24 @@ fileInput.addEventListener('change', function () {
   }
 });
 
-var copyLinkResetTimer;
+tabInput.addEventListener('click', function () {
+  panes.classList.remove('show-output');
+  tabInput.classList.add('active');
+  tabInput.setAttribute('aria-selected', 'true');
+  tabInput.setAttribute('tabindex', '0');
+  tabOutput.classList.remove('active');
+  tabOutput.setAttribute('aria-selected', 'false');
+  tabOutput.setAttribute('tabindex', '-1');
+});
 
-copyLink.addEventListener('click', function () {
-  navigator.clipboard.writeText(location.href).then(function () {
-    copyLink.textContent = 'Copied!';
-  }).catch(function () {
-    copyLink.textContent = 'Copy failed';
-  }).finally(function () {
-    if (copyLinkResetTimer !== undefined) {
-      clearTimeout(copyLinkResetTimer);
-    }
-    copyLinkResetTimer = setTimeout(function () { copyLink.textContent = 'Copy link'; }, 1500);
-  });
+tabOutput.addEventListener('click', function () {
+  panes.classList.add('show-output');
+  tabOutput.classList.add('active');
+  tabOutput.setAttribute('aria-selected', 'true');
+  tabOutput.setAttribute('tabindex', '0');
+  tabInput.classList.remove('active');
+  tabInput.setAttribute('aria-selected', 'false');
+  tabInput.setAttribute('tabindex', '-1');
 });
 
 // Drag and drop support

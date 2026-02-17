@@ -22,6 +22,7 @@ import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Core.ExportName as ExportName
+import qualified Scrod.Core.ExportNameKind as ExportNameKind
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
@@ -574,15 +575,39 @@ declarationsContents exports items =
     walkExports [] used = ([], used)
     walkExports (e : es) used = case e of
       Export.Identifier ident ->
-        let name = ExportName.name (ExportIdentifier.name ident)
+        let exportName = ExportIdentifier.name ident
+            name = ExportName.name exportName
             subs = ExportIdentifier.subordinates ident
+            exportMeta =
+              foldMap (List.singleton . warningContent) (ExportIdentifier.warning ident)
+                <> foldMap docContents (ExportIdentifier.doc ident)
          in case Map.lookup name nameMap of
               Just li
                 | not (Set.member (itemNatKey li) used) ->
                     let (here, newKeys) = renderExportedItem subs li
                         (rest, used') = walkExports es (Set.union newKeys used)
-                     in (here <> rest, used')
-              _ -> walkExports es used
+                     in (here <> exportMeta <> rest, used')
+              _ ->
+                let here = case ExportName.kind exportName of
+                      Just ExportNameKind.Module ->
+                        [ element
+                            "div"
+                            [("class", "card my-3")]
+                            [ element
+                                "div"
+                                [("class", "card-header")]
+                                [ element "code" [("class", "text-break")] [Xml.string "module ", Xml.text name],
+                                  element
+                                    "div"
+                                    [("class", "mx-1")]
+                                    [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
+                                ]
+                            ]
+                        ]
+                          <> exportMeta
+                      _ -> exportMeta
+                    (rest, used') = walkExports es used
+                 in (here <> rest, used')
       Export.Group section ->
         let here = [sectionContent section]
             (rest, used') = walkExports es used

@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Traversable as Traversable
 import qualified Data.Tuple as Tuple
 import qualified Data.Version
 import qualified GHC.Data.FastString as FastString
@@ -344,15 +345,16 @@ convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
         args = Names.extractSigArguments sig
-     in fmap concat . flip traverse names $ \lName -> do
-          parentResult <- Internal.mkItemWithKeyM
-            (Annotation.getLocA lName)
-            Nothing
-            (Just $ Internal.extractIdPName lName)
-            doc
-            docSince
-            sigText
-            ItemKind.Function
+     in fmap concat . Traversable.for names $ \lName -> do
+          parentResult <-
+            Internal.mkItemWithKeyM
+              (Annotation.getLocA lName)
+              Nothing
+              (Just $ Internal.extractIdPName lName)
+              doc
+              docSince
+              sigText
+              ItemKind.Function
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
@@ -361,15 +363,16 @@ convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
         args = Names.extractSigArguments sig
-     in fmap concat . flip traverse names $ \lName -> do
-          parentResult <- Internal.mkItemWithKeyM
-            (Annotation.getLocA lName)
-            Nothing
-            (Just $ Internal.extractIdPName lName)
-            doc
-            docSince
-            sigText
-            ItemKind.PatternSynonym
+     in fmap concat . Traversable.for names $ \lName -> do
+          parentResult <-
+            Internal.mkItemWithKeyM
+              (Annotation.getLocA lName)
+              Nothing
+              (Just $ Internal.extractIdPName lName)
+              doc
+              docSince
+              sigText
+              ItemKind.PatternSynonym
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
@@ -593,15 +596,16 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
           args = Names.extractSigArguments sig
-       in fmap concat . flip traverse names $ \lName -> do
-            parentResult <- Internal.mkItemWithKeyM
-              (Annotation.getLocA lName)
-              parentKey
-              (Just $ Internal.extractIdPName lName)
-              doc
-              docSince
-              sigText
-              ItemKind.ClassMethod
+       in fmap concat . Traversable.for names $ \lName -> do
+            parentResult <-
+              Internal.mkItemWithKeyM
+                (Annotation.getLocA lName)
+                parentKey
+                (Just $ Internal.extractIdPName lName)
+                doc
+                docSince
+                sigText
+                ItemKind.ClassMethod
             case parentResult of
               Nothing -> pure []
               Just (methodItem, methodKey) -> do

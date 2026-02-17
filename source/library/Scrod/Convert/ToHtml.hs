@@ -634,9 +634,8 @@ declarationsContents exports items =
     shouldShowChild :: Maybe Subordinates.Subordinates -> Located.Located Item.Item -> Bool
     shouldShowChild subs li =
       let item = Located.value li
-       in if not (isTraditionalSubordinate (Item.kind item))
-            then True
-            else case subs of
+       in not (isTraditionalSubordinate (Item.kind item))
+            || case subs of
               Nothing -> False
               Just (Subordinates.MkSubordinates True _) -> True
               Just (Subordinates.MkSubordinates False explicit) ->

@@ -12,6 +12,7 @@
   #input-pane, #output-pane { width: 100%; }
   #panes.show-output #input-pane { display: none !important; }
   #panes:not(.show-output) #output-pane { display: none !important; }
+  #input-pane { border-inline-end: 0 !important; }
 }
 
 .drop-overlay {

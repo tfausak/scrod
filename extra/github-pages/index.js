@@ -268,16 +268,20 @@ tabInput.addEventListener('click', function () {
   panes.classList.remove('show-output');
   tabInput.classList.add('active');
   tabInput.setAttribute('aria-selected', 'true');
+  tabInput.setAttribute('tabindex', '0');
   tabOutput.classList.remove('active');
   tabOutput.setAttribute('aria-selected', 'false');
+  tabOutput.setAttribute('tabindex', '-1');
 });
 
 tabOutput.addEventListener('click', function () {
   panes.classList.add('show-output');
   tabOutput.classList.add('active');
   tabOutput.setAttribute('aria-selected', 'true');
+  tabOutput.setAttribute('tabindex', '0');
   tabInput.classList.remove('active');
   tabInput.setAttribute('aria-selected', 'false');
+  tabInput.setAttribute('tabindex', '-1');
 });
 
 // Drag and drop support

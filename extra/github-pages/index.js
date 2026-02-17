@@ -10,6 +10,9 @@ var theme = document.getElementById('theme');
 var fileButton = document.getElementById('file-button');
 var fileInput = document.getElementById('file-input');
 var dropOverlay = document.getElementById('drop-overlay');
+var panes = document.getElementById('panes');
+var tabInput = document.getElementById('tab-input');
+var tabOutput = document.getElementById('tab-output');
 var shadow = output.attachShadow({ mode: 'open' });
 var debounceTimer;
 var ready = false;
@@ -259,6 +262,22 @@ fileInput.addEventListener('change', function () {
     loadFile(fileInput.files[0]);
     fileInput.value = '';
   }
+});
+
+tabInput.addEventListener('click', function () {
+  panes.classList.remove('show-output');
+  tabInput.classList.add('active');
+  tabInput.setAttribute('aria-selected', 'true');
+  tabOutput.classList.remove('active');
+  tabOutput.setAttribute('aria-selected', 'false');
+});
+
+tabOutput.addEventListener('click', function () {
+  panes.classList.add('show-output');
+  tabOutput.classList.add('active');
+  tabOutput.setAttribute('aria-selected', 'true');
+  tabInput.classList.remove('active');
+  tabInput.setAttribute('aria-selected', 'false');
 });
 
 // Drag and drop support

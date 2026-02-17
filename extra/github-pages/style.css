@@ -4,6 +4,16 @@
   tab-size: 2;
 }
 
+@media (min-width: 768px) {
+  #input-pane, #output-pane { width: 50%; }
+}
+
+@media (max-width: 767.98px) {
+  #input-pane, #output-pane { width: 100%; }
+  #panes.show-output #input-pane { display: none !important; }
+  #panes:not(.show-output) #output-pane { display: none !important; }
+}
+
 .drop-overlay {
   background: rgba(var(--bs-primary-rgb), 0.15);
   border: 3px dashed var(--bs-primary);

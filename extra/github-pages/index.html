@@ -50,14 +50,22 @@
       </ul>
     </div>
   </nav>
-  <div class='d-flex flex-grow-1 overflow-hidden'>
-    <div class='w-50 h-100 overflow-auto border-end'>
+  <ul class='nav nav-tabs d-md-none px-3 pt-2 bg-body-tertiary' role='tablist'>
+    <li class='nav-item' role='presentation'>
+      <button type='button' id='tab-input' class='nav-link active' role='tab' aria-selected='true'>Input</button>
+    </li>
+    <li class='nav-item' role='presentation'>
+      <button type='button' id='tab-output' class='nav-link' role='tab' aria-selected='false'>Output</button>
+    </li>
+  </ul>
+  <div id='panes' class='d-flex flex-grow-1 overflow-hidden'>
+    <div id='input-pane' class='w-md-50 h-100 overflow-auto border-end'>
       <label for='source' class='visually-hidden'>Haskell source code or URL</label>
       <textarea id='source' class='w-100 h-100 border-0 font-monospace small bg-body text-body p-3'
         placeholder='Paste or type Haskell source&#10;Enter a URL to fetch&#10;Drop or upload a file'
         spellcheck='false'></textarea>
     </div>
-    <div class='w-50 h-100 d-flex flex-column'>
+    <div id='output-pane' class='w-md-50 h-100 d-flex flex-column'>
       <div id='output' class='flex-grow-1 overflow-auto p-3' role='region' aria-live='polite' aria-label='Output'></div>
     </div>
   </div>

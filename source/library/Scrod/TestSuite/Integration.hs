@@ -3046,6 +3046,66 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "")
         ]
 
+  Spec.describe s "export-driven declarations" $ do
+    Spec.it s "renders items in export list order" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( y, x ) where
+        x = ()
+        y = ()
+        """
+        ["Declarations"]
+
+    Spec.it s "renders section headings from export groups" $ do
+      checkHtmlContains
+        s
+        """
+        module M
+          ( -- * Section One
+            x
+          ) where
+        x = ()
+        """
+        ["Section One"]
+
+    Spec.it s "renders unexported items under Unexported heading" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( x ) where
+        x = ()
+        y = ()
+        """
+        ["Unexported"]
+
+    Spec.it s "does not render Unexported when all items are exported" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( x ) where
+        x = ()
+        """
+        ["Unexported"]
+
+    Spec.it s "keeps source order when no export list" $ do
+      checkHtmlNotContains
+        s
+        """
+        x = ()
+        y = ()
+        """
+        ["Unexported"]
+
+    Spec.it s "does not render standalone Exports section" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( x ) where
+        x = ()
+        """
+        [">Exports<"]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 

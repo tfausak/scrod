@@ -2995,6 +2995,57 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/value", "\"Module doc\"")
         ]
 
+  Spec.describe s "argument names" $ do
+    Spec.it s "captures argument name from binding" $ do
+      check
+        s
+        """
+        f :: a -> a
+        f x = x
+        """
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/signature", "\"a\"")
+        ]
+
+    Spec.it s "picks first variable name across equations" $ do
+      check
+        s
+        """
+        or :: Bool -> Bool -> Bool
+        or True _ = True
+        or _ x = x
+        """
+        [ ("/items/0/value/name", "\"or\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", ""),
+          ("/items/1/value/signature", "\"Bool\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/name", "\"x\""),
+          ("/items/2/value/signature", "\"Bool\"")
+        ]
+
+    Spec.it s "handles all-wildcard arguments" $ do
+      check
+        s
+        """
+        f :: a -> a
+        f _ = undefined
+        """
+        [ ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "")
+        ]
+
+    Spec.it s "handles signature without binding" $ do
+      check
+        s
+        "f :: a -> a"
+        [ ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "")
+        ]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 

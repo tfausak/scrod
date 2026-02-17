@@ -147,21 +147,19 @@ bodyElement x =
         "div"
         [("class", "container py-5")]
         ( [element "h1" [("class", "text-break")] [Xml.text $ moduleTitle x]]
-            <> foldMap (pure . warningAlert) (Module.warning x)
-            <> foldMap (pure . sinceAlert) (Module.since x)
+            <> foldMap (pure . warningContent) (Module.warning x)
+            <> foldMap (pure . sinceContent) (Module.since x)
+            <> docContents (Module.documentation x)
             <> extensionsContents (Module.language x) (Module.extensions x)
             <> importsContents (Module.imports x)
-            <> [element "hr" [] []]
-            <> docContents (Module.documentation x)
-            <> exportsContents (Module.exports x)
+            <> exportsContents2 (Module.exports x)
             <> itemsContents (Module.items x)
-            <> [element "hr" [] []]
-            <> [footerSection x]
+            <> [footerContent x]
         )
     ]
 
-warningAlert :: Warning.Warning -> Content.Content Element.Element
-warningAlert x =
+warningContent :: Warning.Warning -> Content.Content Element.Element
+warningContent x =
   element
     "div"
     [ ("class", "alert alert-warning"),
@@ -174,8 +172,8 @@ warningAlert x =
       element "span" [("class", "text-break")] [Xml.text $ Warning.value x]
     ]
 
-sinceAlert :: Since.Since -> Content.Content Element.Element
-sinceAlert x =
+sinceContent :: Since.Since -> Content.Content Element.Element
+sinceContent x =
   element
     "div"
     [ ("class", "alert alert-info"),
@@ -196,8 +194,8 @@ sinceToText x =
 
 -- Footer section
 
-footerSection :: Module.Module -> Content.Content Element.Element
-footerSection m =
+footerContent :: Module.Module -> Content.Content Element.Element
+footerContent m =
   element
     "footer"
     [("class", "text-secondary")]
@@ -213,79 +211,44 @@ footerSection m =
 
 -- Exports section
 
-exportsContents :: Maybe [Export.Export] -> [Content.Content Element.Element]
-exportsContents Nothing = []
-exportsContents (Just []) = []
-exportsContents (Just exports) =
-  [ element
-      "section"
-      [("class", "my-4")]
-      ( [element "h2" [("class", "border-bottom pb-1 mt-4")] [Xml.string "Exports"]]
-          <> [ element
-                 "ul"
-                 [("class", "list-group list-group-flush")]
-                 (concatMap exportToContents exports)
-             ]
-      )
+exportsContents2 :: Maybe [Export.Export] -> [Content.Content Element.Element]
+exportsContents2 exports =
+  [ element "h2" [] [Xml.string "Exports"],
+    case exports of
+      Nothing -> Xml.string "Everything is implicitly exported."
+      Just [] -> Xml.string "Nothing is explicitly exported."
+      Just xs ->
+        element
+          "details"
+          []
+          [ element
+              "summary"
+              []
+              [ Xml.string "Show/hide ",
+                Xml.string $ pluralize (length xs) "export",
+                Xml.string "."
+              ],
+            element "ul" [] $ fmap exportContent xs
+          ]
   ]
 
-exportToContents :: Export.Export -> [Content.Content Element.Element]
-exportToContents export = case export of
-  Export.Identifier ident ->
-    [element "li" [liClass] [exportIdentifierToHtml ident]]
-  Export.Group section ->
-    [element "li" [liClass] [sectionContent section]]
-  Export.Doc doc ->
-    [element "li" [liClass] [element "div" [("class", "mt-1")] (docContents doc)]]
-  Export.DocNamed name ->
-    [element "li" [liClass] [element "div" [("class", "mt-1")] [Xml.text (t "\x00a7" <> name)]]]
-  where
-    liClass :: (String, String)
-    liClass = ("class", "list-group-item bg-transparent py-1 px-2")
-
-exportIdentifierToHtml :: ExportIdentifier.ExportIdentifier -> Content.Content Element.Element
-exportIdentifierToHtml ei =
+exportContent :: Export.Export -> Content.Content Element.Element
+exportContent export =
   element
-    "div"
-    [("class", "py-1")]
-    ( foldMap (\w -> [warningAlert w]) (ExportIdentifier.warning ei)
-        <> [ element
-               "code"
-               [("class", "font-monospace")]
-               ( [Xml.text (exportNameToText (ExportIdentifier.name ei))]
-                   <> subordinatesToContents (ExportIdentifier.subordinates ei)
-               )
-           ]
-        <> foldMap
-          ( \doc ->
-              [element "div" [("class", "mt-1")] (docContents doc)]
-          )
-          (ExportIdentifier.doc ei)
-    )
+    "li"
+    []
+    $ case export of
+      Export.Doc x -> docContents x
+      Export.DocNamed x -> [docNamedContent x]
+      Export.Group x -> [sectionContent x]
+      Export.Identifier x -> exportIdentifierContents x
 
-exportNameToText :: ExportName.ExportName -> Text.Text
-exportNameToText en =
-  kindPrefix <> ExportName.name en
-  where
-    kindPrefix :: Text.Text
-    kindPrefix = case ExportName.kind en of
-      Nothing -> Text.empty
-      Just ExportNameKind.Pattern -> t "pattern "
-      Just ExportNameKind.Type -> t "type "
-      Just ExportNameKind.Module -> t "module "
-
-subordinatesToContents :: Maybe Subordinates.Subordinates -> [Content.Content Element.Element]
-subordinatesToContents Nothing = []
-subordinatesToContents (Just subs) =
-  let wildcardText :: Text.Text
-      wildcardText = t ".."
-      explicitTexts :: [Text.Text]
-      explicitTexts = fmap ExportName.name (Subordinates.explicit subs)
-      allTexts :: [Text.Text]
-      allTexts = if Subordinates.wildcard subs then wildcardText : explicitTexts else explicitTexts
-      combined :: Text.Text
-      combined = Text.intercalate (t ", ") allTexts
-   in [Xml.text (t "(" <> combined <> t ")")]
+exportIdentifierContents :: ExportIdentifier.ExportIdentifier -> [Content.Content Element.Element]
+exportIdentifierContents x =
+  exportNameContents (ExportIdentifier.name x)
+    <> foldMap subordinatesContents (ExportIdentifier.subordinates x)
+    <> foldMap (pure . warningContent) (ExportIdentifier.warning x)
+    <> foldMap docContents (ExportIdentifier.doc x)
 
 sectionContent :: Section.Section -> Content.Content Element.Element
 sectionContent x =
@@ -293,6 +256,51 @@ sectionContent x =
     . docContents
     . Header.title
     $ Section.header x
+
+docNamedContent :: Text.Text -> Content.Content Element.Element
+docNamedContent x =
+  element
+    "span"
+    [("class", "text-warning")]
+    [ Xml.string "Unknown named documentation group ",
+      element "code" [("class", "text-break")] [Xml.string "$", Xml.text x],
+      Xml.string "."
+    ]
+
+subordinatesContents :: Subordinates.Subordinates -> [Content.Content Element.Element]
+subordinatesContents x =
+  [element "code" [] [Xml.string " ("]]
+    <> List.intercalate
+      [element "code" [] [Xml.string ", "]]
+      (exportNameContents <$> Subordinates.explicit x)
+    <> ( if Subordinates.wildcard x
+           then
+             [ element
+                 "code"
+                 []
+                 [ Xml.string $ if null $ Subordinates.explicit x then "" else ", ",
+                   Xml.string ".."
+                 ]
+             ]
+           else []
+       )
+    <> [element "code" [] [Xml.string ")"]]
+
+exportNameContents :: ExportName.ExportName -> [Content.Content Element.Element]
+exportNameContents x =
+  [ element "code" [("class", "text-break")] [Xml.text $ ExportName.name x],
+    case ExportName.kind x of
+      Nothing -> Xml.string ""
+      Just enk ->
+        element
+          "span"
+          [("class", "badge mx-1 text-bg-secondary")]
+          [ Xml.string $ case enk of
+              ExportNameKind.Module -> "module"
+              ExportNameKind.Pattern -> "pattern"
+              ExportNameKind.Type -> "type"
+          ]
+  ]
 
 -- Imports section
 
@@ -603,7 +611,7 @@ itemContent item children =
       element
         "div"
         [("class", "card-body")]
-        $ foldMap (pure . sinceAlert) (Item.since $ Located.value item)
+        $ foldMap (pure . sinceContent) (Item.since $ Located.value item)
           <> docContents (Item.documentation $ Located.value item)
           <> children
     ]

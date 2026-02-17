@@ -3106,6 +3106,47 @@ spec s = Spec.describe s "integration" $ do
         """
         [">Exports<"]
 
+    Spec.it s "renders export doc comments inline" $ do
+      checkHtmlContains
+        s
+        """
+        module M
+          ( -- | Some docs
+            x
+          ) where
+        x = ()
+        """
+        ["Some docs"]
+
+    Spec.it s "always shows class instances" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( MyClass ) where
+        class MyClass a
+        instance MyClass Int
+        """
+        ["Unexported"]
+
+    Spec.it s "always shows rules" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( f ) where
+        f x = x
+        {-# RULES "f/id" f = id #-}
+        """
+        ["Unexported"]
+
+    Spec.it s "renders module re-exports" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( module M, x ) where
+        x = ()
+        """
+        ["re-export"]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 

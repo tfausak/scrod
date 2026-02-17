@@ -2521,6 +2521,132 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/signature", "\"nominal\"")
         ]
 
+  Spec.describe s "arguments" $ do
+    Spec.it s "function with per-argument docs" $ do
+      check
+        s
+        """
+        f :: a -- ^ i
+          -> a -- ^ o
+        """
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/signature", "\"a -> a\""),
+          ("/items/0/value/documentation/type", "\"Empty\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"a\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/value", "\"i\"")
+        ]
+
+    Spec.it s "function without arg docs" $ do
+      check
+        s
+        "f :: Int -> Bool -> String"
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/signature", "\"Int -> Bool -> String\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"Int\""),
+          ("/items/1/value/documentation/type", "\"Empty\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"Bool\""),
+          ("/items/2/value/documentation/type", "\"Empty\"")
+        ]
+
+    Spec.it s "function with forall and constraints and arg docs" $ do
+      check
+        s
+        """
+        {-# language ExplicitForAll #-}
+        f :: forall a. Show a => a -- ^ input
+          -> String -- ^ output
+        """
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/signature", "\"forall a. Show a => a -> String\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"a\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/value", "\"input\"")
+        ]
+
+    Spec.it s "data constructor with arg doc has argument children" $ do
+      check
+        s
+        """
+        data T2
+          = C2
+            Int -- ^ arg doc
+            Bool
+        """
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/0/value/name", "\"T2\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/1/value/name", "\"C2\""),
+          ("/items/1/value/signature", "\"Int -> Bool -> T2\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"Int\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"arg doc\""),
+          ("/items/3/value/kind/type", "\"Argument\""),
+          ("/items/3/value/parentKey", "1"),
+          ("/items/3/value/signature", "\"Bool\""),
+          ("/items/3/value/documentation/type", "\"Empty\"")
+        ]
+
+    Spec.it s "GADT constructor with arg doc has argument children" $ do
+      check
+        s
+        """
+        data T3 where
+          C3 ::
+            Int -- ^ arg doc
+            -> T3
+        """
+        [ ("/items/0/value/kind/type", "\"DataType\""),
+          ("/items/0/value/name", "\"T3\""),
+          ("/items/1/value/kind/type", "\"GADTConstructor\""),
+          ("/items/1/value/name", "\"C3\""),
+          ("/items/1/value/signature", "\"Int -> T3\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"Int\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"arg doc\"")
+        ]
+
+    Spec.it s "class method with arg docs has argument children" $ do
+      check
+        s
+        """
+        class C a where
+          m :: a -- ^ input
+            -> Bool -- ^ result
+            -> String
+        """
+        [ ("/items/0/value/kind/type", "\"Class\""),
+          ("/items/0/value/name", "\"C\""),
+          ("/items/1/value/kind/type", "\"ClassMethod\""),
+          ("/items/1/value/name", "\"m\""),
+          ("/items/1/value/signature", "\"a -> Bool -> String\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "1"),
+          ("/items/2/value/signature", "\"a\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"input\""),
+          ("/items/3/value/kind/type", "\"Argument\""),
+          ("/items/3/value/parentKey", "1"),
+          ("/items/3/value/signature", "\"Bool\""),
+          ("/items/3/value/documentation/type", "\"Paragraph\""),
+          ("/items/3/value/documentation/value/value", "\"result\"")
+        ]
+
   Spec.describe s "pragma combinations" $ do
     Spec.it s "inline and specialize on same function" $ do
       check

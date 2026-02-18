@@ -769,8 +769,8 @@ itemContent item children =
         "div"
         [("class", "card-body")]
         $ foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-          <> docContents (Item.documentation $ Located.value item)
           <> children
+          <> docContents (Item.documentation $ Located.value item)
     ]
   where
     badgeColor = case kind of

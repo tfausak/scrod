@@ -108,12 +108,11 @@ async function update(document: vscode.TextDocument): Promise<void> {
   try {
     const process = await engine;
     const source = document.getText();
-    const inputBytes = Buffer.byteLength(source, "utf8");
     const start = performance.now();
     html = await process(source, literate, isSignature);
     const elapsed = performance.now() - start;
     outputChannel?.appendLine(
-      `${path.basename(document.fileName)}: finished in ${Math.round(elapsed)} ms (${inputBytes} bytes input, ${html.length} bytes output)`
+      `${path.basename(document.fileName)}: finished in ${Math.round(elapsed)} ms`
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

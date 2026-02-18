@@ -3,15 +3,36 @@ import * as vscode from "vscode";
 import * as path from "path";
 import { loadWasmEngine } from "./wasmEngine";
 
-let engine: Promise<(source: string, literate: boolean, signature: boolean) => Promise<string>>;
+let engine: Promise<(source: string, literate: boolean, signature: boolean, cabalContent: string | null) => Promise<string>>;
 let panel: vscode.WebviewPanel | undefined;
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
 let pendingHtml: string | undefined;
 let previewDocumentUri: vscode.Uri | undefined;
+let cabalContent: string | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
   engine = loadWasmEngine(context.extensionPath);
+
+  discoverCabalContent().then((content) => {
+    cabalContent = content;
+  });
+
+  const cabalWatcher = vscode.workspace.createFileSystemWatcher("**/*.cabal");
+  cabalWatcher.onDidChange(() => {
+    discoverCabalContent().then((content) => {
+      cabalContent = content;
+    });
+  });
+  cabalWatcher.onDidCreate(() => {
+    discoverCabalContent().then((content) => {
+      cabalContent = content;
+    });
+  });
+  cabalWatcher.onDidDelete(() => {
+    cabalContent = null;
+  });
+  context.subscriptions.push(cabalWatcher);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("scrod.openPreview", () => {
@@ -77,6 +98,14 @@ function isHaskell(doc: vscode.TextDocument): boolean {
   );
 }
 
+async function discoverCabalContent(): Promise<string | null> {
+  const files = await vscode.workspace.findFiles("**/*.cabal", "**/dist-newstyle/**", 1);
+  const file = files[0];
+  if (!file) return null;
+  const bytes = await vscode.workspace.fs.readFile(file);
+  return Buffer.from(bytes).toString("utf-8");
+}
+
 function immediateUpdate(document: vscode.TextDocument | undefined): void {
   if (!panel) return;
   clearTimeout(debounceTimer);
@@ -104,7 +133,7 @@ async function update(document: vscode.TextDocument): Promise<void> {
   let html: string;
   try {
     const process = await engine;
-    html = await process(document.getText(), literate, isSignature);
+    html = await process(document.getText(), literate, isSignature, cabalContent);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message

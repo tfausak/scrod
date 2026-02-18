@@ -91,28 +91,30 @@ function isHaskell(doc: vscode.TextDocument): boolean {
 }
 
 async function findNearestCabalContent(documentUri: vscode.Uri): Promise<string | null> {
-  let dir = path.dirname(documentUri.fsPath);
-  const root = vscode.workspace.getWorkspaceFolder(documentUri)?.uri.fsPath;
-  while (true) {
-    try {
-      const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dir));
-      const cabalEntry = entries.find(
-        ([name, type]) => type === vscode.FileType.File && name.endsWith(".cabal")
-      );
-      if (cabalEntry) {
-        const cabalUri = vscode.Uri.file(path.join(dir, cabalEntry[0]));
-        const bytes = await vscode.workspace.fs.readFile(cabalUri);
-        return Buffer.from(bytes).toString("utf-8");
-      }
-    } catch {
-      // directory not readable
-    }
-    if (root && dir === root) break;
-    const parent = path.dirname(dir);
-    if (parent === dir) break;
-    dir = parent;
+  const cabalFiles = await vscode.workspace.findFiles("**/*.cabal");
+  if (cabalFiles.length === 0) return null;
+  const docDir = path.dirname(documentUri.fsPath);
+  const closest = cabalFiles.reduce((a, b) => {
+    const aDist = directoryDistance(docDir, path.dirname(a.fsPath));
+    const bDist = directoryDistance(docDir, path.dirname(b.fsPath));
+    return aDist <= bDist ? a : b;
+  });
+  try {
+    const bytes = await vscode.workspace.fs.readFile(closest);
+    return Buffer.from(bytes).toString("utf-8");
+  } catch {
+    return null;
   }
-  return null;
+}
+
+function directoryDistance(from: string, to: string): number {
+  const fromParts = from.split(path.sep);
+  const toParts = to.split(path.sep);
+  let common = 0;
+  while (common < fromParts.length && common < toParts.length && fromParts[common] === toParts[common]) {
+    common++;
+  }
+  return (fromParts.length - common) + (toParts.length - common);
 }
 
 function immediateUpdate(document: vscode.TextDocument | undefined): void {

@@ -149,31 +149,33 @@ spec s = Spec.describe s "integration" $ do
         "{-# language NoOverloadedStrings #-}"
         [("/extensions/OverloadedStrings", "false")]
 
+    let cabalHeader = "cabal-version: 3.0\nname: test\nversion: 0\n"
+
     Spec.it s "works with --cabal extensions" $ do
       checkWith
         s
-        ["--cabal", "library\n  default-extensions: OverloadedStrings"]
+        ["--cabal", cabalHeader <> "library\n  default-extensions: OverloadedStrings"]
         ""
         [("/extensions/OverloadedStrings", "true")]
 
     Spec.it s "works with --cabal language" $ do
       checkWith
         s
-        ["--cabal", "library\n  default-language: GHC2021"]
+        ["--cabal", cabalHeader <> "library\n  default-language: GHC2021"]
         ""
         [("/language", "\"GHC2021\"")]
 
     Spec.it s "--cabal matches module to component" $ do
       checkWith
         s
-        ["--cabal", "library\n  exposed-modules: Foo\n  default-extensions: OverloadedStrings\nexecutable bar\n  default-extensions: CPP"]
+        ["--cabal", cabalHeader <> "library\n  exposed-modules: Foo\n  default-extensions: OverloadedStrings\nexecutable bar\n  main-is: Main.hs\n  default-extensions: CPP"]
         "module Foo where"
         [("/extensions/OverloadedStrings", "true")]
 
     Spec.it s "--cabal falls back to library with no module" $ do
       checkWith
         s
-        ["--cabal", "library\n  default-extensions: OverloadedStrings\nexecutable bar\n  default-extensions: CPP"]
+        ["--cabal", cabalHeader <> "library\n  default-extensions: OverloadedStrings\nexecutable bar\n  main-is: Main.hs\n  default-extensions: CPP"]
         ""
         [("/extensions/OverloadedStrings", "true")]
 

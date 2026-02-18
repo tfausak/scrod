@@ -6,28 +6,27 @@
 --
 -- 1. __Cabal script headers__: block comments of the form @{- cabal: ... -}@
 --    embedded in Haskell source files.
--- 2. __@.cabal@ files__: full package descriptions with component-aware
---    matching. Given a module name, finds the component that owns the module
---    and returns only that component's extensions and language (resolving
---    @common@ stanza imports).
+-- 2. __@.cabal@ files__: full package descriptions parsed via
+--    @Cabal-syntax@'s 'PD.parseGenericPackageDescription'. Given a module
+--    name, finds the component that owns the module and returns only that
+--    component's extensions and language.
 module Scrod.Cabal where
 
 import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Char as Char
 import qualified Data.List as List
-import qualified Data.Maybe as Maybe
 import qualified Distribution.Fields as Fields
+import qualified Distribution.PackageDescription as PD
+import qualified Distribution.PackageDescription.Configuration as PD
+import qualified Distribution.PackageDescription.Parsec as PD
+import qualified Distribution.Pretty as Pretty
+import qualified Distribution.Types.Benchmark as Benchmark
+import qualified Distribution.Types.BuildInfo as BuildInfo
+import qualified Distribution.Types.Executable as Executable
+import qualified Distribution.Types.Library as Library
+import qualified Distribution.Types.TestSuite as TestSuite
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Scrod.Spec as Spec
-
--- | A parsed component from a @.cabal@ file section.
-data Component = MkComponent
-  { componentModules :: [String],
-    componentExtensions :: [String],
-    componentLanguage :: Maybe String,
-    componentImports :: [String]
-  }
-  deriving (Eq, Show)
 
 -- | Discover extension names from a Cabal script header, if present.
 -- Returns extension names like @["TemplateHaskell", "GADTs"]@.
@@ -72,6 +71,13 @@ parseDefaultExtensions content =
           concatMap getWords fieldLines
     getExtensions _ = []
 
+    getWords :: Fields.FieldLine pos -> [String]
+    getWords (Fields.FieldLine _ bs) =
+      filter (not . null)
+        . words
+        . fmap (\c -> if c == ',' then ' ' else c)
+        $ Char8.unpack bs
+
 -- | Extract a module name from Haskell source by scanning for
 -- @module Foo.Bar@. Returns 'Nothing' if no module declaration is found.
 extractModuleName :: String -> Maybe String
@@ -85,31 +91,29 @@ extractModuleName = go . words
 
 -- | Parse a full @.cabal@ file with component-aware matching.
 --
+-- Uses @Cabal-syntax@'s 'PD.parseGenericPackageDescription' to parse the
+-- content into a 'PD.GenericPackageDescription', then
+-- 'PD.flattenPackageDescription' to resolve conditional branches.
+--
 -- Given an optional module name, finds the component that owns the module
 -- (checking @exposed-modules@, @other-modules@, and @signatures@) and
 -- returns only that component's @default-extensions@ and
--- @default-language@ (with @common@ stanza imports resolved).
+-- @default-language@.
 --
 -- Fallback strategy when no module matches:
 --
 -- 1. Use the main (unnamed) library component.
--- 2. Union of all components and top-level fields.
+-- 2. Union of all components.
 parseCabalFile :: Maybe String -> String -> ([String], Maybe String)
 parseCabalFile moduleName content =
-  case Fields.readFields (Char8.pack content) of
+  case snd (PD.runParseResult (PD.parseGenericPackageDescription (Char8.pack content))) of
     Left _ -> ([], Nothing)
-    Right fields ->
-      let (commons, mainLib, otherComps, topLevel) = categorizeFields fields
-          resolvedLib = fmap (resolveImports commons) mainLib
-          resolvedComps = fmap (resolveImports commons) otherComps
-          allResolved = maybe id (:) resolvedLib resolvedComps
-          matched = moduleName >>= \name -> List.find (elem name . componentModules) allResolved
-          target = case matched of
-            Just comp -> comp
-            Nothing -> case resolvedLib of
-              Just lib -> lib
-              Nothing -> mergeComponents (topLevel : allResolved)
-       in (componentExtensions target, componentLanguage target)
+    Right gpd ->
+      let pd = PD.flattenPackageDescription gpd
+          target = findTargetBuildInfo moduleName pd
+       in ( fmap Pretty.prettyShow (BuildInfo.defaultExtensions target),
+            fmap Pretty.prettyShow (BuildInfo.defaultLanguage target)
+          )
 
 -- | Parse a @.cabal@ file and return GHC option strings for discovered
 -- extensions and language, scoped to a specific module.
@@ -120,122 +124,49 @@ parseCabalFileOptionsForModule moduleName content =
       extOpts = fmap (\e -> SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> e) exts
    in langOpts <> extOpts
 
--- | Parse a section's nested fields into a 'Component'.
-parseComponent :: [Fields.Field pos] -> Component
-parseComponent fields =
-  let flat = flattenFields fields
-      modules =
-        concatMap (fieldValues "exposed-modules") flat
-          <> concatMap (fieldValues "other-modules") flat
-          <> concatMap (fieldValues "signatures") flat
-      exts = concatMap (fieldValues "default-extensions") flat
-      langs = concatMap (fieldValues "default-language") flat
-      imports = concatMap (fieldValues "import") flat
-   in MkComponent
-        { componentModules = modules,
-          componentExtensions = exts,
-          componentLanguage = lastMaybe langs,
-          componentImports = imports
-        }
+-- | Find the 'BuildInfo' for the component that owns the given module.
+findTargetBuildInfo :: Maybe String -> PD.PackageDescription -> BuildInfo.BuildInfo
+findTargetBuildInfo moduleName pd =
+  let allComps = collectComponents pd
+      matched =
+        moduleName >>= \name ->
+          List.find (elem name . fst) allComps
+   in case matched of
+        Just (_, bi) -> bi
+        Nothing -> case PD.library pd of
+          Just lib -> Library.libBuildInfo lib
+          Nothing -> mconcat (fmap snd allComps)
 
--- | Categorize top-level fields into common stanzas, the main library,
--- other components, and a top-level pseudo-component.
-categorizeFields ::
-  [Fields.Field pos] ->
-  ( [(String, Component)],
-    Maybe Component,
-    [Component],
-    Component
-  )
-categorizeFields fields =
-  let (topFields, commons, mainLib, others) = go [] [] Nothing [] fields
-   in (reverse commons, mainLib, reverse others, parseComponent (reverse topFields))
-  where
-    go :: [Fields.Field pos] -> [(String, Component)] -> Maybe Component -> [Component] -> [Fields.Field pos] -> ([Fields.Field pos], [(String, Component)], Maybe Component, [Component])
-    go topFs cs lib os [] = (topFs, cs, lib, os)
-    go topFs cs lib os (f : fs) = case f of
-      Fields.Section (Fields.Name _ name) args nested
-        | isName "common" name ->
-            go topFs ((sectionArgName args, parseComponent nested) : cs) lib os fs
-        | isName "library" name && null args ->
-            go topFs cs (Just (parseComponent nested)) os fs
-        | isComponentSection name ->
-            go topFs cs lib (parseComponent nested : os) fs
-      _ -> go (f : topFs) cs lib os fs
-
-    isName target name = Char8.map Char.toLower name == Char8.pack target
-
-    isComponentSection name =
-      let lower = Char8.map Char.toLower name
-       in lower
-            `elem` fmap
-              Char8.pack
-              ["library", "executable", "test-suite", "benchmark", "foreign-library"]
-
-    sectionArgName :: [Fields.SectionArg pos] -> String
-    sectionArgName [] = ""
-    sectionArgName (arg : _) = case arg of
-      Fields.SecArgName _ bs -> Char8.unpack bs
-      Fields.SecArgStr _ bs -> Char8.unpack bs
-      Fields.SecArgOther _ bs -> Char8.unpack bs
-
--- | Resolve @import@ fields by merging common stanza extensions and
--- language into a component. Uses a visited list to prevent cycles.
-resolveImports :: [(String, Component)] -> Component -> Component
-resolveImports commons = go []
-  where
-    go visited comp =
-      let newImports = filter (`notElem` visited) (componentImports comp)
-          visited' = visited <> newImports
-          imported =
-            [ go visited' c
-            | name <- newImports,
-              (n, c) <- commons,
-              n == name
-            ]
-          mergedExts = concatMap componentExtensions imported <> componentExtensions comp
-          mergedLang = case componentLanguage comp of
-            Just l -> Just l
-            Nothing -> lastMaybe (Maybe.mapMaybe componentLanguage imported)
-       in comp
-            { componentExtensions = mergedExts,
-              componentLanguage = mergedLang,
-              componentImports = []
-            }
-
--- | Merge multiple components into one (union of all extensions and modules).
-mergeComponents :: [Component] -> Component
-mergeComponents comps =
-  MkComponent
-    { componentModules = concatMap componentModules comps,
-      componentExtensions = concatMap componentExtensions comps,
-      componentLanguage = lastMaybe (Maybe.mapMaybe componentLanguage comps),
-      componentImports = []
-    }
-
-getWords :: Fields.FieldLine pos -> [String]
-getWords (Fields.FieldLine _ bs) =
-  filter (not . null)
-    . words
-    . fmap (\c -> if c == ',' then ' ' else c)
-    $ Char8.unpack bs
-
-flattenFields :: [Fields.Field pos] -> [Fields.Field pos]
-flattenFields = concatMap go
-  where
-    go :: Fields.Field pos -> [Fields.Field pos]
-    go field@(Fields.Field _ _) = [field]
-    go (Fields.Section _ _ nested) = concatMap go nested
-
-fieldValues :: String -> Fields.Field pos -> [String]
-fieldValues target (Fields.Field (Fields.Name _ name) fieldLines)
-  | Char8.map Char.toLower name == Char8.pack target =
-      concatMap getWords fieldLines
-fieldValues _ _ = []
-
-lastMaybe :: [a] -> Maybe a
-lastMaybe [] = Nothing
-lastMaybe xs = Just (List.last xs)
+-- | Collect all components as @(module names, build info)@ pairs.
+collectComponents :: PD.PackageDescription -> [([String], BuildInfo.BuildInfo)]
+collectComponents pd =
+  let libs = maybe id (:) (PD.library pd) (PD.subLibraries pd)
+      libComps =
+        [ ( fmap Pretty.prettyShow (Library.exposedModules lib <> Library.signatures lib)
+              <> fmap Pretty.prettyShow (BuildInfo.otherModules (Library.libBuildInfo lib)),
+            Library.libBuildInfo lib
+          )
+        | lib <- libs
+        ]
+      exeComps =
+        [ ( fmap Pretty.prettyShow (BuildInfo.otherModules (Executable.buildInfo exe)),
+            Executable.buildInfo exe
+          )
+        | exe <- PD.executables pd
+        ]
+      testComps =
+        [ ( fmap Pretty.prettyShow (BuildInfo.otherModules (TestSuite.testBuildInfo ts)),
+            TestSuite.testBuildInfo ts
+          )
+        | ts <- PD.testSuites pd
+        ]
+      benchComps =
+        [ ( fmap Pretty.prettyShow (BuildInfo.otherModules (Benchmark.benchmarkBuildInfo bm)),
+            Benchmark.benchmarkBuildInfo bm
+          )
+        | bm <- PD.benchmarks pd
+        ]
+   in libComps <> exeComps <> testComps <> benchComps
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -325,39 +256,39 @@ spec s = do
       Spec.assertEq s (extractModuleName "module Foo\n  where") (Just "Foo")
 
   Spec.named s 'parseCabalFile $ do
+    let header :: String
+        header = "cabal-version: 3.0\nname: test\nversion: 0\n"
+
     Spec.it s "returns empty for empty input" $ do
       Spec.assertEq s (parseCabalFile Nothing "") ([], Nothing)
 
     Spec.it s "returns empty for invalid cabal content" $ do
       Spec.assertEq s (parseCabalFile Nothing "!!!") ([], Nothing)
 
-    Spec.it s "discovers top-level default-extensions" $ do
-      Spec.assertEq
-        s
-        (parseCabalFile Nothing "default-extensions: OverloadedStrings")
-        (["OverloadedStrings"], Nothing)
-
-    Spec.it s "discovers default-language" $ do
-      Spec.assertEq
-        s
-        (parseCabalFile Nothing "default-language: GHC2021")
-        ([], Just "GHC2021")
-
-    Spec.it s "discovers extensions inside a section" $ do
+    Spec.it s "discovers extensions in library" $ do
       Spec.assertEq
         s
         ( parseCabalFile
             Nothing
-            "library\n  default-extensions: GADTs"
+            (header <> "library\n  default-extensions: GADTs")
         )
         (["GADTs"], Nothing)
+
+    Spec.it s "discovers default-language" $ do
+      Spec.assertEq
+        s
+        ( parseCabalFile
+            Nothing
+            (header <> "library\n  default-language: GHC2021")
+        )
+        ([], Just "GHC2021")
 
     Spec.it s "resolves common stanza imports" $ do
       Spec.assertEq
         s
         ( parseCabalFile
             Nothing
-            "common warnings\n  default-extensions: OverloadedStrings\nlibrary\n  import: warnings\n  default-extensions: GADTs"
+            (header <> "common warnings\n  default-extensions: OverloadedStrings\nlibrary\n  import: warnings\n  default-extensions: GADTs")
         )
         (["OverloadedStrings", "GADTs"], Nothing)
 
@@ -366,7 +297,7 @@ spec s = do
         s
         ( parseCabalFile
             Nothing
-            "common base\n  default-language: Haskell2010\ncommon extended\n  import: base\n  default-extensions: GADTs\nlibrary\n  import: extended"
+            (header <> "common base\n  default-language: Haskell2010\ncommon extended\n  import: base\n  default-extensions: GADTs\nlibrary\n  import: extended")
         )
         (["GADTs"], Just "Haskell2010")
 
@@ -375,7 +306,7 @@ spec s = do
         s
         ( parseCabalFile
             Nothing
-            "common base\n  default-language: Haskell2010\nlibrary\n  default-language: GHC2021"
+            (header <> "common base\n  default-language: Haskell2010\nlibrary\n  import: base\n  default-language: GHC2021")
         )
         ([], Just "GHC2021")
 
@@ -384,7 +315,7 @@ spec s = do
         s
         ( parseCabalFile
             Nothing
-            "library\n  default-language: GHC2021\n  default-extensions: OverloadedStrings"
+            (header <> "library\n  default-language: GHC2021\n  default-extensions: OverloadedStrings")
         )
         (["OverloadedStrings"], Just "GHC2021")
 
@@ -393,7 +324,7 @@ spec s = do
         s
         ( parseCabalFile
             (Just "Foo")
-            "library\n  exposed-modules: Foo\n  default-extensions: GADTs\nexecutable bar\n  default-extensions: CPP"
+            (header <> "library\n  exposed-modules: Foo\n  default-extensions: GADTs\nexecutable bar\n  main-is: Main.hs\n  default-extensions: CPP")
         )
         (["GADTs"], Nothing)
 
@@ -402,7 +333,7 @@ spec s = do
         s
         ( parseCabalFile
             (Just "Bar")
-            "library\n  exposed-modules: Foo\n  default-extensions: GADTs\nexecutable bar\n  other-modules: Bar\n  default-extensions: CPP"
+            (header <> "library\n  exposed-modules: Foo\n  default-extensions: GADTs\nexecutable bar\n  main-is: Main.hs\n  other-modules: Bar\n  default-extensions: CPP")
         )
         (["CPP"], Nothing)
 
@@ -411,6 +342,6 @@ spec s = do
         s
         ( parseCabalFile
             (Just "Unknown")
-            "library\n  exposed-modules: Foo\n  default-extensions: GADTs"
+            (header <> "library\n  exposed-modules: Foo\n  default-extensions: GADTs")
         )
         (["GADTs"], Nothing)

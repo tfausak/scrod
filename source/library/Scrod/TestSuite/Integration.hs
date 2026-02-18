@@ -3048,14 +3048,14 @@ spec s = Spec.describe s "integration" $ do
 
   Spec.describe s "export-driven declarations" $ do
     Spec.it s "renders items in export list order" $ do
-      checkHtmlContains
+      checkHtmlOrder
         s
         """
         module M ( y, x ) where
         x = ()
         y = ()
         """
-        ["Declarations"]
+        [">y<", ">x<"]
 
     Spec.it s "renders section headings from export groups" $ do
       checkHtmlContains
@@ -3147,6 +3147,62 @@ spec s = Spec.describe s "integration" $ do
         """
         ["re-export"]
 
+    Spec.it s "hides constructors when type exported without subordinates" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( T ) where
+        data T = C1 | C2
+        """
+        [">C1<", ">C2<"]
+
+    Spec.it s "shows all constructors with wildcard subordinates" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( T(..) ) where
+        data T = C1 | C2
+        """
+        [">C1<", ">C2<"]
+
+    Spec.it s "shows only listed constructors with explicit subordinates" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( T(C1) ) where
+        data T = C1 | C2
+        """
+        [">C1<"]
+
+    Spec.it s "hides unlisted constructors with explicit subordinates" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( T(C1) ) where
+        data T = C1 | C2
+        """
+        [">C2<"]
+
+    Spec.it s "hides methods when class exported without subordinates" $ do
+      checkHtmlNotContains
+        s
+        """
+        module M ( MyClass ) where
+        class MyClass a where
+          myMethod :: a -> a
+        """
+        [">myMethod<"]
+
+    Spec.it s "shows all methods with wildcard subordinates" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( MyClass(..) ) where
+        class MyClass a where
+          myMethod :: a -> a
+        """
+        [">myMethod<"]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 
@@ -3213,3 +3269,28 @@ checkHtmlNotContains s input forbidden = do
     Monad.when (needle `List.isInfixOf` html)
       . Spec.assertFailure s
       $ "expected HTML NOT to contain: " <> needle
+
+checkHtmlOrder :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
+checkHtmlOrder s input needles = do
+  result <-
+    either (Spec.assertFailure s . Exception.displayException) pure
+      . Main.mainWith "scrod-test-suite" ["--format", "html"]
+      $ pure input
+  output <- either (Spec.assertFailure s) pure result
+  let html = Builder.toString output
+  checkOrder s html needles
+
+checkOrder :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
+checkOrder _ _ [] = pure ()
+checkOrder s html (needle : rest) =
+  case breakOnSubstring needle html of
+    Nothing ->
+      Spec.assertFailure s $
+        "expected HTML to contain: " <> needle
+    Just remaining -> checkOrder s remaining rest
+
+breakOnSubstring :: String -> String -> Maybe String
+breakOnSubstring _ [] = Nothing
+breakOnSubstring needle haystack@(_ : xs)
+  | needle `List.isPrefixOf` haystack = Just (drop (length needle) haystack)
+  | otherwise = breakOnSubstring needle xs

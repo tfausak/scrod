@@ -3203,6 +3203,14 @@ spec s = Spec.describe s "integration" $ do
         """
         [">myMethod<"]
 
+    Spec.it s "renders exports with no matching item" $ do
+      checkHtmlContains
+        s
+        """
+        module M ( missing ) where
+        """
+        [">missing<"]
+
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 

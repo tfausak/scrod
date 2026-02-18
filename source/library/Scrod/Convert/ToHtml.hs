@@ -503,7 +503,8 @@ declarationsContents :: Maybe [Export.Export] -> [Located.Located Item.Item] -> 
 declarationsContents exports items =
   [ element "h2" [] [Xml.string "Declarations"],
     case (exports, items) of
-      (_, []) -> Xml.string "None."
+      (Nothing, []) -> Xml.string "None."
+      (Just [], []) -> Xml.string "None."
       (Nothing, _) -> defaultDeclarations
       (Just [], _) -> defaultDeclarations
       (Just es, _) -> exportDrivenDeclarations es
@@ -587,25 +588,35 @@ declarationsContents exports items =
                     let (here, newKeys) = renderExportedItem subs li
                         (rest, used') = walkExports es (Set.union newKeys used)
                      in (here <> exportMeta <> rest, used')
-              _ ->
-                let here = case ExportName.kind exportName of
+              Just _ ->
+                let (rest, used') = walkExports es used
+                 in (exportMeta <> rest, used')
+              Nothing ->
+                let namePrefix = case ExportName.kind exportName of
+                      Just ExportNameKind.Module -> "module "
+                      Just ExportNameKind.Pattern -> "pattern "
+                      Just ExportNameKind.Type -> "type "
+                      Nothing -> ""
+                    badge = case ExportName.kind exportName of
                       Just ExportNameKind.Module ->
                         [ element
                             "div"
-                            [("class", "card my-3")]
-                            [ element
-                                "div"
-                                [("class", "card-header")]
-                                [ element "code" [("class", "text-break")] [Xml.string "module ", Xml.text name],
-                                  element
-                                    "div"
-                                    [("class", "mx-1")]
-                                    [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
-                                ]
-                            ]
+                            [("class", "mx-1")]
+                            [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
                         ]
-                          <> exportMeta
-                      _ -> exportMeta
+                      _ -> []
+                    here =
+                      [ element
+                          "div"
+                          [("class", "card my-3")]
+                          [ element
+                              "div"
+                              [("class", "card-header")]
+                              $ element "code" [("class", "text-break")] [Xml.string namePrefix, Xml.text name]
+                                : badge
+                          ]
+                      ]
+                        <> exportMeta
                     (rest, used') = walkExports es used
                  in (here <> rest, used')
       Export.Group section ->

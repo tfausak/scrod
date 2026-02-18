@@ -147,21 +147,18 @@ function scheduleUpdate(document: vscode.TextDocument): void {
   }, 300);
 }
 
-async function update(document: vscode.TextDocument): Promise<void> {
+async function render(document: vscode.TextDocument, cabalContent: string | null): Promise<void> {
   if (!panel) return;
-  previewDocumentUri = document.uri;
-  panel.title = `Preview: ${path.basename(document.fileName)}`;
   const ext = extname(document);
   const literate =
     document.languageId === "literate haskell" || ext === ".lhs" || ext === ".lhsig";
   const isSignature = ext === ".hsig" || ext === ".lhsig";
-  const t0 = performance.now();
-  const cabalContent = await findNearestCabalContent(document.uri);
-  const t1 = performance.now();
   let html: string;
   try {
     const process = await engine;
+    const t0 = performance.now();
     html = await process(document.getText(), literate, isSignature, cabalContent);
+    log.info(`render ${path.basename(document.fileName)}: ${(performance.now() - t0).toFixed(1)} ms (cabal: ${cabalContent !== null})`);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message
@@ -170,13 +167,27 @@ async function update(document: vscode.TextDocument): Promise<void> {
       .replace(/>/g, "&gt;");
     html = `<pre style="color: var(--vscode-errorForeground, #c00); white-space: pre-wrap; padding: 1rem;">${escaped}</pre>`;
   }
-  const t2 = performance.now();
-  log.info(`update ${path.basename(document.fileName)}: cabal ${(t1 - t0).toFixed(1)} ms, render ${(t2 - t1).toFixed(1)} ms`);
   if (!webviewReady) {
     pendingHtml = html;
     return;
   }
   panel.webview.postMessage({ type: "update", html });
+}
+
+async function update(document: vscode.TextDocument): Promise<void> {
+  if (!panel) return;
+  previewDocumentUri = document.uri;
+  panel.title = `Preview: ${path.basename(document.fileName)}`;
+  const needsCabalWarmup = cabalFileCache === null;
+  if (needsCabalWarmup) {
+    render(document, null);
+    findNearestCabalContent(document.uri).then((content) => {
+      if (content !== null) render(document, content);
+    });
+  } else {
+    const cabalContent = await findNearestCabalContent(document.uri);
+    render(document, cabalContent);
+  }
 }
 
 async function gotoLocation(line: number, col: number): Promise<void> {

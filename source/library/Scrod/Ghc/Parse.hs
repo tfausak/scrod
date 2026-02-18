@@ -12,6 +12,7 @@
 module Scrod.Ghc.Parse where
 
 import qualified Control.Monad.Catch as Exception
+import Data.Either (fromRight)
 import qualified Data.Bifunctor as Bifunctor
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
@@ -29,6 +30,7 @@ import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Logger as Logger
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Hs
+import qualified Language.Haskell.Syntax.Module.Name as ModuleName
 import qualified Scrod.Cabal as Cabal
 import qualified Scrod.Cpp as Cpp
 import qualified Scrod.Ghc.ArchOS as ArchOS
@@ -100,6 +102,21 @@ supportedLanguages = Session.supportedLanguagesAndExtensions ArchOS.empty
 interactiveFilePath :: FilePath
 interactiveFilePath = "<interactive>"
 
+-- | Extract a module name from Haskell source using GHC's header parser.
+-- Delegates to 'Header.getImports' which parses just the module header,
+-- correctly handling comments and pragmas.
+extractModuleName :: String -> Maybe String
+extractModuleName =
+  fromRight Nothing . extractModuleNameE
+
+extractModuleNameE :: String -> Either SourceError.SourceError (Maybe String)
+extractModuleNameE string =
+  Unsafe.unsafePerformIO . Exception.try $ do
+    result <- Header.getImports ParserOpts.empty False (StringBuffer.stringToStringBuffer string) interactiveFilePath interactiveFilePath
+    pure $ case result of
+      Left _ -> Nothing
+      Right (_, _, locMod) -> Just $ ModuleName.moduleNameString (SrcLoc.unLoc locMod)
+
 resolveExtensions ::
   Maybe Session.Language ->
   [DynFlags.OnOff Extension.Extension] ->
@@ -141,3 +158,22 @@ spec s = do
 
     Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
       Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp])
+
+  Spec.named s 'extractModuleName $ do
+    Spec.it s "extracts a simple module name" $ do
+      Spec.assertEq s (extractModuleName "module Foo where") (Just "Foo")
+
+    Spec.it s "extracts a dotted module name" $ do
+      Spec.assertEq s (extractModuleName "module Foo.Bar.Baz where") (Just "Foo.Bar.Baz")
+
+    Spec.it s "handles block comment between module and name" $ do
+      Spec.assertEq s (extractModuleName "module {- x -} M where") (Just "M")
+
+    Spec.it s "handles line comment between module and name" $ do
+      Spec.assertEq s (extractModuleName "module\n-- x\nM where") (Just "M")
+
+    Spec.it s "returns Main for no module declaration" $ do
+      Spec.assertEq s (extractModuleName "main = putStrLn \"hello\"") (Just "Main")
+
+    Spec.it s "handles Haddock comment before module" $ do
+      Spec.assertEq s (extractModuleName "-- | Provides utilities\nmodule Foo where") (Just "Foo")

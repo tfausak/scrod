@@ -78,17 +78,6 @@ parseDefaultExtensions content =
         . fmap (\c -> if c == ',' then ' ' else c)
         $ Char8.unpack bs
 
--- | Extract a module name from Haskell source by scanning for
--- @module Foo.Bar@. Returns 'Nothing' if no module declaration is found.
-extractModuleName :: String -> Maybe String
-extractModuleName = go . words
-  where
-    go ("module" : (c : cs) : _)
-      | Char.isUpper c = Just (takeWhile isModuleChar (c : cs))
-    go (_ : rest) = go rest
-    go [] = Nothing
-    isModuleChar ch = Char.isAlphaNum ch || ch == '.' || ch == '_' || ch == '\''
-
 -- | Parse a full @.cabal@ file with component-aware matching.
 --
 -- Uses @Cabal-syntax@'s 'PD.parseGenericPackageDescription' to parse the
@@ -235,25 +224,6 @@ spec s = do
 
     Spec.it s "skips non-marker lines before the header" $ do
       Spec.assertEq s (extractHeader "-- a comment\n{- cabal:\nx\n-}") (Just "x\n")
-
-  Spec.named s 'extractModuleName $ do
-    Spec.it s "extracts a simple module name" $ do
-      Spec.assertEq s (extractModuleName "module Foo where") (Just "Foo")
-
-    Spec.it s "extracts a dotted module name" $ do
-      Spec.assertEq s (extractModuleName "module Foo.Bar.Baz where") (Just "Foo.Bar.Baz")
-
-    Spec.it s "returns Nothing for empty input" $ do
-      Spec.assertEq s (extractModuleName "") Nothing
-
-    Spec.it s "returns Nothing for no module declaration" $ do
-      Spec.assertEq s (extractModuleName "main = putStrLn \"hello\"") Nothing
-
-    Spec.it s "handles Haddock comment before module" $ do
-      Spec.assertEq s (extractModuleName "-- | Provides utilities\nmodule Foo where") (Just "Foo")
-
-    Spec.it s "handles module on separate line from where" $ do
-      Spec.assertEq s (extractModuleName "module Foo\n  where") (Just "Foo")
 
   Spec.named s 'parseCabalFile $ do
     let header :: String

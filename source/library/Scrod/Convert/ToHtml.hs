@@ -750,47 +750,56 @@ itemContent item children =
     [ ("class", "card my-3"),
       ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item))
     ]
-    [ element
-        "div"
-        [("class", "align-items-start card-header d-flex")]
-        $ [ element
-              "div"
-              []
-              [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
-              ]
-          ]
-          <> earlySignature
-          <> [ element
-                 "div"
-                 [("class", "mx-1")]
-                 [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
-                 ]
-             ]
-          <> lateSignature
-          <> [ element
-                 "div"
-                 [("class", "ms-auto")]
-                 [ element
-                     "button"
-                     [ ("class", "btn btn-outline-secondary btn-sm"),
-                       ("data-col", show . Column.unwrap . Location.column $ Located.location item),
-                       ("data-line", show . Line.unwrap . Location.line $ Located.location item),
-                       ("type", "button")
-                     ]
-                     [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
-                       Xml.string ":",
-                       Xml.string . show . Column.unwrap . Location.column $ Located.location item
-                     ]
-                 ]
-             ],
-      element
-        "div"
-        [("class", "card-body")]
-        $ foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-          <> children
-          <> docContents (Item.documentation $ Located.value item)
-    ]
+    $ [ element
+          "div"
+          [("class", "align-items-start card-header d-flex")]
+          $ [ element
+                "div"
+                []
+                [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
+                ]
+            ]
+            <> earlySignature
+            <> [ element
+                   "div"
+                   [("class", "mx-1")]
+                   [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
+                   ]
+               ]
+            <> lateSignature
+            <> [ element
+                   "div"
+                   [("class", "ms-auto")]
+                   [ element
+                       "button"
+                       [ ("class", "btn btn-outline-secondary btn-sm"),
+                         ("data-col", show . Column.unwrap . Location.column $ Located.location item),
+                         ("data-line", show . Line.unwrap . Location.line $ Located.location item),
+                         ("type", "button")
+                       ]
+                       [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
+                         Xml.string ":",
+                         Xml.string . show . Column.unwrap . Location.column $ Located.location item
+                       ]
+                   ]
+               ]
+      ]
+      <> cardBody
   where
+    cardBody =
+      let contents =
+            foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
+              <> children
+              <> docContents (Item.documentation $ Located.value item)
+       in if all Content.isEmpty contents
+            then []
+            else
+              [ element
+                  "div"
+                  [("class", "card-body")]
+                  contents
+              ]
+
     badgeColor = case kind of
       ItemKind.Annotation -> "text-bg-info"
       ItemKind.CompletePragma -> "text-bg-info"
@@ -883,6 +892,10 @@ kindToString x = case x of
 
 docContents :: Doc.Doc -> [Content.Content Element.Element]
 docContents doc = case doc of
+  -- The empty string node prevents the XML renderer from emitting a
+  -- self-closing tag (e.g. <div/>) on any parent element, which is not valid
+  -- HTML. Use 'Content.isEmpty' rather than 'null' to test whether the
+  -- resulting content list is effectively empty.
   Doc.Empty -> [Xml.string ""]
   Doc.Append xs -> foldMap docContents xs
   Doc.String x -> [element "span" [("class", "text-break")] [Xml.text x]]

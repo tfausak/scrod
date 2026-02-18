@@ -226,10 +226,10 @@ extractItems referencedChunkNames lHsModule =
       familyInstanceNames = FamilyInstanceParents.extractFamilyInstanceNames lHsModule
       familyParentedItems = FamilyInstanceParents.associateFamilyInstanceParents familyInstanceNames roleParentedItems
       mergedItems = Merge.mergeItemsByName familyParentedItems
-      -- Standalone kind signature association runs after merging so
-      -- that type signatures and bindings are merged first. This
-      -- parents associated declarations to their corresponding
-      -- standalone kind signature (see 'KindSigParents').
+      -- Standalone kind signature merging runs after term-level
+      -- merging so that type signatures and bindings are merged first.
+      -- This merges standalone kind signatures into their corresponding
+      -- declarations (see 'KindSigParents').
       kindSigParentedItems = KindSigParents.associateKindSigParents mergedItems
       -- COMPLETE pragma association runs after merging and uses inverted
       -- semantics: pattern synonyms are parented to the COMPLETE pragma

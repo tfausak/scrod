@@ -83,8 +83,10 @@ mergeOrRemoveKindSig kindSigMap declNames locItem =
                   Just $ mergeKindSigInto kindSigItem locItem
 
 -- | Merge a standalone kind signature's metadata into a declaration.
--- The kind signature's signature text, documentation, and \@since\@
--- annotation take precedence when present.
+-- The kind signature's signature text and \@since\@ annotation take
+-- precedence when present, and documentation is combined (kind
+-- signature first, then declaration). The earlier source location of
+-- the two items is used.
 mergeKindSigInto ::
   Located.Located Item.Item ->
   Located.Located Item.Item ->
@@ -103,8 +105,11 @@ mergeKindSigInto kindSigItem declItem =
         Internal.appendSince
           (Item.since kindSigVal)
           (Item.since declVal)
+      mergedLocation =
+        min (Located.location kindSigItem) (Located.location declItem)
    in declItem
-        { Located.value =
+        { Located.location = mergedLocation,
+          Located.value =
             declVal
               { Item.signature = mergedSig,
                 Item.documentation = mergedDoc,

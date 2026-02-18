@@ -66,12 +66,42 @@ parseDefaultExtensions content =
       | Char8.map Char.toLower name == Char8.pack "default-extensions" =
           concatMap getWords fieldLines
     getExtensions _ = []
-    getWords :: Fields.FieldLine pos -> [String]
-    getWords (Fields.FieldLine _ bs) =
-      filter (not . null)
-        . words
-        . fmap (\c -> if c == ',' then ' ' else c)
-        $ Char8.unpack bs
+
+getWords :: Fields.FieldLine pos -> [String]
+getWords (Fields.FieldLine _ bs) =
+  filter (not . null)
+    . words
+    . fmap (\c -> if c == ',' then ' ' else c)
+    $ Char8.unpack bs
+
+-- | Parse a full @.cabal@ file and extract @default-extensions@ and
+-- @default-language@ from all stanzas (top-level fields and sections).
+parseCabalFile :: String -> ([String], Maybe String)
+parseCabalFile content =
+  case Fields.readFields (Char8.pack content) of
+    Left _ -> ([], Nothing)
+    Right fields ->
+      let allFlat = flattenFields fields
+          exts = concatMap (fieldValues "default-extensions") allFlat
+          langs = concatMap (fieldValues "default-language") allFlat
+       in (exts, lastMaybe langs)
+
+flattenFields :: [Fields.Field pos] -> [Fields.Field pos]
+flattenFields = concatMap go
+  where
+    go :: Fields.Field pos -> [Fields.Field pos]
+    go field@(Fields.Field _ _) = [field]
+    go (Fields.Section _ _ nested) = concatMap go nested
+
+fieldValues :: String -> Fields.Field pos -> [String]
+fieldValues target (Fields.Field (Fields.Name _ name) fieldLines)
+  | Char8.map Char.toLower name == Char8.pack target =
+      concatMap getWords fieldLines
+fieldValues _ _ = []
+
+lastMaybe :: [a] -> Maybe a
+lastMaybe [] = Nothing
+lastMaybe xs = Just (List.last xs)
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -140,3 +170,54 @@ spec s = do
 
     Spec.it s "skips non-marker lines before the header" $ do
       Spec.assertEq s (extractHeader "-- a comment\n{- cabal:\nx\n-}") (Just "x\n")
+
+  Spec.named s 'parseCabalFile $ do
+    Spec.it s "returns empty for empty input" $ do
+      Spec.assertEq s (parseCabalFile "") ([], Nothing)
+
+    Spec.it s "returns empty for invalid cabal content" $ do
+      Spec.assertEq s (parseCabalFile "!!!") ([], Nothing)
+
+    Spec.it s "discovers top-level default-extensions" $ do
+      Spec.assertEq
+        s
+        (parseCabalFile "default-extensions: OverloadedStrings")
+        (["OverloadedStrings"], Nothing)
+
+    Spec.it s "discovers default-language" $ do
+      Spec.assertEq
+        s
+        (parseCabalFile "default-language: GHC2021")
+        ([], Just "GHC2021")
+
+    Spec.it s "discovers extensions inside a section" $ do
+      Spec.assertEq
+        s
+        ( parseCabalFile
+            "library\n  default-extensions: GADTs"
+        )
+        (["GADTs"], Nothing)
+
+    Spec.it s "discovers extensions in multiple sections" $ do
+      Spec.assertEq
+        s
+        ( parseCabalFile
+            "common warnings\n  default-extensions: OverloadedStrings\nlibrary\n  default-extensions: GADTs"
+        )
+        (["OverloadedStrings", "GADTs"], Nothing)
+
+    Spec.it s "picks the last default-language" $ do
+      Spec.assertEq
+        s
+        ( parseCabalFile
+            "common base\n  default-language: Haskell2010\nlibrary\n  default-language: GHC2021"
+        )
+        ([], Just "GHC2021")
+
+    Spec.it s "discovers both extensions and language" $ do
+      Spec.assertEq
+        s
+        ( parseCabalFile
+            "library\n  default-language: GHC2021\n  default-extensions: OverloadedStrings"
+        )
+        (["OverloadedStrings"], Just "GHC2021")

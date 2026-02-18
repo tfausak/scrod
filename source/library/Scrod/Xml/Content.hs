@@ -44,13 +44,13 @@ spec s = do
       Spec.assertEq s (isEmpty $ Text Text.empty) True
 
     Spec.it s "returns False for non-empty Text" $ do
-      Spec.assertEq s (isEmpty $ Text $ Text.pack "hello") False
+      Spec.assertEq s (isEmpty . Text $ Text.pack "hello") False
 
     Spec.it s "returns True for empty Raw" $ do
       Spec.assertEq s (isEmpty $ Raw Text.empty) True
 
     Spec.it s "returns False for non-empty Raw" $ do
-      Spec.assertEq s (isEmpty $ Raw $ Text.pack "hello") False
+      Spec.assertEq s (isEmpty . Raw $ Text.pack "hello") False
 
     Spec.it s "returns False for Element" $ do
       Spec.assertEq s (isEmpty $ Element "test") False

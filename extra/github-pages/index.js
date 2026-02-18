@@ -32,6 +32,7 @@ function effectiveTheme() {
 }
 
 function setShadowMessage(element) {
+  output.classList.add('p-3');
   shadow.textContent = '';
   shadow.appendChild(bootstrapLink());
   var wrapper = document.createElement('div');
@@ -116,6 +117,7 @@ worker.onmessage = function (e) {
     if (msg.format === 'json') {
       showJson(msg.value);
     } else {
+      output.classList.remove('p-3');
       shadow.innerHTML = msg.value;
       syncShadowTheme();
       renderMath();

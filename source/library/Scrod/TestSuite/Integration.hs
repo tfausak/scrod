@@ -2203,12 +2203,9 @@ spec s = Spec.describe s "integration" $ do
         type O :: *
         data O
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"O\""),
-          ("/items/0/value/signature", "\"*\""),
-          ("/items/1/value/kind/type", "\"DataType\""),
-          ("/items/1/value/name", "\"O\""),
-          ("/items/1/value/parentKey", "0")
+          ("/items/0/value/signature", "\"*\"")
         ]
 
     Spec.it s "standalone kind signature with data" $ do
@@ -2218,16 +2215,12 @@ spec s = Spec.describe s "integration" $ do
         type X :: a -> a
         data X a = X
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"DataType\""),
           ("/items/0/value/name", "\"X\""),
           ("/items/0/value/signature", "\"a -> a\""),
-          ("/items/1/value/kind/type", "\"DataType\""),
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
           ("/items/1/value/name", "\"X\""),
-          ("/items/1/value/parentKey", "0"),
-          ("/items/1/value/signature", "\"a\""),
-          ("/items/2/value/kind/type", "\"DataConstructor\""),
-          ("/items/2/value/name", "\"X\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/1/value/parentKey", "1")
         ]
 
     Spec.it s "standalone kind signature with newtype" $ do
@@ -2237,16 +2230,12 @@ spec s = Spec.describe s "integration" $ do
         type Phantom :: * -> *
         newtype Phantom a = MkPhantom ()
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"Newtype\""),
           ("/items/0/value/name", "\"Phantom\""),
           ("/items/0/value/signature", "\"* -> *\""),
-          ("/items/1/value/kind/type", "\"Newtype\""),
-          ("/items/1/value/name", "\"Phantom\""),
-          ("/items/1/value/parentKey", "0"),
-          ("/items/1/value/signature", "\"a\""),
-          ("/items/2/value/kind/type", "\"DataConstructor\""),
-          ("/items/2/value/name", "\"MkPhantom\""),
-          ("/items/2/value/parentKey", "1")
+          ("/items/1/value/kind/type", "\"DataConstructor\""),
+          ("/items/1/value/name", "\"MkPhantom\""),
+          ("/items/1/value/parentKey", "1")
         ]
 
     Spec.it s "standalone kind signature with type synonym" $ do
@@ -2256,12 +2245,9 @@ spec s = Spec.describe s "integration" $ do
         type T :: * -> *
         type T a = Maybe a
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"TypeSynonym\""),
           ("/items/0/value/name", "\"T\""),
-          ("/items/0/value/signature", "\"* -> *\""),
-          ("/items/1/value/kind/type", "\"TypeSynonym\""),
-          ("/items/1/value/name", "\"T\""),
-          ("/items/1/value/parentKey", "0")
+          ("/items/0/value/signature", "\"* -> *\"")
         ]
 
     Spec.it s "standalone kind signature with class" $ do
@@ -2272,12 +2258,9 @@ spec s = Spec.describe s "integration" $ do
         type C :: * -> Constraint
         class C a
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"Class\""),
           ("/items/0/value/name", "\"C\""),
-          ("/items/0/value/signature", "\"* -> Constraint\""),
-          ("/items/1/value/kind/type", "\"Class\""),
-          ("/items/1/value/name", "\"C\""),
-          ("/items/1/value/parentKey", "0")
+          ("/items/0/value/signature", "\"* -> Constraint\"")
         ]
 
     Spec.it s "standalone kind signature with type family" $ do
@@ -2288,12 +2271,9 @@ spec s = Spec.describe s "integration" $ do
         type F :: * -> *
         type family F a
         """
-        [ ("/items/0/value/kind/type", "\"StandaloneKindSig\""),
+        [ ("/items/0/value/kind/type", "\"OpenTypeFamily\""),
           ("/items/0/value/name", "\"F\""),
-          ("/items/0/value/signature", "\"* -> *\""),
-          ("/items/1/value/kind/type", "\"OpenTypeFamily\""),
-          ("/items/1/value/name", "\"F\""),
-          ("/items/1/value/parentKey", "0")
+          ("/items/0/value/signature", "\"* -> *\"")
         ]
 
     Spec.it s "default declaration" $ do

@@ -39,9 +39,9 @@ buildMergeMap items =
 
 -- | Check if an item is eligible for merging.
 --
--- Standalone kind signatures are excluded because they should remain
--- as separate items with the associated declaration parented to them,
--- not merged into a single item (see 'KindSigParents').
+-- Standalone kind signatures are excluded because they are merged
+-- into their corresponding declarations in a separate pass (see
+-- 'KindSigParents').
 isMergeCandidate :: Located.Located Item.Item -> Bool
 isMergeCandidate item =
   let val = Located.value item

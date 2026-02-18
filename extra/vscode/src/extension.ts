@@ -158,10 +158,10 @@ function wrapperHtml(): string {
       color: var(--vscode-foreground) !important;
     }
     a:not(.btn) {
-      color: var(--vscode-textLink-foreground);
+      color: var(--vscode-textLink-foreground) !important;
     }
     a:not(.btn):hover {
-      color: var(--vscode-textLink-activeForeground);
+      color: var(--vscode-textLink-activeForeground) !important;
     }
     .link-underline {
       color: var(--vscode-textLink-foreground) !important;
@@ -186,6 +186,7 @@ function wrapperHtml(): string {
     }
     .badge.text-bg-warning {
       background-color: var(--vscode-editorWarning-foreground) !important;
+      color: var(--vscode-editor-background) !important;
     }
     .btn-outline-secondary {
       color: var(--vscode-foreground) !important;
@@ -214,10 +215,10 @@ function wrapperHtml(): string {
       --bs-table-border-color: var(--vscode-widget-border);
     }
     pre, code {
-      color: inherit;
+      color: inherit !important;
     }
     h1, h2, h3, h4, h5, h6 {
-      color: var(--vscode-foreground);
+      color: var(--vscode-foreground) !important;
     }
   </style>
 </head>
@@ -256,6 +257,8 @@ function wrapperHtml(): string {
           }
         }
 
+        // Re-append the VS Code theme <style> to the end of <head> so its
+        // rules cascade after any dynamically-loaded stylesheets (Bootstrap).
         var themeStyle = document.getElementById('vscode-theme');
         if (themeStyle) {
           document.head.appendChild(themeStyle);

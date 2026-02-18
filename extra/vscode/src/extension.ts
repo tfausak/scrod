@@ -9,22 +9,27 @@ let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
 let pendingHtml: string | undefined;
 let previewDocumentUri: vscode.Uri | undefined;
+let cabalFileCache: vscode.Uri[] | null = null;
+let cabalContentCache: Map<string, string> = new Map();
+const log = vscode.window.createOutputChannel("Scrod", { log: true });
 
 export function activate(context: vscode.ExtensionContext): void {
   engine = loadWasmEngine(context.extensionPath);
 
   const cabalWatcher = vscode.workspace.createFileSystemWatcher("**/*.cabal");
-  const refreshPreview = () => {
+  const invalidateAndRefresh = () => {
+    cabalFileCache = null;
+    cabalContentCache.clear();
     if (panel && previewDocumentUri) {
       vscode.workspace.openTextDocument(previewDocumentUri).then((doc) => {
         immediateUpdate(doc);
       });
     }
   };
-  cabalWatcher.onDidChange(refreshPreview);
-  cabalWatcher.onDidCreate(refreshPreview);
-  cabalWatcher.onDidDelete(refreshPreview);
-  context.subscriptions.push(cabalWatcher);
+  cabalWatcher.onDidChange(invalidateAndRefresh);
+  cabalWatcher.onDidCreate(invalidateAndRefresh);
+  cabalWatcher.onDidDelete(invalidateAndRefresh);
+  context.subscriptions.push(cabalWatcher, log);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("scrod.openPreview", () => {
@@ -91,17 +96,26 @@ function isHaskell(doc: vscode.TextDocument): boolean {
 }
 
 async function findNearestCabalContent(documentUri: vscode.Uri): Promise<string | null> {
-  const cabalFiles = await vscode.workspace.findFiles("**/*.cabal");
-  if (cabalFiles.length === 0) return null;
+  if (cabalFileCache === null) {
+    const t0 = performance.now();
+    cabalFileCache = await vscode.workspace.findFiles("**/*.cabal", "{**/dist-newstyle/**,**/.stack-work/**}");
+    log.info(`findFiles **/*.cabal: ${(performance.now() - t0).toFixed(1)} ms, found ${cabalFileCache.length}`);
+  }
+  if (cabalFileCache.length === 0) return null;
   const docDir = path.dirname(documentUri.fsPath);
-  const closest = cabalFiles.reduce((a, b) => {
+  const closest = cabalFileCache.reduce((a, b) => {
     const aDist = directoryDistance(docDir, path.dirname(a.fsPath));
     const bDist = directoryDistance(docDir, path.dirname(b.fsPath));
     return aDist <= bDist ? a : b;
   });
+  const key = closest.toString();
+  const cached = cabalContentCache.get(key);
+  if (cached !== undefined) return cached;
   try {
     const bytes = await vscode.workspace.fs.readFile(closest);
-    return Buffer.from(bytes).toString("utf-8");
+    const content = Buffer.from(bytes).toString("utf-8");
+    cabalContentCache.set(key, content);
+    return content;
   } catch {
     return null;
   }
@@ -141,7 +155,9 @@ async function update(document: vscode.TextDocument): Promise<void> {
   const literate =
     document.languageId === "literate haskell" || ext === ".lhs" || ext === ".lhsig";
   const isSignature = ext === ".hsig" || ext === ".lhsig";
+  const t0 = performance.now();
   const cabalContent = await findNearestCabalContent(document.uri);
+  const t1 = performance.now();
   let html: string;
   try {
     const process = await engine;
@@ -154,6 +170,8 @@ async function update(document: vscode.TextDocument): Promise<void> {
       .replace(/>/g, "&gt;");
     html = `<pre style="color: var(--vscode-errorForeground, #c00); white-space: pre-wrap; padding: 1rem;">${escaped}</pre>`;
   }
+  const t2 = performance.now();
+  log.info(`update ${path.basename(document.fileName)}: cabal ${(t1 - t0).toFixed(1)} ms, render ${(t2 - t1).toFixed(1)} ms`);
   if (!webviewReady) {
     pendingHtml = html;
     return;

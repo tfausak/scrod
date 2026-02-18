@@ -9,8 +9,11 @@ let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
 let pendingHtml: string | undefined;
 let previewDocumentUri: vscode.Uri | undefined;
+let outputChannel: vscode.OutputChannel | undefined;
 
 export function activate(context: vscode.ExtensionContext): void {
+  outputChannel = vscode.window.createOutputChannel("Scrod");
+  context.subscriptions.push(outputChannel);
   engine = loadWasmEngine(context.extensionPath);
 
   context.subscriptions.push(
@@ -104,7 +107,13 @@ async function update(document: vscode.TextDocument): Promise<void> {
   let html: string;
   try {
     const process = await engine;
-    html = await process(document.getText(), literate, isSignature);
+    const source = document.getText();
+    const start = performance.now();
+    html = await process(source, literate, isSignature);
+    const elapsed = performance.now() - start;
+    outputChannel?.appendLine(
+      `${path.basename(document.fileName)}: finished in ${Math.round(elapsed)} ms`
+    );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const escaped = message

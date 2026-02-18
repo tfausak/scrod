@@ -128,6 +128,41 @@ spec s = Spec.describe s "integration" $ do
         """
         [("/extensions/Cpp", "true")]
 
+    Spec.it s "works with --ghc-option extension" $ do
+      checkWith
+        s
+        ["--ghc-option", "-XOverloadedStrings"]
+        ""
+        [("/extensions/OverloadedStrings", "true")]
+
+    Spec.it s "works with --ghc-option language" $ do
+      checkWith
+        s
+        ["--ghc-option", "-XHaskell2010"]
+        ""
+        [("/language", "\"Haskell2010\"")]
+
+    Spec.it s "source pragmas override --ghc-option" $ do
+      checkWith
+        s
+        ["--ghc-option", "-XOverloadedStrings"]
+        "{-# language NoOverloadedStrings #-}"
+        [("/extensions/OverloadedStrings", "false")]
+
+    Spec.it s "works with --cabal extensions" $ do
+      checkWith
+        s
+        ["--cabal", "library\n  default-extensions: OverloadedStrings"]
+        ""
+        [("/extensions/OverloadedStrings", "true")]
+
+    Spec.it s "works with --cabal language" $ do
+      checkWith
+        s
+        ["--cabal", "library\n  default-language: GHC2021"]
+        ""
+        [("/language", "\"GHC2021\"")]
+
   Spec.describe s "documentation" $ do
     Spec.it s "defaults to Empty" $ do
       check s "" [("/documentation/type", "\"Empty\"")]

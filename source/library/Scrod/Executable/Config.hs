@@ -12,7 +12,9 @@ import qualified Scrod.Extra.Read as Read
 import qualified Scrod.Spec as Spec
 
 data Config = MkConfig
-  { format :: Format.Format,
+  { cabal :: Maybe String,
+    format :: Format.Format,
+    ghcOptions :: [String],
     help :: Bool,
     literate :: Bool,
     schema :: Bool,
@@ -26,9 +28,11 @@ fromFlags = Monad.foldM applyFlag initial
 
 applyFlag :: (Stack.HasCallStack, Exception.MonadThrow m) => Config -> Flag.Flag -> m Config
 applyFlag config flag = case flag of
+  Flag.Cabal string -> pure config {cabal = Just string}
   Flag.Format string -> do
     fmt <- Format.fromString string
     pure config {format = fmt}
+  Flag.GhcOption string -> pure config {ghcOptions = ghcOptions config <> [string]}
   Flag.Help maybeString -> case maybeString of
     Nothing -> pure config {help = True}
     Just string -> do
@@ -58,7 +62,9 @@ applyFlag config flag = case flag of
 initial :: Config
 initial =
   MkConfig
-    { format = Format.Json,
+    { cabal = Nothing,
+      format = Format.Json,
+      ghcOptions = [],
       help = False,
       literate = False,
       schema = False,
@@ -139,3 +145,20 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Help $ Just "invalid"]) Nothing
+
+    Spec.describe s "ghcOptions" $ do
+      Spec.it s "defaults to empty" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags []) $ Just []
+
+      Spec.it s "collects one option" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags [Flag.GhcOption "-XCPP"]) $ Just ["-XCPP"]
+
+      Spec.it s "collects multiple options in order" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags [Flag.GhcOption "-XCPP", Flag.GhcOption "-XGADTs"]) $ Just ["-XCPP", "-XGADTs"]
+
+    Spec.describe s "cabal" $ do
+      Spec.it s "defaults to nothing" $ do
+        Spec.assertEq s (cabal <$> fromFlags []) $ Just Nothing
+
+      Spec.it s "works with content" $ do
+        Spec.assertEq s (cabal <$> fromFlags [Flag.Cabal "library\n  default-extensions: GADTs"]) $ Just (Just "library\n  default-extensions: GADTs")

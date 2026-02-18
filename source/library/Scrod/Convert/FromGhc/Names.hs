@@ -230,7 +230,7 @@ stripHsDocTy lTy = case lTy of
 -- | Extract argument types and their optional doc comments from a type
 -- signature. Walks the 'HsFunTy' chain, collecting each argument's
 -- pretty-printed type text and its 'LHsDoc' (if the argument was wrapped
--- in 'HsDocTy'). The return type (final non-arrow part) is not included.
+-- in 'HsDocTy'). The return type is included only when it has documentation.
 --
 -- Handles 'TypeSig' (unwrap via 'hswc_body'), 'PatSynSig', and
 -- 'ClassOpSig' (unwrap via 'sig_body' on 'HsSigType').
@@ -255,7 +255,7 @@ extractArgsFromBody lTy = case SrcLoc.unLoc lTy of
   Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
   Syntax.HsDocTy _ inner _doc -> case SrcLoc.unLoc inner of
     Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
-    _ -> extractArgsFromBody inner
+    _ -> [extractArg lTy]
   _ -> []
 
 -- | Extract the type text and optional doc comment from a single argument.

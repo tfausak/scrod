@@ -22,6 +22,7 @@ import qualified Data.ByteString.Char8 as Char8
 import qualified Data.Char as Char
 import qualified Data.List as List
 import qualified Distribution.Fields as Fields
+import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Scrod.Spec as Spec
 
 -- | Discover extension names from a Cabal script header, if present.
@@ -85,6 +86,15 @@ parseCabalFile content =
           exts = concatMap (fieldValues "default-extensions") allFlat
           langs = concatMap (fieldValues "default-language") allFlat
        in (exts, lastMaybe langs)
+
+-- | Parse a @.cabal@ file and return GHC option strings for discovered
+-- extensions and language.
+parseCabalFileOptions :: String -> [SrcLoc.Located String]
+parseCabalFileOptions content =
+  let (exts, lang) = parseCabalFile content
+      langOpts = maybe [] (\l -> [SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> l]) lang
+      extOpts = fmap (\e -> SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> e) exts
+   in langOpts <> extOpts
 
 flattenFields :: [Fields.Field pos] -> [Fields.Field pos]
 flattenFields = concatMap go

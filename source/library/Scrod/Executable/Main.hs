@@ -11,7 +11,9 @@ import qualified Data.Bifunctor as Bifunctor
 import qualified Data.ByteString.Builder as Builder
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
+import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified PackageInfo_scrod as PackageInfo
+import qualified Scrod.Cabal as Cabal
 import qualified Scrod.Convert.FromGhc as FromGhc
 import qualified Scrod.Convert.ToHtml as ToHtml
 import qualified Scrod.Convert.ToJsonSchema as ToJsonSchema
@@ -63,7 +65,10 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
       then Either.throw . Bifunctor.first userError $ Unlit.unlit contents
       else pure contents
   let isSignature = Config.signature config
-  result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature source
+  let cabalFileOptions = maybe [] Cabal.parseCabalFileOptions (Config.cabal config)
+  let ghcOpts = fmap (SrcLoc.L SrcLoc.noSrcSpan) (Config.ghcOptions config)
+  let extraOptions = cabalFileOptions <> ghcOpts
+  result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature extraOptions source
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson

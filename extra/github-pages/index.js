@@ -117,6 +117,9 @@ worker.onmessage = function (e) {
       showJson(msg.value);
     } else {
       shadow.innerHTML = msg.value;
+      var style = document.createElement('style');
+      style.textContent = '.py-5 { padding-top: 0 !important; }';
+      shadow.prepend(style);
       syncShadowTheme();
       renderMath();
     }

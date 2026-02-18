@@ -151,6 +151,7 @@ categorizeFields fields =
   let (topFields, commons, mainLib, others) = go [] [] Nothing [] fields
    in (reverse commons, mainLib, reverse others, parseComponent (reverse topFields))
   where
+    go :: [Fields.Field pos] -> [(String, Component)] -> Maybe Component -> [Component] -> [Fields.Field pos] -> ([Fields.Field pos], [(String, Component)], Maybe Component, [Component])
     go topFs cs lib os [] = (topFs, cs, lib, os)
     go topFs cs lib os (f : fs) = case f of
       Fields.Section (Fields.Name _ name) args nested
@@ -171,6 +172,7 @@ categorizeFields fields =
               Char8.pack
               ["library", "executable", "test-suite", "benchmark", "foreign-library"]
 
+    sectionArgName :: [Fields.SectionArg pos] -> String
     sectionArgName [] = ""
     sectionArgName (arg : _) = case arg of
       Fields.SecArgName _ bs -> Char8.unpack bs

@@ -163,6 +163,20 @@ spec s = Spec.describe s "integration" $ do
         ""
         [("/language", "\"GHC2021\"")]
 
+    Spec.it s "--cabal matches module to component" $ do
+      checkWith
+        s
+        ["--cabal", "library\n  exposed-modules: Foo\n  default-extensions: OverloadedStrings\nexecutable bar\n  default-extensions: CPP"]
+        "module Foo where"
+        [("/extensions/OverloadedStrings", "true")]
+
+    Spec.it s "--cabal falls back to library with no module" $ do
+      checkWith
+        s
+        ["--cabal", "library\n  default-extensions: OverloadedStrings\nexecutable bar\n  default-extensions: CPP"]
+        ""
+        [("/extensions/OverloadedStrings", "true")]
+
   Spec.describe s "documentation" $ do
     Spec.it s "defaults to Empty" $ do
       check s "" [("/documentation/type", "\"Empty\"")]

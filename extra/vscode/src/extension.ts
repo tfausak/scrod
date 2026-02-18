@@ -9,29 +9,21 @@ let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 let webviewReady = false;
 let pendingHtml: string | undefined;
 let previewDocumentUri: vscode.Uri | undefined;
-let cabalContent: string | null = null;
 
 export function activate(context: vscode.ExtensionContext): void {
   engine = loadWasmEngine(context.extensionPath);
 
-  discoverCabalContent().then((content) => {
-    cabalContent = content;
-  });
-
   const cabalWatcher = vscode.workspace.createFileSystemWatcher("**/*.cabal");
-  cabalWatcher.onDidChange(() => {
-    discoverCabalContent().then((content) => {
-      cabalContent = content;
-    });
-  });
-  cabalWatcher.onDidCreate(() => {
-    discoverCabalContent().then((content) => {
-      cabalContent = content;
-    });
-  });
-  cabalWatcher.onDidDelete(() => {
-    cabalContent = null;
-  });
+  const refreshPreview = () => {
+    if (panel && previewDocumentUri) {
+      vscode.workspace.openTextDocument(previewDocumentUri).then((doc) => {
+        immediateUpdate(doc);
+      });
+    }
+  };
+  cabalWatcher.onDidChange(refreshPreview);
+  cabalWatcher.onDidCreate(refreshPreview);
+  cabalWatcher.onDidDelete(refreshPreview);
   context.subscriptions.push(cabalWatcher);
 
   context.subscriptions.push(
@@ -98,12 +90,29 @@ function isHaskell(doc: vscode.TextDocument): boolean {
   );
 }
 
-async function discoverCabalContent(): Promise<string | null> {
-  const files = await vscode.workspace.findFiles("**/*.cabal", "**/dist-newstyle/**", 1);
-  const file = files[0];
-  if (!file) return null;
-  const bytes = await vscode.workspace.fs.readFile(file);
-  return Buffer.from(bytes).toString("utf-8");
+async function findNearestCabalContent(documentUri: vscode.Uri): Promise<string | null> {
+  let dir = path.dirname(documentUri.fsPath);
+  const root = vscode.workspace.getWorkspaceFolder(documentUri)?.uri.fsPath;
+  while (true) {
+    try {
+      const entries = await vscode.workspace.fs.readDirectory(vscode.Uri.file(dir));
+      const cabalEntry = entries.find(
+        ([name, type]) => type === vscode.FileType.File && name.endsWith(".cabal")
+      );
+      if (cabalEntry) {
+        const cabalUri = vscode.Uri.file(path.join(dir, cabalEntry[0]));
+        const bytes = await vscode.workspace.fs.readFile(cabalUri);
+        return Buffer.from(bytes).toString("utf-8");
+      }
+    } catch {
+      // directory not readable
+    }
+    if (root && dir === root) break;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  return null;
 }
 
 function immediateUpdate(document: vscode.TextDocument | undefined): void {
@@ -130,6 +139,7 @@ async function update(document: vscode.TextDocument): Promise<void> {
   const literate =
     document.languageId === "literate haskell" || ext === ".lhs" || ext === ".lhsig";
   const isSignature = ext === ".hsig" || ext === ".lhsig";
+  const cabalContent = await findNearestCabalContent(document.uri);
   let html: string;
   try {
     const process = await engine;

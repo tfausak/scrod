@@ -111,7 +111,7 @@ async function update(document: vscode.TextDocument): Promise<void> {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
-    html = `<pre style="color: #c00; white-space: pre-wrap; padding: 1rem;">${escaped}</pre>`;
+    html = `<pre style="color: var(--vscode-errorForeground, #c00); white-space: pre-wrap; padding: 1rem;">${escaped}</pre>`;
   }
   if (!webviewReady) {
     pendingHtml = html;
@@ -152,6 +152,75 @@ function wrapperHtml(): string {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https:; style-src 'unsafe-inline' https://esm.sh; font-src https://esm.sh; script-src 'nonce-${nonce}' https://esm.sh;">
+  <style id="vscode-theme">
+    body {
+      background-color: var(--vscode-editor-background) !important;
+      color: var(--vscode-foreground) !important;
+    }
+    a:not(.btn) {
+      color: var(--vscode-textLink-foreground) !important;
+    }
+    a:not(.btn):hover {
+      color: var(--vscode-textLink-activeForeground) !important;
+    }
+    .link-underline {
+      color: var(--vscode-textLink-foreground) !important;
+    }
+    .text-secondary, .text-body-secondary {
+      color: var(--vscode-descriptionForeground) !important;
+    }
+    .card {
+      background-color: var(--vscode-editorWidget-background) !important;
+      border-color: var(--vscode-widget-border) !important;
+    }
+    .card-header {
+      border-color: var(--vscode-widget-border) !important;
+    }
+    .badge.text-bg-secondary {
+      background-color: var(--vscode-badge-background) !important;
+      color: var(--vscode-badge-foreground) !important;
+    }
+    .badge.text-bg-info {
+      background-color: var(--vscode-badge-background) !important;
+      color: var(--vscode-badge-foreground) !important;
+    }
+    .badge.text-bg-warning {
+      background-color: var(--vscode-editorWarning-foreground) !important;
+      color: var(--vscode-editor-background) !important;
+    }
+    .btn-outline-secondary {
+      color: var(--vscode-foreground) !important;
+      border-color: var(--vscode-widget-border) !important;
+    }
+    .btn-outline-secondary:hover {
+      background-color: var(--vscode-button-secondaryBackground) !important;
+      color: var(--vscode-button-secondaryForeground) !important;
+    }
+    .alert-warning {
+      background-color: var(--vscode-inputValidation-warningBackground) !important;
+      border-color: var(--vscode-inputValidation-warningBorder) !important;
+      color: var(--vscode-foreground) !important;
+    }
+    .alert-info {
+      background-color: var(--vscode-inputValidation-infoBackground) !important;
+      border-color: var(--vscode-inputValidation-infoBorder) !important;
+      color: var(--vscode-foreground) !important;
+    }
+    .text-warning {
+      color: var(--vscode-editorWarning-foreground) !important;
+    }
+    .table {
+      --bs-table-color: var(--vscode-foreground);
+      --bs-table-bg: transparent;
+      --bs-table-border-color: var(--vscode-widget-border);
+    }
+    pre, code {
+      color: inherit !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      color: var(--vscode-foreground) !important;
+    }
+  </style>
 </head>
 <body>
   <script nonce="${nonce}">
@@ -186,6 +255,13 @@ function wrapperHtml(): string {
           if (href && !document.querySelector('link[href="' + href + '"]')) {
             document.head.appendChild(newLinks[i].cloneNode());
           }
+        }
+
+        // Re-append the VS Code theme <style> to the end of <head> so its
+        // rules cascade after any dynamically-loaded stylesheets (Bootstrap).
+        var themeStyle = document.getElementById('vscode-theme');
+        if (themeStyle) {
+          document.head.appendChild(themeStyle);
         }
 
         var scrollTop = document.documentElement.scrollTop;

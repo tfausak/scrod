@@ -153,11 +153,19 @@ h98ArgsToDoc details = case details of
         Outputable.<+> Outputable.text "->"
         Outputable.<+> Outputable.ppr (Syntax.cdf_type r)
   Syntax.RecCon lFields ->
-    Just $
-      Outputable.text "{"
-        Outputable.<+> Outputable.hsep
-          (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr (SrcLoc.unLoc lFields)))
-        Outputable.<+> Outputable.text "}"
+    let fields = SrcLoc.unLoc lFields
+     in Just $ case fields of
+          [f] ->
+            Outputable.text "{"
+              Outputable.<+> Outputable.ppr f
+              Outputable.<+> Outputable.text "}"
+          (f : fs) ->
+            Outputable.vcat $
+              [Outputable.text "{" Outputable.<+> Outputable.ppr f]
+                <> fmap (\fld -> Outputable.text "," Outputable.<+> Outputable.ppr fld) fs
+                <> [Outputable.text "}"]
+          [] ->
+            Outputable.text "{}"
 
 -- | Strip documentation from H98 constructor details.
 stripH98DetailsDocs ::

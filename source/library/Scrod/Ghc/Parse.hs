@@ -12,8 +12,8 @@
 module Scrod.Ghc.Parse where
 
 import qualified Control.Monad.Catch as Exception
-import Data.Either (fromRight)
 import qualified Data.Bifunctor as Bifunctor
+import Data.Either (fromRight)
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer

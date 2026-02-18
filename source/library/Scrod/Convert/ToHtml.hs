@@ -592,12 +592,13 @@ declarationsContents exports items =
                 let (rest, used') = walkExports es used
                  in (exportMeta <> rest, used')
               Nothing ->
-                let namePrefix = case ExportName.kind exportName of
+                let kind = ExportName.kind exportName
+                    namePrefix = case kind of
                       Just ExportNameKind.Module -> "module "
                       Just ExportNameKind.Pattern -> "pattern "
                       Just ExportNameKind.Type -> "type "
                       Nothing -> ""
-                    badge = case ExportName.kind exportName of
+                    badge = case kind of
                       Just ExportNameKind.Module ->
                         [ element
                             "div"

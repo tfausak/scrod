@@ -740,7 +740,7 @@ itemContent item children =
     ]
     [ element
         "div"
-        [("class", "align-items-center card-header d-flex")]
+        [("class", "align-items-start card-header d-flex")]
         $ [ element
               "div"
               []
@@ -819,10 +819,10 @@ itemContent item children =
       Just sig ->
         [ element
             "div"
-            [("class", "mx-2")]
+            [("class", "mx-2"), ("style", "min-width: 0")]
             [ element
                 "code"
-                [("class", "text-break text-secondary")]
+                [("class", "text-break text-secondary"), ("style", "white-space: pre-wrap")]
                 [Xml.text $ prefix <> sig]
             ]
         ]

@@ -1284,6 +1284,13 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/signature", "\"{ f4 :: Int } -> T4\"")
         ]
 
+    Spec.it s "data constructor with multiple record fields" $ do
+      check
+        s
+        "data T = C { f1 :: Int, f2 :: Bool }"
+        [ ("/items/1/value/signature", "\"{ f1 :: Int\\n, f2 :: Bool\\n} -> T\"")
+        ]
+
     Spec.it s "data constructor with existential" $ do
       check
         s

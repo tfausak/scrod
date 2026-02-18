@@ -92,7 +92,7 @@ parseCabalFile content =
 parseCabalFileOptions :: String -> [SrcLoc.Located String]
 parseCabalFileOptions content =
   let (exts, lang) = parseCabalFile content
-      langOpts = maybe [] (\l -> [SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> l]) lang
+      langOpts = foldMap (\l -> [SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> l]) lang
       extOpts = fmap (\e -> SrcLoc.L SrcLoc.noSrcSpan $ "-X" <> e) exts
    in langOpts <> extOpts
 

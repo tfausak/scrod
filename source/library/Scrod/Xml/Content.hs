@@ -39,6 +39,25 @@ encode encodeElement c = case c of
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
+  Spec.named s 'isEmpty $ do
+    Spec.it s "returns True for empty Text" $ do
+      Spec.assertEq s (isEmpty $ Text Text.empty) True
+
+    Spec.it s "returns False for non-empty Text" $ do
+      Spec.assertEq s (isEmpty $ Text $ Text.pack "hello") False
+
+    Spec.it s "returns True for empty Raw" $ do
+      Spec.assertEq s (isEmpty $ Raw Text.empty) True
+
+    Spec.it s "returns False for non-empty Raw" $ do
+      Spec.assertEq s (isEmpty $ Raw $ Text.pack "hello") False
+
+    Spec.it s "returns False for Element" $ do
+      Spec.assertEq s (isEmpty $ Element "test") False
+
+    Spec.it s "returns False for Comment" $ do
+      Spec.assertEq s (isEmpty $ Comment (Comment.MkComment $ Text.pack " test ")) False
+
   Spec.named s 'encode $ do
     let encodeElement :: String -> Builder.Builder
         encodeElement _ = Builder.stringUtf8 "<test/>"

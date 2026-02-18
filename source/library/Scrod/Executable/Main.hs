@@ -67,7 +67,7 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
   let isSignature = Config.signature config
   let moduleName = Parse.extractModuleName source
   let cabalFileOptions = foldMap (Cabal.parseCabalFileOptionsForModule moduleName) (Config.cabal config)
-  let ghcOpts = fmap (SrcLoc.L SrcLoc.noSrcSpan) (Config.ghcOptions config)
+  let ghcOpts = foldMap (\s -> [SrcLoc.L SrcLoc.noSrcSpan s]) (Config.ghcOptions config)
   let extraOptions = cabalFileOptions <> ghcOpts
   result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature extraOptions source
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result

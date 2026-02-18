@@ -56,9 +56,10 @@ onmessage = async function (e) {
       const args = ['--format', msg.format];
       if (msg.literate) args.push('--literate');
       if (msg.signature) args.push('--signature');
-      console.time('scrod');
+      const start = performance.now();
       const result = await scrod(args, msg.source);
-      console.timeEnd('scrod');
+      const elapsed = performance.now() - start;
+      console.log('scrod: finished in ' + Math.round(elapsed) + ' ms');
       postMessage({ tag: 'result', value: result, format: msg.format });
     } catch (err) {
       postMessage({ tag: 'error', message: err.message });

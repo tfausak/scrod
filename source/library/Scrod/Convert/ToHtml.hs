@@ -152,8 +152,14 @@ bodyElement x =
             <> foldMap (List.singleton . warningContent) (Module.warning x)
             <> foldMap (List.singleton . sinceContent) (Module.since x)
             <> docContents (Module.documentation x)
-            <> [element "section" [("class", "my-3")] . extensionsContents (Module.language x) $ Module.extensions x]
-            <> [element "section" [("class", "my-3")] . importsContents $ Module.imports x]
+            <> ( if Maybe.isNothing (Module.language x) && Map.null (Module.extensions x)
+                   then []
+                   else [element "section" [("class", "my-3")] . extensionsContents (Module.language x) $ Module.extensions x]
+               )
+            <> ( if null (Module.imports x)
+                   then []
+                   else [element "section" [("class", "my-3")] . importsContents $ Module.imports x]
+               )
             <> [element "section" [("class", "my-3")] $ declarationsContents (Module.exports x) (Module.items x)]
             <> [footerContent x]
         )

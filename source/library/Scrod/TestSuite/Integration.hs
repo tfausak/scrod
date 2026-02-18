@@ -2537,7 +2537,12 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
-          ("/items/1/value/documentation/value/value", "\"i\"")
+          ("/items/1/value/documentation/value/value", "\"i\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"a\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"o\"")
         ]
 
     Spec.it s "function without arg docs" $ do
@@ -2572,7 +2577,34 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
-          ("/items/1/value/documentation/value/value", "\"input\"")
+          ("/items/1/value/documentation/value/value", "\"input\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"String\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"output\"")
+        ]
+
+    Spec.it s "function with return value doc only" $ do
+      check
+        s
+        """
+        f :: a
+          -> a -- ^ lost
+        """
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/signature", "\"a -> a\""),
+          ("/items/0/value/documentation/type", "\"Empty\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"a\""),
+          ("/items/1/value/documentation/type", "\"Empty\""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"a\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"lost\"")
         ]
 
     Spec.it s "data constructor with arg doc has argument children" $ do

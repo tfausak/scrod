@@ -765,8 +765,8 @@ itemContent item children =
                        ]
                    ]
                ]
-        ]
-    <> cardBody
+      ]
+      <> cardBody
   where
     cardBody =
       let contents =

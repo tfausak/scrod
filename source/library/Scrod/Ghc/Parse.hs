@@ -13,7 +13,7 @@ module Scrod.Ghc.Parse where
 
 import qualified Control.Monad.Catch as Exception
 import qualified Data.Bifunctor as Bifunctor
-import Data.Either (fromRight)
+import qualified Data.Either as Either
 import qualified GHC.Data.EnumSet as EnumSet
 import qualified GHC.Data.FastString as FastString
 import qualified GHC.Data.StringBuffer as StringBuffer
@@ -107,7 +107,7 @@ interactiveFilePath = "<interactive>"
 -- correctly handling comments and pragmas.
 extractModuleName :: String -> Maybe String
 extractModuleName =
-  fromRight Nothing . extractModuleNameE
+  Either.fromRight Nothing . extractModuleNameE
 
 extractModuleNameE :: String -> Either SourceError.SourceError (Maybe String)
 extractModuleNameE string =

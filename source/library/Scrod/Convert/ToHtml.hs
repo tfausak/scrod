@@ -773,7 +773,7 @@ itemContent item children =
             foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
               <> docContents (Item.documentation $ Located.value item)
               <> children
-       in if null contents
+       in if all Content.isEmpty contents
             then []
             else
               [ element
@@ -874,7 +874,11 @@ kindToString x = case x of
 
 docContents :: Doc.Doc -> [Content.Content Element.Element]
 docContents doc = case doc of
-  Doc.Empty -> []
+  -- The empty string node prevents the XML renderer from emitting a
+  -- self-closing tag (e.g. <div/>) on any parent element, which is not valid
+  -- HTML. Use 'Content.isEmpty' rather than 'null' to test whether the
+  -- resulting content list is effectively empty.
+  Doc.Empty -> [Xml.string ""]
   Doc.Append xs -> foldMap docContents xs
   Doc.String x -> [element "span" [("class", "text-break")] [Xml.text x]]
   Doc.Paragraph x -> [element "p" [] $ docContents x]

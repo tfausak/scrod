@@ -19,6 +19,16 @@ data Content a
   | Text Text.Text
   deriving (Eq, Ord, Show)
 
+-- | Returns 'True' for content nodes that render as the empty string (empty
+-- 'Text' or 'Raw' nodes). Useful for checking whether a list of content is
+-- effectively empty without stripping the nodes themselves (which may be
+-- needed to prevent self-closing tags).
+isEmpty :: Content a -> Bool
+isEmpty c = case c of
+  Text t -> Text.null t
+  Raw r -> Text.null r
+  _ -> False
+
 -- | Encode content, parameterized by element encoder.
 encode :: (a -> Builder.Builder) -> Content a -> Builder.Builder
 encode encodeElement c = case c of

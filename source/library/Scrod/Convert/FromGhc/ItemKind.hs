@@ -7,6 +7,9 @@ module Scrod.Convert.FromGhc.ItemKind where
 
 import GHC.Hs ()
 import qualified GHC.Hs.Extension as Ghc
+import qualified GHC.Types.Name.Occurrence as Occurrence
+import qualified GHC.Types.Name.Reader as Reader
+import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Core.ItemKind as ItemKind
 
@@ -55,7 +58,7 @@ itemKindFromFamilyDecl famDecl = case Syntax.fdInfo famDecl of
 -- | Determine ItemKind from a binding.
 itemKindFromBind :: Syntax.HsBindLR Ghc.GhcPs Ghc.GhcPs -> ItemKind.ItemKind
 itemKindFromBind bind = case bind of
-  Syntax.FunBind {} -> ItemKind.Function
+  Syntax.FunBind {Syntax.fun_id = lName} -> functionOrOperator lName
   Syntax.PatBind {} -> ItemKind.PatternBinding
   Syntax.VarBind {} -> ItemKind.Function
   Syntax.PatSynBind {} -> ItemKind.PatternSynonym
@@ -80,6 +83,13 @@ itemKindFromInstDecl inst = case inst of
   Syntax.ClsInstD {} -> ItemKind.ClassInstance
   Syntax.DataFamInstD {} -> ItemKind.DataFamilyInstance
   Syntax.TyFamInstD {} -> ItemKind.TypeFamilyInstance
+
+-- | Return 'Operator' if the name is symbolic, 'Function' otherwise.
+functionOrOperator :: Syntax.LIdP Ghc.GhcPs -> ItemKind.ItemKind
+functionOrOperator lName =
+  if Occurrence.isSymOcc . Reader.rdrNameOcc $ SrcLoc.unLoc lName
+    then ItemKind.Operator
+    else ItemKind.Function
 
 -- | Determine ItemKind from a foreign declaration.
 itemKindFromForeignDecl :: Syntax.ForeignDecl Ghc.GhcPs -> ItemKind.ItemKind

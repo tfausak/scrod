@@ -34,6 +34,7 @@ data Module = MkModule
 instance ToJson.ToJson Module where
   toJson m =
     Json.object
+      . (("$schema", Json.string "https://scrod.fyi/schema.json") :)
       . filter (\(_, v) -> v /= Json.null)
       $ [ ("version", ToJson.toJson $ version m),
           ("language", ToJson.toJson $ language m),
@@ -65,7 +66,8 @@ instance Schema.ToSchema Module where
     importsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
     itemsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
     let allProps =
-          [ ("version", Schema.unwrap versionS),
+          [ ("$schema", Json.object [("type", Json.string "string"), ("format", Json.string "uri")]),
+            ("version", Schema.unwrap versionS),
             ("language", Schema.unwrap languageS),
             ("extensions", Schema.unwrap extensionsS),
             ("documentation", Schema.unwrap documentationS),
@@ -77,7 +79,8 @@ instance Schema.ToSchema Module where
             ("items", Schema.unwrap itemsS)
           ]
     let reqNames =
-          [ Json.string "version",
+          [ Json.string "$schema",
+            Json.string "version",
             Json.string "extensions",
             Json.string "documentation",
             Json.string "signature",

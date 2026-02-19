@@ -25,8 +25,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for build commands, test filtering, linti
 
 ### Key module groups
 
-- **`Scrod.Core.*`** — Data types for the intermediate representation (Module, Item, Doc, Export, etc.). Each type lives in its own module with a `Mk`-prefixed constructor (e.g., `MkModule`, `MkItem`).
-- **`Scrod.Convert.FromGhc`** — Converts GHC AST into Scrod Core types. Largest and most complex module. Uses a `ConvertM` state monad that assigns auto-incrementing `ItemKey`s.
+- **`Scrod.Core.*`** — Data types for the intermediate representation (Module, Item, Doc, ItemKind, Visibility, etc.). Each type lives in its own module with a `Mk`-prefixed constructor (e.g., `MkModule`, `MkItem`). Items carry a `Visibility` field (`Exported`, `Implicit`, or `Unexported`) and are ordered in the `Module.items` list to reflect export-list order.
+- **`Scrod.Convert.FromGhc`** — Converts GHC AST into Scrod Core types. Uses a `ConvertM` state monad that assigns auto-incrementing `ItemKey`s. Has many submodules (`ExportOrdering`, `Visibility`, `ItemKind`, `Exports`, `Names`, etc.) that handle specific conversion concerns.
 - **`Scrod.Convert.FromHaddock`** — Converts Haddock doc strings into Scrod's `Doc` type.
 - **`Scrod.Convert.ToHtml`** — Renders Core types as self-contained HTML (Bootstrap 5 + KaTeX).
 - **`Scrod.Convert.ToJson`** — Renders Core types to JSON output.

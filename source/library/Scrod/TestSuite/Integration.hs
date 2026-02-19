@@ -28,6 +28,10 @@ spec s = Spec.describe s "integration" $ do
         ("/items", "[]")
       ]
 
+  Spec.describe s "$schema" $ do
+    Spec.it s "is present" $ do
+      check s "" [("/$schema", "\"https://scrod.fyi/schema.json\"")]
+
   Spec.describe s "version" $ do
     Spec.it s "works" $ do
       -- Note that we don't want this test to be too specific, otherwise we'd

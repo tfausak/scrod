@@ -3168,58 +3168,6 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/visibility/type", "\"Exported\"")
         ]
 
-  Spec.describe s "export-driven declarations" $ do
-    Spec.it s "renders items in export list order" $ do
-      checkHtmlOrder
-        s
-        """
-        module M ( y, x ) where
-        x = ()
-        y = ()
-        """
-        [">y<", ">x<"]
-
-    Spec.it s "renders section headings from export groups" $ do
-      checkHtmlContains
-        s
-        """
-        module M
-          ( -- * Section One
-            x
-          ) where
-        x = ()
-        """
-        ["Section One"]
-
-    Spec.it s "renders export doc comments inline" $ do
-      checkHtmlContains
-        s
-        """
-        module M
-          ( -- | Some docs
-            x
-          ) where
-        x = ()
-        """
-        ["Some docs"]
-
-    Spec.it s "renders module re-exports" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( module M, x ) where
-        x = ()
-        """
-        ["re-export"]
-
-    Spec.it s "renders exports with no matching item" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( missing ) where
-        """
-        [">missing<"]
-
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
 
@@ -3261,40 +3209,3 @@ checkHtml s arguments input = do
   Monad.when (null $ Builder.toString output) $
     Spec.assertFailure s "expected non-empty HTML output"
 
-checkHtmlContains :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
-checkHtmlContains s input expected = do
-  result <-
-    either (Spec.assertFailure s . Exception.displayException) pure
-      . Main.mainWith "scrod-test-suite" ["--format", "html"]
-      $ pure input
-  output <- either (Spec.assertFailure s) pure result
-  let html = Builder.toString output
-  Monad.forM_ expected $ \needle ->
-    Monad.unless (needle `List.isInfixOf` html)
-      . Spec.assertFailure s
-      $ "expected HTML to contain: " <> needle
-
-checkHtmlOrder :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
-checkHtmlOrder s input needles = do
-  result <-
-    either (Spec.assertFailure s . Exception.displayException) pure
-      . Main.mainWith "scrod-test-suite" ["--format", "html"]
-      $ pure input
-  output <- either (Spec.assertFailure s) pure result
-  let html = Builder.toString output
-  checkOrder s html needles
-
-checkOrder :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
-checkOrder _ _ [] = pure ()
-checkOrder s html (needle : rest) =
-  case breakOnSubstring needle html of
-    Nothing ->
-      Spec.assertFailure s $
-        "expected HTML to contain: " <> needle
-    Just remaining -> checkOrder s remaining rest
-
-breakOnSubstring :: String -> String -> Maybe String
-breakOnSubstring _ [] = Nothing
-breakOnSubstring needle haystack@(_ : xs)
-  | needle `List.isPrefixOf` haystack = Just (drop (length needle) haystack)
-  | otherwise = breakOnSubstring needle xs

@@ -264,7 +264,7 @@ computeVisibility ::
   Maybe [Export.Export] ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-computeVisibility Nothing items = fmap (setImplicit Nothing) items
+computeVisibility Nothing items = fmap setImplicit items
 computeVisibility (Just exports) items =
   let exportedNames = extractExportedNames exports
       wildcardParentKeys = extractWildcardParentKeys exports items
@@ -292,8 +292,8 @@ computeVisibility (Just exports) items =
 
 -- | When there is no export list, tag implicit items and leave everything
 -- else as 'Exported' (the default set by 'mkItemM').
-setImplicit :: Maybe ItemKey.ItemKey -> Located.Located Item.Item -> Located.Located Item.Item
-setImplicit _ li =
+setImplicit :: Located.Located Item.Item -> Located.Located Item.Item
+setImplicit li =
   let item = Located.value li
    in if isAlwaysVisible (Item.kind item)
         then setVisibility Visibility.Implicit li

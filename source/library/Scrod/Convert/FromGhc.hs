@@ -35,6 +35,7 @@ import qualified PackageInfo_scrod as PackageInfo
 import qualified Scrod.Convert.FromGhc.CompleteParents as CompleteParents
 import qualified Scrod.Convert.FromGhc.Constructors as Constructors
 import qualified Scrod.Convert.FromGhc.Doc as GhcDoc
+import qualified Scrod.Convert.FromGhc.ExportOrdering as ExportOrdering
 import qualified Scrod.Convert.FromGhc.Exports as Exports
 import qualified Scrod.Convert.FromGhc.FamilyInstanceParents as FamilyInstanceParents
 import qualified Scrod.Convert.FromGhc.FixityParents as FixityParents
@@ -82,6 +83,7 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
       namedDocChunks = extractNamedDocChunks lHsModule
       rawExports = Exports.extractModuleExports lHsModule
       referencedChunkNames = extractReferencedChunkNames rawExports
+      resolvedExports = resolveNamedDocExports namedDocChunks <$> rawExports
   Right
     Module.MkModule
       { Module.version = version,
@@ -92,10 +94,10 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.signature = isSignature,
         Module.name = extractModuleName lHsModule,
         Module.warning = extractModuleWarning lHsModule,
-        Module.exports = resolveNamedDocExports namedDocChunks <$> rawExports,
         Module.imports = extractModuleImports lHsModule,
         Module.items =
-          Visibility.computeVisibility (resolveNamedDocExports namedDocChunks <$> rawExports)
+          ExportOrdering.reorderByExports resolvedExports
+            . Visibility.computeVisibility resolvedExports
             . extractItems referencedChunkNames
             $ lHsModule
       }

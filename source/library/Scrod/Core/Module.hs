@@ -4,7 +4,6 @@ import qualified Data.Map as Map
 import qualified Data.Proxy as Proxy
 import qualified Data.Text as Text
 import qualified Scrod.Core.Doc as Doc
-import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
@@ -27,7 +26,6 @@ data Module = MkModule
     signature :: Bool,
     name :: Maybe (Located.Located ModuleName.ModuleName),
     warning :: Maybe Warning.Warning,
-    exports :: Maybe [Export.Export],
     imports :: [Import.Import],
     items :: [Located.Located Item.Item]
   }
@@ -45,7 +43,6 @@ instance ToJson.ToJson Module where
           ("signature", ToJson.toJson $ signature m),
           ("name", ToJson.toJson $ name m),
           ("warning", ToJson.toJson $ warning m),
-          ("exports", ToJson.toJson $ exports m),
           ("imports", ToJson.toJson $ imports m),
           ("items", ToJson.toJson $ items m)
         ]
@@ -65,7 +62,6 @@ instance Schema.ToSchema Module where
     sinceS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Since.Since)
     nameS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy (Located.Located ModuleName.ModuleName))
     warningS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy Warning.Warning)
-    exportsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Export.Export])
     importsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Import.Import])
     itemsS <- Schema.toSchema (Proxy.Proxy :: Proxy.Proxy [Located.Located Item.Item])
     let allProps =
@@ -77,7 +73,6 @@ instance Schema.ToSchema Module where
             ("signature", Json.object [("type", Json.string "boolean")]),
             ("name", Schema.unwrap nameS),
             ("warning", Schema.unwrap warningS),
-            ("exports", Schema.unwrap exportsS),
             ("imports", Schema.unwrap importsS),
             ("items", Schema.unwrap itemsS)
           ]

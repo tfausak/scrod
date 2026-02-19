@@ -3103,6 +3103,114 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/name", "")
         ]
 
+  Spec.describe s "visibility" $ do
+    Spec.it s "marks exported items as Exported" $ do
+      check
+        s
+        """
+        module M ( x ) where
+        x = ()
+        y = ()
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Unexported\"")
+        ]
+
+    Spec.it s "marks all items as Exported when no export list" $ do
+      check
+        s
+        """
+        x = ()
+        y = ()
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Exported\"")
+        ]
+
+    Spec.it s "marks class instances as Implicit" $ do
+      check
+        s
+        """
+        module M ( MyClass ) where
+        class MyClass a
+        instance MyClass Int
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Implicit\"")
+        ]
+
+    Spec.it s "marks rules as Implicit" $ do
+      check
+        s
+        """
+        module M ( f ) where
+        f x = x
+        {-# RULES "f/id" f = id #-}
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Implicit\"")
+        ]
+
+    Spec.it s "marks constructors as Unexported when type has no subordinates" $ do
+      check
+        s
+        """
+        module M ( T ) where
+        data T = C1 | C2
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Unexported\""),
+          ("/items/2/value/visibility/type", "\"Unexported\"")
+        ]
+
+    Spec.it s "marks all constructors as Exported with wildcard subordinates" $ do
+      check
+        s
+        """
+        module M ( T(..) ) where
+        data T = C1 | C2
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Exported\""),
+          ("/items/2/value/visibility/type", "\"Exported\"")
+        ]
+
+    Spec.it s "marks only listed constructors as Exported with explicit subordinates" $ do
+      check
+        s
+        """
+        module M ( T(C1) ) where
+        data T = C1 | C2
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Exported\""),
+          ("/items/2/value/visibility/type", "\"Unexported\"")
+        ]
+
+    Spec.it s "marks methods as Unexported when class has no subordinates" $ do
+      check
+        s
+        """
+        module M ( MyClass ) where
+        class MyClass a where
+          myMethod :: a -> a
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Unexported\"")
+        ]
+
+    Spec.it s "marks all methods as Exported with wildcard subordinates" $ do
+      check
+        s
+        """
+        module M ( MyClass(..) ) where
+        class MyClass a where
+          myMethod :: a -> a
+        """
+        [ ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Exported\"")
+        ]
+
   Spec.describe s "export-driven declarations" $ do
     Spec.it s "renders items in export list order" $ do
       checkHtmlOrder
@@ -3126,43 +3234,6 @@ spec s = Spec.describe s "integration" $ do
         """
         ["Section One"]
 
-    Spec.it s "renders unexported items under Unexported heading" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( x ) where
-        x = ()
-        y = ()
-        """
-        ["Unexported"]
-
-    Spec.it s "does not render Unexported when all items are exported" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( x ) where
-        x = ()
-        """
-        ["Unexported"]
-
-    Spec.it s "keeps source order when no export list" $ do
-      checkHtmlNotContains
-        s
-        """
-        x = ()
-        y = ()
-        """
-        ["Unexported"]
-
-    Spec.it s "does not render standalone Exports section" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( x ) where
-        x = ()
-        """
-        [">Exports<"]
-
     Spec.it s "renders export doc comments inline" $ do
       checkHtmlContains
         s
@@ -3175,26 +3246,6 @@ spec s = Spec.describe s "integration" $ do
         """
         ["Some docs"]
 
-    Spec.it s "always shows class instances" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( MyClass ) where
-        class MyClass a
-        instance MyClass Int
-        """
-        ["Unexported"]
-
-    Spec.it s "always shows rules" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( f ) where
-        f x = x
-        {-# RULES "f/id" f = id #-}
-        """
-        ["Unexported"]
-
     Spec.it s "renders module re-exports" $ do
       checkHtmlContains
         s
@@ -3203,62 +3254,6 @@ spec s = Spec.describe s "integration" $ do
         x = ()
         """
         ["re-export"]
-
-    Spec.it s "hides constructors when type exported without subordinates" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( T ) where
-        data T = C1 | C2
-        """
-        [">C1<", ">C2<"]
-
-    Spec.it s "shows all constructors with wildcard subordinates" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( T(..) ) where
-        data T = C1 | C2
-        """
-        [">C1<", ">C2<"]
-
-    Spec.it s "shows only listed constructors with explicit subordinates" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( T(C1) ) where
-        data T = C1 | C2
-        """
-        [">C1<"]
-
-    Spec.it s "hides unlisted constructors with explicit subordinates" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( T(C1) ) where
-        data T = C1 | C2
-        """
-        [">C2<"]
-
-    Spec.it s "hides methods when class exported without subordinates" $ do
-      checkHtmlNotContains
-        s
-        """
-        module M ( MyClass ) where
-        class MyClass a where
-          myMethod :: a -> a
-        """
-        [">myMethod<"]
-
-    Spec.it s "shows all methods with wildcard subordinates" $ do
-      checkHtmlContains
-        s
-        """
-        module M ( MyClass(..) ) where
-        class MyClass a where
-          myMethod :: a -> a
-        """
-        [">myMethod<"]
 
     Spec.it s "renders exports with no matching item" $ do
       checkHtmlContains
@@ -3321,19 +3316,6 @@ checkHtmlContains s input expected = do
     Monad.unless (needle `List.isInfixOf` html)
       . Spec.assertFailure s
       $ "expected HTML to contain: " <> needle
-
-checkHtmlNotContains :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
-checkHtmlNotContains s input forbidden = do
-  result <-
-    either (Spec.assertFailure s . Exception.displayException) pure
-      . Main.mainWith "scrod-test-suite" ["--format", "html"]
-      $ pure input
-  output <- either (Spec.assertFailure s) pure result
-  let html = Builder.toString output
-  Monad.forM_ forbidden $ \needle ->
-    Monad.when (needle `List.isInfixOf` html)
-      . Spec.assertFailure s
-      $ "expected HTML NOT to contain: " <> needle
 
 checkHtmlOrder :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [String] -> m ()
 checkHtmlOrder s input needles = do

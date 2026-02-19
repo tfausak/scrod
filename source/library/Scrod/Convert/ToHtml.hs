@@ -869,6 +869,7 @@ kindToString x = case x of
   ItemKind.ForeignExport -> "foreign export"
   ItemKind.ForeignImport -> "foreign import"
   ItemKind.Function -> "function"
+  ItemKind.Operator -> "operator"
   ItemKind.GADTConstructor -> "constructor"
   ItemKind.InlineSignature -> "inline"
   ItemKind.MinimalPragma -> "minimal"

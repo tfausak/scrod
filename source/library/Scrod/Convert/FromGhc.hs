@@ -275,7 +275,7 @@ patchArgumentNames argNameMap items =
           [ (Item.key val, names)
           | locItem <- items,
             let val = Located.value locItem,
-            Item.kind val == ItemKind.Function,
+            Item.kind val == ItemKind.Function || Item.kind val == ItemKind.Operator,
             Just itemName <- [Item.name val],
             Just names <- [Map.lookup itemName argNameMap]
           ]
@@ -419,15 +419,17 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let sigText = Names.extractSigSignature sig
         args = Names.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
+          let name = Internal.extractIdPName lName
+              itemKind = if ItemName.isOperator name then ItemKind.Operator else ItemKind.Function
           parentResult <-
             Internal.mkItemWithKeyM
               (Annotation.getLocA lName)
               Nothing
-              (Just $ Internal.extractIdPName lName)
+              (Just name)
               doc
               docSince
               sigText
-              ItemKind.Function
+              itemKind
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
@@ -572,7 +574,10 @@ convertDeclWithDocM ::
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertDeclWithDocM parentKey doc docSince itemName sig lDecl =
-  let itemKind = ItemKindFrom.itemKindFromDecl $ SrcLoc.unLoc lDecl
+  let rawKind = ItemKindFrom.itemKindFromDecl $ SrcLoc.unLoc lDecl
+      itemKind = case (rawKind, itemName) of
+        (ItemKind.Function, Just n) | ItemName.isOperator n -> ItemKind.Operator
+        _ -> rawKind
    in Internal.mkItemM (Annotation.getLocA lDecl) parentKey itemName doc docSince sig itemKind
 
 -- | Convert rule declarations.

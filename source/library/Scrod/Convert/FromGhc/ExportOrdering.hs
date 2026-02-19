@@ -214,11 +214,10 @@ mkUnresolvedExport ident nextKey =
         Just ExportNameKind.Pattern -> Just (Text.pack "pattern")
         Just ExportNameKind.Type -> Just (Text.pack "type")
         Nothing -> Nothing
-      doc = Maybe.fromMaybe Doc.Empty (ExportIdentifier.doc ident)
    in ( mkSyntheticItem
           nextKey
           (Just (ItemName.MkItemName name))
-          doc
+          Doc.Empty
           namespaceSig
           ItemKind.UnresolvedExport,
         nextKey + 1

@@ -419,13 +419,11 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let sigText = Names.extractSigSignature sig
         args = Names.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
-          let name = Internal.extractIdPName lName
-              itemKind = if ItemName.isOperator name then ItemKind.Operator else ItemKind.Function
           parentResult <-
             Internal.mkItemWithKeyM
               (Annotation.getLocA lName)
               Nothing
-              (Just name)
+              (Just $ Internal.extractIdPName lName)
               doc
               docSince
               sigText
@@ -574,10 +572,7 @@ convertDeclWithDocM ::
   Syntax.LHsDecl Ghc.GhcPs ->
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertDeclWithDocM parentKey doc docSince itemName sig lDecl =
-  let rawKind = ItemKindFrom.itemKindFromDecl $ SrcLoc.unLoc lDecl
-      itemKind = case (rawKind, itemName) of
-        (ItemKind.Function, Just n) | ItemName.isOperator n -> ItemKind.Operator
-        _ -> rawKind
+  let itemKind = ItemKindFrom.itemKindFromDecl $ SrcLoc.unLoc lDecl
    in Internal.mkItemM (Annotation.getLocA lDecl) parentKey itemName doc docSince sig itemKind
 
 -- | Convert rule declarations.

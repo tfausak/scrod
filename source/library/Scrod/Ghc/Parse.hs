@@ -40,7 +40,7 @@ import qualified System.IO.Unsafe as Unsafe
 
 parse ::
   Bool ->
-  [SrcLoc.Located String] ->
+  [String] ->
   String ->
   Either
     String
@@ -50,7 +50,8 @@ parse ::
 parse isSignature extraOptions string = do
   let originalStringBuffer = StringBuffer.stringToStringBuffer string
   let cabalOptions = cabalExtensionOptions string
-  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions (extraOptions <> cabalOptions) originalStringBuffer
+  let options = fmap SrcLoc.noLoc $ extraOptions <> cabalOptions
+  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions options originalStringBuffer
   let extensions = uncurry resolveExtensions languageAndExtensions
   source <-
     if EnumSet.member Extension.Cpp extensions
@@ -66,9 +67,8 @@ parse isSignature extraOptions string = do
     Lexer.PFailed newPState -> Left . Outputable.showSDocUnsafe . Outputable.ppr $ Lexer.getPsErrorMessages newPState
     Lexer.POk _ lHsModule -> pure (languageAndExtensions, lHsModule)
 
-cabalExtensionOptions :: String -> [SrcLoc.Located String]
-cabalExtensionOptions =
-  fmap (SrcLoc.L SrcLoc.noSrcSpan . ("-X" ++)) . Cabal.discoverExtensions
+cabalExtensionOptions :: String -> [String]
+cabalExtensionOptions = fmap ("-X" <>) . Cabal.discoverExtensions
 
 discoverExtensions ::
   [SrcLoc.Located String] ->
@@ -137,7 +137,7 @@ spec s = do
       Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (Nothing, [Session.On Extension.Cpp])
 
     Spec.it s "succeeds with extra options" $ do
-      Spec.assertEq s (fst <$> parse False [SrcLoc.L SrcLoc.noSrcSpan "-XOverloadedStrings"] "") $ Right (Nothing, [Session.On Extension.OverloadedStrings])
+      Spec.assertEq s (fst <$> parse False ["-XOverloadedStrings"] "") $ Right (Nothing, [Session.On Extension.OverloadedStrings])
 
     Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
       Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp])

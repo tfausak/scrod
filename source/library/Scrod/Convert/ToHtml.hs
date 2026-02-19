@@ -11,7 +11,6 @@ import qualified Data.List as List
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
-import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
@@ -19,10 +18,6 @@ import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Example as Example
-import qualified Scrod.Core.Export as Export
-import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
-import qualified Scrod.Core.ExportName as ExportName
-import qualified Scrod.Core.ExportNameKind as ExportNameKind
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Hyperlink as Hyperlink
@@ -44,7 +39,6 @@ import qualified Scrod.Core.Namespace as Namespace
 import qualified Scrod.Core.NumberedItem as NumberedItem
 import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Picture as Picture
-import qualified Scrod.Core.Section as Section
 import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
@@ -160,7 +154,7 @@ bodyElement x =
                    then []
                    else [element "section" [("class", "my-3")] . importsContents $ Module.imports x]
                )
-            <> [element "section" [("class", "my-3")] $ declarationsContents (Module.exports x) (Module.items x)]
+            <> [element "section" [("class", "my-3")] $ declarationsContents (Module.items x)]
             <> [footerContent x]
         )
     ]
@@ -213,23 +207,6 @@ footerContent m =
         [Xml.string "Scrod"],
       Xml.string " version ",
       element "span" [("class", "text-break")] [Xml.text . versionToText $ Module.version m],
-      Xml.string "."
-    ]
-
-sectionContent :: Section.Section -> Content.Content Element.Element
-sectionContent x =
-  element (levelToName . Header.level $ Section.header x) []
-    . docContents
-    . Header.title
-    $ Section.header x
-
-docNamedContent :: Text.Text -> Content.Content Element.Element
-docNamedContent x =
-  element
-    "span"
-    [("class", "text-warning")]
-    [ Xml.string "Unknown named documentation group ",
-      element "code" [("class", "text-break")] [Xml.string "$", Xml.text x],
       Xml.string "."
     ]
 
@@ -481,19 +458,31 @@ extensionUrlPaths =
 
 -- Declarations section
 
-declarationsContents :: Maybe [Export.Export] -> [Located.Located Item.Item] -> [Content.Content Element.Element]
-declarationsContents exports items =
+declarationsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
+declarationsContents items =
   [ element "h2" [] [Xml.string "Declarations"],
-    case (exports, items) of
-      (Nothing, []) -> Xml.string "None."
-      (Just [], []) -> Xml.string "None."
-      (Nothing, _) -> defaultDeclarations
-      (Just [], _) -> defaultDeclarations
-      (Just es, _) -> exportDrivenDeclarations es
+    if null topLevelItems
+      then Xml.string "None."
+      else
+        let (nonUnexported, unexported) = List.partition isNonUnexported topLevelItems
+         in element "details" [("open", "open")] $
+              element
+                "summary"
+                []
+                [ Xml.string "Show/hide ",
+                  Xml.string $ pluralize (length topLevelItems) "declaration",
+                  Xml.string "."
+                ]
+                : foldMap renderTopLevelItem nonUnexported
+                  <> if null unexported
+                    then []
+                    else
+                      element "h3" [] [Xml.string "Unexported"]
+                        : foldMap renderTopLevelItem unexported
   ]
   where
-    itemNatKey :: Located.Located Item.Item -> Natural.Natural
-    itemNatKey = ItemKey.unwrap . Item.key . Located.value
+    isNonUnexported :: Located.Located Item.Item -> Bool
+    isNonUnexported li = Item.visibility (Located.value li) /= Visibility.Unexported
 
     childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
     childrenMap = foldr addChild Map.empty items
@@ -504,189 +493,64 @@ declarationsContents exports items =
       Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
 
     topLevelItems :: [Located.Located Item.Item]
-    topLevelItems = filter (isTopLevel . Located.value) items
+    topLevelItems = filter (Maybe.isNothing . Item.parentKey . Located.value) items
 
-    isTopLevel :: Item.Item -> Bool
-    isTopLevel = Maybe.isNothing . Item.parentKey
+    -- \| Render a top-level item. DocumentationChunk items without a
+    -- name render their documentation inline (for section headings and
+    -- export docs). UnresolvedExport items render with a namespace
+    -- prefix and optional re-export badge. All other items render as
+    -- cards.
+    renderTopLevelItem :: Located.Located Item.Item -> [Content.Content Element.Element]
+    renderTopLevelItem li
+      | isInlineDocChunk li = docContents (Item.documentation (Located.value li))
+      | Item.kind (Located.value li) == ItemKind.UnresolvedExport = renderUnresolvedExport li
+      | otherwise = renderItemWithChildren li
+
+    isInlineDocChunk :: Located.Located Item.Item -> Bool
+    isInlineDocChunk li =
+      let item = Located.value li
+       in Item.kind item == ItemKind.DocumentationChunk
+            && Maybe.isNothing (Item.name item)
+
+    renderUnresolvedExport :: Located.Located Item.Item -> [Content.Content Element.Element]
+    renderUnresolvedExport li =
+      let item = Located.value li
+          namePrefix = case Item.signature item of
+            Just sig -> Text.unpack sig <> " "
+            Nothing -> ""
+          badge = case Item.signature item of
+            Just sig
+              | sig == Text.pack "module" ->
+                  [ element
+                      "div"
+                      [("class", "mx-1")]
+                      [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
+                  ]
+            _ -> []
+          name = foldMap ItemName.unwrap (Item.name item)
+       in [ element
+              "div"
+              [("class", "card my-3")]
+              [ element
+                  "div"
+                  [("class", "card-header")]
+                  $ element "code" [("class", "text-break")] [Xml.string namePrefix, Xml.text name]
+                    : badge
+              ]
+          ]
 
     renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
     renderItemWithChildren li =
-      [ itemContent li
-          . foldMap renderItemWithChildren
-          $ Map.findWithDefault [] (itemNatKey li) childrenMap
-      ]
-
-    defaultDeclarations :: Content.Content Element.Element
-    defaultDeclarations =
-      element "details" [("open", "open")] $
-        element
-          "summary"
-          []
-          [ Xml.string "Show/hide ",
-            Xml.string $ pluralize (length topLevelItems) "declaration",
-            Xml.string "."
+      let children = Map.findWithDefault [] (itemNatKey li) childrenMap
+          visibleChildren =
+            if Item.visibility (Located.value li) == Visibility.Unexported
+              then children
+              else filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) children
+       in [ itemContent li (foldMap renderItemWithChildren visibleChildren)
           ]
-          : foldMap renderItemWithChildren topLevelItems
 
-    nameMap :: Map.Map Text.Text (Located.Located Item.Item)
-    nameMap =
-      Map.fromList
-        [ (ItemName.unwrap n, li)
-        | li <- topLevelItems,
-          Just n <- [Item.name (Located.value li)]
-        ]
-
-    exportDrivenDeclarations :: [Export.Export] -> Content.Content Element.Element
-    exportDrivenDeclarations es =
-      let (exportedHtml, usedAfterExports) = walkExports es Set.empty
-          (alwaysVisibleHtml, usedAfterVisible) = renderAlwaysVisible usedAfterExports
-          unexportedHtml = renderUnexported usedAfterVisible
-       in element "details" [("open", "open")] $
-            element
-              "summary"
-              []
-              [ Xml.string "Show/hide ",
-                Xml.string $ pluralize (length topLevelItems) "declaration",
-                Xml.string "."
-              ]
-              : exportedHtml
-                <> alwaysVisibleHtml
-                <> unexportedHtml
-
-    walkExports :: [Export.Export] -> Set.Set Natural.Natural -> ([Content.Content Element.Element], Set.Set Natural.Natural)
-    walkExports [] used = ([], used)
-    walkExports (e : es) used = case e of
-      Export.Identifier ident ->
-        let exportName = ExportIdentifier.name ident
-            name = ExportName.name exportName
-            exportMeta =
-              foldMap (List.singleton . warningContent) (ExportIdentifier.warning ident)
-                <> foldMap docContents (ExportIdentifier.doc ident)
-         in case Map.lookup name nameMap of
-              Just li
-                | not (Set.member (itemNatKey li) used) ->
-                    let (here, newKeys) = renderExportedItem li
-                        (rest, used') = walkExports es (Set.union newKeys used)
-                     in (here <> exportMeta <> rest, used')
-              Just _ ->
-                let (rest, used') = walkExports es used
-                 in (exportMeta <> rest, used')
-              Nothing ->
-                let kind = ExportName.kind exportName
-                    namePrefix = case kind of
-                      Just ExportNameKind.Module -> "module "
-                      Just ExportNameKind.Pattern -> "pattern "
-                      Just ExportNameKind.Type -> "type "
-                      Nothing -> ""
-                    badge = case kind of
-                      Just ExportNameKind.Module ->
-                        [ element
-                            "div"
-                            [("class", "mx-1")]
-                            [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
-                        ]
-                      _ -> []
-                    here =
-                      [ element
-                          "div"
-                          [("class", "card my-3")]
-                          [ element
-                              "div"
-                              [("class", "card-header")]
-                              $ element "code" [("class", "text-break")] [Xml.string namePrefix, Xml.text name]
-                                : badge
-                          ]
-                      ]
-                        <> exportMeta
-                    (rest, used') = walkExports es used
-                 in (here <> rest, used')
-      Export.Group section ->
-        let here = [sectionContent section]
-            (rest, used') = walkExports es used
-         in (here <> rest, used')
-      Export.Doc doc ->
-        let here = docContents doc
-            (rest, used') = walkExports es used
-         in (here <> rest, used')
-      Export.DocNamed name ->
-        let here = [docNamedContent name]
-            (rest, used') = walkExports es used
-         in (here <> rest, used')
-
-    renderExportedItem :: Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
-    renderExportedItem li =
-      let k = itemNatKey li
-          allChildren = Map.findWithDefault [] k childrenMap
-          visibleChildren = filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) allChildren
-          (childHtml, childKeys) =
-            foldr
-              ( \c (accHtml, accKeys) ->
-                  let (h, ks) = renderCollecting c
-                   in (h <> accHtml, Set.union ks accKeys)
-              )
-              ([], Set.empty)
-              visibleChildren
-       in ( [ itemContent li childHtml
-            ],
-            Set.insert k childKeys
-          )
-
-    renderCollecting :: Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
-    renderCollecting li =
-      let k = itemNatKey li
-          children = Map.findWithDefault [] k childrenMap
-          (childHtml, childKeys) =
-            foldr
-              ( \c (accHtml, accKeys) ->
-                  let (h, ks) = renderCollecting c
-                   in (h <> accHtml, Set.union ks accKeys)
-              )
-              ([], Set.empty)
-              children
-       in ( [ itemContent li childHtml
-            ],
-            Set.insert k childKeys
-          )
-
-    renderAlwaysVisible :: Set.Set Natural.Natural -> ([Content.Content Element.Element], Set.Set Natural.Natural)
-    renderAlwaysVisible used =
-      let visible =
-            [ li
-            | li <- topLevelItems,
-              not (Set.member (itemNatKey li) used),
-              Item.visibility (Located.value li) == Visibility.Implicit
-            ]
-          (html, keys) =
-            foldr
-              ( \li (accHtml, accKeys) ->
-                  let (h, ks) = renderCollecting li
-                   in (h <> accHtml, Set.union ks accKeys)
-              )
-              ([], used)
-              visible
-       in (html, keys)
-
-    renderUnexported :: Set.Set Natural.Natural -> [Content.Content Element.Element]
-    renderUnexported used =
-      let unexported =
-            [ li
-            | li <- topLevelItems,
-              not (Set.member (itemNatKey li) used),
-              Item.visibility (Located.value li) /= Visibility.Implicit
-            ]
-       in if null unexported
-            then []
-            else
-              element "h3" [] [Xml.string "Unexported"]
-                : foldMap (renderUnexportedItem used) unexported
-
-    renderUnexportedItem :: Set.Set Natural.Natural -> Located.Located Item.Item -> [Content.Content Element.Element]
-    renderUnexportedItem used li =
-      let k = itemNatKey li
-          children = Map.findWithDefault [] k childrenMap
-          unusedChildren = filter (\c -> not (Set.member (itemNatKey c) used)) children
-       in [ itemContent li (foldMap (renderUnexportedItem used) unusedChildren)
-          ]
+    itemNatKey :: Located.Located Item.Item -> Natural.Natural
+    itemNatKey = ItemKey.unwrap . Item.key . Located.value
 
 itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> Content.Content Element.Element
 itemContent item children =
@@ -832,6 +696,7 @@ kindToString x = case x of
   ItemKind.TypeData -> "type data"
   ItemKind.TypeFamilyInstance -> "type instance"
   ItemKind.TypeSynonym -> "type"
+  ItemKind.UnresolvedExport -> "export"
   ItemKind.Warning -> "warning"
 
 -- Doc to HTML conversion

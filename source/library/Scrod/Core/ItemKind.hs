@@ -8,6 +8,11 @@ import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Schema as Schema
 
 -- | The kind of Haskell declaration an Item represents.
+--
+-- This type must remain a simple enumeration: no constructor should
+-- carry arguments. Renderers and predicates pattern-match on it
+-- exhaustively, and keeping it argument-free avoids coupling the
+-- core representation to presentation details.
 data ItemKind
   = -- | Function binding: @f x = expr@
     Function
@@ -85,6 +90,9 @@ data ItemKind
     DocumentationChunk
   | -- | Positional argument of a function or constructor
     Argument
+  | -- | Export list entry with no matching declaration in this module
+    -- (e.g. a module re-export or an unresolved name).
+    UnresolvedExport
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind
 

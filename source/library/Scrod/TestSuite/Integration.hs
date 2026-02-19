@@ -671,262 +671,168 @@ spec s = Spec.describe s "integration" $ do
           ("/warning/value", "\"foo\\nbar\"")
         ]
 
-  Spec.describe s "exports" $ do
-    Spec.it s "defaults to absent" $ do
-      check s "" [("/exports", "")]
+  Spec.describe s "export ordering" $ do
+    Spec.it s "orders items by export list" $ do
+      check
+        s
+        """
+        module M ( y, x ) where
+        x = ()
+        y = ()
+        """
+        [ ("/items/0/value/name", "\"y\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
 
-    Spec.it s "works with an empty list" $ do
-      check s "module M () where" [("/exports", "[]")]
+    Spec.it s "creates section heading items from export groups" $ do
+      check
+        s
+        """
+        module M
+          ( -- * Section One
+            x
+          ) where
+        x = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/type", "\"Header\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
 
-    Spec.describe s "identifier" $ do
-      Spec.it s "works" $ do
-        check
-          s
-          "module M ( pi ) where"
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/name", "\"pi\"")
-          ]
+    Spec.it s "creates inline doc items from export docs" $ do
+      check
+        s
+        """
+        module M
+          ( -- | Some docs
+            x
+          ) where
+        x = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
 
-      Spec.it s "works with an explicit pattern" $ do
-        check
-          s
-          """
-          {-# language PatternSynonyms #-}
-          module M ( pattern True ) where
-          """
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind/type", "\"Pattern\""),
-            ("/exports/0/value/name/name", "\"True\"")
-          ]
+    Spec.it s "creates unresolved export items for module re-exports" $ do
+      check
+        s
+        """
+        module M ( module M, x ) where
+        x = ()
+        """
+        [ ("/items/0/value/kind/type", "\"UnresolvedExport\""),
+          ("/items/0/value/name", "\"M\""),
+          ("/items/0/value/signature", "\"module\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
 
-      Spec.it s "works with an explicit type" $ do
-        check
-          s
-          """
-          {-# language ExplicitNamespaces #-}
-          module M ( type Bool ) where
-          """
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind/type", "\"Type\""),
-            ("/exports/0/value/name/name", "\"Bool\"")
-          ]
+    Spec.it s "creates unresolved export items for missing declarations" $ do
+      check
+        s
+        """
+        module M ( missing ) where
+        """
+        [ ("/items/0/value/kind/type", "\"UnresolvedExport\""),
+          ("/items/0/value/name", "\"missing\"")
+        ]
 
-      Spec.it s "works with a module" $ do
-        check
-          s
-          "module M ( module M ) where"
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/kind/type", "\"Module\""),
-            ("/exports/0/value/name/name", "\"M\"")
-          ]
+    Spec.it s "resolves named doc chunks into items" $ do
+      check
+        s
+        """
+        module M
+          ( -- $foo
+            unit,
+          ) where
 
-      Spec.it s "works with a subordinate" $ do
-        check
-          s
-          "module M ( Bool ( True ) ) where"
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/name", "\"Bool\""),
-            ("/exports/0/value/subordinates/wildcard", "false"),
-            ("/exports/0/value/subordinates/explicit/0/name", "\"True\"")
-          ]
+        -- $foo
+        -- bar
 
-      Spec.it s "works with a wildcard" $ do
-        check
-          s
-          "module M ( Bool ( .. ) ) where"
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/name", "\"Bool\""),
-            ("/exports/0/value/subordinates/wildcard", "true"),
-            ("/exports/0/value/subordinates/explicit", "[]")
-          ]
+        unit :: ()
+        unit = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/value/value", "\"bar\""),
+          ("/items/1/value/name", "\"unit\""),
+          ("/items/1/value/kind/type", "\"Function\"")
+        ]
 
-      Spec.it s "works with a warning" $ do
-        check
-          s
-          """
-          module M ( {-# warning "foo" #-} pi ) where
-          """
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/name", "\"pi\""),
-            ("/exports/0/value/warning/category", "\"deprecations\""),
-            ("/exports/0/value/warning/value", "\"foo\"")
-          ]
+  Spec.describe s "named chunks" $ do
+    Spec.it s "creates items for unreferenced named chunks" $ do
+      check
+        s
+        """
+        -- $a
+        -- b
+        x=0
+        """
+        [ ("/items/0/value/name", "\"$a\""),
+          ("/items/0/value/documentation/type", "\"Paragraph\""),
+          ("/items/0/value/documentation/value/value", "\"b\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
 
-      Spec.it s "works with a doc" $ do
-        check
-          s
-          """
-          module M
-            ( pi -- ^ foo
-            ) where
-          """
-          [ ("/exports/0/type", "\"Identifier\""),
-            ("/exports/0/value/name/name", "\"pi\""),
-            ("/exports/0/value/doc/type", "\"Paragraph\""),
-            ("/exports/0/value/doc/value/type", "\"String\""),
-            ("/exports/0/value/doc/value/value", "\"foo\"")
-          ]
+    Spec.it s "preceding doc comment does not leak past named chunk" $ do
+      check
+        s
+        """
+        module M
+          ( -- $bar
+            unit,
+          ) where
 
-    Spec.describe s "group" $ do
-      Spec.it s "works" $ do
-        check
-          s
-          """
-          module M
-            ( -- * foo
-            ) where
-          """
-          [ ("/exports/0/type", "\"Group\""),
-            ("/exports/0/value/level", "1"),
-            ("/exports/0/value/title/type", "\"Paragraph\""),
-            ("/exports/0/value/title/value/type", "\"String\""),
-            ("/exports/0/value/title/value/value", "\"foo\"")
-          ]
+        -- | foo
+        -- $bar
+        -- qux
+        unit :: ()
+        unit = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/value/value", "\"qux\""),
+          ("/items/1/value/name", "\"unit\""),
+          ("/items/1/value/documentation/type", "\"Empty\"")
+        ]
 
-    Spec.describe s "doc" $ do
-      Spec.it s "works" $ do
-        check
-          s
-          """
-          module M
-            ( -- | foo
-            ) where
-          """
-          [ ("/exports/0/type", "\"Doc\""),
-            ("/exports/0/value/type", "\"Paragraph\""),
-            ("/exports/0/value/value/type", "\"String\""),
-            ("/exports/0/value/value/value", "\"foo\"")
-          ]
+    Spec.it s "preceding doc comment does not leak past unreferenced named chunk" $ do
+      check
+        s
+        """
+        -- | foo
+        -- $a
+        -- chunk
+        x=0
+        """
+        [ ("/items/0/value/name", "\"$a\""),
+          ("/items/0/value/documentation/value/value", "\"chunk\""),
+          ("/items/1/value/name", "\"x\""),
+          ("/items/1/value/documentation/type", "\"Empty\"")
+        ]
 
-    Spec.describe s "doc named" $ do
-      Spec.it s "unresolved" $ do
-        check
-          s
-          """
-          module M
-            ( -- $foo
-            ) where
-          """
-          [ ("/exports/0/type", "\"DocNamed\""),
-            ("/exports/0/value", "\"foo\"")
-          ]
+    Spec.it s "creates items for unreferenced named chunks with explicit exports" $ do
+      check
+        s
+        """
+        module M
+          ( -- $foo
+            unit,
+          ) where
 
-      Spec.it s "resolved" $ do
-        check
-          s
-          """
-          module M
-            ( -- $foo
-              unit,
-            ) where
+        -- $foo
+        -- bar
 
-          -- $foo
-          -- bar
+        -- $baz
+        -- quux
 
-          unit :: ()
-          unit = ()
-          """
-          [ ("/exports/0/type", "\"Doc\""),
-            ("/exports/0/value/type", "\"Paragraph\""),
-            ("/exports/0/value/value/type", "\"String\""),
-            ("/exports/0/value/value/value", "\"bar\""),
-            ("/exports/1/type", "\"Identifier\""),
-            ("/exports/1/value/name/name", "\"unit\"")
-          ]
-
-      Spec.it s "does not create items for referenced named chunks" $ do
-        check
-          s
-          """
-          module M
-            ( -- $foo
-              unit,
-            ) where
-
-          -- $foo
-          -- bar
-
-          unit :: ()
-          unit = ()
-          """
-          [ ("/items/0/value/name", "\"unit\""),
-            ("/items/0/value/kind/type", "\"Function\""),
-            ("/items/0/value/signature", "\"()\"")
-          ]
-
-      Spec.it s "creates items for unreferenced named chunks" $ do
-        check
-          s
-          """
-          -- $a
-          -- b
-          x=0
-          """
-          [ ("/items/0/value/name", "\"$a\""),
-            ("/items/0/value/documentation/type", "\"Paragraph\""),
-            ("/items/0/value/documentation/value/value", "\"b\""),
-            ("/items/1/value/name", "\"x\"")
-          ]
-
-      Spec.it s "preceding doc comment does not leak past named chunk" $ do
-        check
-          s
-          """
-          module M
-            ( -- $bar
-              unit,
-            ) where
-
-          -- | foo
-          -- $bar
-          -- qux
-          unit :: ()
-          unit = ()
-          """
-          [ ("/exports/0/value/value/value", "\"qux\""),
-            ("/items/0/value/name", "\"unit\""),
-            ("/items/0/value/documentation/type", "\"Empty\"")
-          ]
-
-      Spec.it s "preceding doc comment does not leak past unreferenced named chunk" $ do
-        check
-          s
-          """
-          -- | foo
-          -- $a
-          -- chunk
-          x=0
-          """
-          [ ("/items/0/value/name", "\"$a\""),
-            ("/items/0/value/documentation/value/value", "\"chunk\""),
-            ("/items/1/value/name", "\"x\""),
-            ("/items/1/value/documentation/type", "\"Empty\"")
-          ]
-
-      Spec.it s "creates items for unreferenced named chunks with explicit exports" $ do
-        check
-          s
-          """
-          module M
-            ( -- $foo
-              unit,
-            ) where
-
-          -- $foo
-          -- bar
-
-          -- $baz
-          -- quux
-
-          unit :: ()
-          unit = ()
-          """
-          [ ("/exports/0/type", "\"Doc\""),
-            ("/exports/0/value/value/value", "\"bar\""),
-            ("/items/0/value/name", "\"$baz\""),
-            ("/items/0/value/documentation/value/value", "\"quux\""),
-            ("/items/1/value/name", "\"unit\"")
-          ]
+        unit :: ()
+        unit = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/value/value", "\"bar\""),
+          ("/items/1/value/name", "\"unit\""),
+          ("/items/2/value/name", "\"$baz\""),
+          ("/items/2/value/documentation/value/value", "\"quux\"")
+        ]
 
   Spec.describe s "imports" $ do
     Spec.it s "defaults to empty list" $ do

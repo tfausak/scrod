@@ -1091,6 +1091,44 @@ spec s = Spec.describe s "integration" $ do
           [ ("/items/0/value/since", "")
           ]
 
+    Spec.describe s "operator" $ do
+      Spec.it s "works with a type signature" $ do
+        check
+          s
+          "(+++) :: Int -> Int -> Int"
+          [ ("/items/0/value/kind/type", "\"Operator\""),
+            ("/items/0/value/name", "\"+++\""),
+            ("/items/0/value/signature", "\"Int -> Int -> Int\"")
+          ]
+
+      Spec.it s "works with a binding" $ do
+        check
+          s
+          "(+++) a b = a"
+          [ ("/items/0/value/kind/type", "\"Operator\""),
+            ("/items/0/value/name", "\"+++\"")
+          ]
+
+      Spec.it s "works with both signature and binding" $ do
+        check
+          s
+          """
+          (+++) :: Int -> Int -> Int
+          (+++) a b = a
+          """
+          [ ("/items/0/value/kind/type", "\"Operator\""),
+            ("/items/0/value/name", "\"+++\""),
+            ("/items/0/value/signature", "\"Int -> Int -> Int\"")
+          ]
+
+      Spec.it s "does not affect regular functions" $ do
+        check
+          s
+          "f :: Int -> Int"
+          [ ("/items/0/value/kind/type", "\"Function\""),
+            ("/items/0/value/name", "\"f\"")
+          ]
+
     Spec.it s "open type family" $ do
       check s "{-# language TypeFamilies #-} type family A" [("/items/0/value/kind/type", "\"OpenTypeFamily\"")]
 
@@ -1909,7 +1947,7 @@ spec s = Spec.describe s "integration" $ do
         infixl 0 %
         """
         [ ("/items/0/value/name", "\"%\""),
-          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/kind/type", "\"Operator\""),
           ("/items/1/value/name", "\"%\""),
           ("/items/1/value/kind/type", "\"FixitySignature\""),
           ("/items/1/value/parentKey", "0"),
@@ -1929,7 +1967,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/parentKey", "1"),
           ("/items/0/value/documentation/value/value", "\"infixl 5\""),
           ("/items/1/value/name", "\"%\""),
-          ("/items/1/value/kind/type", "\"Function\""),
+          ("/items/1/value/kind/type", "\"Operator\""),
           ("/items/1/value/signature", "\"() -> () -> ()\"")
         ]
 
@@ -2745,7 +2783,7 @@ spec s = Spec.describe s "integration" $ do
         {-# specialize (%) :: () -> () -> () #-}
         """
         [ ("/items/0/value/name", "\"%\""),
-          ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/kind/type", "\"Operator\""),
           ("/items/0/value/key", "0"),
           ("/items/1/value/kind/type", "\"Argument\""),
           ("/items/1/value/parentKey", "0"),

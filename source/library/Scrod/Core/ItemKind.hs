@@ -11,6 +11,8 @@ import qualified Scrod.Schema as Schema
 data ItemKind
   = -- | Function binding: @f x = expr@
     Function
+  | -- | Operator binding: @(+) x y = expr@
+    Operator
   | -- | Pattern binding: @(x, y) = tuple@
     PatternBinding
   | -- | Pattern synonym: @pattern P x = Just x@

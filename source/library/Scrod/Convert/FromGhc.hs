@@ -378,7 +378,7 @@ patchArgumentNames argNameMap items =
           [ (Item.key val, names)
           | locItem <- items,
             let val = Located.value locItem,
-            Item.kind val == ItemKind.Function,
+            Item.kind val == ItemKind.Function || Item.kind val == ItemKind.Operator,
             Just itemName <- [Item.name val],
             Just names <- [Map.lookup itemName argNameMap]
           ]
@@ -530,7 +530,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
               doc
               docSince
               sigText
-              ItemKind.Function
+              (ItemKindFrom.functionOrOperator lName)
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do

@@ -175,6 +175,7 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     needs:
+      - build
       - meta
       - wasm
     concurrency:
@@ -199,6 +200,11 @@ jobs:
         with:
           node-version: 22
       - run: extra/github-pages/build.sh
+      - uses: actions/download-artifact@v7
+        with:
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-Linux
+      - run: tar --extract --file artifact.tar --strip-components=1 artifact/schema.json
+      - run: cp schema.json extra/github-pages/dist/
       - uses: actions/upload-pages-artifact@v4
         with:
           path: extra/github-pages/dist/

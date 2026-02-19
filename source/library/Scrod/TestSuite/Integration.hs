@@ -3208,4 +3208,3 @@ checkHtml s arguments input = do
   output <- either (Spec.assertFailure s) pure result
   Monad.when (null $ Builder.toString output) $
     Spec.assertFailure s "expected non-empty HTML output"
-

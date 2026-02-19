@@ -35,6 +35,7 @@ import qualified Scrod.Core.ModuleName as ModuleName
 import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Version as Version
+import qualified Scrod.Core.Visibility as Visibility
 import qualified Scrod.Core.Warning as Warning
 
 -- | State for tracking item keys during conversion.
@@ -203,7 +204,8 @@ mkItemWithKeyM srcSpan parentKey itemName doc itemSince sig itemKind =
                       Item.name = itemName,
                       Item.documentation = doc,
                       Item.since = itemSince,
-                      Item.signature = sig
+                      Item.signature = sig,
+                      Item.visibility = Visibility.Exported
                     }
               },
             key

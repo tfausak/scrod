@@ -46,10 +46,10 @@ import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Picture as Picture
 import qualified Scrod.Core.Section as Section
 import qualified Scrod.Core.Since as Since
-import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
+import qualified Scrod.Core.Visibility as Visibility
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Declaration as XmlDeclaration
@@ -479,30 +479,6 @@ extensionUrlPaths =
       ("ViewPatterns", "exts/view_patterns.html#extension-ViewPatterns")
     ]
 
--- | Whether an item kind is "always visible" — implicitly exported
--- regardless of the export list.
-isAlwaysVisible :: ItemKind.ItemKind -> Bool
-isAlwaysVisible k = case k of
-  ItemKind.ClassInstance -> True
-  ItemKind.StandaloneDeriving -> True
-  ItemKind.DerivedInstance -> True
-  ItemKind.Rule -> True
-  ItemKind.Default -> True
-  ItemKind.Annotation -> True
-  ItemKind.Splice -> True
-  _ -> False
-
--- | Whether an item kind is a traditional subordinate that can be
--- filtered by export subordinate restrictions.
-isTraditionalSubordinate :: ItemKind.ItemKind -> Bool
-isTraditionalSubordinate k = case k of
-  ItemKind.DataConstructor -> True
-  ItemKind.GADTConstructor -> True
-  ItemKind.RecordField -> True
-  ItemKind.ClassMethod -> True
-  ItemKind.DefaultMethodSignature -> True
-  _ -> False
-
 -- Declarations section
 
 declarationsContents :: Maybe [Export.Export] -> [Located.Located Item.Item] -> [Content.Content Element.Element]
@@ -564,8 +540,7 @@ declarationsContents exports items =
     exportDrivenDeclarations es =
       let (exportedHtml, usedAfterExports) = walkExports es Set.empty
           (alwaysVisibleHtml, usedAfterVisible) = renderAlwaysVisible usedAfterExports
-          usedAfterComplete = handleCompletePragmas usedAfterVisible
-          unexportedHtml = renderUnexported usedAfterComplete
+          unexportedHtml = renderUnexported usedAfterVisible
        in element "details" [("open", "open")] $
             element
               "summary"
@@ -584,14 +559,13 @@ declarationsContents exports items =
       Export.Identifier ident ->
         let exportName = ExportIdentifier.name ident
             name = ExportName.name exportName
-            subs = ExportIdentifier.subordinates ident
             exportMeta =
               foldMap (List.singleton . warningContent) (ExportIdentifier.warning ident)
                 <> foldMap docContents (ExportIdentifier.doc ident)
          in case Map.lookup name nameMap of
               Just li
                 | not (Set.member (itemNatKey li) used) ->
-                    let (here, newKeys) = renderExportedItem subs li
+                    let (here, newKeys) = renderExportedItem li
                         (rest, used') = walkExports es (Set.union newKeys used)
                      in (here <> exportMeta <> rest, used')
               Just _ ->
@@ -639,11 +613,11 @@ declarationsContents exports items =
             (rest, used') = walkExports es used
          in (here <> rest, used')
 
-    renderExportedItem :: Maybe Subordinates.Subordinates -> Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
-    renderExportedItem subs li =
+    renderExportedItem :: Located.Located Item.Item -> ([Content.Content Element.Element], Set.Set Natural.Natural)
+    renderExportedItem li =
       let k = itemNatKey li
           allChildren = Map.findWithDefault [] k childrenMap
-          visibleChildren = filter (shouldShowChild subs) allChildren
+          visibleChildren = filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) allChildren
           (childHtml, childKeys) =
             foldr
               ( \c (accHtml, accKeys) ->
@@ -674,27 +648,13 @@ declarationsContents exports items =
             Set.insert k childKeys
           )
 
-    shouldShowChild :: Maybe Subordinates.Subordinates -> Located.Located Item.Item -> Bool
-    shouldShowChild subs li =
-      let item = Located.value li
-       in not (isTraditionalSubordinate (Item.kind item))
-            || case subs of
-              Nothing -> False
-              Just (Subordinates.MkSubordinates True _) -> True
-              Just (Subordinates.MkSubordinates False explicit) ->
-                case Item.name item of
-                  Nothing -> False
-                  Just n -> Set.member (ItemName.unwrap n) explicitNames
-                    where
-                      explicitNames = Set.fromList $ fmap ExportName.name explicit
-
     renderAlwaysVisible :: Set.Set Natural.Natural -> ([Content.Content Element.Element], Set.Set Natural.Natural)
     renderAlwaysVisible used =
       let visible =
             [ li
             | li <- topLevelItems,
               not (Set.member (itemNatKey li) used),
-              isAlwaysVisible (Item.kind (Located.value li))
+              Item.visibility (Located.value li) == Visibility.Implicit
             ]
           (html, keys) =
             foldr
@@ -706,28 +666,13 @@ declarationsContents exports items =
               visible
        in (html, keys)
 
-    handleCompletePragmas :: Set.Set Natural.Natural -> Set.Set Natural.Natural
-    handleCompletePragmas used =
-      foldr
-        ( \li acc ->
-            let k = itemNatKey li
-                cs = Map.findWithDefault [] k childrenMap
-             in if Item.kind (Located.value li) == ItemKind.CompletePragma
-                  && not (null cs)
-                  && all (\c -> Set.member (itemNatKey c) acc) cs
-                  then Set.insert k acc
-                  else acc
-        )
-        used
-        topLevelItems
-
     renderUnexported :: Set.Set Natural.Natural -> [Content.Content Element.Element]
     renderUnexported used =
       let unexported =
             [ li
             | li <- topLevelItems,
               not (Set.member (itemNatKey li) used),
-              not (isAlwaysVisible (Item.kind (Located.value li)))
+              Item.visibility (Located.value li) /= Visibility.Implicit
             ]
        in if null unexported
             then []

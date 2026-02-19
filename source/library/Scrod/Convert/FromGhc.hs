@@ -48,6 +48,7 @@ import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
 import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
+import qualified Scrod.Convert.FromGhc.Visibility as Visibility
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
@@ -93,7 +94,10 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = resolveNamedDocExports namedDocChunks <$> rawExports,
         Module.imports = extractModuleImports lHsModule,
-        Module.items = extractItems referencedChunkNames lHsModule
+        Module.items =
+          Visibility.computeVisibility (resolveNamedDocExports namedDocChunks <$> rawExports)
+            . extractItems referencedChunkNames
+            $ lHsModule
       }
 
 -- | Convert base version to our 'Version' type.

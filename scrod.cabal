@@ -106,6 +106,7 @@ library
     Scrod.Convert.FromGhc.ParentAssociation
     Scrod.Convert.FromGhc.RoleParents
     Scrod.Convert.FromGhc.SpecialiseParents
+    Scrod.Convert.FromGhc.Visibility
     Scrod.Convert.FromGhc.WarningParents
     Scrod.Convert.FromHaddock
     Scrod.Convert.ToHtml

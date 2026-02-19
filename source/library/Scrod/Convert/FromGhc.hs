@@ -52,6 +52,8 @@ import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
+import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
+import qualified Scrod.Core.ExportName as ExportName
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
@@ -64,7 +66,9 @@ import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
 import qualified Scrod.Core.PackageName as PackageName
 import qualified Scrod.Core.Since as Since
+import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Version as Version
+import qualified Scrod.Core.Visibility as Visibility
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
 
@@ -93,7 +97,10 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
         Module.warning = extractModuleWarning lHsModule,
         Module.exports = resolveNamedDocExports namedDocChunks <$> rawExports,
         Module.imports = extractModuleImports lHsModule,
-        Module.items = extractItems referencedChunkNames lHsModule
+        Module.items =
+          computeVisibility (resolveNamedDocExports namedDocChunks <$> rawExports)
+            . extractItems referencedChunkNames
+            $ lHsModule
       }
 
 -- | Convert base version to our 'Version' type.
@@ -239,6 +246,102 @@ extractItems referencedChunkNames lHsModule =
       -- are merged with their type signatures first.
       completeNames = CompleteParents.extractCompleteNames lHsModule
    in CompleteParents.associateCompleteParents completeNames kindSigParentedItems
+
+-- | Whether an item kind is always visible regardless of the export list.
+isAlwaysVisible :: ItemKind.ItemKind -> Bool
+isAlwaysVisible k = case k of
+  ItemKind.ClassInstance -> True
+  ItemKind.StandaloneDeriving -> True
+  ItemKind.DerivedInstance -> True
+  ItemKind.Rule -> True
+  ItemKind.Default -> True
+  ItemKind.Annotation -> True
+  ItemKind.Splice -> True
+  _ -> False
+
+-- | Compute visibility for each item based on the module's export list.
+computeVisibility ::
+  Maybe [Export.Export] ->
+  [Located.Located Item.Item] ->
+  [Located.Located Item.Item]
+computeVisibility Nothing items = fmap (setImplicit Nothing) items
+computeVisibility (Just exports) items =
+  let exportedNames = extractExportedNames exports
+      wildcardParentKeys = extractWildcardParentKeys exports items
+   in fmap (classifyItem exportedNames wildcardParentKeys) items
+  where
+    classifyItem ::
+      Set.Set Text.Text ->
+      Set.Set ItemKey.ItemKey ->
+      Located.Located Item.Item ->
+      Located.Located Item.Item
+    classifyItem exportedNames wildcardParentKeys li =
+      let item = Located.value li
+       in if isAlwaysVisible (Item.kind item)
+            then setVisibility Visibility.Implicit li
+            else case Item.parentKey item of
+              Just pk
+                | Set.member pk wildcardParentKeys ->
+                    setVisibility Visibility.Wildcard li
+              _ ->
+                case Item.name item of
+                  Just n
+                    | Set.member (ItemName.unwrap n) exportedNames ->
+                        setVisibility Visibility.Exported li
+                  _ -> setVisibility Visibility.Unexported li
+
+-- | When there is no export list, tag implicit items and leave everything
+-- else as 'Exported' (the default set by 'mkItemM').
+setImplicit :: Maybe ItemKey.ItemKey -> Located.Located Item.Item -> Located.Located Item.Item
+setImplicit _ li =
+  let item = Located.value li
+   in if isAlwaysVisible (Item.kind item)
+        then setVisibility Visibility.Implicit li
+        else li
+
+-- | Set the visibility field on a located item.
+setVisibility :: Visibility.Visibility -> Located.Located Item.Item -> Located.Located Item.Item
+setVisibility v li =
+  li {Located.value = (Located.value li) {Item.visibility = v}}
+
+-- | Extract the set of names that are directly exported (including
+-- explicitly named subordinates like @Foo(Bar, Baz)@).
+extractExportedNames :: [Export.Export] -> Set.Set Text.Text
+extractExportedNames = foldMap go
+  where
+    go :: Export.Export -> Set.Set Text.Text
+    go (Export.Identifier ident) =
+      let name = ExportName.name (ExportIdentifier.name ident)
+          explicitSubs = case ExportIdentifier.subordinates ident of
+            Nothing -> Set.empty
+            Just (Subordinates.MkSubordinates _ explicit) ->
+              Set.fromList $ fmap ExportName.name explicit
+       in Set.insert name explicitSubs
+    go _ = Set.empty
+
+-- | Extract the set of parent item keys whose children are exported via
+-- a @(..)@ wildcard.
+extractWildcardParentKeys ::
+  [Export.Export] ->
+  [Located.Located Item.Item] ->
+  Set.Set ItemKey.ItemKey
+extractWildcardParentKeys exports items =
+  let wildcardNames =
+        Set.fromList
+          [ ExportName.name (ExportIdentifier.name ident)
+          | Export.Identifier ident <- exports,
+            Just (Subordinates.MkSubordinates True _) <- [ExportIdentifier.subordinates ident]
+          ]
+      nameToKey =
+        Map.fromList
+          [ (ItemName.unwrap n, Item.key (Located.value li))
+          | li <- items,
+            Maybe.isNothing (Item.parentKey (Located.value li)),
+            Just n <- [Item.name (Located.value li)]
+          ]
+   in Set.fromList
+        . Maybe.mapMaybe (\n -> Map.lookup n nameToKey)
+        $ Set.toList wildcardNames
 
 -- | Build a map from function name to argument names extracted from
 -- 'FunBind' patterns. Each function maps to a list of 'Maybe Text'

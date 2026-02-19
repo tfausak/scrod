@@ -146,6 +146,7 @@ library
     Scrod.Core.Table
     Scrod.Core.TableCell
     Scrod.Core.Version
+    Scrod.Core.Visibility
     Scrod.Core.Warning
     Scrod.Cpp
     Scrod.Cpp.Directive

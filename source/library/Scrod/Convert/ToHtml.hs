@@ -50,6 +50,7 @@ import qualified Scrod.Core.Subordinates as Subordinates
 import qualified Scrod.Core.Table as Table
 import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Core.Version as Version
+import qualified Scrod.Core.Visibility as Visibility
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Xml.Content as Content
 import qualified Scrod.Xml.Declaration as XmlDeclaration
@@ -479,19 +480,6 @@ extensionUrlPaths =
       ("ViewPatterns", "exts/view_patterns.html#extension-ViewPatterns")
     ]
 
--- | Whether an item kind is "always visible" — implicitly exported
--- regardless of the export list.
-isAlwaysVisible :: ItemKind.ItemKind -> Bool
-isAlwaysVisible k = case k of
-  ItemKind.ClassInstance -> True
-  ItemKind.StandaloneDeriving -> True
-  ItemKind.DerivedInstance -> True
-  ItemKind.Rule -> True
-  ItemKind.Default -> True
-  ItemKind.Annotation -> True
-  ItemKind.Splice -> True
-  _ -> False
-
 -- | Whether an item kind is a traditional subordinate that can be
 -- filtered by export subordinate restrictions.
 isTraditionalSubordinate :: ItemKind.ItemKind -> Bool
@@ -694,7 +682,7 @@ declarationsContents exports items =
             [ li
             | li <- topLevelItems,
               not (Set.member (itemNatKey li) used),
-              isAlwaysVisible (Item.kind (Located.value li))
+              Item.visibility (Located.value li) == Visibility.Implicit
             ]
           (html, keys) =
             foldr
@@ -727,7 +715,7 @@ declarationsContents exports items =
             [ li
             | li <- topLevelItems,
               not (Set.member (itemNatKey li) used),
-              not (isAlwaysVisible (Item.kind (Located.value li)))
+              Item.visibility (Located.value li) /= Visibility.Implicit
             ]
        in if null unexported
             then []

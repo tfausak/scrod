@@ -10,6 +10,7 @@ import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Since as Since
+import qualified Scrod.Core.Visibility as Visibility
 import qualified Scrod.Json.ToJson as ToJson
 import qualified Scrod.Schema as Schema
 
@@ -20,7 +21,8 @@ data Item = MkItem
     name :: Maybe ItemName.ItemName,
     documentation :: Doc.Doc,
     since :: Maybe Since.Since,
-    signature :: Maybe Text.Text
+    signature :: Maybe Text.Text,
+    visibility :: Visibility.Visibility
   }
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Item

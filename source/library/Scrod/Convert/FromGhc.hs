@@ -275,14 +275,14 @@ computeVisibility (Just exports) items =
       Set.Set ItemKey.ItemKey ->
       Located.Located Item.Item ->
       Located.Located Item.Item
-    classifyItem exportedNames wildcardParentKeys li =
+    classifyItem exportedNames wildcardKeys li =
       let item = Located.value li
        in if isAlwaysVisible (Item.kind item)
             then setVisibility Visibility.Implicit li
             else case Item.parentKey item of
               Just pk
-                | Set.member pk wildcardParentKeys ->
-                    setVisibility Visibility.Wildcard li
+                | Set.member pk wildcardKeys ->
+                    setVisibility Visibility.Exported li
               _ ->
                 case Item.name item of
                   Just n

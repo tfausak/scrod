@@ -9,13 +9,10 @@ import qualified Scrod.Schema as Schema
 
 -- | The visibility of an item with respect to the module's export list.
 data Visibility
-  = -- | Directly named in the export list (including subordinates named
-    -- explicitly like @Foo(Bar, Baz)@), or every top-level item when
-    -- there is no export list.
+  = -- | In the export list (directly named, via subordinates like
+    -- @Foo(Bar)@, or via wildcard like @Foo(..)@), or every top-level
+    -- item when there is no export list.
     Exported
-  | -- | Visible because a parent is exported with a @(..)@ wildcard
-    -- (e.g. constructors via @Foo(..)@, class methods, record fields).
-    Wildcard
   | -- | Always visible regardless of the export list (class instances,
     -- standalone deriving, derived instances, rules, defaults,
     -- annotations, splices).

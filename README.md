@@ -49,20 +49,24 @@ scrod --format html < MyModule.hs  # HTML output
 
 ```
 $ scrod --help
-scrod version 0.2026.2.11
+scrod version 0.2026.2.18
 <https://scrod.fyi>
 
-  -h[BOOL]  --help[=BOOL]       Shows the help.
-            --version[=BOOL]    Shows the version.
-            --format=FORMAT     Sets the output format (json or html).
-            --literate[=BOOL]   Treats the input as Literate Haskell.
-            --signature[=BOOL]  Treats the input as a Backpack signature.
+  -h[BOOL]  --help[=BOOL]           Shows the help.
+            --version[=BOOL]        Shows the version.
+            --format=FORMAT         Sets the output format (json or html).
+            --ghc-option=OPTION     Sets a GHC option (e.g. -XOverloadedStrings).
+            --literate[=BOOL]       Treats the input as Literate Haskell.
+            --schema[=BOOL]         Shows the JSON output schema.
+            --signature[=BOOL]      Treats the input as a Backpack signature.
 ```
 
 - **`-h`, `--help`**: Prints the help then exits.
 - **`--version`**: Prints the version then exits.
 - **`--format`**: Sets the output format. Either `json` (the default) or `html`.
+- **`--ghc-option`**: Passes an option to the GHC parser (e.g. `-XOverloadedStrings`). Can be given multiple times.
 - **`--literate`**: Treats the input as literate Haskell, either Bird or LaTeX style.
+- **`--schema`**: Prints the JSON output schema then exits.
 - **`--signature`**: Treats the input as a Backpack signature.
 
 Boolean flags accept an optional `=BOOL` argument (`True` or `False`). Without the argument, the flag is set to `True`. This lets you override earlier flags, e.g. `--literate --literate=False`.

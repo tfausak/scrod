@@ -100,6 +100,38 @@ supportedLanguages = Session.supportedLanguagesAndExtensions ArchOS.empty
 interactiveFilePath :: FilePath
 interactiveFilePath = "<interactive>"
 
+parseGuessing ::
+  Bool ->
+  [String] ->
+  String ->
+  Either
+    String
+    ( (Maybe Session.Language, [DynFlags.OnOff Extension.Extension]),
+      SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
+    )
+parseGuessing isSignature extraOptions string =
+  case parse isSignature extraOptions string of
+    Right result -> Right result
+    Left _ ->
+      let guessOptions = fmap ("-X" <>) stolenSyntaxExtensions
+       in parse isSignature (extraOptions <> guessOptions) string
+
+stolenSyntaxExtensions :: [String]
+stolenSyntaxExtensions =
+  [ "Arrows",
+    "BangPatterns",
+    "ExtendedLiterals",
+    "ForeignFunctionInterface",
+    "ImplicitParams",
+    "MagicHash",
+    "PatternSynonyms",
+    "QuasiQuotes",
+    "RecursiveDo",
+    "StaticPointers",
+    "TemplateHaskell",
+    "UnboxedTuples"
+  ]
+
 resolveExtensions ::
   Maybe Session.Language ->
   [DynFlags.OnOff Extension.Extension] ->
@@ -141,3 +173,25 @@ spec s = do
 
     Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
       Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp])
+
+  Spec.named s 'parseGuessing $ do
+    Spec.it s "succeeds with empty input" $ do
+      Spec.assertEq s (fst <$> parseGuessing False [] "") $ Right (Nothing, [])
+
+    Spec.it s "succeeds with valid input" $ do
+      Spec.assertEq s (fst <$> parseGuessing False [] "module Foo where") $ Right (Nothing, [])
+
+    Spec.it s "succeeds with TemplateHaskell syntax" $ do
+      case parseGuessing False [] "f = $( undefined )" of
+        Left err -> Spec.assertFailure s err
+        Right _ -> pure ()
+
+    Spec.it s "succeeds with MagicHash syntax" $ do
+      case parseGuessing False [] "f = 0#" of
+        Left err -> Spec.assertFailure s err
+        Right _ -> pure ()
+
+    Spec.it s "fails with truly invalid input" $ do
+      case parseGuessing False [] "!" of
+        Left _ -> pure ()
+        Right _ -> Spec.assertFailure s "expected parse failure"

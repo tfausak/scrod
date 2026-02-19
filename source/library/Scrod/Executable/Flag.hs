@@ -11,6 +11,7 @@ import qualified System.Console.GetOpt as GetOpt
 data Flag
   = Format String
   | GhcOption String
+  | GuessExtensions (Maybe String)
   | Help (Maybe String)
   | Literate (Maybe String)
   | Schema (Maybe String)
@@ -33,6 +34,7 @@ optDescrs =
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
     GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
     GetOpt.Option [] ["ghc-option"] (GetOpt.ReqArg GhcOption "OPTION") "Sets a GHC option (e.g. -XOverloadedStrings).",
+    GetOpt.Option [] ["guess-extensions"] (GetOpt.OptArg GuessExtensions "BOOL") "Guesses language extensions when parsing fails.",
     GetOpt.Option [] ["literate"] (GetOpt.OptArg Literate "BOOL") "Treats the input as Literate Haskell.",
     GetOpt.Option [] ["schema"] (GetOpt.OptArg Schema "BOOL") "Shows the JSON output schema.",
     GetOpt.Option [] ["signature"] (GetOpt.OptArg Signature "BOOL") "Treats the input as a Backpack signature."
@@ -94,6 +96,13 @@ spec s = do
 
       Spec.it s "works with an argument" $ do
         Spec.assertEq s (fromArguments ["--version="]) $ Just [Version $ Just ""]
+
+    Spec.describe s "guess-extensions" $ do
+      Spec.it s "works with no argument" $ do
+        Spec.assertEq s (fromArguments ["--guess-extensions"]) $ Just [GuessExtensions Nothing]
+
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--guess-extensions="]) $ Just [GuessExtensions $ Just ""]
 
     Spec.describe s "ghc-option" $ do
       Spec.it s "works with an argument" $ do

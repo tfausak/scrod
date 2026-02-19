@@ -15,6 +15,7 @@ import qualified Scrod.Spec as Spec
 data Config = MkConfig
   { format :: Format.Format,
     ghcOptions :: Seq.Seq String,
+    guessExtensions :: Bool,
     help :: Bool,
     literate :: Bool,
     schema :: Bool,
@@ -32,6 +33,11 @@ applyFlag config flag = case flag of
     fmt <- Format.fromString string
     pure config {format = fmt}
   Flag.GhcOption string -> pure config {ghcOptions = ghcOptions config Seq.|> string}
+  Flag.GuessExtensions maybeString -> case maybeString of
+    Nothing -> pure config {guessExtensions = True}
+    Just string -> do
+      bool <- Read.readM string
+      pure config {guessExtensions = bool}
   Flag.Help maybeString -> case maybeString of
     Nothing -> pure config {help = True}
     Just string -> do
@@ -63,6 +69,7 @@ initial =
   MkConfig
     { format = Format.Json,
       ghcOptions = Seq.empty,
+      guessExtensions = False,
       help = False,
       literate = False,
       schema = False,
@@ -143,6 +150,19 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Help $ Just "invalid"]) Nothing
+
+    Spec.describe s "guessExtensions" $ do
+      Spec.it s "works with nothing" $ do
+        Spec.assertEq s (fromFlags [Flag.GuessExtensions Nothing]) $ Just initial {guessExtensions = True}
+
+      Spec.it s "works with just false" $ do
+        Spec.assertEq s (fromFlags [Flag.GuessExtensions $ Just "False"]) $ Just initial
+
+      Spec.it s "works with just true" $ do
+        Spec.assertEq s (fromFlags [Flag.GuessExtensions $ Just "True"]) $ Just initial {guessExtensions = True}
+
+      Spec.it s "fails with just invalid" $ do
+        Spec.assertEq s (fromFlags [Flag.GuessExtensions $ Just "invalid"]) Nothing
 
     Spec.describe s "ghcOptions" $ do
       Spec.it s "defaults to empty" $ do

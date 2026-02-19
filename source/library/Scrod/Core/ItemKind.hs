@@ -87,3 +87,15 @@ data ItemKind
     Argument
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically ItemKind
+
+-- | Whether an item kind is a traditional subordinate that can be
+-- filtered by export subordinate restrictions (e.g. @Foo(Bar)@ or
+-- @Foo(..)@).
+isTraditionalSubordinate :: ItemKind -> Bool
+isTraditionalSubordinate k = case k of
+  DataConstructor -> True
+  GADTConstructor -> True
+  RecordField -> True
+  ClassMethod -> True
+  DefaultMethodSignature -> True
+  _ -> False

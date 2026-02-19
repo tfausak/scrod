@@ -251,6 +251,7 @@ extractItems referencedChunkNames lHsModule =
 isAlwaysVisible :: ItemKind.ItemKind -> Bool
 isAlwaysVisible k = case k of
   ItemKind.ClassInstance -> True
+  ItemKind.CompletePragma -> True
   ItemKind.StandaloneDeriving -> True
   ItemKind.DerivedInstance -> True
   ItemKind.Rule -> True
@@ -268,14 +269,16 @@ computeVisibility Nothing items = fmap setImplicit items
 computeVisibility (Just exports) items =
   let exportedNames = extractExportedNames exports
       wildcardParentKeys = extractWildcardParentKeys exports items
-   in fmap (classifyItem exportedNames wildcardParentKeys) items
+      exportedParentSubs = extractExportedParentSubs exports items
+   in fmap (classifyItem exportedNames wildcardParentKeys exportedParentSubs) items
   where
     classifyItem ::
       Set.Set Text.Text ->
       Set.Set ItemKey.ItemKey ->
+      Map.Map ItemKey.ItemKey (Maybe Subordinates.Subordinates) ->
       Located.Located Item.Item ->
       Located.Located Item.Item
-    classifyItem exportedNames wildcardKeys li =
+    classifyItem exportedNames wildcardKeys parentSubs li =
       let item = Located.value li
        in if isAlwaysVisible (Item.kind item)
             then setVisibility Visibility.Implicit li
@@ -283,12 +286,40 @@ computeVisibility (Just exports) items =
               Just pk
                 | Set.member pk wildcardKeys ->
                     setVisibility Visibility.Exported li
+                | Just subs <- Map.lookup pk parentSubs ->
+                    classifyChild subs item li
               _ ->
                 case Item.name item of
                   Just n
                     | Set.member (ItemName.unwrap n) exportedNames ->
                         setVisibility Visibility.Exported li
                   _ -> setVisibility Visibility.Unexported li
+
+    -- Classify a child of an exported parent based on subordinate
+    -- restrictions. Non-traditional subordinates (e.g. associated type
+    -- families) are always exported. Traditional subordinates
+    -- (constructors, record fields, class methods) follow the export
+    -- list's subordinate restrictions.
+    classifyChild ::
+      Maybe Subordinates.Subordinates ->
+      Item.Item ->
+      Located.Located Item.Item ->
+      Located.Located Item.Item
+    classifyChild subs item li
+      | not (ItemKind.isTraditionalSubordinate (Item.kind item)) =
+          setVisibility Visibility.Exported li
+      | otherwise = case subs of
+          Nothing -> setVisibility Visibility.Unexported li
+          Just (Subordinates.MkSubordinates True _) ->
+            setVisibility Visibility.Exported li
+          Just (Subordinates.MkSubordinates False explicit) ->
+            case Item.name item of
+              Just n
+                | Set.member (ItemName.unwrap n) explicitNames ->
+                    setVisibility Visibility.Exported li
+                where
+                  explicitNames = Set.fromList $ fmap ExportName.name explicit
+              _ -> setVisibility Visibility.Unexported li
 
 -- | When there is no export list, tag implicit items and leave everything
 -- else as 'Exported' (the default set by 'mkItemM').
@@ -332,16 +363,37 @@ extractWildcardParentKeys exports items =
           | Export.Identifier ident <- exports,
             Just (Subordinates.MkSubordinates True _) <- [ExportIdentifier.subordinates ident]
           ]
-      nameToKey =
-        Map.fromList
-          [ (ItemName.unwrap n, Item.key (Located.value li))
-          | li <- items,
-            Maybe.isNothing (Item.parentKey (Located.value li)),
-            Just n <- [Item.name (Located.value li)]
-          ]
    in Set.fromList
-        . Maybe.mapMaybe (\n -> Map.lookup n nameToKey)
+        . Maybe.mapMaybe (\n -> Map.lookup n (topLevelNameToKey items))
         $ Set.toList wildcardNames
+
+-- | Extract a map from exported parent item keys to their subordinate
+-- restrictions. The value is 'Nothing' when the parent is exported with
+-- no subordinates at all (e.g. @Foo@), or 'Just' when subordinates are
+-- present (e.g. @Foo(..)@ or @Foo(Bar)@).
+extractExportedParentSubs ::
+  [Export.Export] ->
+  [Located.Located Item.Item] ->
+  Map.Map ItemKey.ItemKey (Maybe Subordinates.Subordinates)
+extractExportedParentSubs exports items =
+  let exportSubs =
+        [ (ExportName.name (ExportIdentifier.name ident), ExportIdentifier.subordinates ident)
+        | Export.Identifier ident <- exports
+        ]
+      nk = topLevelNameToKey items
+   in Map.fromList
+        . Maybe.mapMaybe (\(n, subs) -> (\k -> (k, subs)) <$> Map.lookup n nk)
+        $ exportSubs
+
+-- | Build a map from top-level item names to their keys.
+topLevelNameToKey :: [Located.Located Item.Item] -> Map.Map Text.Text ItemKey.ItemKey
+topLevelNameToKey items =
+  Map.fromList
+    [ (ItemName.unwrap n, Item.key (Located.value li))
+    | li <- items,
+      Maybe.isNothing (Item.parentKey (Located.value li)),
+      Just n <- [Item.name (Located.value li)]
+    ]
 
 -- | Build a map from function name to argument names extracted from
 -- 'FunBind' patterns. Each function maps to a list of 'Maybe Text'

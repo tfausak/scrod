@@ -758,6 +758,57 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind/type", "\"Function\"")
         ]
 
+    Spec.it s "creates metadata items for export-level doc comments" $ do
+      check
+        s
+        """
+        module M
+          ( x -- ^ export doc
+          ) where
+        x = ()
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/value", "\"export doc\"")
+        ]
+
+    Spec.it s "creates metadata items for export-level warnings" $ do
+      check
+        s
+        """
+        module M ( {-# warning "deprecated" #-} x ) where
+        x = ()
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/1/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/1/value/documentation/type", "\"Paragraph\"")
+        ]
+
+    Spec.it s "deduplicates repeated exports" $ do
+      check
+        s
+        """
+        module M ( x, x ) where
+        x = ()
+        """
+        [ ("/items/0/value/name", "\"x\""),
+          ("/items/0/value/kind/type", "\"Function\"")
+        ]
+
+    Spec.it s "places implicit items after exported items" $ do
+      check
+        s
+        """
+        module M ( MyClass ) where
+        class MyClass a
+        instance MyClass Int
+        """
+        [ ("/items/0/value/name", "\"MyClass\""),
+          ("/items/0/value/visibility/type", "\"Exported\""),
+          ("/items/1/value/visibility/type", "\"Implicit\"")
+        ]
+
   Spec.describe s "named chunks" $ do
     Spec.it s "creates items for unreferenced named chunks" $ do
       check

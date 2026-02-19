@@ -50,8 +50,10 @@ reorderByExports (Just exports) items =
       implicitItems = collectImplicit usedKeys items
       usedKeys2 = foldr (Set.insert . Item.key . Located.value) usedKeys implicitItems
       unexportedItems = collectUnexported usedKeys2 items
+      usedKeys3 = foldr (Set.insert . Item.key . Located.value) usedKeys2 unexportedItems
+      remainingItems = collectRemaining usedKeys3 items
       childItems = filter (Maybe.isJust . Item.parentKey . Located.value) items
-   in exportedItems <> implicitItems <> unexportedItems <> childItems
+   in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
 
 -- | Build a map from top-level item names to located items.
 topLevelNameMap :: [Located.Located Item.Item] -> Map.Map Text.Text (Located.Located Item.Item)
@@ -98,8 +100,10 @@ walkExports (e : es) nameMap used nextKey = case e of
              in (meta <> rest, used2, nextKey3)
           Nothing ->
             let (unresolvedItem, nextKey2) = mkUnresolvedExport ident nextKey
-                (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
-             in (unresolvedItem : rest, used2, nextKey3)
+                meta = exportMetadataItems ident nextKey2
+                nextKey3 = nextKey2 + fromIntegral (length meta)
+                (rest, used2, nextKey4) = walkExports es nameMap used nextKey3
+             in (unresolvedItem : meta <> rest, used2, nextKey4)
   Export.Group section ->
     let (sectionItem, nextKey2) = mkSectionItem section nextKey
         (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
@@ -138,6 +142,21 @@ collectUnexported usedKeys =
         let item = Located.value li
          in Maybe.isNothing (Item.parentKey item)
               && Item.visibility item == Visibility.Unexported
+              && not (Set.member (Item.key item) usedKeys)
+    )
+
+-- | Catch-all for any top-level items not captured by the above
+-- collectors. This cannot happen in practice today, but guards against
+-- future drift between Visibility and ExportOrdering.
+collectRemaining ::
+  Set.Set ItemKey.ItemKey ->
+  [Located.Located Item.Item] ->
+  [Located.Located Item.Item]
+collectRemaining usedKeys =
+  filter
+    ( \li ->
+        let item = Located.value li
+         in Maybe.isNothing (Item.parentKey item)
               && not (Set.member (Item.key item) usedKeys)
     )
 
@@ -232,10 +251,12 @@ mkDocNamedItem ::
   Text.Text ->
   Natural.Natural ->
   (Located.Located Item.Item, Natural.Natural)
-mkDocNamedItem _name nextKey =
-  ( mkSyntheticItem nextKey Nothing Doc.Empty Nothing ItemKind.DocumentationChunk,
+mkDocNamedItem name nextKey =
+  ( mkSyntheticItem nextKey Nothing doc Nothing ItemKind.DocumentationChunk,
     nextKey + 1
   )
+  where
+    doc = Doc.Paragraph . Doc.String $ Text.pack "$" <> name
 
 -- | Create a synthetic item with a given key, not tied to any source
 -- location.

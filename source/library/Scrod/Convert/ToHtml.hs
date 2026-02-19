@@ -495,7 +495,7 @@ declarationsContents items =
     topLevelItems :: [Located.Located Item.Item]
     topLevelItems = filter (Maybe.isNothing . Item.parentKey . Located.value) items
 
-    -- \| Render a top-level item. DocumentationChunk items without a
+    -- Render a top-level item. DocumentationChunk items without a
     -- name render their documentation inline (for section headings and
     -- export docs). UnresolvedExport items render with a namespace
     -- prefix and optional re-export badge. All other items render as

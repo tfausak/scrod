@@ -5,6 +5,17 @@
   <meta charset='utf-8'>
   <meta name='viewport' content='initial-scale = 1, width = device-width'>
   <title>Scrod</title>
+  <meta name='description' content='A Haskell documentation tool with a live editor'>
+  <meta property='og:title' content='Scrod'>
+  <meta property='og:description' content='A Haskell documentation tool with a live editor'>
+  <meta property='og:type' content='website'>
+  <meta property='og:url' content='https://scrod.fyi'>
+  <meta property='og:image' content='https://scrod.fyi/og-image.svg'>
+  <meta name='twitter:card' content='summary'>
+  <meta name='twitter:title' content='Scrod'>
+  <meta name='twitter:description' content='A Haskell documentation tool with a live editor'>
+  <meta name='twitter:image' content='https://scrod.fyi/og-image.svg'>
+  <link rel='icon' href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1f41f;</text></svg>">
   <link rel='stylesheet' href='https://esm.sh/bootstrap@5.3.8/dist/css/bootstrap.min.css'
     integrity='sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB' crossorigin='anonymous'>
   <link rel='stylesheet' href='style.css'>
@@ -52,10 +63,12 @@
   </nav>
   <ul class='nav nav-tabs d-md-none px-3 pt-2 bg-body-tertiary' role='tablist'>
     <li class='nav-item' role='presentation'>
-      <button type='button' id='tab-input' class='nav-link active' role='tab' aria-selected='true' aria-controls='input-pane' tabindex='0'>Input</button>
+      <button type='button' id='tab-input' class='nav-link active' role='tab' aria-selected='true'
+        aria-controls='input-pane' tabindex='0'>Input</button>
     </li>
     <li class='nav-item' role='presentation'>
-      <button type='button' id='tab-output' class='nav-link' role='tab' aria-selected='false' aria-controls='output-pane' tabindex='-1'>Output</button>
+      <button type='button' id='tab-output' class='nav-link' role='tab' aria-selected='false'
+        aria-controls='output-pane' tabindex='-1'>Output</button>
     </li>
   </ul>
   <div id='panes' class='d-flex flex-grow-1 overflow-hidden'>

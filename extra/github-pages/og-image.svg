@@ -1,0 +1,6 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='630' viewBox='0 0 1200 630'>
+  <rect width='1200' height='630' fill='#f8f9fa'/>
+  <text x='600' y='260' font-size='200' text-anchor='middle'>&#x1f41f;</text>
+  <text x='600' y='420' font-size='80' font-family='system-ui, sans-serif' font-weight='bold' text-anchor='middle' fill='#212529'>Scrod</text>
+  <text x='600' y='490' font-size='36' font-family='system-ui, sans-serif' text-anchor='middle' fill='#6c757d'>A Haskell documentation tool</text>
+</svg>

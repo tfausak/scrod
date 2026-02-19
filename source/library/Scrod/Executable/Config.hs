@@ -5,6 +5,7 @@ module Scrod.Executable.Config where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Catch as Exception
+import qualified Data.Sequence as Seq
 import qualified GHC.Stack as Stack
 import qualified Scrod.Executable.Flag as Flag
 import qualified Scrod.Executable.Format as Format
@@ -13,6 +14,7 @@ import qualified Scrod.Spec as Spec
 
 data Config = MkConfig
   { format :: Format.Format,
+    ghcOptions :: Seq.Seq String,
     help :: Bool,
     literate :: Bool,
     schema :: Bool,
@@ -29,6 +31,7 @@ applyFlag config flag = case flag of
   Flag.Format string -> do
     fmt <- Format.fromString string
     pure config {format = fmt}
+  Flag.GhcOption string -> pure config {ghcOptions = ghcOptions config Seq.|> string}
   Flag.Help maybeString -> case maybeString of
     Nothing -> pure config {help = True}
     Just string -> do
@@ -59,6 +62,7 @@ initial :: Config
 initial =
   MkConfig
     { format = Format.Json,
+      ghcOptions = Seq.empty,
       help = False,
       literate = False,
       schema = False,
@@ -139,3 +143,13 @@ spec s = do
 
       Spec.it s "fails with just invalid" $ do
         Spec.assertEq s (fromFlags [Flag.Help $ Just "invalid"]) Nothing
+
+    Spec.describe s "ghcOptions" $ do
+      Spec.it s "defaults to empty" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags []) $ Just Seq.empty
+
+      Spec.it s "collects one option" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags [Flag.GhcOption "-XCPP"]) $ Just (Seq.fromList ["-XCPP"])
+
+      Spec.it s "collects multiple options in order" $ do
+        Spec.assertEq s (ghcOptions <$> fromFlags [Flag.GhcOption "-XCPP", Flag.GhcOption "-XGADTs"]) $ Just (Seq.fromList ["-XCPP", "-XGADTs"])

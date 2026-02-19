@@ -10,6 +10,7 @@ import qualified System.Console.GetOpt as GetOpt
 
 data Flag
   = Format String
+  | GhcOption String
   | Help (Maybe String)
   | Literate (Maybe String)
   | Schema (Maybe String)
@@ -27,9 +28,11 @@ fromArguments arguments = do
 
 optDescrs :: [GetOpt.OptDescr Flag]
 optDescrs =
+  -- First help, then version, then everything else in alphabetical order.
   [ GetOpt.Option ['h'] ["help"] (GetOpt.OptArg Help "BOOL") "Shows the help.",
     GetOpt.Option [] ["version"] (GetOpt.OptArg Version "BOOL") "Shows the version.",
     GetOpt.Option [] ["format"] (GetOpt.ReqArg Format "FORMAT") "Sets the output format (json or html).",
+    GetOpt.Option [] ["ghc-option"] (GetOpt.ReqArg GhcOption "OPTION") "Sets a GHC option (e.g. -XOverloadedStrings).",
     GetOpt.Option [] ["literate"] (GetOpt.OptArg Literate "BOOL") "Treats the input as Literate Haskell.",
     GetOpt.Option [] ["schema"] (GetOpt.OptArg Schema "BOOL") "Shows the JSON output schema.",
     GetOpt.Option [] ["signature"] (GetOpt.OptArg Signature "BOOL") "Treats the input as a Backpack signature."
@@ -91,3 +94,13 @@ spec s = do
 
       Spec.it s "works with an argument" $ do
         Spec.assertEq s (fromArguments ["--version="]) $ Just [Version $ Just ""]
+
+    Spec.describe s "ghc-option" $ do
+      Spec.it s "works with an argument" $ do
+        Spec.assertEq s (fromArguments ["--ghc-option=-XOverloadedStrings"]) $ Just [GhcOption "-XOverloadedStrings"]
+
+      Spec.it s "fails with no argument" $ do
+        Spec.assertEq s (fromArguments ["--ghc-option"]) Nothing
+
+      Spec.it s "works with multiple" $ do
+        Spec.assertEq s (fromArguments ["--ghc-option=-XCPP", "--ghc-option=-XGADTs"]) $ Just [GhcOption "-XCPP", GhcOption "-XGADTs"]

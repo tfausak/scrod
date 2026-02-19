@@ -9,6 +9,7 @@ import qualified Control.Monad.Trans.Class as Trans
 import qualified Control.Monad.Trans.Except as ExceptT
 import qualified Data.Bifunctor as Bifunctor
 import qualified Data.ByteString.Builder as Builder
+import qualified Data.Foldable as Foldable
 import qualified Data.Version as Version
 import qualified GHC.Stack as Stack
 import qualified PackageInfo_scrod as PackageInfo
@@ -63,7 +64,8 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
       then Either.throw . Bifunctor.first userError $ Unlit.unlit contents
       else pure contents
   let isSignature = Config.signature config
-  result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature source
+  let ghcOpts = Foldable.toList (Config.ghcOptions config)
+  result <- Either.throw . Bifunctor.first userError $ Parse.parse isSignature ghcOpts source
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson

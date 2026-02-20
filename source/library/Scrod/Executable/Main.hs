@@ -69,5 +69,5 @@ mainWith name arguments myGetContents = ExceptT.runExceptT $ do
   module_ <- Either.throw . Bifunctor.first userError $ FromGhc.fromGhc isSignature result
   let convert = case Config.format config of
         Format.Json -> Json.encode . ToJson.toJson
-        Format.Html -> Xml.encode . ToHtml.toHtml
+        Format.Html -> Xml.encodeHtml . ToHtml.toHtml
   pure $ convert module_ <> Builder.charUtf8 '\n'

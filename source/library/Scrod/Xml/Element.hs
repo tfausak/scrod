@@ -3,6 +3,7 @@
 module Scrod.Xml.Element where
 
 import qualified Data.ByteString.Builder as Builder
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Scrod.Extra.Builder as Builder
 import qualified Scrod.Spec as Spec
@@ -46,6 +47,47 @@ encodeWithContents el =
 encodeAttributes :: [Attribute.Attribute] -> Builder.Builder
 encodeAttributes = foldMap (\a -> Builder.charUtf8 ' ' <> Attribute.encode a)
 
+-- | Encode an element as HTML. Only void elements are self-closing; all
+-- other elements use open and close tags even when empty.
+encodeHtml :: Element -> Builder.Builder
+encodeHtml el =
+  if null (contents el) && isHtmlVoidElement (Name.unwrap $ name el)
+    then encodeSelfClosing el
+    else
+      Builder.charUtf8 '<'
+        <> Name.encode (name el)
+        <> encodeAttributes (attributes el)
+        <> Builder.charUtf8 '>'
+        <> foldMap (Content.encode encodeHtml) (contents el)
+        <> Builder.stringUtf8 "</"
+        <> Name.encode (name el)
+        <> Builder.charUtf8 '>'
+
+-- | Whether a tag name is an HTML void element that may be self-closing.
+-- See <https://html.spec.whatwg.org/multipage/syntax.html#void-elements>.
+isHtmlVoidElement :: Text.Text -> Bool
+isHtmlVoidElement = (`Set.member` htmlVoidElements)
+
+htmlVoidElements :: Set.Set Text.Text
+htmlVoidElements =
+  Set.fromList $
+    fmap
+      Text.pack
+      [ "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "source",
+        "track",
+        "wbr"
+      ]
+
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   let mkName :: String -> Name.Name
@@ -75,3 +117,22 @@ spec s = do
 
     Spec.it s "escapes text content" $ do
       Spec.assertEq s (Builder.toString . encode $ MkElement (mkName "foo") [] [Content.Text $ Text.pack "a & b"]) "<foo>a &amp; b</foo>"
+
+  Spec.named s 'encodeHtml $ do
+    Spec.it s "self-closes void elements" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "br") [] []) "<br />"
+
+    Spec.it s "self-closes void elements with attributes" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "img") [mkAttr "src" "x.png"] []) "<img src=\"x.png\" />"
+
+    Spec.it s "uses paired tags for non-void elements when empty" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "div") [] []) "<div></div>"
+
+    Spec.it s "uses paired tags for non-void elements with content" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "div") [] [mkText "hello"]) "<div>hello</div>"
+
+    Spec.it s "applies recursively to nested elements" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "div") [] [mkElement "span" [] []]) "<div><span></span></div>"
+
+    Spec.it s "applies recursively to nested void elements" $ do
+      Spec.assertEq s (Builder.toString . encodeHtml $ MkElement (mkName "div") [] [mkElement "br" [] []]) "<div><br /></div>"

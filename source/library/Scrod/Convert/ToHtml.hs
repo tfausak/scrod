@@ -4,7 +4,7 @@
 --
 -- Produces a complete @\<html\>@ document with Bootstrap 5 and KaTeX
 -- loaded from CDNs. The output uses the custom XML types in
--- @Scrod.Xml.*@ and can be serialized with 'Xml.encode'.
+-- @Scrod.Xml.*@ and can be serialized with 'Xml.encodeHtml'.
 module Scrod.Convert.ToHtml (toHtml) where
 
 import qualified Data.List as List
@@ -669,11 +669,7 @@ kindToString x = case x of
 
 docContents :: Doc.Doc -> [Content.Content Element.Element]
 docContents doc = case doc of
-  -- The empty string node prevents the XML renderer from emitting a
-  -- self-closing tag (e.g. <div/>) on any parent element, which is not valid
-  -- HTML. Use 'Content.isEmpty' rather than 'null' to test whether the
-  -- resulting content list is effectively empty.
-  Doc.Empty -> [Xml.string ""]
+  Doc.Empty -> []
   Doc.Append xs -> foldMap docContents xs
   Doc.String x -> [element "span" [("class", "text-break")] [Xml.text x]]
   Doc.Paragraph x -> [element "p" [] $ docContents x]
@@ -690,7 +686,7 @@ docContents doc = case doc of
   Doc.Pic x -> [pictureContent x]
   Doc.MathInline x -> [Xml.string "\\(", Xml.text x, Xml.string "\\)"]
   Doc.MathDisplay x -> [Xml.string "\\[", Xml.text x, Xml.string "\\]"]
-  Doc.AName x -> [element "a" [("id", Text.unpack x)] [Xml.string ""]]
+  Doc.AName x -> [element "a" [("id", Text.unpack x)] []]
   Doc.Property x -> [propertyContent x]
   Doc.Examples xs -> exampleContent <$> NonEmpty.toList xs
   Doc.Header x -> [headerContent x]

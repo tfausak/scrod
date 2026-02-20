@@ -14,5 +14,8 @@
     }
   },
   "image": "mcr.microsoft.com/devcontainers/base:alpine",
-  "onCreateCommand": "nix-env -iA nixpkgs.direnv"
+  "onCreateCommand": "nix-env -iA nixpkgs.direnv",
+  "remoteEnv": {
+    "LC_ALL": "C.UTF-8"
+  }
 }

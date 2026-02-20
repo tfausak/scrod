@@ -1672,7 +1672,7 @@ spec s = Spec.describe s "integration" $ do
         "data R6 deriving Show"
         [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
           ("/items/1/value/name", "\"Show\""),
-          ("/items/1/value/signature", "")
+          ("/items/1/value/signature", "\"derived\"")
         ]
 
     Spec.it s "data GADT deriving" $ do

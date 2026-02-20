@@ -24,7 +24,7 @@ encode :: Element -> Builder.Builder
 encode el =
   if null (contents el)
     then encodeSelfClosing el
-    else encodeWithContents encode el
+    else encodeWithContents el
 
 encodeSelfClosing :: Element -> Builder.Builder
 encodeSelfClosing el =
@@ -33,13 +33,13 @@ encodeSelfClosing el =
     <> encodeAttributes (attributes el)
     <> Builder.stringUtf8 " />"
 
-encodeWithContents :: (Element -> Builder.Builder) -> Element -> Builder.Builder
-encodeWithContents encodeElement el =
+encodeWithContents :: Element -> Builder.Builder
+encodeWithContents el =
   Builder.charUtf8 '<'
     <> Name.encode (name el)
     <> encodeAttributes (attributes el)
     <> Builder.charUtf8 '>'
-    <> foldMap (Content.encode encodeElement) (contents el)
+    <> foldMap (Content.encode encode) (contents el)
     <> Builder.stringUtf8 "</"
     <> Name.encode (name el)
     <> Builder.charUtf8 '>'
@@ -48,12 +48,23 @@ encodeAttributes :: [Attribute.Attribute] -> Builder.Builder
 encodeAttributes = foldMap (\a -> Builder.charUtf8 ' ' <> Attribute.encode a)
 
 -- | Encode an element as HTML. Only void elements are self-closing; all
--- other elements use open and close tags even when empty.
+-- other elements use open and close tags even when empty. Recursively
+-- fills empty non-void elements with an empty text node so that the
+-- regular XML encoder produces paired tags.
 encodeHtml :: Element -> Builder.Builder
-encodeHtml el =
-  if null (contents el) && isHtmlVoidElement (Name.unwrap $ name el)
-    then encodeSelfClosing el
-    else encodeWithContents encodeHtml el
+encodeHtml = encode . fillNonVoidElements
+
+fillNonVoidElements :: Element -> Element
+fillNonVoidElements el =
+  let cs = fmap fillNonVoidContent (contents el)
+   in if null cs && not (isHtmlVoidElement (Name.unwrap $ name el))
+        then el {contents = [Content.Text Text.empty]}
+        else el {contents = cs}
+
+fillNonVoidContent :: Content.Content Element -> Content.Content Element
+fillNonVoidContent c = case c of
+  Content.Element e -> Content.Element (fillNonVoidElements e)
+  _ -> c
 
 -- | Whether a tag name is an HTML void element that may be self-closing.
 -- See <https://html.spec.whatwg.org/multipage/syntax.html#void-elements>.

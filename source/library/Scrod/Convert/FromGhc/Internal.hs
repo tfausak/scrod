@@ -170,6 +170,11 @@ metaSinceToSince metaSince = do
           Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
       }
 
+-- | Set the parent key on a located item.
+setParentKey :: ItemKey.ItemKey -> Located.Located Item.Item -> Located.Located Item.Item
+setParentKey pk li =
+  li {Located.value = (Located.value li) {Item.parentKey = Just pk}}
+
 -- | Create an Item from a source span with the given properties.
 mkItemM ::
   SrcLoc.SrcSpan ->

@@ -9,6 +9,7 @@ module Scrod.Convert.FromGhc.ParentAssociation where
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
+import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemName as ItemName
@@ -64,8 +65,5 @@ resolveParent pragmaLocations nameToKey locItem =
         case Map.lookup name nameToKey of
           Nothing -> locItem
           Just parentKey ->
-            locItem
-              { Located.value =
-                  (Located.value locItem) {Item.parentKey = Just parentKey}
-              }
+            Internal.setParentKey parentKey locItem
     else locItem

@@ -85,7 +85,4 @@ resolveCompleteParent completeNames locationToKey locItem =
               Just loc -> case Map.lookup loc locationToKey of
                 Nothing -> locItem
                 Just parentKey ->
-                  locItem
-                    { Located.value =
-                        val {Item.parentKey = Just parentKey}
-                    }
+                  Internal.setParentKey parentKey locItem

@@ -357,7 +357,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
         sig = Just $ Names.extractForeignDeclSignature foreignDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince name sig lDecl
   Syntax.SpliceD _ spliceDecl ->
-    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
+    let sig = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
   Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
   Syntax.RoleAnnotD _ roleAnnotDecl -> Maybe.maybeToList <$> convertRoleAnnotM roleAnnotDecl
@@ -411,7 +411,7 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
     let parentKey = fmap (Item.key . Located.value) parentItem
         eqn = Syntax.dfid_eqn dataFamInst
         parentType =
-          Just . Text.pack . Outputable.showSDocUnsafe $
+          Just . Text.pack . Internal.showSDocShort $
             Outputable.ppr (Syntax.feqn_tycon eqn)
               Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
     childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
@@ -472,25 +472,28 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let sigText = Just . inlineSpecToText $ Basic.inl_inline inlinePragma
      in Maybe.maybeToList <$> convertInlineNameM doc docSince sigText lName
   Syntax.SpecSig _ lName sigTypes _ ->
-    let sigText = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
+    let sigText = Just . Text.pack . Internal.showSDocShort $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
      in Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
   Syntax.SpecSigE _ _ lExpr _ -> convertSpecSigEM doc docSince lExpr
   Syntax.CompleteMatchSig _ names mTyCon ->
     let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
-        sigText = Just . Text.pack . Outputable.showSDocUnsafe $ case mTyCon of
+        sigText = Just . Text.pack . Internal.showSDocShort $ case mTyCon of
           Nothing -> namesSig
           Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert extracted argument data into child Argument items.
+-- Returns no items if none of the arguments have documentation.
 convertArguments ::
   Maybe ItemKey.ItemKey ->
   SrcLoc.SrcSpan ->
   [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))] ->
   Internal.ConvertM [Located.Located Item.Item]
-convertArguments parentKey srcSpan args =
-  Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+convertArguments parentKey srcSpan args
+  | any (Maybe.isJust . snd) args =
+      Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+  | otherwise = pure []
 
 -- | Convert a single argument to an Argument item.
 convertOneArgument ::
@@ -549,7 +552,7 @@ convertSpecSigEM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertSpecSigEM doc docSince lExpr = case SrcLoc.unLoc lExpr of
   Syntax.ExprWithTySig _ body sigWcType ->
-    let sigText = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ sigWcType
+    let sigText = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ sigWcType
      in case SrcLoc.unLoc body of
           Syntax.HsVar _ lName ->
             Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
@@ -623,7 +626,7 @@ convertRuleDeclM lRuleDecl =
   let ruleDecl = SrcLoc.unLoc lRuleDecl
       name = Just . ItemName.MkItemName . Text.pack . FastString.unpackFS . SrcLoc.unLoc $ Syntax.rd_name ruleDecl
       sig =
-        Just . Text.pack . Outputable.showSDocUnsafe $
+        Just . Text.pack . Internal.showSDocShort $
           Outputable.ppr (Syntax.rd_bndrs ruleDecl)
             Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
             Outputable.<+> Outputable.text "="
@@ -757,7 +760,7 @@ convertDefaultSigDeclM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertDefaultSigDeclM nameToKey doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SigD _ (Syntax.ClassOpSig _ True names sigTy) ->
-    let sig = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr sigTy
+    let sig = Just . Text.pack . Internal.showSDocShort $ Outputable.ppr sigTy
      in Maybe.catMaybes <$> traverse (convertDefaultSigNameM nameToKey doc docSince sig) names
   _ -> pure []
 
@@ -788,7 +791,7 @@ convertMinimalSigM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
   Syntax.MinimalSig _ lBooleanFormula ->
-    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
+    let sig = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
      in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
   _ -> pure Nothing
 
@@ -830,7 +833,7 @@ convertTyFamInstEqnM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertTyFamInstEqnM parentKey lEqn =
   let eqn = SrcLoc.unLoc lEqn
-      sig = Just . Text.pack . Outputable.showSDocUnsafe $ extractTyFamInstEqnSig eqn
+      sig = Just . Text.pack . Internal.showSDocShort $ extractTyFamInstEqnSig eqn
    in Internal.mkItemM (Annotation.getLocA lEqn) parentKey Nothing Doc.Empty Nothing sig ItemKind.TypeFamilyInstance
 
 -- | Pretty-print a type family instance equation.

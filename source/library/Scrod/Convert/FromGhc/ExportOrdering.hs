@@ -259,11 +259,11 @@ mkDocNamedItem ::
   Natural.Natural ->
   (Located.Located Item.Item, Natural.Natural)
 mkDocNamedItem name nextKey =
-  ( mkSyntheticItem nextKey Nothing doc Nothing ItemKind.DocumentationChunk,
+  ( mkSyntheticItem nextKey chunkName Doc.Empty Nothing ItemKind.DocumentationChunk,
     nextKey + 1
   )
   where
-    doc = Doc.Paragraph . Doc.String $ Text.pack "$" <> name
+    chunkName = Just . ItemName.MkItemName $ Text.pack "$" <> name
 
 -- | Create a synthetic item with a given key, not tied to any source
 -- location.

@@ -12,6 +12,7 @@ import qualified Data.Text as Text
 import GHC.Hs ()
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Types.SrcLoc as SrcLoc
+import GHC.Utils.Outputable ((<+>))
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Scrod.Convert.FromGhc.Internal as Internal
@@ -52,7 +53,7 @@ extractTyClDeclName tyClDecl = case tyClDecl of
   Syntax.ClassDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
     Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
       [] -> Outputable.ppr lName
-      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
+      tvs -> Outputable.ppr lName <+> Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract the fully applied parent type text from a data declaration.
 -- For @data Maybe a@, this produces @"Maybe a"@.
@@ -61,7 +62,7 @@ extractParentTypeText tyClDecl = case tyClDecl of
   Syntax.DataDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
     Just . Text.pack . Internal.showSDocShort $ case Syntax.hsQTvExplicit tyVars of
       [] -> Outputable.ppr lName
-      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
+      tvs -> Outputable.ppr lName <+> Outputable.hsep (fmap Outputable.ppr tvs)
   _ -> Nothing
 
 -- | Extract type variable bindings from a type\/class declaration.

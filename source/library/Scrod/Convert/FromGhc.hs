@@ -28,6 +28,7 @@ import qualified GHC.Types.Basic as Basic
 import qualified GHC.Types.PkgQual as PkgQual
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
+import GHC.Utils.Outputable ((<+>))
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
@@ -414,7 +415,7 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
         parentType =
           Just . Text.pack . Internal.showSDocShort $
             Outputable.ppr (Syntax.feqn_tycon eqn)
-              Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
+              <+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
     childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
     pure $ Maybe.maybeToList parentItem <> childItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
@@ -480,7 +481,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
         sigText = Just . Text.pack . Internal.showSDocShort $ case mTyCon of
           Nothing -> namesSig
-          Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
+          Just tyCon -> namesSig <+> Outputable.text "::" <+> Outputable.ppr tyCon
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
@@ -621,9 +622,9 @@ convertRuleDeclM lRuleDecl =
       sig =
         Just . Text.pack . Internal.showSDocShort $
           Outputable.ppr (Syntax.rd_bndrs ruleDecl)
-            Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
-            Outputable.<+> Outputable.text "="
-            Outputable.<+> Outputable.ppr (Syntax.rd_rhs ruleDecl)
+            <+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
+            <+> Outputable.text "="
+            <+> Outputable.ppr (Syntax.rd_rhs ruleDecl)
    in Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing name Doc.Empty Nothing sig ItemKind.Rule
 
 -- | Convert a role annotation declaration.
@@ -833,9 +834,9 @@ convertTyFamInstEqnM parentKey lEqn =
 extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
 extractTyFamInstEqnSig eqn =
   Outputable.ppr (Syntax.feqn_tycon eqn)
-    Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
-    Outputable.<+> Outputable.text "="
-    Outputable.<+> Outputable.ppr (Syntax.feqn_rhs eqn)
+    <+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
+    <+> Outputable.text "="
+    <+> Outputable.ppr (Syntax.feqn_rhs eqn)
 
 -- | Pretty-print a type argument, stripping the 'HsArg' wrapper.
 pprHsTypeArg :: Syntax.LHsTypeArg Ghc.GhcPs -> Outputable.SDoc

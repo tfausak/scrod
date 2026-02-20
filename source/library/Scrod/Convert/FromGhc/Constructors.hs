@@ -12,6 +12,7 @@ import qualified Data.Text as Text
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.SrcLoc as SrcLoc
+import GHC.Utils.Outputable ((<+>))
 import qualified GHC.Utils.Outputable as Outputable
 import qualified Language.Haskell.Syntax as Syntax
 import qualified Language.Haskell.Syntax.Basic as SyntaxBasic
@@ -107,24 +108,24 @@ extractConDeclSignature mParentType conDecl = case conDecl of
                 if hasForall && not (null exTvs)
                   then
                     Outputable.text "forall"
-                      Outputable.<+> Outputable.hsep (fmap Outputable.ppr exTvs)
+                      <+> Outputable.hsep (fmap Outputable.ppr exTvs)
                       Outputable.<> Outputable.text "."
                   else Outputable.empty
               cxtDoc = case mbCxt of
                 Nothing -> Outputable.empty
                 Just ctx -> case SrcLoc.unLoc ctx of
                   [] -> Outputable.empty
-                  [c] -> Outputable.ppr c Outputable.<+> Outputable.text "=>"
+                  [c] -> Outputable.ppr c <+> Outputable.text "=>"
                   cs ->
                     Outputable.parens
                       (Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr cs)))
-                      Outputable.<+> Outputable.text "=>"
+                      <+> Outputable.text "=>"
               argsDoc = h98ArgsToDoc (stripH98DetailsDocs args)
               bodyDoc = case argsDoc of
                 Nothing -> Outputable.text (Text.unpack parentType)
-                Just ad -> ad Outputable.<+> Outputable.text "->" Outputable.<+> Outputable.text (Text.unpack parentType)
+                Just ad -> ad <+> Outputable.text "->" <+> Outputable.text (Text.unpack parentType)
            in Just . Text.pack . Internal.showSDocShort $
-                forallDoc Outputable.<+> cxtDoc Outputable.<+> bodyDoc
+                forallDoc <+> cxtDoc <+> bodyDoc
   c@Syntax.ConDeclGADT {} ->
     let full =
           Text.pack . Internal.showSDocShort . Outputable.ppr $
@@ -150,19 +151,19 @@ h98ArgsToDoc details = case details of
   Syntax.InfixCon l r ->
     Just $
       Outputable.ppr (Syntax.cdf_type l)
-        Outputable.<+> Outputable.text "->"
-        Outputable.<+> Outputable.ppr (Syntax.cdf_type r)
+        <+> Outputable.text "->"
+        <+> Outputable.ppr (Syntax.cdf_type r)
   Syntax.RecCon lFields ->
     let fields = SrcLoc.unLoc lFields
      in Just $ case fields of
           [f] ->
             Outputable.text "{"
-              Outputable.<+> Outputable.ppr f
-              Outputable.<+> Outputable.text "}"
+              <+> Outputable.ppr f
+              <+> Outputable.text "}"
           (f : fs) ->
             Outputable.vcat $
-              [Outputable.text "{" Outputable.<+> Outputable.ppr f]
-                <> fmap (\fld -> Outputable.text "," Outputable.<+> Outputable.ppr fld) fs
+              [Outputable.text "{" <+> Outputable.ppr f]
+                <> fmap (\fld -> Outputable.text "," <+> Outputable.ppr fld) fs
                 <> [Outputable.text "}"]
           [] ->
             Outputable.text "{}"

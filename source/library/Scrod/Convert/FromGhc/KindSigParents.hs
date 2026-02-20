@@ -13,7 +13,6 @@ module Scrod.Convert.FromGhc.KindSigParents where
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -62,11 +61,8 @@ buildDeclNameSet =
               Nothing -> []
               Just n ->
                 let full = ItemName.unwrap n
-                 in n : [ItemName.MkItemName base | Just base <- [baseName full], base /= full]
+                 in n : [ItemName.MkItemName base | Just base <- [Internal.baseItemName full]]
             else []
-    baseName t = case Text.words t of
-      (w : _) -> Just w
-      _ -> Nothing
 
 -- | For each item, either merge a matching kind signature into it,
 -- remove a consumed kind signature, or pass it through unchanged.
@@ -100,9 +96,9 @@ mergeOrRemoveKindSig kindSigMap declNames locItem =
         Just x -> Just x
         Nothing ->
           let full = ItemName.unwrap name
-           in case Text.words full of
-                (w : _ : _) -> Map.lookup (ItemName.MkItemName w) m
-                _ -> Nothing
+           in case Internal.baseItemName full of
+                Just w -> Map.lookup (ItemName.MkItemName w) m
+                Nothing -> Nothing
 
 -- | Merge a standalone kind signature's metadata into a declaration.
 -- The kind signature's signature text and \@since\@ annotation take

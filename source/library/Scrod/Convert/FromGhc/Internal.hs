@@ -171,6 +171,14 @@ metaSinceToSince metaSince = do
           Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
       }
 
+-- | Extract the base name (first word) from an item name that contains
+-- type variables. Returns 'Nothing' if the name is a single word (no
+-- type variables) or empty.
+baseItemName :: Text.Text -> Maybe Text.Text
+baseItemName t = case Text.words t of
+  (w : _ : _) -> Just w
+  _ -> Nothing
+
 -- | Set the parent key on a located item.
 setParentKey :: ItemKey.ItemKey -> Located.Located Item.Item -> Located.Located Item.Item
 setParentKey pk li =

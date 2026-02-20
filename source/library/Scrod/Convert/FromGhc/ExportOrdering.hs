@@ -14,6 +14,7 @@ import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Numeric.Natural as Natural
+import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Doc as Doc
@@ -66,12 +67,8 @@ topLevelNameMap items =
       Maybe.isNothing (Item.parentKey (Located.value li)),
       Just n <- [Item.name (Located.value li)],
       let full = ItemName.unwrap n,
-      entry <- (full, li) : [(base, li) | Just base <- [stripTyVars full], base /= full]
+      entry <- (full, li) : [(base, li) | Just base <- [Internal.baseItemName full]]
     ]
-  where
-    stripTyVars t = case Text.words t of
-      (w : _) -> Just w
-      _ -> Nothing
 
 -- | Compute the next available item key (one past the maximum).
 nextItemKey :: [Located.Located Item.Item] -> Natural.Natural

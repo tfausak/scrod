@@ -60,9 +60,19 @@ computeVisibility (Just exports) items =
               _ ->
                 case Item.name item of
                   Just n
-                    | Set.member (ItemName.unwrap n) exportedNames ->
+                    | nameIsExported (ItemName.unwrap n) exportedNames ->
                         setVisibility Visibility.Exported li
                   _ -> setVisibility Visibility.Unexported li
+
+    -- Check if a name (possibly containing type variables) matches
+    -- an exported name. Tries the full name first, then the base
+    -- name (first word) for names with type variables.
+    nameIsExported :: Text.Text -> Set.Set Text.Text -> Bool
+    nameIsExported full names =
+      Set.member full names
+        || case Text.words full of
+          (w : _ : _) -> Set.member w names
+          _ -> False
 
     -- Classify a child of an exported parent based on subordinate
     -- restrictions. Non-traditional subordinates (e.g. associated type
@@ -155,11 +165,20 @@ extractExportedParentSubs exports items =
         $ exportSubs
 
 -- | Build a map from top-level item names to their keys.
+-- For items whose names contain type variables (indicated by a space),
+-- both the full name and the base name (first word) are indexed.
 topLevelNameToKey :: [Located.Located Item.Item] -> Map.Map Text.Text ItemKey.ItemKey
 topLevelNameToKey items =
   Map.fromList
-    [ (ItemName.unwrap n, Item.key (Located.value li))
+    [ entry
     | li <- items,
       Maybe.isNothing (Item.parentKey (Located.value li)),
-      Just n <- [Item.name (Located.value li)]
+      Just n <- [Item.name (Located.value li)],
+      let full = ItemName.unwrap n,
+      let k = Item.key (Located.value li),
+      entry <- (full, k) : [(base, k) | Just base <- [stripTyVars full], base /= full]
     ]
+  where
+    stripTyVars t = case Text.words t of
+      (w : _) -> Just w
+      _ -> Nothing

@@ -42,12 +42,17 @@ extractKindSigSignature (Syntax.StandaloneKindSig _ _ lSigType) =
   Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ lSigType
 
 -- | Extract name from a type/class declaration.
+-- For class declarations, this includes type variables in the name
+-- (e.g., @class C a@ produces @"C a"@).
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName
 extractTyClDeclName tyClDecl = case tyClDecl of
   Syntax.FamDecl _ famDecl -> Just $ extractFamilyDeclName famDecl
   Syntax.SynDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
   Syntax.DataDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
-  Syntax.ClassDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
+  Syntax.ClassDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
+    Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
+      [] -> Outputable.ppr lName
+      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract the fully applied parent type text from a data declaration.
 -- For @data Maybe a@, this produces @"Maybe a"@.
@@ -66,7 +71,6 @@ extractParentTypeText tyClDecl = case tyClDecl of
 extractTyClDeclTyVars :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractTyClDeclTyVars tyClDecl = case tyClDecl of
   Syntax.DataDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
-  Syntax.ClassDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
   _ -> Nothing
 
 -- | Pretty-print explicit type variable binders as text.
@@ -232,10 +236,15 @@ stripHsDocTy lTy = case lTy of
 -- pretty-printed type text and its 'LHsDoc' (if the argument was wrapped
 -- in 'HsDocTy'). The return type is included only when it has documentation.
 --
+-- Returns a pair of (arguments, optional return type).
+--
 -- Handles 'TypeSig' (unwrap via 'hswc_body'), 'PatSynSig', and
 -- 'ClassOpSig' (unwrap via 'sig_body' on 'HsSigType').
 extractSigArguments ::
-  Syntax.Sig Ghc.GhcPs -> [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))]
+  Syntax.Sig Ghc.GhcPs ->
+  ( [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))],
+    Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))
+  )
 extractSigArguments sig = case sig of
   Syntax.TypeSig _ _ wc ->
     extractArgsFromBody . Syntax.sig_body . SrcLoc.unLoc $ Syntax.hswc_body wc
@@ -243,20 +252,28 @@ extractSigArguments sig = case sig of
     extractArgsFromBody . Syntax.sig_body $ SrcLoc.unLoc lSigType
   Syntax.ClassOpSig _ _ _ lSigType ->
     extractArgsFromBody . Syntax.sig_body $ SrcLoc.unLoc lSigType
-  _ -> []
+  _ -> ([], Nothing)
 
 -- | Skip through 'HsForAllTy' and 'HsQualTy' to reach the arrow chain,
--- then extract arguments from the 'HsFunTy' chain.
+-- then extract arguments from the 'HsFunTy' chain. Returns the arguments
+-- and the optional documented return type separately.
 extractArgsFromBody ::
-  Syntax.LHsType Ghc.GhcPs -> [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))]
+  Syntax.LHsType Ghc.GhcPs ->
+  ( [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))],
+    Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))
+  )
 extractArgsFromBody lTy = case SrcLoc.unLoc lTy of
   Syntax.HsForAllTy _ _ body -> extractArgsFromBody body
   Syntax.HsQualTy _ _ body -> extractArgsFromBody body
-  Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
+  Syntax.HsFunTy _ _ arg res ->
+    let (args, ret) = extractArgsFromBody res
+     in (extractArg arg : args, ret)
   Syntax.HsDocTy _ inner _doc -> case SrcLoc.unLoc inner of
-    Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
-    _ -> [extractArg lTy]
-  _ -> []
+    Syntax.HsFunTy _ _ arg res ->
+      let (args, ret) = extractArgsFromBody res
+       in (extractArg arg : args, ret)
+    _ -> ([], Just (extractArg lTy))
+  _ -> ([], Nothing)
 
 -- | Extract the type text and optional doc comment from a single argument.
 -- If the argument is wrapped in 'HsDocTy', the doc is extracted and the

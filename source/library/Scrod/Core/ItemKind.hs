@@ -90,6 +90,8 @@ data ItemKind
     DocumentationChunk
   | -- | Positional argument of a function or constructor
     Argument
+  | -- | Return type of a function
+    ReturnType
   | -- | Export list entry with no matching declaration in this module
     -- (e.g. a module re-export or an unresolved name).
     UnresolvedExport

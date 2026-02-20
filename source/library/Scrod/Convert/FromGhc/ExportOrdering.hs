@@ -56,14 +56,22 @@ reorderByExports (Just exports) items =
    in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
 
 -- | Build a map from top-level item names to located items.
+-- For items whose names contain type variables (indicated by a space),
+-- both the full name and the base name (first word) are indexed.
 topLevelNameMap :: [Located.Located Item.Item] -> Map.Map Text.Text (Located.Located Item.Item)
 topLevelNameMap items =
   Map.fromList
-    [ (ItemName.unwrap n, li)
+    [ entry
     | li <- items,
       Maybe.isNothing (Item.parentKey (Located.value li)),
-      Just n <- [Item.name (Located.value li)]
+      Just n <- [Item.name (Located.value li)],
+      let full = ItemName.unwrap n,
+      entry <- (full, li) : [(base, li) | Just base <- [stripTyVars full], base /= full]
     ]
+  where
+    stripTyVars t = case Text.words t of
+      (w : _) -> Just w
+      _ -> Nothing
 
 -- | Compute the next available item key (one past the maximum).
 nextItemKey :: [Located.Located Item.Item] -> Natural.Natural

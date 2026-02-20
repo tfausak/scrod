@@ -21,8 +21,7 @@ data Content a
 
 -- | Returns 'True' for content nodes that render as the empty string (empty
 -- 'Text' or 'Raw' nodes). Useful for checking whether a list of content is
--- effectively empty without stripping the nodes themselves (which may be
--- needed to prevent self-closing tags).
+-- effectively empty.
 isEmpty :: Content a -> Bool
 isEmpty c = case c of
   Text t -> Text.null t

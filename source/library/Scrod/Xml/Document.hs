@@ -51,6 +51,12 @@ encode doc =
   foldMap (\m -> Misc.encode m <> Builder.charUtf8 '\n') (prolog doc)
     <> Element.encode (root doc)
 
+-- | Encode as HTML. Only void elements are self-closing.
+encodeHtml :: Document -> Builder.Builder
+encodeHtml doc =
+  foldMap (\m -> Misc.encode m <> Builder.charUtf8 '\n') (prolog doc)
+    <> Element.encodeHtml (root doc)
+
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   let mkName :: String -> Name.Name
@@ -105,3 +111,24 @@ spec s = do
               (mkElement "style" [Content.Raw $ Text.pack "a > b { color: red; }"])
         )
         "<style>a > b { color: red; }</style>"
+
+  Spec.named s 'encodeHtml $ do
+    Spec.it s "uses paired tags for empty non-void elements" $ do
+      Spec.assertEq
+        s
+        ( Builder.toString . encodeHtml $
+            MkDocument
+              []
+              (mkElement "html" [])
+        )
+        "<html></html>"
+
+    Spec.it s "self-closes void elements" $ do
+      Spec.assertEq
+        s
+        ( Builder.toString . encodeHtml $
+            MkDocument
+              []
+              (mkElement "div" [Content.Element $ Element.MkElement (Name.MkName $ Text.pack "br") [] []])
+        )
+        "<div><br /></div>"

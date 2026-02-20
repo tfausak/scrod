@@ -910,6 +910,38 @@ spec s = Spec.describe s "integration" $ do
           ("/items/2/value/documentation/value/value", "\"quux\"")
         ]
 
+  Spec.describe s "doc groups" $ do
+    Spec.it s "converts doc groups in the module body to headings" $ do
+      check
+        s
+        """
+        a = 1
+        -- * My Section
+        c = 2
+        """
+        [ ("/items/0/value/name", "\"a\""),
+          ("/items/1/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/1/value/documentation/type", "\"Header\""),
+          ("/items/1/value/documentation/value/level", "1"),
+          ("/items/1/value/documentation/value/title/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/title/value/value", "\"My Section\""),
+          ("/items/2/value/name", "\"c\"")
+        ]
+
+    Spec.it s "handles level 2 doc groups" $ do
+      check
+        s
+        """
+        -- ** Sub Section
+        x = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/documentation/type", "\"Header\""),
+          ("/items/0/value/documentation/value/level", "2"),
+          ("/items/0/value/documentation/value/title/value/value", "\"Sub Section\""),
+          ("/items/1/value/name", "\"x\"")
+        ]
+
   Spec.describe s "imports" $ do
     Spec.it s "defaults to empty list" $ do
       check s "" [("/imports", "[]")]

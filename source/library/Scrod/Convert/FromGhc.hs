@@ -54,15 +54,15 @@ import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
-import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Extension as Extension
+import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
-import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Language as Language
+import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
@@ -573,13 +573,13 @@ fixityDirectionToText dir = case dir of
 
 -- | Convert a GHC doc group level (1-based) to a 'Level'.
 intToLevel :: Int -> Level.Level
-intToLevel n = case n of
-  1 -> Level.One
-  2 -> Level.Two
-  3 -> Level.Three
-  4 -> Level.Four
-  5 -> Level.Five
-  _ -> Level.Six
+intToLevel n
+  | n <= 1 = Level.One
+  | n == 2 = Level.Two
+  | n == 3 = Level.Three
+  | n == 4 = Level.Four
+  | n == 5 = Level.Five
+  | otherwise = Level.Six
 
 -- | Convert a GHC 'InlineSpec' to its pragma keyword text.
 inlineSpecToText :: Basic.InlineSpec -> Text.Text

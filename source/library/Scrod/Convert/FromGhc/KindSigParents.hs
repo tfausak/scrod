@@ -13,6 +13,7 @@ module Scrod.Convert.FromGhc.KindSigParents where
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -45,21 +46,32 @@ buildKindSigMap =
 -- | Collect names of top-level declarations that are not standalone
 -- kind signatures. Used to decide whether a kind signature has a
 -- matching declaration and should be consumed.
+-- For items whose names contain type variables (indicated by a space),
+-- both the full name and the base name (first word) are indexed.
 buildDeclNameSet ::
   [Located.Located Item.Item] ->
   Set.Set ItemName.ItemName
 buildDeclNameSet =
-  Set.fromList . Maybe.mapMaybe getDeclName
+  Set.fromList . concatMap getDeclNames
   where
-    getDeclName locItem =
+    getDeclNames locItem =
       let val = Located.value locItem
        in if Item.kind val /= ItemKind.StandaloneKindSig
             && Maybe.isNothing (Item.parentKey val)
-            then Item.name val
-            else Nothing
+            then case Item.name val of
+              Nothing -> []
+              Just n ->
+                let full = ItemName.unwrap n
+                 in n : [ItemName.MkItemName base | Just base <- [baseName full], base /= full]
+            else []
+    baseName t = case Text.words t of
+      (w : _) -> Just w
+      _ -> Nothing
 
 -- | For each item, either merge a matching kind signature into it,
 -- remove a consumed kind signature, or pass it through unchanged.
+-- When looking up kind signatures, both the full name and the base
+-- name (first word) are tried, to support names with type variables.
 mergeOrRemoveKindSig ::
   Map.Map ItemName.ItemName (Located.Located Item.Item) ->
   Set.Set ItemName.ItemName ->
@@ -77,10 +89,20 @@ mergeOrRemoveKindSig kindSigMap declNames locItem =
           | Maybe.isJust (Item.parentKey val) ->
               Just locItem
           | otherwise ->
-              case Map.lookup name kindSigMap of
+              case lookupWithBaseName name kindSigMap of
                 Nothing -> Just locItem
                 Just kindSigItem ->
                   Just $ mergeKindSigInto kindSigItem locItem
+  where
+    lookupWithBaseName :: ItemName.ItemName -> Map.Map ItemName.ItemName (Located.Located Item.Item) -> Maybe (Located.Located Item.Item)
+    lookupWithBaseName name m =
+      case Map.lookup name m of
+        Just x -> Just x
+        Nothing ->
+          let full = ItemName.unwrap name
+           in case Text.words full of
+                (w : _ : _) -> Map.lookup (ItemName.MkItemName w) m
+                _ -> Nothing
 
 -- | Merge a standalone kind signature's metadata into a declaration.
 -- The kind signature's signature text and \@since\@ annotation take

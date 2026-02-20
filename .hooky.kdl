@@ -1,7 +1,5 @@
 hook hlint {
-    command hlint {
-        pass_files xargs
-    }
+    command hlint {}
     files *.hs
 }
 
@@ -9,7 +7,6 @@ hook ormolu {
     command ormolu {
         check_args --mode check
         fix_args --mode inplace
-        pass_files xargs
     }
     files *.hs
 }

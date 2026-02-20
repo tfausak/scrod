@@ -3209,8 +3209,18 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/visibility/type", "\"Exported\"")
         ]
 
+-- | Run the pipeline on the given Haskell source and assert JSON pointer
+-- expectations. Each @(pointer, json)@ pair asserts that the value at
+-- @pointer@ equals the parsed @json@. Use an empty string for @json@
+-- (or the 'checkAbsent' wrapper) to assert that the pointer does not
+-- resolve to any value.
 check :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> String -> [(String, String)] -> m ()
 check s = checkWith s []
+
+-- | Assert that a JSON pointer path does not resolve to any value.
+-- Equivalent to @(pointer, "")@ in a 'check' assertion list.
+checkAbsent :: String -> (String, String)
+checkAbsent pointer = (pointer, "")
 
 checkWith :: (Stack.HasCallStack, Monad m) => Spec.Spec m n -> [String] -> String -> [(String, String)] -> m ()
 checkWith s arguments input assertions = do

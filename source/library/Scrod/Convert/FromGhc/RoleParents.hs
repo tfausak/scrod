@@ -18,10 +18,7 @@ import qualified Scrod.Core.Location as Location
 extractRoleLocations ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Set.Set Location.Location
-extractRoleLocations lHsModule =
-  let hsModule = SrcLoc.unLoc lHsModule
-      decls = Syntax.hsmodDecls hsModule
-   in Set.fromList $ concatMap extractDeclRoleLocations decls
+extractRoleLocations = Internal.extractDeclLocations extractDeclRoleLocations
 
 -- | Extract role annotation name locations from a single declaration.
 extractDeclRoleLocations ::

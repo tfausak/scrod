@@ -2579,7 +2579,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/items/0/value/kind/type", "\"Function\""),
           ("/items/0/value/name", "\"f\""),
-          ("/items/0/value/signature", "\"forall a. Show a => a -> String\""),
+          ("/items/0/value/signature", "\"forall a. Show a =>\\n          a -> String\""),
           ("/items/1/value/kind/type", "\"Argument\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),

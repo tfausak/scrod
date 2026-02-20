@@ -39,7 +39,7 @@ extractStandaloneKindSigName (Syntax.StandaloneKindSig _ lName _) = Internal.ext
 -- For example, @type X :: a -> a@ produces @"a -> a"@.
 extractKindSigSignature :: Syntax.StandaloneKindSig Ghc.GhcPs -> Text.Text
 extractKindSigSignature (Syntax.StandaloneKindSig _ _ lSigType) =
-  Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ lSigType
+  Text.pack . Internal.showSDocShort . Outputable.ppr $ lSigType
 
 -- | Extract name from a type/class declaration.
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName
@@ -54,7 +54,7 @@ extractTyClDeclName tyClDecl = case tyClDecl of
 extractParentTypeText :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractParentTypeText tyClDecl = case tyClDecl of
   Syntax.DataDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
-    Just . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
+    Just . Text.pack . Internal.showSDocShort $ case Syntax.hsQTvExplicit tyVars of
       [] -> Outputable.ppr lName
       tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
   _ -> Nothing
@@ -74,7 +74,7 @@ extractTyClDeclTyVars tyClDecl = case tyClDecl of
 tyVarsToText :: Syntax.LHsQTyVars Ghc.GhcPs -> Maybe Text.Text
 tyVarsToText tyVars = case Syntax.hsQTvExplicit tyVars of
   [] -> Nothing
-  tvs -> Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (fmap Outputable.ppr tvs)
+  tvs -> Just . Text.pack . Internal.showSDocShort $ Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract the signature for a type synonym declaration.
 -- For @type T = ()@, this produces @Just "= ()"@.
@@ -82,7 +82,7 @@ tyVarsToText tyVars = case Syntax.hsQTvExplicit tyVars of
 extractSynDeclSignature :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractSynDeclSignature tyClDecl = case tyClDecl of
   Syntax.SynDecl {Syntax.tcdTyVars = tyVars, Syntax.tcdRhs = rhs} ->
-    let rhsText = Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr rhs
+    let rhsText = Text.pack . Internal.showSDocShort $ Outputable.ppr rhs
      in Just $ case tyVarsToText tyVars of
           Nothing -> Text.pack "= " <> rhsText
           Just tvs -> tvs <> Text.pack " = " <> rhsText
@@ -99,7 +99,7 @@ extractForeignDeclName foreignDecl = Internal.extractIdPName $ Syntax.fd_name fo
 -- | Extract signature from a foreign declaration.
 extractForeignDeclSignature :: Syntax.ForeignDecl Ghc.GhcPs -> Text.Text
 extractForeignDeclSignature foreignDecl =
-  Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ Syntax.fd_sig_ty foreignDecl
+  Text.pack . Internal.showSDocShort . Outputable.ppr $ Syntax.fd_sig_ty foreignDecl
 
 -- | Extract name from a binding.
 extractBindName :: Syntax.HsBindLR Ghc.GhcPs Ghc.GhcPs -> Maybe ItemName.ItemName
@@ -184,11 +184,11 @@ extractSigName sig = case sig of
 extractSigSignature :: Syntax.Sig Ghc.GhcPs -> Maybe Text.Text
 extractSigSignature sig = case sig of
   Syntax.TypeSig _ _ ty ->
-    Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ stripHsSigWcType ty
+    Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ stripHsSigWcType ty
   Syntax.PatSynSig _ _ ty ->
-    Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ stripHsSigType ty
+    Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ stripHsSigType ty
   Syntax.ClassOpSig _ _ _ ty ->
-    Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ stripHsSigType ty
+    Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ stripHsSigType ty
   _ -> Nothing
 
 -- | Strip 'HsDocTy' wrappers from a wildcard-wrapped signature type.
@@ -266,11 +266,11 @@ extractArg ::
   Syntax.LHsType Ghc.GhcPs -> (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))
 extractArg lTy = case SrcLoc.unLoc lTy of
   Syntax.HsDocTy _ inner doc ->
-    ( Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ stripHsDocTy inner,
+    ( Text.pack . Internal.showSDocShort . Outputable.ppr $ stripHsDocTy inner,
       Just doc
     )
   _ ->
-    ( Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ stripHsDocTy lTy,
+    ( Text.pack . Internal.showSDocShort . Outputable.ppr $ stripHsDocTy lTy,
       Nothing
     )
 
@@ -278,13 +278,13 @@ extractArg lTy = case SrcLoc.unLoc lTy of
 extractInstDeclName :: Syntax.InstDecl Ghc.GhcPs -> Maybe ItemName.ItemName
 extractInstDeclName inst = Just $ case inst of
   Syntax.ClsInstD _ clsInst ->
-    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+    ItemName.MkItemName . Text.pack . Internal.showSDocShort . Outputable.ppr $
       Syntax.cid_poly_ty clsInst
   Syntax.DataFamInstD _ dataFamInst ->
-    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+    ItemName.MkItemName . Text.pack . Internal.showSDocShort . Outputable.ppr $
       dataFamInst
   Syntax.TyFamInstD _ tyFamInst ->
-    ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
+    ItemName.MkItemName . Text.pack . Internal.showSDocShort . Outputable.ppr $
       tyFamInst
 
 -- | Extract name from a standalone deriving declaration.
@@ -293,7 +293,7 @@ extractDerivDeclName =
   Just
     . ItemName.MkItemName
     . Text.pack
-    . Outputable.showSDocUnsafe
+    . Internal.showSDocShort
     . Outputable.ppr
     . Syntax.hswc_body
     . Syntax.deriv_type

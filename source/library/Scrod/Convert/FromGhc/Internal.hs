@@ -103,6 +103,12 @@ warningTxtToWarning warningTxt =
           $ Warnings.warningTxtMessage warningTxt
     }
 
+-- | Render an SDoc with a short line length to encourage line breaks.
+showSDocShort :: Outputable.SDoc -> String
+showSDocShort =
+  Outputable.renderWithContext
+    Outputable.defaultSDocContext {Outputable.sdocLineLength = 40}
+
 -- | Convert GHC WarningCategory to our 'Category' type.
 categoryFromGhc :: Warnings.WarningCategory -> Category.Category
 categoryFromGhc =

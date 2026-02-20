@@ -12,7 +12,6 @@ import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
-import qualified Numeric.Natural as Natural
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Definition as Definition
@@ -460,201 +459,170 @@ extensionUrlPaths =
 
 declarationsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 declarationsContents items =
-  element "h2" [] [Xml.string "Declarations"]
-    : if null topLevelItems
-      then [Xml.string "None."]
-      else
-        let (nonUnexported, unexported) = List.partition isNonUnexported topLevelItems
-         in foldMap renderTopLevelItem nonUnexported
-              <> if null unexported
-                then []
-                else
-                  element "h3" [] [Xml.string "Unexported"]
-                    : foldMap renderTopLevelItem unexported
-  where
-    isNonUnexported :: Located.Located Item.Item -> Bool
-    isNonUnexported li = Item.visibility (Located.value li) /= Visibility.Unexported
-
-    childrenMap :: Map.Map Natural.Natural [Located.Located Item.Item]
-    childrenMap = foldr addChild Map.empty items
-
-    addChild :: Located.Located Item.Item -> Map.Map Natural.Natural [Located.Located Item.Item] -> Map.Map Natural.Natural [Located.Located Item.Item]
-    addChild li acc = case Item.parentKey (Located.value li) of
-      Nothing -> acc
-      Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
-
-    topLevelItems :: [Located.Located Item.Item]
-    topLevelItems = filter (Maybe.isNothing . Item.parentKey . Located.value) items
-
-    -- Render a top-level item. DocumentationChunk items without a
-    -- name render their documentation inline (for section headings and
-    -- export docs). UnresolvedExport items render with a namespace
-    -- prefix and optional re-export badge. All other items render as
-    -- cards.
-    renderTopLevelItem :: Located.Located Item.Item -> [Content.Content Element.Element]
-    renderTopLevelItem li
-      | isInlineDocChunk li = docContents (Item.documentation (Located.value li))
-      | Item.kind (Located.value li) == ItemKind.UnresolvedExport = renderUnresolvedExport li
-      | otherwise = renderItemWithChildren li
-
-    isInlineDocChunk :: Located.Located Item.Item -> Bool
-    isInlineDocChunk li =
-      let item = Located.value li
-       in Item.kind item == ItemKind.DocumentationChunk
-            && Maybe.isNothing (Item.name item)
-
-    renderUnresolvedExport :: Located.Located Item.Item -> [Content.Content Element.Element]
-    renderUnresolvedExport li =
-      let item = Located.value li
-          namePrefix = case Item.signature item of
-            Just sig -> Text.unpack sig <> " "
-            Nothing -> ""
-          badge = case Item.signature item of
-            Just sig
-              | sig == Text.pack "module" ->
-                  [ element
-                      "div"
-                      [("class", "mx-1")]
-                      [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
-                  ]
-            _ -> []
-          name = foldMap ItemName.unwrap (Item.name item)
-       in [ element
-              "div"
-              [("class", "card my-3")]
-              [ element
-                  "div"
-                  [("class", "card-header")]
-                  $ element "code" [("class", "text-break")] [Xml.string namePrefix, Xml.text name]
-                    : badge
-              ]
-          ]
-
-    renderItemWithChildren :: Located.Located Item.Item -> [Content.Content Element.Element]
-    renderItemWithChildren li =
-      let children = Map.findWithDefault [] (itemNatKey li) childrenMap
-          visibleChildren =
-            if Item.visibility (Located.value li) == Visibility.Unexported
-              then children
-              else filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) children
-          isArgument c = Item.kind (Located.value c) == ItemKind.Argument
-          (argChildren, otherChildren) = List.partition isArgument visibleChildren
-       in [ itemContent
-              li
-              (foldMap renderItemWithChildren argChildren)
-              (foldMap renderItemWithChildren otherChildren)
-          ]
-
-    itemNatKey :: Located.Located Item.Item -> Natural.Natural
-    itemNatKey = ItemKey.unwrap . Item.key . Located.value
+  let isNonUnexported li = Item.visibility (Located.value li) /= Visibility.Unexported
+      addChild li acc = case Item.parentKey (Located.value li) of
+        Nothing -> acc
+        Just pk -> Map.insertWith (<>) (ItemKey.unwrap pk) [li] acc
+      childrenMap = foldr addChild Map.empty items
+      topLevelItems = filter (Maybe.isNothing . Item.parentKey . Located.value) items
+      itemNatKey = ItemKey.unwrap . Item.key . Located.value
+      isInlineDocChunk li =
+        let item = Located.value li
+         in Item.kind item == ItemKind.DocumentationChunk
+              && Maybe.isNothing (Item.name item)
+      renderUnresolvedExport li =
+        let item = Located.value li
+            namePrefix = case Item.signature item of
+              Just sig -> Text.unpack sig <> " "
+              Nothing -> ""
+            badge = case Item.signature item of
+              Just sig
+                | sig == Text.pack "module" ->
+                    [ element
+                        "div"
+                        [("class", "mx-1")]
+                        [element "span" [("class", "badge text-bg-secondary")] [Xml.string "re-export"]]
+                    ]
+              _ -> []
+            name = foldMap ItemName.unwrap (Item.name item)
+         in [ element
+                "div"
+                [("class", "card my-3")]
+                [ element
+                    "div"
+                    [("class", "card-header")]
+                    $ element "code" [("class", "text-break")] [Xml.string namePrefix, Xml.text name]
+                      : badge
+                ]
+            ]
+      renderItemWithChildren li =
+        let children = Map.findWithDefault [] (itemNatKey li) childrenMap
+            visibleChildren =
+              if Item.visibility (Located.value li) == Visibility.Unexported
+                then children
+                else filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) children
+            isArgument c = Item.kind (Located.value c) == ItemKind.Argument
+            (argChildren, otherChildren) = List.partition isArgument visibleChildren
+         in [ itemContent
+                li
+                (foldMap renderItemWithChildren argChildren)
+                (foldMap renderItemWithChildren otherChildren)
+            ]
+      -- Render a top-level item. DocumentationChunk items without a
+      -- name render their documentation inline (for section headings and
+      -- export docs). UnresolvedExport items render with a namespace
+      -- prefix and optional re-export badge. All other items render as
+      -- cards.
+      renderTopLevelItem li
+        | isInlineDocChunk li = docContents (Item.documentation (Located.value li))
+        | Item.kind (Located.value li) == ItemKind.UnresolvedExport = renderUnresolvedExport li
+        | otherwise = renderItemWithChildren li
+   in element "h2" [] [Xml.string "Declarations"]
+        : if null topLevelItems
+          then [Xml.string "None."]
+          else
+            let (nonUnexported, unexported) = List.partition isNonUnexported topLevelItems
+             in foldMap renderTopLevelItem nonUnexported
+                  <> if null unexported
+                    then []
+                    else
+                      element "h3" [] [Xml.string "Unexported"]
+                        : foldMap renderTopLevelItem unexported
 
 itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> [Content.Content Element.Element] -> Content.Content Element.Element
 itemContent item argChildren otherChildren =
-  element
-    "div"
-    [ ("class", "card my-3"),
-      ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item))
-    ]
-    $ [ element
-          "div"
-          [("class", "align-items-start card-header d-flex")]
-          $ [ element
-                "div"
-                []
-                ( case Item.name $ Located.value item of
-                    Nothing -> []
-                    Just n -> [element "code" [("class", "text-break")] [Xml.text $ ItemName.unwrap n]]
-                )
-            ]
-            <> earlySignature
-            <> [ element
-                   "div"
-                   [("class", "mx-1")]
-                   [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
-                   ]
-               ]
-            <> lateSignature
-            <> [ element
-                   "div"
-                   [("class", "ms-auto")]
-                   [ element
-                       "button"
-                       [ ("class", "btn btn-outline-secondary btn-sm"),
-                         ("data-col", show . Column.unwrap . Location.column $ Located.location item),
-                         ("data-line", show . Line.unwrap . Location.line $ Located.location item),
-                         ("type", "button")
-                       ]
-                       [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
-                         Xml.string ":",
-                         Xml.string . show . Column.unwrap . Location.column $ Located.location item
-                       ]
-                   ]
-               ]
-      ]
-      <> cardBody
-  where
-    cardBody =
-      let contents =
-            foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-              <> argChildren
-              <> docContents (Item.documentation $ Located.value item)
-              <> otherChildren
-       in if all Content.isEmpty contents
-            then []
-            else
+  let kind = Item.kind $ Located.value item
+      isEarly = case kind of
+        ItemKind.DataType -> True
+        ItemKind.Newtype -> True
+        ItemKind.TypeData -> True
+        ItemKind.TypeSynonym -> True
+        ItemKind.Class -> True
+        _ -> False
+      prefix = t $ if isEarly then "" else ":: "
+      signature = case Item.signature $ Located.value item of
+        Nothing -> []
+        Just sig ->
+          [ element
+              "div"
+              [("class", "mx-2"), ("style", "min-width: 0")]
               [ element
-                  "div"
-                  [("class", "card-body")]
-                  contents
+                  "code"
+                  [("class", "text-break text-secondary"), ("style", "white-space: pre-wrap")]
+                  [Xml.text $ prefix <> sig]
               ]
-
-    badgeColor = case kind of
-      ItemKind.Annotation -> "text-bg-info"
-      ItemKind.CompletePragma -> "text-bg-info"
-      ItemKind.DefaultMethodSignature -> "text-bg-info"
-      ItemKind.FixitySignature -> "text-bg-info"
-      ItemKind.InlineSignature -> "text-bg-info"
-      ItemKind.MinimalPragma -> "text-bg-info"
-      ItemKind.Rule -> "text-bg-info"
-      ItemKind.SpecialiseSignature -> "text-bg-info"
-      ItemKind.Warning -> "text-bg-warning"
-      _ -> "text-bg-secondary"
-
-    kind :: ItemKind.ItemKind
-    kind = Item.kind $ Located.value item
-
-    isEarly :: Bool
-    isEarly = case kind of
-      ItemKind.DataType -> True
-      ItemKind.Newtype -> True
-      ItemKind.TypeData -> True
-      ItemKind.TypeSynonym -> True
-      ItemKind.Class -> True
-      _ -> False
-
-    earlySignature :: [Content.Content Element.Element]
-    earlySignature =
-      if isEarly then signature else []
-
-    lateSignature :: [Content.Content Element.Element]
-    lateSignature =
-      if isEarly then [] else signature
-
-    prefix = t $ if isEarly then "" else ":: "
-
-    signature :: [Content.Content Element.Element]
-    signature = case Item.signature $ Located.value item of
-      Nothing -> []
-      Just sig ->
-        [ element
-            "div"
-            [("class", "mx-2"), ("style", "min-width: 0")]
-            [ element
-                "code"
-                [("class", "text-break text-secondary"), ("style", "white-space: pre-wrap")]
-                [Xml.text $ prefix <> sig]
-            ]
+          ]
+      earlySignature =
+        if isEarly then signature else []
+      lateSignature =
+        if isEarly then [] else signature
+      badgeColor = case kind of
+        ItemKind.Annotation -> "text-bg-info"
+        ItemKind.CompletePragma -> "text-bg-info"
+        ItemKind.DefaultMethodSignature -> "text-bg-info"
+        ItemKind.FixitySignature -> "text-bg-info"
+        ItemKind.InlineSignature -> "text-bg-info"
+        ItemKind.MinimalPragma -> "text-bg-info"
+        ItemKind.Rule -> "text-bg-info"
+        ItemKind.SpecialiseSignature -> "text-bg-info"
+        ItemKind.Warning -> "text-bg-warning"
+        _ -> "text-bg-secondary"
+      cardBody =
+        let contents =
+              foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
+                <> argChildren
+                <> docContents (Item.documentation $ Located.value item)
+                <> otherChildren
+         in if all Content.isEmpty contents
+              then []
+              else
+                [ element
+                    "div"
+                    [("class", "card-body")]
+                    contents
+                ]
+   in element
+        "div"
+        [ ("class", "card my-3"),
+          ("id", "item-" <> (show . ItemKey.unwrap . Item.key $ Located.value item))
         ]
+        $ [ element
+              "div"
+              [("class", "align-items-start card-header d-flex")]
+              $ [ element
+                    "div"
+                    []
+                    ( case Item.name $ Located.value item of
+                        Nothing -> []
+                        Just n -> [element "code" [("class", "text-break")] [Xml.text $ ItemName.unwrap n]]
+                    )
+                ]
+                <> earlySignature
+                <> [ element
+                       "div"
+                       [("class", "mx-1")]
+                       [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
+                       ]
+                   ]
+                <> lateSignature
+                <> [ element
+                       "div"
+                       [("class", "ms-auto")]
+                       [ element
+                           "button"
+                           [ ("class", "btn btn-outline-secondary btn-sm"),
+                             ("data-col", show . Column.unwrap . Location.column $ Located.location item),
+                             ("data-line", show . Line.unwrap . Location.line $ Located.location item),
+                             ("type", "button")
+                           ]
+                           [ Xml.string . show . Line.unwrap . Location.line $ Located.location item,
+                             Xml.string ":",
+                             Xml.string . show . Column.unwrap . Location.column $ Located.location item
+                           ]
+                       ]
+                   ]
+          ]
+          <> cardBody
 
 kindToString :: ItemKind.ItemKind -> String
 kindToString x = case x of

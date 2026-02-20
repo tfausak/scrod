@@ -5,6 +5,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.ExportIdentifier as ExportIdentifier
 import qualified Scrod.Core.ExportName as ExportName
@@ -70,9 +71,9 @@ computeVisibility (Just exports) items =
     nameIsExported :: Text.Text -> Set.Set Text.Text -> Bool
     nameIsExported full names =
       Set.member full names
-        || case Text.words full of
-          (w : _ : _) -> Set.member w names
-          _ -> False
+        || case Internal.baseItemName full of
+          Just w -> Set.member w names
+          Nothing -> False
 
     -- Classify a child of an exported parent based on subordinate
     -- restrictions. Non-traditional subordinates (e.g. associated type
@@ -176,9 +177,5 @@ topLevelNameToKey items =
       Just n <- [Item.name (Located.value li)],
       let full = ItemName.unwrap n,
       let k = Item.key (Located.value li),
-      entry <- (full, k) : [(base, k) | Just base <- [stripTyVars full], base /= full]
+      entry <- (full, k) : [(base, k) | Just base <- [Internal.baseItemName full]]
     ]
-  where
-    stripTyVars t = case Text.words t of
-      (w : _) -> Just w
-      _ -> Nothing

@@ -170,6 +170,14 @@ metaSinceToSince metaSince = do
           Version.MkVersion $ fmap (fromIntegral :: Int -> Natural.Natural) versionNE
       }
 
+-- | Extract the base name (first word) from an item name that contains
+-- type variables. Returns 'Nothing' if the name is a single word (no
+-- type variables) or empty.
+baseItemName :: Text.Text -> Maybe Text.Text
+baseItemName t = case Text.words t of
+  (w : _ : _) -> Just w
+  _ -> Nothing
+
 -- | Create an Item from a source span with the given properties.
 mkItemM ::
   SrcLoc.SrcSpan ->

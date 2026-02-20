@@ -9,7 +9,6 @@ module Scrod.Convert.FromGhc.InstanceParents where
 
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
-import qualified Data.Text as Text
 import GHC.Hs ()
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -144,11 +143,8 @@ buildTypeNameToKeyMap =
                   Just n ->
                     let k = Item.key val
                         full = ItemName.unwrap n
-                     in (n, k) : [(ItemName.MkItemName base, k) | Just base <- [baseName full], base /= full]
+                     in (n, k) : [(ItemName.MkItemName base, k) | Just base <- [Internal.baseItemName full]]
                 else []
-    baseName t = case Text.words t of
-      (w : _) -> Just w
-      _ -> Nothing
 
 -- | Check if an item kind represents a type or class definition.
 isTypeOrClassKind :: ItemKind.ItemKind -> Bool

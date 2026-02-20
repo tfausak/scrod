@@ -460,26 +460,17 @@ extensionUrlPaths =
 
 declarationsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 declarationsContents items =
-  [ element "h2" [] [Xml.string "Declarations"],
-    if null topLevelItems
-      then Xml.string "None."
+  element "h2" [] [Xml.string "Declarations"]
+    : if null topLevelItems
+      then [Xml.string "None."]
       else
         let (nonUnexported, unexported) = List.partition isNonUnexported topLevelItems
-         in element "details" [("open", "open")] $
-              element
-                "summary"
-                []
-                [ Xml.string "Show/hide ",
-                  Xml.string $ pluralize (length topLevelItems) "declaration",
-                  Xml.string "."
-                ]
-                : foldMap renderTopLevelItem nonUnexported
-                  <> if null unexported
-                    then []
-                    else
-                      element "h3" [] [Xml.string "Unexported"]
-                        : foldMap renderTopLevelItem unexported
-  ]
+         in foldMap renderTopLevelItem nonUnexported
+              <> if null unexported
+                then []
+                else
+                  element "h3" [] [Xml.string "Unexported"]
+                    : foldMap renderTopLevelItem unexported
   where
     isNonUnexported :: Located.Located Item.Item -> Bool
     isNonUnexported li = Item.visibility (Located.value li) /= Visibility.Unexported

@@ -829,7 +829,7 @@ spec s = Spec.describe s "integration" $ do
         class MyClass a
         instance MyClass Int
         """
-        [ ("/items/0/value/name", "\"MyClass\""),
+        [ ("/items/0/value/name", "\"MyClass a\""),
           ("/items/0/value/visibility/type", "\"Exported\""),
           ("/items/1/value/visibility/type", "\"Implicit\"")
         ]
@@ -1408,8 +1408,7 @@ spec s = Spec.describe s "integration" $ do
         s
         "class C a"
         [ ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"C\""),
-          ("/items/0/value/signature", "\"a\"")
+          ("/items/0/value/name", "\"C a\"")
         ]
 
     Spec.it s "class instance" $ do
@@ -1672,7 +1671,7 @@ spec s = Spec.describe s "integration" $ do
         "data R6 deriving Show"
         [ ("/items/1/value/kind/type", "\"DerivedInstance\""),
           ("/items/1/value/name", "\"Show\""),
-          ("/items/1/value/signature", "")
+          ("/items/1/value/signature", "\"derived\"")
         ]
 
     Spec.it s "data GADT deriving" $ do
@@ -1891,7 +1890,7 @@ spec s = Spec.describe s "integration" $ do
           t = undefined
         """
         [ ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"S\""),
+          ("/items/0/value/name", "\"S a\""),
           ("/items/0/value/key", "0"),
           ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/name", "\"t\""),
@@ -2166,7 +2165,7 @@ spec s = Spec.describe s "integration" $ do
           {-# minimal l2m #-}
         """
         [ ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"L2\""),
+          ("/items/0/value/name", "\"L2 a\""),
           ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/2/value/kind/type", "\"MinimalPragma\""),
@@ -2286,7 +2285,7 @@ spec s = Spec.describe s "integration" $ do
         class C a
         """
         [ ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"C\""),
+          ("/items/0/value/name", "\"C a\""),
           ("/items/0/value/signature", "\"* -> Constraint\"")
         ]
 
@@ -2545,7 +2544,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
           ("/items/1/value/documentation/value/value", "\"i\""),
-          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/kind/type", "\"ReturnType\""),
           ("/items/2/value/parentKey", "0"),
           ("/items/2/value/signature", "\"a\""),
           ("/items/2/value/documentation/type", "\"Paragraph\""),
@@ -2585,7 +2584,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
           ("/items/1/value/documentation/value/value", "\"input\""),
-          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/kind/type", "\"ReturnType\""),
           ("/items/2/value/parentKey", "0"),
           ("/items/2/value/signature", "\"String\""),
           ("/items/2/value/documentation/type", "\"Paragraph\""),
@@ -2607,7 +2606,7 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Empty\""),
-          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/kind/type", "\"ReturnType\""),
           ("/items/2/value/parentKey", "0"),
           ("/items/2/value/signature", "\"a\""),
           ("/items/2/value/documentation/type", "\"Paragraph\""),
@@ -2670,7 +2669,7 @@ spec s = Spec.describe s "integration" $ do
             -> String
         """
         [ ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"C\""),
+          ("/items/0/value/name", "\"C a\""),
           ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/name", "\"m\""),
           ("/items/1/value/signature", "\"a -> Bool -> String\""),
@@ -3015,7 +3014,7 @@ spec s = Spec.describe s "integration" $ do
         """
         [ ("/signature", "true"),
           ("/items/0/value/kind/type", "\"Class\""),
-          ("/items/0/value/name", "\"C\""),
+          ("/items/0/value/name", "\"C a\""),
           ("/items/1/value/kind/type", "\"ClassMethod\""),
           ("/items/1/value/name", "\"bar\"")
         ]

@@ -2586,15 +2586,11 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/name", "\"f\""),
           ("/items/0/value/signature", "\"a -> a\""),
           ("/items/0/value/documentation/type", "\"Empty\""),
-          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/kind/type", "\"ReturnType\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),
-          ("/items/1/value/documentation/type", "\"Empty\""),
-          ("/items/2/value/kind/type", "\"ReturnType\""),
-          ("/items/2/value/parentKey", "0"),
-          ("/items/2/value/signature", "\"a\""),
-          ("/items/2/value/documentation/type", "\"Paragraph\""),
-          ("/items/2/value/documentation/value/value", "\"lost\"")
+          ("/items/1/value/documentation/type", "\"Paragraph\""),
+          ("/items/1/value/documentation/value/value", "\"lost\"")
         ]
 
     Spec.it s "data constructor with arg doc has argument children" $ do
@@ -3012,38 +3008,50 @@ spec s = Spec.describe s "integration" $ do
       check
         s
         """
-        f :: a -> a
+        f :: a {- ^ doc -} -> a
         f x = x
         """
         [ ("/items/0/value/kind/type", "\"Function\""),
-          ("/items/0/value/name", "\"f\"")
+          ("/items/0/value/name", "\"f\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "\"x\"")
         ]
 
     Spec.it s "picks first variable name across equations" $ do
       check
         s
         """
-        or :: Bool -> Bool -> Bool
+        or :: Bool {- ^ doc -} -> Bool -> Bool
         or True _ = True
         or _ x = x
         """
-        [ ("/items/0/value/name", "\"or\"")
+        [ ("/items/0/value/name", "\"or\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", ""),
+          ("/items/2/value/kind/type", "\"Argument\""),
+          ("/items/2/value/name", "\"x\"")
         ]
 
     Spec.it s "handles all-wildcard arguments" $ do
       check
         s
         """
-        f :: a -> a
+        f :: a {- ^ doc -} -> a
         f _ = undefined
         """
-        []
+        [ ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "")
+        ]
 
     Spec.it s "handles signature without binding" $ do
       check
         s
-        "f :: a -> a"
-        []
+        """
+        f :: a {- ^ doc -} -> a
+        """
+        [ ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/name", "")
+        ]
 
   Spec.describe s "visibility" $ do
     Spec.it s "marks exported items as Exported" $ do

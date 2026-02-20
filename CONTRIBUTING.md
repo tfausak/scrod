@@ -45,6 +45,14 @@ nix develop --command extra/vscode/build.sh # produces a .vsix file
 
 ### Linting and formatting (CI checks all of these)
 
+If you have Hooky configured (`hooky install`), you can fix all linting and formatting at once:
+
+```bash
+hooky fix
+```
+
+To run individual checks manually:
+
 ```bash
 hlint source/                                        # lint Haskell
 ormolu --mode check $(find source -name "*.hs")      # check formatting

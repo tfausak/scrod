@@ -512,10 +512,11 @@ convertReturnType ::
   SrcLoc.SrcSpan ->
   Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs)) ->
   Internal.ConvertM [Located.Located Item.Item]
-convertReturnType _ _ Nothing = pure []
-convertReturnType parentKey srcSpan (Just (sigText, mDoc)) =
-  let (retDoc, retSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
-   in Maybe.maybeToList <$> Internal.mkItemM srcSpan parentKey Nothing retDoc retSince (Just sigText) ItemKind.ReturnType
+convertReturnType parentKey srcSpan mRet = case mRet of
+  Nothing -> pure []
+  Just (sigText, mDoc) ->
+    let (retDoc, retSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
+     in Maybe.maybeToList <$> Internal.mkItemM srcSpan parentKey Nothing retDoc retSince (Just sigText) ItemKind.ReturnType
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -565,8 +566,9 @@ convertSpecSigEM doc docSince lExpr = case SrcLoc.unLoc lExpr of
 -- | Combine a user-written doc with a synthesized doc. If the user doc
 -- is empty, just use the synthesized one; otherwise append both.
 combineDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
-combineDoc Doc.Empty synth = synth
-combineDoc user synth = Doc.Append [user, synth]
+combineDoc user synth = case user of
+  Doc.Empty -> synth
+  _ -> Doc.Append [user, synth]
 
 -- | Convert a fixity direction to text.
 fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text
@@ -837,9 +839,10 @@ extractTyFamInstEqnSig eqn =
 
 -- | Pretty-print a type argument, stripping the 'HsArg' wrapper.
 pprHsTypeArg :: Syntax.LHsTypeArg Ghc.GhcPs -> Outputable.SDoc
-pprHsTypeArg (Syntax.HsValArg _ ty) = Outputable.ppr ty
-pprHsTypeArg (Syntax.HsTypeArg _ ki) = Outputable.text "@" Outputable.<> Outputable.ppr ki
-pprHsTypeArg (Syntax.HsArgPar _) = Outputable.empty
+pprHsTypeArg arg = case arg of
+  Syntax.HsValArg _ ty -> Outputable.ppr ty
+  Syntax.HsTypeArg _ ki -> Outputable.text "@" Outputable.<> Outputable.ppr ki
+  Syntax.HsArgPar _ -> Outputable.empty
 
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::
@@ -919,8 +922,9 @@ extractDerivedTypeDocAndSince lSigTy =
 extractDerivStrategy ::
   Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
   Maybe Text.Text
-extractDerivStrategy Nothing = Just (Text.pack "derived")
-extractDerivStrategy (Just s) = Just (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc s)
+extractDerivStrategy mStrat = case mStrat of
+  Nothing -> Just (Text.pack "derived")
+  Just s -> Just (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc s)
 
 -- | Extract named documentation chunks from module declarations.
 extractNamedDocChunks ::

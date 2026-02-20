@@ -167,11 +167,12 @@ extractPatVarName pat = case pat of
 -- where position 0 yields 'Nothing' (no variable in either equation)
 -- and position 1 yields @Just "x"@ (from the second equation).
 mergePatNames :: [[Maybe Text.Text]] -> [Maybe Text.Text]
-mergePatNames [] = []
-mergePatNames patNameLists =
-  let maxLen = maximum (fmap length patNameLists)
-      padded = fmap (\ns -> ns <> replicate (maxLen - length ns) Nothing) patNameLists
-   in fmap (Maybe.listToMaybe . Maybe.catMaybes) (List.transpose padded)
+mergePatNames patNameLists = case patNameLists of
+  [] -> []
+  _ ->
+    let maxLen = maximum (fmap length patNameLists)
+        padded = fmap (\ns -> ns <> replicate (maxLen - length ns) Nothing) patNameLists
+     in fmap (Maybe.listToMaybe . Maybe.catMaybes) (List.transpose padded)
 
 -- | Extract name from a signature.
 extractSigName :: Syntax.Sig Ghc.GhcPs -> Maybe ItemName.ItemName

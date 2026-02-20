@@ -238,8 +238,9 @@ instance (GToSchema (Generics.Rep a)) => ToSchema (Generics.Generically a) where
 
 -- | Lowercase the first character of a string.
 lcFirst :: String -> String
-lcFirst [] = []
-lcFirst (c : cs) = Char.toLower c : cs
+lcFirst s = case s of
+  [] -> []
+  c : cs -> Char.toLower c : cs
 
 -- * Tests
 

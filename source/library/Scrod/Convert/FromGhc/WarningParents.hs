@@ -19,10 +19,7 @@ import qualified Scrod.Core.Location as Location
 extractWarningLocations ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Set.Set Location.Location
-extractWarningLocations lHsModule =
-  let hsModule = SrcLoc.unLoc lHsModule
-      decls = Syntax.hsmodDecls hsModule
-   in Set.fromList $ concatMap extractDeclWarningLocations decls
+extractWarningLocations = Internal.extractDeclLocations extractDeclWarningLocations
 
 -- | Extract warning name locations from a single declaration.
 extractDeclWarningLocations ::

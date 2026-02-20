@@ -18,10 +18,7 @@ import qualified Scrod.Core.Location as Location
 extractInlineLocations ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Set.Set Location.Location
-extractInlineLocations lHsModule =
-  let hsModule = SrcLoc.unLoc lHsModule
-      decls = Syntax.hsmodDecls hsModule
-   in Set.fromList $ concatMap extractDeclInlineLocations decls
+extractInlineLocations = Internal.extractDeclLocations extractDeclInlineLocations
 
 -- | Extract inline name locations from a single declaration.
 extractDeclInlineLocations ::

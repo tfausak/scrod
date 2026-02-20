@@ -1,5 +1,5 @@
 hook hlint {
-    command hlint {}
+    command hlint --cmdthreads {}
     files *.hs
 }
 

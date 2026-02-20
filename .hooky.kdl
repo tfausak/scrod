@@ -14,20 +14,20 @@ hook ormolu {
     files *.hs
 }
 
-hook cabal_gild {
+hook cabal-gild {
     command cabal-gild {
         check_args --input scrod.cabal --mode check
         fix_args --io scrod.cabal --mode format
         pass_files none
     }
-    files /scrod.cabal
+    files "/scrod.cabal"
 }
 
-hook cabal_check {
+hook cabal-check {
     command cabal check {
         pass_files none
     }
-    files /scrod.cabal
+    files "/scrod.cabal"
 }
 
 hook hooky {

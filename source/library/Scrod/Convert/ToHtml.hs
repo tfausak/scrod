@@ -565,8 +565,10 @@ itemContent item children =
           $ [ element
                 "div"
                 []
-                [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
-                ]
+                ( case Item.name $ Located.value item of
+                    Nothing -> []
+                    Just n -> [element "code" [("class", "text-break")] [Xml.text $ ItemName.unwrap n]]
+                )
             ]
             <> earlySignature
             <> [ element

@@ -9,6 +9,7 @@ module Scrod.Convert.FromGhc.InstanceParents where
 
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
+import qualified Data.Text as Text
 import GHC.Hs ()
 import qualified GHC.Hs.Extension as Ghc
 import qualified GHC.Parser.Annotation as Annotation
@@ -124,20 +125,30 @@ associateInstanceParents headTypeNames classNames items =
    in fmap (resolveInstanceParent headTypeNames classNames typeNameToKey) items
 
 -- | Build a map from type/class names to their item keys.
+-- For items whose names contain type variables (indicated by a space),
+-- both the full name and the base name (first word) are indexed.
 buildTypeNameToKeyMap ::
   [Located.Located Item.Item] ->
   Map.Map ItemName.ItemName ItemKey.ItemKey
 buildTypeNameToKeyMap =
-  Map.fromList . Maybe.mapMaybe getTypeNameAndKey
+  Map.fromList . concatMap getTypeNameAndKey
   where
     getTypeNameAndKey locItem =
       let val = Located.value locItem
        in case Item.parentKey val of
-            Just _ -> Nothing
+            Just _ -> []
             Nothing ->
               if isTypeOrClassKind (Item.kind val)
-                then fmap (\n -> (n, Item.key val)) (Item.name val)
-                else Nothing
+                then case Item.name val of
+                  Nothing -> []
+                  Just n ->
+                    let k = Item.key val
+                        full = ItemName.unwrap n
+                     in (n, k) : [(ItemName.MkItemName base, k) | Just base <- [baseName full], base /= full]
+                else []
+    baseName t = case Text.words t of
+      (w : _) -> Just w
+      _ -> Nothing
 
 -- | Check if an item kind represents a type or class definition.
 isTypeOrClassKind :: ItemKind.ItemKind -> Bool

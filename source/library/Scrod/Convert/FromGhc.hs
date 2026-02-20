@@ -479,13 +479,16 @@ convertSigDeclM doc docSince lDecl sig = case sig of
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert extracted argument data into child Argument items.
+-- Returns no items if none of the arguments have documentation.
 convertArguments ::
   Maybe ItemKey.ItemKey ->
   SrcLoc.SrcSpan ->
   [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))] ->
   Internal.ConvertM [Located.Located Item.Item]
-convertArguments parentKey srcSpan args =
-  Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+convertArguments parentKey srcSpan args
+  | any (Maybe.isJust . snd) args =
+      Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+  | otherwise = pure []
 
 -- | Convert a single argument to an Argument item.
 convertOneArgument ::

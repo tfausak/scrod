@@ -24,7 +24,7 @@ encode :: Element -> Builder.Builder
 encode el =
   if null (contents el)
     then encodeSelfClosing el
-    else encodeWithContents el
+    else encodeWithContents encode el
 
 encodeSelfClosing :: Element -> Builder.Builder
 encodeSelfClosing el =
@@ -33,13 +33,13 @@ encodeSelfClosing el =
     <> encodeAttributes (attributes el)
     <> Builder.stringUtf8 " />"
 
-encodeWithContents :: Element -> Builder.Builder
-encodeWithContents el =
+encodeWithContents :: (Element -> Builder.Builder) -> Element -> Builder.Builder
+encodeWithContents encodeElement el =
   Builder.charUtf8 '<'
     <> Name.encode (name el)
     <> encodeAttributes (attributes el)
     <> Builder.charUtf8 '>'
-    <> foldMap (Content.encode encode) (contents el)
+    <> foldMap (Content.encode encodeElement) (contents el)
     <> Builder.stringUtf8 "</"
     <> Name.encode (name el)
     <> Builder.charUtf8 '>'
@@ -53,15 +53,7 @@ encodeHtml :: Element -> Builder.Builder
 encodeHtml el =
   if null (contents el) && isHtmlVoidElement (Name.unwrap $ name el)
     then encodeSelfClosing el
-    else
-      Builder.charUtf8 '<'
-        <> Name.encode (name el)
-        <> encodeAttributes (attributes el)
-        <> Builder.charUtf8 '>'
-        <> foldMap (Content.encode encodeHtml) (contents el)
-        <> Builder.stringUtf8 "</"
-        <> Name.encode (name el)
-        <> Builder.charUtf8 '>'
+    else encodeWithContents encodeHtml el
 
 -- | Whether a tag name is an HTML void element that may be self-closing.
 -- See <https://html.spec.whatwg.org/multipage/syntax.html#void-elements>.

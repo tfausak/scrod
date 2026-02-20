@@ -537,14 +537,19 @@ declarationsContents items =
             if Item.visibility (Located.value li) == Visibility.Unexported
               then children
               else filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) children
-       in [ itemContent li (foldMap renderItemWithChildren visibleChildren)
+          isArgument c = Item.kind (Located.value c) == ItemKind.Argument
+          (argChildren, otherChildren) = List.partition isArgument visibleChildren
+       in [ itemContent
+              li
+              (foldMap renderItemWithChildren argChildren)
+              (foldMap renderItemWithChildren otherChildren)
           ]
 
     itemNatKey :: Located.Located Item.Item -> Natural.Natural
     itemNatKey = ItemKey.unwrap . Item.key . Located.value
 
-itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> Content.Content Element.Element
-itemContent item children =
+itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> [Content.Content Element.Element] -> Content.Content Element.Element
+itemContent item argChildren otherChildren =
   element
     "div"
     [ ("class", "card my-3"),
@@ -591,8 +596,9 @@ itemContent item children =
     cardBody =
       let contents =
             foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-              <> children
+              <> argChildren
               <> docContents (Item.documentation $ Located.value item)
+              <> otherChildren
        in if all Content.isEmpty contents
             then []
             else

@@ -687,6 +687,7 @@ kindToString x = case x of
   ItemKind.PatternBinding -> "pattern"
   ItemKind.PatternSynonym -> "pattern"
   ItemKind.RecordField -> "field"
+  ItemKind.ReturnType -> "return"
   ItemKind.RoleAnnotation -> "role"
   ItemKind.Rule -> "rule"
   ItemKind.SpecialiseSignature -> "specialise"

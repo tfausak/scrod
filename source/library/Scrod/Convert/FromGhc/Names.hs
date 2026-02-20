@@ -232,10 +232,15 @@ stripHsDocTy lTy = case lTy of
 -- pretty-printed type text and its 'LHsDoc' (if the argument was wrapped
 -- in 'HsDocTy'). The return type is included only when it has documentation.
 --
+-- Returns a pair of (arguments, optional return type).
+--
 -- Handles 'TypeSig' (unwrap via 'hswc_body'), 'PatSynSig', and
 -- 'ClassOpSig' (unwrap via 'sig_body' on 'HsSigType').
 extractSigArguments ::
-  Syntax.Sig Ghc.GhcPs -> [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))]
+  Syntax.Sig Ghc.GhcPs ->
+  ( [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))],
+    Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))
+  )
 extractSigArguments sig = case sig of
   Syntax.TypeSig _ _ wc ->
     extractArgsFromBody . Syntax.sig_body . SrcLoc.unLoc $ Syntax.hswc_body wc
@@ -243,20 +248,28 @@ extractSigArguments sig = case sig of
     extractArgsFromBody . Syntax.sig_body $ SrcLoc.unLoc lSigType
   Syntax.ClassOpSig _ _ _ lSigType ->
     extractArgsFromBody . Syntax.sig_body $ SrcLoc.unLoc lSigType
-  _ -> []
+  _ -> ([], Nothing)
 
 -- | Skip through 'HsForAllTy' and 'HsQualTy' to reach the arrow chain,
--- then extract arguments from the 'HsFunTy' chain.
+-- then extract arguments from the 'HsFunTy' chain. Returns the arguments
+-- and the optional documented return type separately.
 extractArgsFromBody ::
-  Syntax.LHsType Ghc.GhcPs -> [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))]
+  Syntax.LHsType Ghc.GhcPs ->
+  ( [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))],
+    Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))
+  )
 extractArgsFromBody lTy = case SrcLoc.unLoc lTy of
   Syntax.HsForAllTy _ _ body -> extractArgsFromBody body
   Syntax.HsQualTy _ _ body -> extractArgsFromBody body
-  Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
+  Syntax.HsFunTy _ _ arg res ->
+    let (args, ret) = extractArgsFromBody res
+     in (extractArg arg : args, ret)
   Syntax.HsDocTy _ inner _doc -> case SrcLoc.unLoc inner of
-    Syntax.HsFunTy _ _ arg res -> extractArg arg : extractArgsFromBody res
-    _ -> [extractArg lTy]
-  _ -> []
+    Syntax.HsFunTy _ _ arg res ->
+      let (args, ret) = extractArgsFromBody res
+       in (extractArg arg : args, ret)
+    _ -> ([], Just (extractArg lTy))
+  _ -> ([], Nothing)
 
 -- | Extract the type text and optional doc comment from a single argument.
 -- If the argument is wrapped in 'HsDocTy', the doc is extracted and the

@@ -3,6 +3,7 @@ module Scrod.TestSuite.All where
 import qualified Scrod.Cabal
 import qualified Scrod.Convert.FromHaddock
 import qualified Scrod.Convert.ToJsonSchema
+import qualified Scrod.Core.Level
 import qualified Scrod.Cpp
 import qualified Scrod.Cpp.Directive
 import qualified Scrod.Cpp.Expr
@@ -51,6 +52,7 @@ spec s = do
   Scrod.Cabal.spec s
   Scrod.Convert.FromHaddock.spec s
   Scrod.Convert.ToJsonSchema.spec s
+  Scrod.Core.Level.spec s
   Scrod.Cpp.spec s
   Scrod.Cpp.Directive.spec s
   Scrod.Cpp.Expr.spec s

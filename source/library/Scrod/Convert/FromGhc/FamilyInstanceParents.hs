@@ -91,7 +91,4 @@ resolveFamilyInstanceParent familyInstanceNames familyNameToKey locItem =
       case Map.lookup familyName familyNameToKey of
         Nothing -> locItem
         Just parentKey ->
-          locItem
-            { Located.value =
-                (Located.value locItem) {Item.parentKey = Just parentKey}
-            }
+          Internal.setParentKey parentKey locItem

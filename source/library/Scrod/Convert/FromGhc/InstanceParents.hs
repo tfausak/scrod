@@ -177,10 +177,10 @@ resolveInstanceParent headTypeNames classNames typeNameToKey locItem =
           if Item.kind val == ItemKind.ClassInstance || Item.kind val == ItemKind.StandaloneDeriving
             then case lookupParentKey (Located.location locItem) headTypeNames typeNameToKey of
               Just parentKey ->
-                locItem {Located.value = val {Item.parentKey = Just parentKey}}
+                Internal.setParentKey parentKey locItem
               Nothing -> case lookupParentKey (Located.location locItem) classNames typeNameToKey of
                 Just parentKey ->
-                  locItem {Located.value = val {Item.parentKey = Just parentKey}}
+                  Internal.setParentKey parentKey locItem
                 Nothing -> locItem
             else locItem
 

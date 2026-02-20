@@ -71,9 +71,7 @@ computeVisibility (Just exports) items =
     nameIsExported :: Text.Text -> Set.Set Text.Text -> Bool
     nameIsExported full names =
       Set.member full names
-        || case Internal.baseItemName full of
-          Just w -> Set.member w names
-          Nothing -> False
+        || maybe False (`Set.member` names) (Internal.baseItemName full)
 
     -- Classify a child of an exported parent based on subordinate
     -- restrictions. Non-traditional subordinates (e.g. associated type

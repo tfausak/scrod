@@ -922,9 +922,8 @@ extractDerivedTypeDocAndSince lSigTy =
 extractDerivStrategy ::
   Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
   Maybe Text.Text
-extractDerivStrategy mStrat = case mStrat of
-  Nothing -> Just (Text.pack "derived")
-  Just s -> Just (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc s)
+extractDerivStrategy =
+  Just . maybe (Text.pack "derived") (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)
 
 -- | Extract named documentation chunks from module declarations.
 extractNamedDocChunks ::

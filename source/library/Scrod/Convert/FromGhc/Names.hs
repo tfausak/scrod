@@ -87,9 +87,7 @@ extractSynDeclSignature :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractSynDeclSignature tyClDecl = case tyClDecl of
   Syntax.SynDecl {Syntax.tcdTyVars = tyVars, Syntax.tcdRhs = rhs} ->
     let rhsText = Text.pack . Internal.showSDocShort $ Outputable.ppr rhs
-     in Just $ case tyVarsToText tyVars of
-          Nothing -> Text.pack "= " <> rhsText
-          Just tvs -> tvs <> Text.pack " = " <> rhsText
+     in Just $ maybe (Text.pack "= " <> rhsText) (\tvs -> tvs <> Text.pack " = " <> rhsText) (tyVarsToText tyVars)
   _ -> Nothing
 
 -- | Extract name from a family declaration.

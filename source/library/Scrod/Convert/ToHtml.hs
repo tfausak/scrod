@@ -472,9 +472,7 @@ declarationsContents items =
               && Maybe.isNothing (Item.name item)
       renderUnresolvedExport li =
         let item = Located.value li
-            namePrefix = case Item.signature item of
-              Just sig -> Text.unpack sig <> " "
-              Nothing -> ""
+            namePrefix = maybe "" ((<> " ") . Text.unpack) (Item.signature item)
             badge = case Item.signature item of
               Just sig
                 | sig == Text.pack "module" ->

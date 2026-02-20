@@ -460,26 +460,17 @@ extensionUrlPaths =
 
 declarationsContents :: [Located.Located Item.Item] -> [Content.Content Element.Element]
 declarationsContents items =
-  [ element "h2" [] [Xml.string "Declarations"],
-    if null topLevelItems
-      then Xml.string "None."
+  element "h2" [] [Xml.string "Declarations"]
+    : if null topLevelItems
+      then [Xml.string "None."]
       else
         let (nonUnexported, unexported) = List.partition isNonUnexported topLevelItems
-         in element "details" [("open", "open")] $
-              element
-                "summary"
-                []
-                [ Xml.string "Show/hide ",
-                  Xml.string $ pluralize (length topLevelItems) "declaration",
-                  Xml.string "."
-                ]
-                : foldMap renderTopLevelItem nonUnexported
-                  <> if null unexported
-                    then []
-                    else
-                      element "h3" [] [Xml.string "Unexported"]
-                        : foldMap renderTopLevelItem unexported
-  ]
+         in foldMap renderTopLevelItem nonUnexported
+              <> if null unexported
+                then []
+                else
+                  element "h3" [] [Xml.string "Unexported"]
+                    : foldMap renderTopLevelItem unexported
   where
     isNonUnexported :: Located.Located Item.Item -> Bool
     isNonUnexported li = Item.visibility (Located.value li) /= Visibility.Unexported
@@ -546,14 +537,19 @@ declarationsContents items =
             if Item.visibility (Located.value li) == Visibility.Unexported
               then children
               else filter (\c -> Item.visibility (Located.value c) /= Visibility.Unexported) children
-       in [ itemContent li (foldMap renderItemWithChildren visibleChildren)
+          isArgument c = Item.kind (Located.value c) == ItemKind.Argument
+          (argChildren, otherChildren) = List.partition isArgument visibleChildren
+       in [ itemContent
+              li
+              (foldMap renderItemWithChildren argChildren)
+              (foldMap renderItemWithChildren otherChildren)
           ]
 
     itemNatKey :: Located.Located Item.Item -> Natural.Natural
     itemNatKey = ItemKey.unwrap . Item.key . Located.value
 
-itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> Content.Content Element.Element
-itemContent item children =
+itemContent :: Located.Located Item.Item -> [Content.Content Element.Element] -> [Content.Content Element.Element] -> Content.Content Element.Element
+itemContent item argChildren otherChildren =
   element
     "div"
     [ ("class", "card my-3"),
@@ -565,8 +561,10 @@ itemContent item children =
           $ [ element
                 "div"
                 []
-                [ element "code" [("class", "text-break")] [Xml.text . foldMap ItemName.unwrap . Item.name $ Located.value item]
-                ]
+                ( case Item.name $ Located.value item of
+                    Nothing -> []
+                    Just n -> [element "code" [("class", "text-break")] [Xml.text $ ItemName.unwrap n]]
+                )
             ]
             <> earlySignature
             <> [ element
@@ -598,8 +596,9 @@ itemContent item children =
     cardBody =
       let contents =
             foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-              <> children
+              <> argChildren
               <> docContents (Item.documentation $ Located.value item)
+              <> otherChildren
        in if all Content.isEmpty contents
             then []
             else
@@ -687,6 +686,7 @@ kindToString x = case x of
   ItemKind.PatternBinding -> "pattern"
   ItemKind.PatternSynonym -> "pattern"
   ItemKind.RecordField -> "field"
+  ItemKind.ReturnType -> "return"
   ItemKind.RoleAnnotation -> "role"
   ItemKind.Rule -> "rule"
   ItemKind.SpecialiseSignature -> "specialise"

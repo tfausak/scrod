@@ -1,5 +1,13 @@
 # Contributing
 
+## Setup
+
+After cloning the repo, install Git hooks:
+
+```bash
+hooky install
+```
+
 ## Build Commands
 
 ```bash
@@ -42,7 +50,7 @@ hlint source/                                        # lint Haskell
 ormolu --mode check $(find source -name "*.hs")      # check formatting
 ormolu --mode inplace $(find source -name "*.hs")    # fix formatting
 cabal-gild --input scrod.cabal --mode check          # check .cabal formatting
-cabal-gild --input scrod.cabal --mode format         # fix .cabal formatting
+cabal-gild --io scrod.cabal --mode format         # fix .cabal formatting
 cabal check                                          # validate .cabal file
 ```
 

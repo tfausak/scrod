@@ -70,7 +70,11 @@ const styleResult = await build({
 
 const styleFilename = entryOutput(styleResult.metafile);
 
-// Phase 5: Generate index.html with hashed references
+// Phase 5: Copy static assets
+
+await copyFile(join(root, 'og-image.svg'), join(dist, 'og-image.svg'));
+
+// Phase 6: Generate index.html with hashed references
 
 const html = await readFile(join(root, 'index.html'), 'utf8');
 const outputHtml = html

@@ -384,7 +384,7 @@ convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
     childItems <- convertDataDefnM parentKey parentType dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
-    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
+    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) Nothing lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     defaultSigItems <- convertDefaultSigsM methodItems sigs docs

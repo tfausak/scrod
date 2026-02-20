@@ -42,12 +42,17 @@ extractKindSigSignature (Syntax.StandaloneKindSig _ _ lSigType) =
   Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ lSigType
 
 -- | Extract name from a type/class declaration.
+-- For class declarations, this includes type variables in the name
+-- (e.g., @class C a@ produces @"C a"@).
 extractTyClDeclName :: Syntax.TyClDecl Ghc.GhcPs -> Maybe ItemName.ItemName
 extractTyClDeclName tyClDecl = case tyClDecl of
   Syntax.FamDecl _ famDecl -> Just $ extractFamilyDeclName famDecl
   Syntax.SynDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
   Syntax.DataDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
-  Syntax.ClassDecl {Syntax.tcdLName = lName} -> Just $ Internal.extractIdPName lName
+  Syntax.ClassDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
+    Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
+      [] -> Outputable.ppr lName
+      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
 
 -- | Extract the fully applied parent type text from a data declaration.
 -- For @data Maybe a@, this produces @"Maybe a"@.
@@ -66,7 +71,6 @@ extractParentTypeText tyClDecl = case tyClDecl of
 extractTyClDeclTyVars :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractTyClDeclTyVars tyClDecl = case tyClDecl of
   Syntax.DataDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
-  Syntax.ClassDecl {Syntax.tcdTyVars = tyVars} -> tyVarsToText tyVars
   _ -> Nothing
 
 -- | Pretty-print explicit type variable binders as text.

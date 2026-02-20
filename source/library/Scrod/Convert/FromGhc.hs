@@ -55,12 +55,14 @@ import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
+import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Language as Language
+import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
@@ -341,6 +343,9 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
     let chunkName = Just . ItemName.MkItemName . Text.pack $ '$' : name
         chunkDoc = GhcDoc.convertExportDoc lNamedDoc
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing chunkName (Internal.appendDoc doc chunkDoc) docSince Nothing ItemKind.DocumentationChunk
+  Syntax.DocD _ (Hs.DocGroup level lGroupDoc) ->
+    let groupDoc = Doc.Header Header.MkHeader {Header.level = Level.fromInt level, Header.title = GhcDoc.convertExportDoc lGroupDoc}
+     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing (Internal.appendDoc doc groupDoc) docSince Nothing ItemKind.DocumentationChunk
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
   Syntax.KindSigD _ kindSig ->

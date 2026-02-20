@@ -55,14 +55,12 @@ import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
 import qualified Scrod.Core.Extension as Extension
-import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Language as Language
-import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.Located as Located
 import qualified Scrod.Core.Module as Module
 import qualified Scrod.Core.ModuleName as ModuleName
@@ -343,9 +341,6 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
     let chunkName = Just . ItemName.MkItemName . Text.pack $ '$' : name
         chunkDoc = GhcDoc.convertExportDoc lNamedDoc
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing chunkName (Internal.appendDoc doc chunkDoc) docSince Nothing ItemKind.DocumentationChunk
-  Syntax.DocD _ (Hs.DocGroup level lGroupDoc) ->
-    let groupDoc = Doc.Header Header.MkHeader {Header.level = Level.fromInt level, Header.title = GhcDoc.convertExportDoc lGroupDoc}
-     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing (Internal.appendDoc doc groupDoc) docSince Nothing ItemKind.DocumentationChunk
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
   Syntax.KindSigD _ kindSig ->
@@ -357,7 +352,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
         sig = Just $ Names.extractForeignDeclSignature foreignDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince name sig lDecl
   Syntax.SpliceD _ spliceDecl ->
-    let sig = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ spliceDecl
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ spliceDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
   Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
   Syntax.RoleAnnotD _ roleAnnotDecl -> Maybe.maybeToList <$> convertRoleAnnotM roleAnnotDecl
@@ -389,7 +384,7 @@ convertTyClDeclWithDocM doc docSince lDecl tyClDecl = case tyClDecl of
     childItems <- convertDataDefnM parentKey parentType dataDefn
     pure $ Maybe.maybeToList parentItem <> childItems
   Syntax.ClassDecl {Syntax.tcdSigs = sigs, Syntax.tcdATs = ats, Syntax.tcdDocs = docs} -> do
-    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) Nothing lDecl
+    parentItem <- convertDeclWithDocM Nothing doc docSince (Names.extractTyClDeclName tyClDecl) (Names.extractTyClDeclTyVars tyClDecl) lDecl
     let parentKey = fmap (Item.key . Located.value) parentItem
     methodItems <- convertClassSigsWithDocsM parentKey sigs docs
     defaultSigItems <- convertDefaultSigsM methodItems sigs docs
@@ -411,7 +406,7 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
     let parentKey = fmap (Item.key . Located.value) parentItem
         eqn = Syntax.dfid_eqn dataFamInst
         parentType =
-          Just . Text.pack . Internal.showSDocShort $
+          Just . Text.pack . Outputable.showSDocUnsafe $
             Outputable.ppr (Syntax.feqn_tycon eqn)
               Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
     childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
@@ -428,7 +423,7 @@ convertSigDeclM ::
 convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-        (args, retType) = Names.extractSigArguments sig
+        args = Names.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
           parentResult <-
             Internal.mkItemWithKeyM
@@ -443,11 +438,10 @@ convertSigDeclM doc docSince lDecl sig = case sig of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
               argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
-              retItem <- convertReturnType (Just parentKey) (Annotation.getLocA lName) retType
-              pure $ [parentItem] <> argItems <> retItem
+              pure $ [parentItem] <> argItems
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-        (args, retType) = Names.extractSigArguments sig
+        args = Names.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
           parentResult <-
             Internal.mkItemWithKeyM
@@ -462,8 +456,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
               argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
-              retItem <- convertReturnType (Just parentKey) (Annotation.getLocA lName) retType
-              pure $ [parentItem] <> argItems <> retItem
+              pure $ [parentItem] <> argItems
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
@@ -472,28 +465,25 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let sigText = Just . inlineSpecToText $ Basic.inl_inline inlinePragma
      in Maybe.maybeToList <$> convertInlineNameM doc docSince sigText lName
   Syntax.SpecSig _ lName sigTypes _ ->
-    let sigText = Just . Text.pack . Internal.showSDocShort $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
+    let sigText = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
      in Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
   Syntax.SpecSigE _ _ lExpr _ -> convertSpecSigEM doc docSince lExpr
   Syntax.CompleteMatchSig _ names mTyCon ->
     let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
-        sigText = Just . Text.pack . Internal.showSDocShort $ case mTyCon of
+        sigText = Just . Text.pack . Outputable.showSDocUnsafe $ case mTyCon of
           Nothing -> namesSig
           Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
 -- | Convert extracted argument data into child Argument items.
--- Returns no items if none of the arguments have documentation.
 convertArguments ::
   Maybe ItemKey.ItemKey ->
   SrcLoc.SrcSpan ->
   [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))] ->
   Internal.ConvertM [Located.Located Item.Item]
-convertArguments parentKey srcSpan args
-  | any (Maybe.isJust . snd) args =
-      Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
-  | otherwise = pure []
+convertArguments parentKey srcSpan args =
+  Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
 
 -- | Convert a single argument to an Argument item.
 convertOneArgument ::
@@ -504,17 +494,6 @@ convertOneArgument ::
 convertOneArgument parentKey srcSpan (sigText, mDoc) =
   let (argDoc, argSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
    in Internal.mkItemM srcSpan parentKey Nothing argDoc argSince (Just sigText) ItemKind.Argument
-
--- | Convert an optional return type into a ReturnType item.
-convertReturnType ::
-  Maybe ItemKey.ItemKey ->
-  SrcLoc.SrcSpan ->
-  Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs)) ->
-  Internal.ConvertM [Located.Located Item.Item]
-convertReturnType _ _ Nothing = pure []
-convertReturnType parentKey srcSpan (Just (sigText, mDoc)) =
-  let (retDoc, retSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
-   in Maybe.maybeToList <$> Internal.mkItemM srcSpan parentKey Nothing retDoc retSince (Just sigText) ItemKind.ReturnType
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -552,7 +531,7 @@ convertSpecSigEM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertSpecSigEM doc docSince lExpr = case SrcLoc.unLoc lExpr of
   Syntax.ExprWithTySig _ body sigWcType ->
-    let sigText = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ sigWcType
+    let sigText = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ sigWcType
      in case SrcLoc.unLoc body of
           Syntax.HsVar _ lName ->
             Maybe.maybeToList <$> convertSpecialiseNameM doc docSince sigText lName
@@ -616,7 +595,7 @@ convertRuleDeclM lRuleDecl =
   let ruleDecl = SrcLoc.unLoc lRuleDecl
       name = Just . ItemName.MkItemName . Text.pack . FastString.unpackFS . SrcLoc.unLoc $ Syntax.rd_name ruleDecl
       sig =
-        Just . Text.pack . Internal.showSDocShort $
+        Just . Text.pack . Outputable.showSDocUnsafe $
           Outputable.ppr (Syntax.rd_bndrs ruleDecl)
             Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
             Outputable.<+> Outputable.text "="
@@ -695,7 +674,7 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
   Syntax.SigD _ sig -> case sig of
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
-          (args, retType) = Names.extractSigArguments sig
+          args = Names.extractSigArguments sig
        in fmap concat . Traversable.for names $ \lName -> do
             parentResult <-
               Internal.mkItemWithKeyM
@@ -710,8 +689,7 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
               Nothing -> pure []
               Just (methodItem, methodKey) -> do
                 argItems <- convertArguments (Just methodKey) (Annotation.getLocA lName) args
-                retItem <- convertReturnType (Just methodKey) (Annotation.getLocA lName) retType
-                pure $ [methodItem] <> argItems <> retItem
+                pure $ [methodItem] <> argItems
     _ -> pure []
   _ -> pure []
 
@@ -750,7 +728,7 @@ convertDefaultSigDeclM ::
   Internal.ConvertM [Located.Located Item.Item]
 convertDefaultSigDeclM nameToKey doc docSince lDecl = case SrcLoc.unLoc lDecl of
   Syntax.SigD _ (Syntax.ClassOpSig _ True names sigTy) ->
-    let sig = Just . Text.pack . Internal.showSDocShort $ Outputable.ppr sigTy
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe $ Outputable.ppr sigTy
      in Maybe.catMaybes <$> traverse (convertDefaultSigNameM nameToKey doc docSince sig) names
   _ -> pure []
 
@@ -781,7 +759,7 @@ convertMinimalSigM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertMinimalSigM parentKey lSig = case SrcLoc.unLoc lSig of
   Syntax.MinimalSig _ lBooleanFormula ->
-    let sig = Just . Text.pack . Internal.showSDocShort . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
+    let sig = Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc lBooleanFormula
      in Internal.mkItemM (Annotation.getLocA lSig) parentKey Nothing Doc.Empty Nothing sig ItemKind.MinimalPragma
   _ -> pure Nothing
 
@@ -823,7 +801,7 @@ convertTyFamInstEqnM ::
   Internal.ConvertM (Maybe (Located.Located Item.Item))
 convertTyFamInstEqnM parentKey lEqn =
   let eqn = SrcLoc.unLoc lEqn
-      sig = Just . Text.pack . Internal.showSDocShort $ extractTyFamInstEqnSig eqn
+      sig = Just . Text.pack . Outputable.showSDocUnsafe $ extractTyFamInstEqnSig eqn
    in Internal.mkItemM (Annotation.getLocA lEqn) parentKey Nothing Doc.Empty Nothing sig ItemKind.TypeFamilyInstance
 
 -- | Pretty-print a type family instance equation.
@@ -918,8 +896,7 @@ extractDerivedTypeDocAndSince lSigTy =
 extractDerivStrategy ::
   Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
   Maybe Text.Text
-extractDerivStrategy Nothing = Just (Text.pack "derived")
-extractDerivStrategy (Just s) = Just (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc s)
+extractDerivStrategy = fmap (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)
 
 -- | Extract named documentation chunks from module declarations.
 extractNamedDocChunks ::

@@ -97,7 +97,7 @@ extractConDeclSignature mParentType conDecl = case conDecl of
     } ->
       case mParentType of
         Nothing ->
-          Just . Text.pack . Internal.showSDocShort . Outputable.ppr $
+          Just . Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
             conDecl
               { Syntax.con_doc = Nothing,
                 Syntax.con_args = stripH98DetailsDocs args
@@ -123,11 +123,11 @@ extractConDeclSignature mParentType conDecl = case conDecl of
               bodyDoc = case argsDoc of
                 Nothing -> Outputable.text (Text.unpack parentType)
                 Just ad -> ad Outputable.<+> Outputable.text "->" Outputable.<+> Outputable.text (Text.unpack parentType)
-           in Just . Text.pack . Internal.showSDocShort $
+           in Just . Text.pack . Outputable.showSDocUnsafe $
                 forallDoc Outputable.<+> cxtDoc Outputable.<+> bodyDoc
   c@Syntax.ConDeclGADT {} ->
     let full =
-          Text.pack . Internal.showSDocShort . Outputable.ppr $
+          Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $
             c
               { Syntax.con_doc = Nothing,
                 Syntax.con_g_args = stripGADTDetailsDocs (Syntax.con_g_args c)
@@ -240,7 +240,7 @@ convertPrefixArgM ::
 convertPrefixArgM parentKey field =
   let (argDoc, argSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc field
       sig =
-        Just . Text.pack . Internal.showSDocShort $
+        Just . Text.pack . Outputable.showSDocUnsafe $
           unpackednessDoc (Syntax.cdf_unpack field)
             Outputable.<> strictnessDoc (Syntax.cdf_bang field)
             Outputable.<> Outputable.ppr (Syntax.cdf_type field)
@@ -270,7 +270,7 @@ convertConDeclFieldM parentKey lField =
       fieldSpec = Syntax.cdrf_spec recField
       (doc, docSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc fieldSpec
       sig =
-        Just . Text.pack . Internal.showSDocShort $
+        Just . Text.pack . Outputable.showSDocUnsafe $
           unpackednessDoc (Syntax.cdf_unpack fieldSpec)
             Outputable.<> strictnessDoc (Syntax.cdf_bang fieldSpec)
             Outputable.<> Outputable.ppr (Syntax.cdf_type fieldSpec)

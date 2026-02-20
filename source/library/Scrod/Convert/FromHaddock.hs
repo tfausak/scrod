@@ -102,7 +102,7 @@ convertDoc doc = case doc of
   Haddock.DocHeader h ->
     Doc.Header
       Header.MkHeader
-        { Header.level = Level.fromInt $ Haddock.headerLevel h,
+        { Header.level = convertLevel $ Haddock.headerLevel h,
           Header.title = convertDoc $ Haddock.headerTitle h
         }
   Haddock.DocTable t ->
@@ -111,6 +111,16 @@ convertDoc doc = case doc of
         { Table.headerRows = convertTableRow <$> Haddock.tableHeaderRows t,
           Table.bodyRows = convertTableRow <$> Haddock.tableBodyRows t
         }
+
+convertLevel :: Int -> Level.Level
+convertLevel n = case n of
+  1 -> Level.One
+  2 -> Level.Two
+  3 -> Level.Three
+  4 -> Level.Four
+  5 -> Level.Five
+  6 -> Level.Six
+  _ -> Level.One -- Default to level one if out of range.
 
 convertTableRow :: Haddock.TableRow (Haddock.DocH Void.Void Identifier.Identifier) -> [TableCell.Cell Doc.Doc]
 convertTableRow = fmap convertTableCell . Haddock.tableRowCells

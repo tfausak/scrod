@@ -98,7 +98,7 @@ convertIE lIe = case SrcLoc.unLoc lIe of
       Section.MkSection
         { Section.header =
             Header.MkHeader
-              { Header.level = Level.fromInt level,
+              { Header.level = levelFromInt level,
                 Header.title = GhcDoc.convertExportDoc lDoc
               }
         }
@@ -149,3 +149,14 @@ convertWrappedName lWrapped = case SrcLoc.unLoc lWrapped of
       { ExportName.kind = Nothing,
         ExportName.name = Internal.extractRdrName lId
       }
+
+-- | Convert an int to a Level.
+levelFromInt :: Int -> Level.Level
+levelFromInt n = case n of
+  1 -> Level.One
+  2 -> Level.Two
+  3 -> Level.Three
+  4 -> Level.Four
+  5 -> Level.Five
+  6 -> Level.Six
+  _ -> Level.One

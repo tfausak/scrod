@@ -344,7 +344,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
         chunkDoc = GhcDoc.convertExportDoc lNamedDoc
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing chunkName (Internal.appendDoc doc chunkDoc) docSince Nothing ItemKind.DocumentationChunk
   Syntax.DocD _ (Hs.DocGroup level lGroupDoc) ->
-    let groupDoc = Doc.Header Header.MkHeader {Header.level = intToLevel level, Header.title = GhcDoc.convertExportDoc lGroupDoc}
+    let groupDoc = Doc.Header Header.MkHeader {Header.level = Level.fromInt level, Header.title = GhcDoc.convertExportDoc lGroupDoc}
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing (Internal.appendDoc doc groupDoc) docSince Nothing ItemKind.DocumentationChunk
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
@@ -573,16 +573,6 @@ fixityDirectionToText dir = case dir of
   SyntaxBasic.InfixL -> Text.pack "infixl"
   SyntaxBasic.InfixR -> Text.pack "infixr"
   SyntaxBasic.InfixN -> Text.pack "infix"
-
--- | Convert a GHC doc group level (1-based) to a 'Level'.
-intToLevel :: Int -> Level.Level
-intToLevel n
-  | n <= 1 = Level.One
-  | n == 2 = Level.Two
-  | n == 3 = Level.Three
-  | n == 4 = Level.Four
-  | n == 5 = Level.Five
-  | otherwise = Level.Six
 
 -- | Convert a GHC 'InlineSpec' to its pragma keyword text.
 inlineSpecToText :: Basic.InlineSpec -> Text.Text

@@ -54,10 +54,12 @@ import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
 import qualified Scrod.Core.Category as Category
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Export as Export
+import qualified Scrod.Core.Header as Header
 import qualified Scrod.Core.Extension as Extension
 import qualified Scrod.Core.Import as Import
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKey as ItemKey
+import qualified Scrod.Core.Level as Level
 import qualified Scrod.Core.ItemKind as ItemKind
 import qualified Scrod.Core.ItemName as ItemName
 import qualified Scrod.Core.Language as Language
@@ -341,6 +343,9 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
     let chunkName = Just . ItemName.MkItemName . Text.pack $ '$' : name
         chunkDoc = GhcDoc.convertExportDoc lNamedDoc
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing chunkName (Internal.appendDoc doc chunkDoc) docSince Nothing ItemKind.DocumentationChunk
+  Syntax.DocD _ (Hs.DocGroup level lGroupDoc) ->
+    let groupDoc = Doc.Header Header.MkHeader {Header.level = intToLevel level, Header.title = GhcDoc.convertExportDoc lGroupDoc}
+     in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing (Internal.appendDoc doc groupDoc) docSince Nothing ItemKind.DocumentationChunk
   Syntax.DocD {} -> Maybe.maybeToList <$> convertDeclSimpleM lDecl
   Syntax.SigD _ sig -> convertSigDeclM doc docSince lDecl sig
   Syntax.KindSigD _ kindSig ->
@@ -552,6 +557,16 @@ fixityDirectionToText dir = case dir of
   SyntaxBasic.InfixL -> Text.pack "infixl"
   SyntaxBasic.InfixR -> Text.pack "infixr"
   SyntaxBasic.InfixN -> Text.pack "infix"
+
+-- | Convert a GHC doc group level (1-based) to a 'Level'.
+intToLevel :: Int -> Level.Level
+intToLevel n = case n of
+  1 -> Level.One
+  2 -> Level.Two
+  3 -> Level.Three
+  4 -> Level.Four
+  5 -> Level.Five
+  _ -> Level.Six
 
 -- | Convert a GHC 'InlineSpec' to its pragma keyword text.
 inlineSpecToText :: Basic.InlineSpec -> Text.Text

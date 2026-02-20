@@ -74,20 +74,21 @@ associateNextDocsLoop ::
   Maybe Since.Since ->
   [Syntax.LHsDecl Ghc.GhcPs] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-associateNextDocsLoop _ _ _ [] = []
-associateNextDocsLoop referencedChunkNames pendingDoc pendingSince (lDecl : rest) = case SrcLoc.unLoc lDecl of
-  Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
-    let (newDoc, newSince) = convertLHsDoc lDoc
-     in associateNextDocsLoop referencedChunkNames (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
-  Syntax.DocD _ (Hs.DocCommentPrev _) ->
-    (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
-  Syntax.DocD _ (Hs.DocCommentNamed name _)
-    | Set.member (Text.pack name) referencedChunkNames ->
-        associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
-    | otherwise ->
-        (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
-  _ ->
-    (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+associateNextDocsLoop referencedChunkNames pendingDoc pendingSince decls = case decls of
+  [] -> []
+  lDecl : rest -> case SrcLoc.unLoc lDecl of
+    Syntax.DocD _ (Hs.DocCommentNext lDoc) ->
+      let (newDoc, newSince) = convertLHsDoc lDoc
+       in associateNextDocsLoop referencedChunkNames (Internal.appendDoc pendingDoc newDoc) (Internal.appendSince pendingSince newSince) rest
+    Syntax.DocD _ (Hs.DocCommentPrev _) ->
+      (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+    Syntax.DocD _ (Hs.DocCommentNamed name _)
+      | Set.member (Text.pack name) referencedChunkNames ->
+          associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+      | otherwise ->
+          (Doc.Empty, Nothing, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
+    _ ->
+      (pendingDoc, pendingSince, lDecl) : associateNextDocsLoop referencedChunkNames Doc.Empty Nothing rest
 
 -- | Associate DocCommentPrev with the preceding declaration.
 associatePrevDocs ::
@@ -99,13 +100,14 @@ associatePrevDocs = reverse . associatePrevDocsLoop . reverse
 associatePrevDocsLoop ::
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-associatePrevDocsLoop [] = []
-associatePrevDocsLoop ((doc, docSince, lDecl) : rest) = case SrcLoc.unLoc lDecl of
-  Syntax.DocD _ (Hs.DocCommentPrev lDoc) ->
-    let (prevDoc, prevSince) = convertLHsDoc lDoc
-     in applyPrevDoc prevDoc prevSince $ associatePrevDocsLoop rest
-  _ ->
-    (doc, docSince, lDecl) : associatePrevDocsLoop rest
+associatePrevDocsLoop triples = case triples of
+  [] -> []
+  (doc, docSince, lDecl) : rest -> case SrcLoc.unLoc lDecl of
+    Syntax.DocD _ (Hs.DocCommentPrev lDoc) ->
+      let (prevDoc, prevSince) = convertLHsDoc lDoc
+       in applyPrevDoc prevDoc prevSince $ associatePrevDocsLoop rest
+    _ ->
+      (doc, docSince, lDecl) : associatePrevDocsLoop rest
 
 -- | Apply a prev-doc comment to the nearest preceding non-doc declaration.
 applyPrevDoc ::
@@ -113,7 +115,8 @@ applyPrevDoc ::
   Maybe Since.Since ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)] ->
   [(Doc.Doc, Maybe Since.Since, Syntax.LHsDecl Ghc.GhcPs)]
-applyPrevDoc _ _ [] = []
-applyPrevDoc prevDoc prevSince ((existingDoc, existingSince, lDecl) : rest) = case SrcLoc.unLoc lDecl of
-  Syntax.DocD {} -> (existingDoc, existingSince, lDecl) : applyPrevDoc prevDoc prevSince rest
-  _ -> (Internal.appendDoc existingDoc prevDoc, Internal.appendSince existingSince prevSince, lDecl) : rest
+applyPrevDoc prevDoc prevSince triples = case triples of
+  [] -> []
+  (existingDoc, existingSince, lDecl) : rest -> case SrcLoc.unLoc lDecl of
+    Syntax.DocD {} -> (existingDoc, existingSince, lDecl) : applyPrevDoc prevDoc prevSince rest
+    _ -> (Internal.appendDoc existingDoc prevDoc, Internal.appendSince existingSince prevSince, lDecl) : rest

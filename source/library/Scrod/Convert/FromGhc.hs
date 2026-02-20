@@ -413,8 +413,7 @@ convertInstDeclWithDocM doc docSince lDecl inst = case inst of
         eqn = Syntax.dfid_eqn dataFamInst
         parentType =
           Just . Text.pack . Internal.showSDocShort $
-            Outputable.ppr (Syntax.feqn_tycon eqn)
-              Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
+            Outputable.hsep (Outputable.ppr (Syntax.feqn_tycon eqn) : (pprHsTypeArg <$> Syntax.feqn_pats eqn))
     childItems <- convertDataDefnM parentKey parentType (Syntax.feqn_rhs eqn)
     pure $ Maybe.maybeToList parentItem <> childItems
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractInstDeclName inst) Nothing lDecl
@@ -480,7 +479,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
     let namesSig = Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr names))
         sigText = Just . Text.pack . Internal.showSDocShort $ case mTyCon of
           Nothing -> namesSig
-          Just tyCon -> namesSig Outputable.<+> Outputable.text "::" Outputable.<+> Outputable.ppr tyCon
+          Just tyCon -> Outputable.hsep [namesSig, Outputable.text "::", Outputable.ppr tyCon]
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
@@ -512,10 +511,11 @@ convertReturnType ::
   SrcLoc.SrcSpan ->
   Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs)) ->
   Internal.ConvertM [Located.Located Item.Item]
-convertReturnType _ _ Nothing = pure []
-convertReturnType parentKey srcSpan (Just (sigText, mDoc)) =
-  let (retDoc, retSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
-   in Maybe.maybeToList <$> Internal.mkItemM srcSpan parentKey Nothing retDoc retSince (Just sigText) ItemKind.ReturnType
+convertReturnType parentKey srcSpan mRet = case mRet of
+  Nothing -> pure []
+  Just (sigText, mDoc) ->
+    let (retDoc, retSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc mDoc
+     in Maybe.maybeToList <$> Internal.mkItemM srcSpan parentKey Nothing retDoc retSince (Just sigText) ItemKind.ReturnType
 
 -- | Convert a single name from a fixity signature.
 convertFixityNameM ::
@@ -565,8 +565,9 @@ convertSpecSigEM doc docSince lExpr = case SrcLoc.unLoc lExpr of
 -- | Combine a user-written doc with a synthesized doc. If the user doc
 -- is empty, just use the synthesized one; otherwise append both.
 combineDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
-combineDoc Doc.Empty synth = synth
-combineDoc user synth = Doc.Append [user, synth]
+combineDoc user synth = case user of
+  Doc.Empty -> synth
+  _ -> Doc.Append [user, synth]
 
 -- | Convert a fixity direction to text.
 fixityDirectionToText :: SyntaxBasic.FixityDirection -> Text.Text
@@ -618,10 +619,12 @@ convertRuleDeclM lRuleDecl =
       name = Just . ItemName.MkItemName . Text.pack . FastString.unpackFS . SrcLoc.unLoc $ Syntax.rd_name ruleDecl
       sig =
         Just . Text.pack . Internal.showSDocShort $
-          Outputable.ppr (Syntax.rd_bndrs ruleDecl)
-            Outputable.<+> Outputable.ppr (Syntax.rd_lhs ruleDecl)
-            Outputable.<+> Outputable.text "="
-            Outputable.<+> Outputable.ppr (Syntax.rd_rhs ruleDecl)
+          Outputable.hsep
+            [ Outputable.ppr (Syntax.rd_bndrs ruleDecl),
+              Outputable.ppr (Syntax.rd_lhs ruleDecl),
+              Outputable.text "=",
+              Outputable.ppr (Syntax.rd_rhs ruleDecl)
+            ]
    in Internal.mkItemM (Annotation.getLocA lRuleDecl) Nothing name Doc.Empty Nothing sig ItemKind.Rule
 
 -- | Convert a role annotation declaration.
@@ -830,16 +833,19 @@ convertTyFamInstEqnM parentKey lEqn =
 -- | Pretty-print a type family instance equation.
 extractTyFamInstEqnSig :: Syntax.TyFamInstEqn Ghc.GhcPs -> Outputable.SDoc
 extractTyFamInstEqnSig eqn =
-  Outputable.ppr (Syntax.feqn_tycon eqn)
-    Outputable.<+> Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn)
-    Outputable.<+> Outputable.text "="
-    Outputable.<+> Outputable.ppr (Syntax.feqn_rhs eqn)
+  Outputable.hsep
+    [ Outputable.ppr (Syntax.feqn_tycon eqn),
+      Outputable.hsep (pprHsTypeArg <$> Syntax.feqn_pats eqn),
+      Outputable.text "=",
+      Outputable.ppr (Syntax.feqn_rhs eqn)
+    ]
 
 -- | Pretty-print a type argument, stripping the 'HsArg' wrapper.
 pprHsTypeArg :: Syntax.LHsTypeArg Ghc.GhcPs -> Outputable.SDoc
-pprHsTypeArg (Syntax.HsValArg _ ty) = Outputable.ppr ty
-pprHsTypeArg (Syntax.HsTypeArg _ ki) = Outputable.text "@" Outputable.<> Outputable.ppr ki
-pprHsTypeArg (Syntax.HsArgPar _) = Outputable.empty
+pprHsTypeArg arg = case arg of
+  Syntax.HsValArg _ ty -> Outputable.ppr ty
+  Syntax.HsTypeArg _ ki -> Outputable.hcat [Outputable.text "@", Outputable.ppr ki]
+  Syntax.HsArgPar _ -> Outputable.empty
 
 -- | Convert data definition constructors and deriving clauses.
 convertDataDefnM ::
@@ -919,8 +925,8 @@ extractDerivedTypeDocAndSince lSigTy =
 extractDerivStrategy ::
   Maybe (Syntax.LDerivStrategy Ghc.GhcPs) ->
   Maybe Text.Text
-extractDerivStrategy Nothing = Just (Text.pack "derived")
-extractDerivStrategy (Just s) = Just (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr $ SrcLoc.unLoc s)
+extractDerivStrategy =
+  Just . maybe (Text.pack "derived") (Text.pack . Outputable.showSDocUnsafe . Outputable.ppr . SrcLoc.unLoc)
 
 -- | Extract named documentation chunks from module declarations.
 extractNamedDocChunks ::

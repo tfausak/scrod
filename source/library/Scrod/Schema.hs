@@ -57,17 +57,17 @@ runSchemaM m =
 -- recursive cycles. Characters @~@ and @/@ in the name are escaped
 -- per RFC 6901 for the JSON Pointer in the @$ref@.
 define :: String -> SchemaM Schema -> SchemaM Schema
-define name m = do
-  defs <- State.get
-  if Map.member name defs
-    then pure ref
-    else do
-      State.modify' $ Map.insert name Nothing
-      MkSchema s <- m
-      State.modify' $ Map.insert name (Just s)
-      pure ref
-  where
-    ref = MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> escapeJsonPointer name)]
+define name m =
+  let ref = MkSchema $ Json.object [("$ref", Json.string $ "#/$defs/" <> escapeJsonPointer name)]
+   in do
+        defs <- State.get
+        if Map.member name defs
+          then pure ref
+          else do
+            State.modify' $ Map.insert name Nothing
+            MkSchema s <- m
+            State.modify' $ Map.insert name (Just s)
+            pure ref
 
 -- | Escape a JSON Pointer reference token per RFC 6901: @~@ becomes
 -- @~0@ and @/@ becomes @~1@.
@@ -238,8 +238,9 @@ instance (GToSchema (Generics.Rep a)) => ToSchema (Generics.Generically a) where
 
 -- | Lowercase the first character of a string.
 lcFirst :: String -> String
-lcFirst [] = []
-lcFirst (c : cs) = Char.toLower c : cs
+lcFirst s = case s of
+  [] -> []
+  c : cs -> Char.toLower c : cs
 
 -- * Tests
 

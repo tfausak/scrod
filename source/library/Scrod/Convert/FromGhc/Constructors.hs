@@ -106,25 +106,28 @@ extractConDeclSignature mParentType conDecl = case conDecl of
           let forallDoc =
                 if hasForall && not (null exTvs)
                   then
-                    Outputable.text "forall"
-                      Outputable.<+> Outputable.hsep (fmap Outputable.ppr exTvs)
-                      Outputable.<> Outputable.text "."
+                    Outputable.hcat
+                      [ Outputable.hsep (Outputable.text "forall" : fmap Outputable.ppr exTvs),
+                        Outputable.text "."
+                      ]
                   else Outputable.empty
               cxtDoc = case mbCxt of
                 Nothing -> Outputable.empty
                 Just ctx -> case SrcLoc.unLoc ctx of
                   [] -> Outputable.empty
-                  [c] -> Outputable.ppr c Outputable.<+> Outputable.text "=>"
+                  [c] -> Outputable.hsep [Outputable.ppr c, Outputable.text "=>"]
                   cs ->
-                    Outputable.parens
-                      (Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr cs)))
-                      Outputable.<+> Outputable.text "=>"
+                    Outputable.hsep
+                      [ Outputable.parens
+                          (Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr cs))),
+                        Outputable.text "=>"
+                      ]
               argsDoc = h98ArgsToDoc (stripH98DetailsDocs args)
               bodyDoc = case argsDoc of
                 Nothing -> Outputable.text (Text.unpack parentType)
-                Just ad -> ad Outputable.<+> Outputable.text "->" Outputable.<+> Outputable.text (Text.unpack parentType)
+                Just ad -> Outputable.hsep [ad, Outputable.text "->", Outputable.text (Text.unpack parentType)]
            in Just . Text.pack . Internal.showSDocShort $
-                forallDoc Outputable.<+> cxtDoc Outputable.<+> bodyDoc
+                Outputable.hsep [forallDoc, cxtDoc, bodyDoc]
   c@Syntax.ConDeclGADT {} ->
     let full =
           Text.pack . Internal.showSDocShort . Outputable.ppr $
@@ -149,20 +152,20 @@ h98ArgsToDoc details = case details of
       $ fmap (Outputable.ppr . Syntax.cdf_type) fields
   Syntax.InfixCon l r ->
     Just $
-      Outputable.ppr (Syntax.cdf_type l)
-        Outputable.<+> Outputable.text "->"
-        Outputable.<+> Outputable.ppr (Syntax.cdf_type r)
+      Outputable.hsep
+        [ Outputable.ppr (Syntax.cdf_type l),
+          Outputable.text "->",
+          Outputable.ppr (Syntax.cdf_type r)
+        ]
   Syntax.RecCon lFields ->
     let fields = SrcLoc.unLoc lFields
      in Just $ case fields of
           [f] ->
-            Outputable.text "{"
-              Outputable.<+> Outputable.ppr f
-              Outputable.<+> Outputable.text "}"
+            Outputable.hsep [Outputable.text "{", Outputable.ppr f, Outputable.text "}"]
           (f : fs) ->
             Outputable.vcat $
-              [Outputable.text "{" Outputable.<+> Outputable.ppr f]
-                <> fmap (\fld -> Outputable.text "," Outputable.<+> Outputable.ppr fld) fs
+              [Outputable.hsep [Outputable.text "{", Outputable.ppr f]]
+                <> fmap (\fld -> Outputable.hsep [Outputable.text ",", Outputable.ppr fld]) fs
                 <> [Outputable.text "}"]
           [] ->
             Outputable.text "{}"
@@ -241,9 +244,11 @@ convertPrefixArgM parentKey field =
   let (argDoc, argSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc field
       sig =
         Just . Text.pack . Internal.showSDocShort $
-          unpackednessDoc (Syntax.cdf_unpack field)
-            Outputable.<> strictnessDoc (Syntax.cdf_bang field)
-            Outputable.<> Outputable.ppr (Syntax.cdf_type field)
+          Outputable.hcat
+            [ unpackednessDoc (Syntax.cdf_unpack field),
+              strictnessDoc (Syntax.cdf_bang field),
+              Outputable.ppr (Syntax.cdf_type field)
+            ]
    in Internal.mkItemM
         (Annotation.getLocA (Syntax.cdf_type field))
         parentKey
@@ -271,9 +276,11 @@ convertConDeclFieldM parentKey lField =
       (doc, docSince) = maybe (Doc.Empty, Nothing) GhcDoc.convertLHsDoc $ Syntax.cdf_doc fieldSpec
       sig =
         Just . Text.pack . Internal.showSDocShort $
-          unpackednessDoc (Syntax.cdf_unpack fieldSpec)
-            Outputable.<> strictnessDoc (Syntax.cdf_bang fieldSpec)
-            Outputable.<> Outputable.ppr (Syntax.cdf_type fieldSpec)
+          Outputable.hcat
+            [ unpackednessDoc (Syntax.cdf_unpack fieldSpec),
+              strictnessDoc (Syntax.cdf_bang fieldSpec),
+              Outputable.ppr (Syntax.cdf_type fieldSpec)
+            ]
    in Maybe.catMaybes <$> traverse (convertFieldNameM parentKey doc docSince sig) (Syntax.cdrf_names recField)
 
 -- | Convert a single field name to an item.

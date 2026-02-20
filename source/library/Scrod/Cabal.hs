@@ -37,41 +37,40 @@ discoverExtensions source =
 -- (with optional trailing whitespace). Lines before the start marker
 -- are skipped, so shebangs are handled naturally.
 extractHeader :: String -> Maybe String
-extractHeader = findStart . lines
-  where
-    findStart [] = Nothing
-    findStart (l : ls)
-      | isStartMarker l = collectBody [] ls
-      | otherwise = findStart ls
-
-    collectBody _ [] = Nothing
-    collectBody acc (l : ls)
-      | isEndMarker l = Just . unlines $ reverse acc
-      | otherwise = collectBody (l : acc) ls
-
-    isStartMarker = (== "{- cabal:") . stripTrailingSpace
-    isEndMarker = (== "-}") . stripTrailingSpace
-
-    stripTrailingSpace = List.dropWhileEnd Char.isSpace
+extractHeader input =
+  let stripTrailingSpace = List.dropWhileEnd Char.isSpace
+      isStartMarker = (== "{- cabal:") . stripTrailingSpace
+      isEndMarker = (== "-}") . stripTrailingSpace
+      findStart xs = case xs of
+        [] -> Nothing
+        l : ls
+          | isStartMarker l -> collectBody [] ls
+          | otherwise -> findStart ls
+      collectBody acc xs = case xs of
+        [] -> Nothing
+        l : ls
+          | isEndMarker l -> Just . unlines $ reverse acc
+          | otherwise -> collectBody (l : acc) ls
+   in findStart (lines input)
 
 -- | Parse @default-extensions@ values from Cabal field content.
 parseDefaultExtensions :: String -> [String]
 parseDefaultExtensions content =
-  case Fields.readFields (Char8.pack content) of
-    Left _ -> []
-    Right fields -> concatMap getExtensions fields
-  where
-    getExtensions :: Fields.Field pos -> [String]
-    getExtensions (Fields.Field (Fields.Name _ name) fieldLines)
-      | Char8.map Char.toLower name == Char8.pack "default-extensions" =
-          concatMap getWords fieldLines
-    getExtensions _ = []
-    getWords :: Fields.FieldLine pos -> [String]
-    getWords (Fields.FieldLine _ bs) =
-      filter (not . null)
-        . words
-        . fmap (\c -> if c == ',' then ' ' else c)
-        $ Char8.unpack bs
+  let getWords :: Fields.FieldLine pos -> [String]
+      getWords (Fields.FieldLine _ bs) =
+        filter (not . null)
+          . words
+          . fmap (\c -> if c == ',' then ' ' else c)
+          $ Char8.unpack bs
+      getExtensions :: Fields.Field pos -> [String]
+      getExtensions field = case field of
+        Fields.Field (Fields.Name _ name) fieldLines
+          | Char8.map Char.toLower name == Char8.pack "default-extensions" ->
+              concatMap getWords fieldLines
+        _ -> []
+   in case Fields.readFields (Char8.pack content) of
+        Left _ -> []
+        Right fields -> concatMap getExtensions fields
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do

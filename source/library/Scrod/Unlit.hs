@@ -16,31 +16,34 @@ import qualified Scrod.Spec as Spec
 -- unterminated LaTeX blocks, bird tracks adjacent to comments, or no code
 -- at all).
 unlit :: String -> Either String String
-unlit input = do
-  let ls = lines input
-  (hasCode, outputLines) <- go ls Blank False False []
-  Monad.unless hasCode $ Left "no code in literate file"
-  Right $ unlines (reverse outputLines)
-  where
-    go [] _ True _ _ = Left "unterminated \\begin{code}"
-    go [] _ False hasCode acc = Right (hasCode, acc)
-    go (line : rest) prev inLatex hasCode acc =
-      let cls = classifyLine line
-       in case inLatex of
-            True -> case cls of
-              EndCode -> go rest EndCode False hasCode ("" : acc)
-              BeginCode -> Left "nested \\begin{code}"
-              _ -> go rest cls True True (line : acc)
-            False -> case cls of
-              Blank -> go rest Blank False hasCode ("" : acc)
-              Bird -> do
-                Monad.when (prev == Comment) $ Left "bird track adjacent to comment"
-                go rest Bird False True ((' ' : drop 1 line) : acc)
-              BeginCode -> go rest BeginCode True True ("" : acc)
-              EndCode -> Left "unexpected \\end{code}"
-              Comment -> do
-                Monad.when (prev == Bird) $ Left "bird track adjacent to comment"
-                go rest Comment False hasCode ("" : acc)
+unlit input =
+  let go lines_ prev inLatex hasCode acc = case lines_ of
+        [] ->
+          if inLatex
+            then Left "unterminated \\begin{code}"
+            else Right (hasCode, acc)
+        line : rest ->
+          let cls = classifyLine line
+           in case inLatex of
+                True -> case cls of
+                  EndCode -> go rest EndCode False hasCode ("" : acc)
+                  BeginCode -> Left "nested \\begin{code}"
+                  _ -> go rest cls True True (line : acc)
+                False -> case cls of
+                  Blank -> go rest Blank False hasCode ("" : acc)
+                  Bird -> do
+                    Monad.when (prev == Comment) $ Left "bird track adjacent to comment"
+                    go rest Bird False True ((' ' : drop 1 line) : acc)
+                  BeginCode -> go rest BeginCode True True ("" : acc)
+                  EndCode -> Left "unexpected \\end{code}"
+                  Comment -> do
+                    Monad.when (prev == Bird) $ Left "bird track adjacent to comment"
+                    go rest Comment False hasCode ("" : acc)
+   in do
+        let ls = lines input
+        (hasCode, outputLines) <- go ls Blank False False []
+        Monad.unless hasCode $ Left "no code in literate file"
+        Right $ unlines (reverse outputLines)
 
 data LineClass
   = Blank

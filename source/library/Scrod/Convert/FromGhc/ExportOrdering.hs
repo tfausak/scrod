@@ -42,19 +42,20 @@ reorderByExports ::
   Maybe [Export.Export] ->
   [Located.Located Item.Item] ->
   [Located.Located Item.Item]
-reorderByExports Nothing items = items
-reorderByExports (Just []) items = items
-reorderByExports (Just exports) items =
-  let nameMap = topLevelNameMap items
-      nextKey = nextItemKey items
-      (exportedItems, usedKeys, _) = walkExports exports nameMap Set.empty nextKey
-      implicitItems = collectImplicit usedKeys items
-      usedKeys2 = foldr (Set.insert . Item.key . Located.value) usedKeys implicitItems
-      unexportedItems = collectUnexported usedKeys2 items
-      usedKeys3 = foldr (Set.insert . Item.key . Located.value) usedKeys2 unexportedItems
-      remainingItems = collectRemaining usedKeys3 items
-      childItems = filter (Maybe.isJust . Item.parentKey . Located.value) items
-   in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
+reorderByExports mExports items = case mExports of
+  Nothing -> items
+  Just [] -> items
+  Just exports ->
+    let nameMap = topLevelNameMap items
+        nextKey = nextItemKey items
+        (exportedItems, usedKeys, _) = walkExports exports nameMap Set.empty nextKey
+        implicitItems = collectImplicit usedKeys items
+        usedKeys2 = foldr (Set.insert . Item.key . Located.value) usedKeys implicitItems
+        unexportedItems = collectUnexported usedKeys2 items
+        usedKeys3 = foldr (Set.insert . Item.key . Located.value) usedKeys2 unexportedItems
+        remainingItems = collectRemaining usedKeys3 items
+        childItems = filter (Maybe.isJust . Item.parentKey . Located.value) items
+     in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
 
 -- | Build a map from top-level item names to located items.
 -- For items whose names contain type variables (indicated by a space),
@@ -72,8 +73,9 @@ topLevelNameMap items =
 
 -- | Compute the next available item key (one past the maximum).
 nextItemKey :: [Located.Located Item.Item] -> Natural.Natural
-nextItemKey [] = 0
-nextItemKey items = 1 + maximum (fmap (ItemKey.unwrap . Item.key . Located.value) items)
+nextItemKey items = case items of
+  [] -> 0
+  _ -> 1 + maximum (fmap (ItemKey.unwrap . Item.key . Located.value) items)
 
 -- | Walk the export list, emitting items in export order. The @used@
 -- set tracks item keys already emitted to avoid duplicates. Returns
@@ -85,42 +87,43 @@ walkExports ::
   Set.Set ItemKey.ItemKey ->
   Natural.Natural ->
   ([Located.Located Item.Item], Set.Set ItemKey.ItemKey, Natural.Natural)
-walkExports [] _ used nextKey = ([], used, nextKey)
-walkExports (e : es) nameMap used nextKey = case e of
-  Export.Identifier ident ->
-    let name = ExportName.name (ExportIdentifier.name ident)
-     in case Map.lookup name nameMap of
-          Just li
-            | not (Set.member (Item.key (Located.value li)) used) ->
-                let meta = exportMetadataItems ident nextKey
-                    nextKey2 = nextKey + fromIntegral (length meta)
-                    used2 = Set.insert (Item.key (Located.value li)) used
-                    (rest, used3, nextKey3) = walkExports es nameMap used2 nextKey2
-                 in (li : meta <> rest, used3, nextKey3)
-          Just _ ->
-            -- Duplicate export: emit only metadata, skip the item.
-            let meta = exportMetadataItems ident nextKey
-                nextKey2 = nextKey + fromIntegral (length meta)
-                (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
-             in (meta <> rest, used2, nextKey3)
-          Nothing ->
-            let (unresolvedItem, nextKey2) = mkUnresolvedExport ident nextKey
-                meta = exportMetadataItems ident nextKey2
-                nextKey3 = nextKey2 + fromIntegral (length meta)
-                (rest, used2, nextKey4) = walkExports es nameMap used nextKey3
-             in (unresolvedItem : meta <> rest, used2, nextKey4)
-  Export.Group section ->
-    let (sectionItem, nextKey2) = mkSectionItem section nextKey
-        (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
-     in (sectionItem : rest, used2, nextKey3)
-  Export.Doc doc ->
-    let (docItem, nextKey2) = mkDocItem doc nextKey
-        (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
-     in (docItem : rest, used2, nextKey3)
-  Export.DocNamed name ->
-    let (docItem, nextKey2) = mkDocNamedItem name nextKey
-        (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
-     in (docItem : rest, used2, nextKey3)
+walkExports exports nameMap used nextKey = case exports of
+  [] -> ([], used, nextKey)
+  e : es -> case e of
+    Export.Identifier ident ->
+      let name = ExportName.name (ExportIdentifier.name ident)
+       in case Map.lookup name nameMap of
+            Just li
+              | not (Set.member (Item.key (Located.value li)) used) ->
+                  let meta = exportMetadataItems ident nextKey
+                      nextKey2 = nextKey + fromIntegral (length meta)
+                      used2 = Set.insert (Item.key (Located.value li)) used
+                      (rest, used3, nextKey3) = walkExports es nameMap used2 nextKey2
+                   in (li : meta <> rest, used3, nextKey3)
+            Just _ ->
+              -- Duplicate export: emit only metadata, skip the item.
+              let meta = exportMetadataItems ident nextKey
+                  nextKey2 = nextKey + fromIntegral (length meta)
+                  (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
+               in (meta <> rest, used2, nextKey3)
+            Nothing ->
+              let (unresolvedItem, nextKey2) = mkUnresolvedExport ident nextKey
+                  meta = exportMetadataItems ident nextKey2
+                  nextKey3 = nextKey2 + fromIntegral (length meta)
+                  (rest, used2, nextKey4) = walkExports es nameMap used nextKey3
+               in (unresolvedItem : meta <> rest, used2, nextKey4)
+    Export.Group section ->
+      let (sectionItem, nextKey2) = mkSectionItem section nextKey
+          (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
+       in (sectionItem : rest, used2, nextKey3)
+    Export.Doc doc ->
+      let (docItem, nextKey2) = mkDocItem doc nextKey
+          (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
+       in (docItem : rest, used2, nextKey3)
+    Export.DocNamed name ->
+      let (docItem, nextKey2) = mkDocNamedItem name nextKey
+          (rest, used2, nextKey3) = walkExports es nameMap used nextKey2
+       in (docItem : rest, used2, nextKey3)
 
 -- | Collect implicit items that haven't been used yet.
 collectImplicit ::

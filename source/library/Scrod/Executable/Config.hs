@@ -5,6 +5,7 @@ module Scrod.Executable.Config where
 
 import qualified Control.Monad as Monad
 import qualified Control.Monad.Catch as Exception
+import Data.Sequence ((|>))
 import qualified Data.Sequence as Seq
 import qualified GHC.Stack as Stack
 import qualified Scrod.Executable.Flag as Flag
@@ -31,7 +32,7 @@ applyFlag config flag = case flag of
   Flag.Format string -> do
     fmt <- Format.fromString string
     pure config {format = fmt}
-  Flag.GhcOption string -> pure config {ghcOptions = ghcOptions config Seq.|> string}
+  Flag.GhcOption string -> pure config {ghcOptions = ghcOptions config |> string}
   Flag.Help maybeString -> case maybeString of
     Nothing -> pure config {help = True}
     Just string -> do

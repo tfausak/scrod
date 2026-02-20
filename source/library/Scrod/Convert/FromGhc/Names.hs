@@ -52,7 +52,7 @@ extractTyClDeclName tyClDecl = case tyClDecl of
   Syntax.ClassDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
     Just . ItemName.MkItemName . Text.pack . Outputable.showSDocUnsafe $ case Syntax.hsQTvExplicit tyVars of
       [] -> Outputable.ppr lName
-      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
+      tvs -> Outputable.hsep (Outputable.ppr lName : fmap Outputable.ppr tvs)
 
 -- | Extract the fully applied parent type text from a data declaration.
 -- For @data Maybe a@, this produces @"Maybe a"@.
@@ -61,7 +61,7 @@ extractParentTypeText tyClDecl = case tyClDecl of
   Syntax.DataDecl {Syntax.tcdLName = lName, Syntax.tcdTyVars = tyVars} ->
     Just . Text.pack . Internal.showSDocShort $ case Syntax.hsQTvExplicit tyVars of
       [] -> Outputable.ppr lName
-      tvs -> Outputable.ppr lName Outputable.<+> Outputable.hsep (fmap Outputable.ppr tvs)
+      tvs -> Outputable.hsep (Outputable.ppr lName : fmap Outputable.ppr tvs)
   _ -> Nothing
 
 -- | Extract type variable bindings from a type\/class declaration.
@@ -87,9 +87,7 @@ extractSynDeclSignature :: Syntax.TyClDecl Ghc.GhcPs -> Maybe Text.Text
 extractSynDeclSignature tyClDecl = case tyClDecl of
   Syntax.SynDecl {Syntax.tcdTyVars = tyVars, Syntax.tcdRhs = rhs} ->
     let rhsText = Text.pack . Internal.showSDocShort $ Outputable.ppr rhs
-     in Just $ case tyVarsToText tyVars of
-          Nothing -> Text.pack "= " <> rhsText
-          Just tvs -> tvs <> Text.pack " = " <> rhsText
+     in Just $ maybe (Text.pack "= " <> rhsText) (\tvs -> tvs <> Text.pack " = " <> rhsText) (tyVarsToText tyVars)
   _ -> Nothing
 
 -- | Extract name from a family declaration.
@@ -167,11 +165,12 @@ extractPatVarName pat = case pat of
 -- where position 0 yields 'Nothing' (no variable in either equation)
 -- and position 1 yields @Just "x"@ (from the second equation).
 mergePatNames :: [[Maybe Text.Text]] -> [Maybe Text.Text]
-mergePatNames [] = []
-mergePatNames patNameLists =
-  let maxLen = maximum (fmap length patNameLists)
-      padded = fmap (\ns -> ns <> replicate (maxLen - length ns) Nothing) patNameLists
-   in fmap (Maybe.listToMaybe . Maybe.catMaybes) (List.transpose padded)
+mergePatNames patNameLists = case patNameLists of
+  [] -> []
+  _ ->
+    let maxLen = maximum (fmap length patNameLists)
+        padded = fmap (\ns -> ns <> replicate (maxLen - length ns) Nothing) patNameLists
+     in fmap (Maybe.listToMaybe . Maybe.catMaybes) (List.transpose padded)
 
 -- | Extract name from a signature.
 extractSigName :: Syntax.Sig Ghc.GhcPs -> Maybe ItemName.ItemName

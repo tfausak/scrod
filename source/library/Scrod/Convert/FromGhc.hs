@@ -48,6 +48,7 @@ import qualified Scrod.Convert.FromGhc.Merge as Merge
 import qualified Scrod.Convert.FromGhc.Names as Names
 import qualified Scrod.Convert.FromGhc.ParentAssociation as ParentAssociation
 import qualified Scrod.Convert.FromGhc.RoleParents as RoleParents
+import qualified Scrod.Convert.FromGhc.SigArguments as SigArguments
 import qualified Scrod.Convert.FromGhc.SpecialiseParents as SpecialiseParents
 import qualified Scrod.Convert.FromGhc.Visibility as Visibility
 import qualified Scrod.Convert.FromGhc.WarningParents as WarningParents
@@ -428,7 +429,7 @@ convertSigDeclM ::
 convertSigDeclM doc docSince lDecl sig = case sig of
   Syntax.TypeSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-        (args, retType) = Names.extractSigArguments sig
+        (args, retType) = SigArguments.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
           parentResult <-
             Internal.mkItemWithKeyM
@@ -447,7 +448,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
               pure $ [parentItem] <> argItems <> retItem
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
-        (args, retType) = Names.extractSigArguments sig
+        (args, retType) = SigArguments.extractSigArguments sig
      in fmap concat . Traversable.for names $ \lName -> do
           parentResult <-
             Internal.mkItemWithKeyM
@@ -695,7 +696,7 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
   Syntax.SigD _ sig -> case sig of
     Syntax.ClassOpSig _ _ names _ ->
       let sigText = Names.extractSigSignature sig
-          (args, retType) = Names.extractSigArguments sig
+          (args, retType) = SigArguments.extractSigArguments sig
        in fmap concat . Traversable.for names $ \lName -> do
             parentResult <-
               Internal.mkItemWithKeyM

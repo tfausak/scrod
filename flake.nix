@@ -63,9 +63,6 @@
         in
         {
           default = pkgs.mkShell {
-            shellHook = ''
-              hooky install
-            '';
             nativeBuildInputs = [
               ghc-wasm-meta.packages.${system}.default
               hooky

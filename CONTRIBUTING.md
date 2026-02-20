@@ -1,5 +1,13 @@
 # Contributing
 
+## Setup
+
+After cloning the repo, install Git hooks:
+
+```bash
+hooky install
+```
+
 ## Build Commands
 
 ```bash

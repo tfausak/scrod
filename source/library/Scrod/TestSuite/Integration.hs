@@ -783,6 +783,22 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/kind/type", "\"Function\"")
         ]
 
+    Spec.it s "renders unresolved named doc chunks as named card items" $ do
+      check
+        s
+        """
+        module M
+          ( -- $x
+            y
+          ) where
+        y = ()
+        """
+        [ ("/items/0/value/kind/type", "\"DocumentationChunk\""),
+          ("/items/0/value/name", "\"$x\""),
+          ("/items/0/value/documentation/type", "\"Empty\""),
+          ("/items/1/value/name", "\"y\"")
+        ]
+
     Spec.it s "creates metadata items for export-level doc comments" $ do
       check
         s

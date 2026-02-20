@@ -8,6 +8,7 @@ module Scrod.Convert.FromGhc.Internal where
 
 import qualified Control.Monad.Trans.State.Strict as State
 import qualified Data.List.NonEmpty as NonEmpty
+import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified Documentation.Haddock.Types as Haddock
 import qualified GHC.Data.FastString as FastString
@@ -182,6 +183,17 @@ mkItemM ::
   ConvertM (Maybe (Located.Located Item.Item))
 mkItemM srcSpan parentKey itemName doc itemSince sig itemKind =
   fmap fst <$> mkItemWithKeyM srcSpan parentKey itemName doc itemSince sig itemKind
+
+-- | Extract source locations from module declarations using the given
+-- per-declaration extractor. Common skeleton for pragma location extraction.
+extractDeclLocations ::
+  (Syntax.LHsDecl Ghc.GhcPs -> [Location.Location]) ->
+  SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
+  Set.Set Location.Location
+extractDeclLocations extractFromDecl lHsModule =
+  let hsModule = SrcLoc.unLoc lHsModule
+      decls = Syntax.hsmodDecls hsModule
+   in Set.fromList $ concatMap extractFromDecl decls
 
 -- | Create an Item and return both the item and its allocated key.
 mkItemWithKeyM ::

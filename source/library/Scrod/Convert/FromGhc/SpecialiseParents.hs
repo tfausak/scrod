@@ -18,10 +18,7 @@ import qualified Scrod.Core.Location as Location
 extractSpecialiseLocations ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Set.Set Location.Location
-extractSpecialiseLocations lHsModule =
-  let hsModule = SrcLoc.unLoc lHsModule
-      decls = Syntax.hsmodDecls hsModule
-   in Set.fromList $ concatMap extractDeclSpecialiseLocations decls
+extractSpecialiseLocations = Internal.extractDeclLocations extractDeclSpecialiseLocations
 
 -- | Extract specialise name locations from a single declaration.
 extractDeclSpecialiseLocations ::

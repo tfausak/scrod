@@ -18,10 +18,7 @@ import qualified Scrod.Core.Location as Location
 extractFixityLocations ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   Set.Set Location.Location
-extractFixityLocations lHsModule =
-  let hsModule = SrcLoc.unLoc lHsModule
-      decls = Syntax.hsmodDecls hsModule
-   in Set.fromList $ concatMap extractDeclFixityLocations decls
+extractFixityLocations = Internal.extractDeclLocations extractDeclFixityLocations
 
 -- | Extract fixity name locations from a single declaration.
 extractDeclFixityLocations ::

@@ -1,0 +1,52 @@
+hook hlint {
+    command hlint {
+        pass_files xargs
+    }
+    files *.hs
+}
+
+hook ormolu {
+    command ormolu {
+        check_args --mode check
+        fix_args --mode inplace
+        pass_files xargs
+    }
+    files *.hs
+}
+
+hook cabal-gild {
+    command cabal-gild {
+        check_args --input scrod.cabal --mode check
+        fix_args --io scrod.cabal --mode format
+        pass_files none
+    }
+    files "/scrod.cabal"
+}
+
+hook cabal-check {
+    command cabal check {
+        pass_files none
+    }
+    files "/scrod.cabal"
+}
+
+hook hooky {
+    command hooky lint {
+        fix_args --fix
+        pass_files file
+    }
+    files *
+}
+
+lint_rules {
+    - check_broken_symlinks
+    - check_case_conflict
+    - check_merge_conflict
+    - end_of_file_fixer
+    - no_commit_to_branch {
+        branches {
+            - main
+        }
+    }
+    - trailing_whitespace
+}

@@ -3230,6 +3230,23 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/visibility/type", "\"Exported\"")
         ]
 
+    Spec.it s "pattern synonyms with COMPLETE pragma are not duplicated in exports" $ do
+      check
+        s
+        """
+        {-# language PatternSynonyms #-}
+        module M (Nil, Cons) where
+        pattern Nil = []
+        pattern Cons x xs = x : xs
+        {-# complete Nil, Cons #-}
+        """
+        [ ("/items/0/value/kind/type", "\"PatternSynonym\""),
+          ("/items/0/value/name", "\"Nil\""),
+          ("/items/1/value/kind/type", "\"PatternSynonym\""),
+          ("/items/1/value/name", "\"Cons\""),
+          ("/items/2/value/kind/type", "\"CompletePragma\"")
+        ]
+
 -- | Run the pipeline on the given Haskell source and assert JSON pointer
 -- expectations. Each @(pointer, json)@ pair asserts that the value at
 -- @pointer@ equals the parsed @json@. Use an empty string for @json@

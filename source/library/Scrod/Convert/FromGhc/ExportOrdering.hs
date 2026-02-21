@@ -54,22 +54,37 @@ reorderByExports mExports items = case mExports of
         unexportedItems = collectUnexported usedKeys2 items
         usedKeys3 = foldr (Set.insert . Item.key . Located.value) usedKeys2 unexportedItems
         remainingItems = collectRemaining usedKeys3 items
-        childItems = filter (Maybe.isJust . Item.parentKey . Located.value) items
+        usedKeys4 = foldr (Set.insert . Item.key . Located.value) usedKeys3 remainingItems
+        childItems =
+          filter
+            ( \li ->
+                let v = Located.value li
+                 in Maybe.isJust (Item.parentKey v)
+                      && not (Set.member (Item.key v) usedKeys4)
+            )
+            items
      in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
 
 -- | Build a map from top-level item names to located items.
 -- For items whose names contain type variables (indicated by a space),
 -- both the full name and the base name (first word) are indexed.
+-- Pattern synonyms are included even when they have a parent key
+-- (e.g. from a COMPLETE pragma), since they are still independently
+-- exportable.
 topLevelNameMap :: [Located.Located Item.Item] -> Map.Map Text.Text (Located.Located Item.Item)
 topLevelNameMap items =
   Map.fromList
     [ entry
     | li <- items,
-      Maybe.isNothing (Item.parentKey (Located.value li)),
+      isTopLevelOrExportable (Located.value li),
       Just n <- [Item.name (Located.value li)],
       let full = ItemName.unwrap n,
       entry <- (full, li) : [(base, li) | Just base <- [Internal.baseItemName full]]
     ]
+  where
+    isTopLevelOrExportable val =
+      Maybe.isNothing (Item.parentKey val)
+        || Item.kind val == ItemKind.PatternSynonym
 
 -- | Compute the next available item key (one past the maximum).
 nextItemKey :: [Located.Located Item.Item] -> Natural.Natural

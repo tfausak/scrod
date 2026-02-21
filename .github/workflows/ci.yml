@@ -30,7 +30,7 @@ jobs:
       - run: mkdir artifact
       - run: ghc-pkg list
       - run: cabal sdist --output-dir artifact
-      - run: cabal configure ${{ matrix.bench && '--enable-benchmarks' || '' }} ${{ matrix.doc && '--enable-documentation --haddock-for-hackage' || '' }} ${{ matrix.test && '--enable-tests' || '' }} --flags=pedantic --jobs
+      - run: cabal configure ${{ matrix.bench && '--enable-benchmarks' || '' }} ${{ matrix.test && '--enable-tests' || '' }} --flags=pedantic --jobs
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: cabal freeze
@@ -45,6 +45,8 @@ jobs:
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
+      - if: matrix.doc
+        run: cabal haddock --haddock-for-hackage
       - if: matrix.doc
         run: cp dist-newstyle/${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz artifact
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact

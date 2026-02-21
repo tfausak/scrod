@@ -238,4 +238,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release create ${{ needs.meta.outputs.version }} --draft --generate-notes --target ${{ github.sha }} ${{ needs.meta.outputs.name }}-*.tar.gz ${{ needs.meta.outputs.name }}-*.json *.vsix
       - run: cabal upload --publish --token '${{ secrets.HACKAGE_TOKEN }}' ${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}.tar.gz
-      - run: cabal --http-transport=plain-http upload --documentation --publish --token '${{ secrets.HACKAGE_TOKEN }}' ${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz
+      - run: cabal upload --documentation --publish --token '${{ secrets.HACKAGE_TOKEN }}' ${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz

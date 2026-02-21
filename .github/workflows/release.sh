@@ -36,6 +36,10 @@ do
       cp "$dir"/*.vsix .
       continue
       ;;
+    # The bench job uploads an artifact matching the same name pattern. The
+    # release job doesn't depend on bench, so the artifact may or may not be
+    # present depending on timing. Skip it if it shows up.
+    bench) continue ;;
     *) echo "unknown platform: $platform" >&2; exit 1 ;;
   esac
   tar --extract --file "$dir/artifact.tar"

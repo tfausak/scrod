@@ -14,10 +14,13 @@ jobs:
     needs: meta
     strategy:
       matrix:
-        os:
-          - macos
-          - ubuntu
-          - windows
+        include:
+          - os: macos
+          - os: ubuntu
+            bench: true
+            doc: true
+            test: true
+          - os: windows
     steps:
       - uses: actions/checkout@v6
       - id: haskell
@@ -27,10 +30,7 @@ jobs:
       - run: mkdir artifact
       - run: ghc-pkg list
       - run: cabal sdist --output-dir artifact
-      - if: runner.os == 'Linux'
-        run: cabal configure --enable-benchmarks --enable-documentation --enable-tests --flags=pedantic --haddock-for-hackage --jobs
-      - if: runner.os != 'Linux'
-        run: cabal configure --flags=pedantic --jobs
+      - run: cabal configure ${{ matrix.bench && '--enable-benchmarks' || '' }} ${{ matrix.doc && '--enable-documentation --haddock-for-hackage' || '' }} ${{ matrix.test && '--enable-tests' || '' }} --flags=pedantic --jobs
       - run: cat cabal.project.local
       - run: cp cabal.project.local artifact
       - run: cabal freeze
@@ -45,12 +45,12 @@ jobs:
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
-      - if: runner.os == 'Linux'
+      - if: matrix.doc
         run: cp dist-newstyle/${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz artifact
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact
-      - if: runner.os == 'Linux'
+      - if: matrix.test
         run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
-      - if: runner.os == 'Linux'
+      - if: matrix.bench
         run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-benchmark ) artifact
       - run: artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }} --schema > artifact/schema.json
         shell: bash

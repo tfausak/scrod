@@ -55,7 +55,14 @@ reorderByExports mExports items = case mExports of
         usedKeys3 = foldr (Set.insert . Item.key . Located.value) usedKeys2 unexportedItems
         remainingItems = collectRemaining usedKeys3 items
         usedKeys4 = foldr (Set.insert . Item.key . Located.value) usedKeys3 remainingItems
-        childItems = filter (\li -> Maybe.isJust (Item.parentKey (Located.value li)) && not (Set.member (Item.key (Located.value li)) usedKeys4)) items
+        childItems =
+          filter
+            ( \li ->
+                let v = Located.value li
+                 in Maybe.isJust (Item.parentKey v)
+                      && not (Set.member (Item.key v) usedKeys4)
+            )
+            items
      in exportedItems <> implicitItems <> unexportedItems <> remainingItems <> childItems
 
 -- | Build a map from top-level item names to located items.

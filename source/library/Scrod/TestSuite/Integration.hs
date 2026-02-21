@@ -2296,7 +2296,7 @@ spec s = Spec.describe s "integration" $ do
         data X a = X
         """
         [ ("/items/0/value/kind/type", "\"DataType\""),
-          ("/items/0/value/name", "\"X\""),
+          ("/items/0/value/name", "\"X a\""),
           ("/items/0/value/signature", "\"a -> a\""),
           ("/items/1/value/kind/type", "\"DataConstructor\""),
           ("/items/1/value/name", "\"X\""),
@@ -2311,7 +2311,7 @@ spec s = Spec.describe s "integration" $ do
         newtype Phantom a = MkPhantom ()
         """
         [ ("/items/0/value/kind/type", "\"Newtype\""),
-          ("/items/0/value/name", "\"Phantom\""),
+          ("/items/0/value/name", "\"Phantom a\""),
           ("/items/0/value/signature", "\"* -> *\""),
           ("/items/1/value/kind/type", "\"DataConstructor\""),
           ("/items/1/value/name", "\"MkPhantom\""),

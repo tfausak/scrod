@@ -2347,6 +2347,15 @@ spec s = Spec.describe s "integration" $ do
     Spec.it s "default declaration" $ do
       check s "default ()" [("/items", "[]")]
 
+    Spec.it s "named default declaration" $ do
+      check
+        s
+        "{-# language NamedDefaults #-} default Num (Int, Double)"
+        [ ("/items/0/value/kind/type", "\"Default\""),
+          ("/items/0/value/name", "\"Num\""),
+          ("/items/0/value/signature", "\"Int, Double\"")
+        ]
+
     Spec.it s "foreign import" $ do
       check
         s

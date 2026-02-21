@@ -362,7 +362,7 @@ convertDeclWithDocMaybeM doc docSince lDecl = case SrcLoc.unLoc lDecl of
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince Nothing sig lDecl
   Syntax.WarningD _ warnDecls -> convertWarnDeclsM warnDecls
   Syntax.RoleAnnotD _ roleAnnotDecl -> Maybe.maybeToList <$> convertRoleAnnotM roleAnnotDecl
-  Syntax.DefD {} -> pure []
+  Syntax.DefD _ defaultDecl -> convertDefaultDeclM doc docSince lDecl defaultDecl
   Syntax.DerivD _ derivDecl ->
     let strategy = extractDerivStrategy $ Syntax.deriv_strategy derivDecl
      in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractDeclName lDecl) strategy lDecl
@@ -584,6 +584,27 @@ inlineSpecToText inlineSpec = case inlineSpec of
   Basic.NoInline {} -> Text.pack "NOINLINE"
   Basic.Opaque {} -> Text.pack "OPAQUE"
   Basic.NoUserInlinePrag -> Text.pack "INLINE"
+
+-- | Convert a default declaration. Named defaults (e.g.
+-- @default Cls (Typ)@) produce an item; unnamed defaults (e.g.
+-- @default (Int)@) are skipped since they don't contribute to
+-- documentation.
+convertDefaultDeclM ::
+  Doc.Doc ->
+  Maybe Since.Since ->
+  Syntax.LHsDecl Ghc.GhcPs ->
+  Syntax.DefaultDecl Ghc.GhcPs ->
+  Internal.ConvertM [Located.Located Item.Item]
+convertDefaultDeclM doc docSince lDecl defaultDecl = case Syntax.defd_class defaultDecl of
+  Nothing -> pure []
+  Just lName ->
+    let name = Just $ Internal.extractIdPName lName
+        sig = case Syntax.defd_defaults defaultDecl of
+          [] -> Nothing
+          types ->
+            Just . Text.pack . Internal.showSDocShort $
+              Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr types))
+     in Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince name sig lDecl
 
 -- | Convert a simple declaration without special handling.
 convertDeclSimpleM ::

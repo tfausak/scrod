@@ -45,8 +45,10 @@ jobs:
       - if: runner.os == 'Linux'
         run: cp dist-newstyle/${{ needs.meta.outputs.name }}-${{ needs.meta.outputs.version }}-docs.tar.gz artifact
       - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }} ) artifact
-      - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
-      - run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-benchmark ) artifact
+      - if: runner.os == 'Linux'
+        run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-test-suite ) artifact
+      - if: runner.os == 'Linux'
+        run: cp $( cabal list-bin ${{ needs.meta.outputs.name }}-benchmark ) artifact
       - run: artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }} --schema > artifact/schema.json
         shell: bash
       - run: tar --create --file artifact.tar --verbose artifact

@@ -701,7 +701,7 @@ docContents doc = case doc of
   Doc.Pic x -> [pictureContent x]
   Doc.MathInline x -> [Xml.string "\\(", Xml.text x, Xml.string "\\)"]
   Doc.MathDisplay x -> [Xml.string "\\[", Xml.text x, Xml.string "\\]"]
-  Doc.AName x -> [element "a" [("id", Text.unpack x)] []]
+  Doc.AName x -> [element "a" [("id", Text.unpack x), ("href", "#" <> Text.unpack x)] [Xml.string "#"]]
   Doc.Property x -> [propertyContent x]
   Doc.Examples xs -> exampleContent <$> NonEmpty.toList xs
   Doc.Header x -> [headerContent x]

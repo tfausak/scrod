@@ -210,6 +210,11 @@ warningToDoc w =
       ]
 
 -- | Create an item for an unresolved export (no matching declaration).
+-- When the export has an explicit namespace keyword (e.g.
+-- @module A (type B) where@), it informs the 'ItemKind' instead of
+-- being stored in the signature field. Module re-exports keep
+-- @"module"@ in the signature since there is no distinct item kind
+-- for them.
 mkUnresolvedExport ::
   ExportIdentifier.ExportIdentifier ->
   Natural.Natural ->
@@ -217,17 +222,17 @@ mkUnresolvedExport ::
 mkUnresolvedExport ident nextKey =
   let exportName = ExportIdentifier.name ident
       name = ExportName.name exportName
-      namespaceSig = case ExportName.kind exportName of
-        Just ExportNameKind.Module -> Just (Text.pack "module")
-        Just ExportNameKind.Pattern -> Just (Text.pack "pattern")
-        Just ExportNameKind.Type -> Just (Text.pack "type")
-        Nothing -> Nothing
+      (kind, sig) = case ExportName.kind exportName of
+        Just ExportNameKind.Module -> (ItemKind.UnresolvedExport, Just (Text.pack "module"))
+        Just ExportNameKind.Pattern -> (ItemKind.PatternSynonym, Nothing)
+        Just ExportNameKind.Type -> (ItemKind.TypeSynonym, Nothing)
+        Nothing -> (ItemKind.UnresolvedExport, Nothing)
    in ( mkSyntheticItem
           nextKey
           (Just (ItemName.MkItemName name))
           Doc.Empty
-          namespaceSig
-          ItemKind.UnresolvedExport,
+          sig
+          kind,
         nextKey + 1
       )
 

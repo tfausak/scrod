@@ -3209,6 +3209,24 @@ spec s = Spec.describe s "integration" $ do
           ("/items/1/value/visibility/type", "\"Exported\"")
         ]
 
+    Spec.it s "explicit type namespace in export informs item kind" $ do
+      check
+        s
+        "{-# language ExplicitNamespaces #-} module A ( type B ) where"
+        [ ("/items/0/value/kind/type", "\"TypeSynonym\""),
+          ("/items/0/value/name", "\"B\""),
+          ("/items/0/value/signature", "")
+        ]
+
+    Spec.it s "explicit pattern namespace in export informs item kind" $ do
+      check
+        s
+        "{-# language ExplicitNamespaces, PatternSynonyms #-} module A ( pattern P ) where"
+        [ ("/items/0/value/kind/type", "\"PatternSynonym\""),
+          ("/items/0/value/name", "\"P\""),
+          ("/items/0/value/signature", "")
+        ]
+
 -- | Run the pipeline on the given Haskell source and assert JSON pointer
 -- expectations. Each @(pointer, json)@ pair asserts that the value at
 -- @pointer@ equals the parsed @json@. Use an empty string for @json@

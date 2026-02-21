@@ -19,7 +19,7 @@ let
       hash = "sha256-RVPI287fjjqV8lVfgRfnbJsF3JNOKWj8RmbmsCSE8JY=";
     };
   };
-  asset = assets.${pkgs.system};
+  asset = assets.${pkgs.stdenv.hostPlatform.system};
 in
 pkgs.stdenv.mkDerivation {
   pname = "hooky";

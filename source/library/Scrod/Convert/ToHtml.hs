@@ -553,7 +553,7 @@ itemContent item argChildren otherChildren =
       earlySignature =
         if isEarly then signature else []
       lateSignature =
-        if isEarly then [] else signature
+        if isEarly || kind == ItemKind.Warning then [] else signature
       badgeColor = case kind of
         ItemKind.Annotation -> "text-bg-info"
         ItemKind.CompletePragma -> "text-bg-info"
@@ -566,11 +566,26 @@ itemContent item argChildren otherChildren =
         ItemKind.Warning -> "text-bg-warning"
         _ -> "text-bg-secondary"
       cardBody =
-        let contents =
-              foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
-                <> argChildren
-                <> docContents (Item.documentation $ Located.value item)
-                <> otherChildren
+        let contents = case kind of
+              ItemKind.Warning ->
+                let category = Maybe.fromMaybe (Text.pack "deprecations") (Item.signature $ Located.value item)
+                 in [ element
+                        "div"
+                        [ ("class", "alert alert-warning mb-0"),
+                          ("role", "alert")
+                        ]
+                        [ element "strong" [] [Xml.string "Warning"],
+                          Xml.string " (",
+                          element "span" [("class", "text-break")] [Xml.text category],
+                          Xml.string "): ",
+                          element "span" [("class", "text-break")] (docContents (Item.documentation $ Located.value item))
+                        ]
+                    ]
+              _ ->
+                foldMap (List.singleton . sinceContent) (Item.since $ Located.value item)
+                  <> argChildren
+                  <> docContents (Item.documentation $ Located.value item)
+                  <> otherChildren
          in if all Content.isEmpty contents
               then []
               else

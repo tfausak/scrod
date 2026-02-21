@@ -2096,7 +2096,7 @@ spec s = Spec.describe s "integration" $ do
         {-# inline [1] j #-}
         """
         [ ("/items/1/value/kind/type", "\"InlineSignature\""),
-          ("/items/1/value/signature", "\"INLINE\""),
+          ("/items/1/value/signature", "\"INLINE [1]\""),
           ("/items/1/value/parentKey", "0")
         ]
 
@@ -2108,7 +2108,19 @@ spec s = Spec.describe s "integration" $ do
         {-# inline [~2] k #-}
         """
         [ ("/items/1/value/kind/type", "\"InlineSignature\""),
-          ("/items/1/value/signature", "\"INLINE\""),
+          ("/items/1/value/signature", "\"INLINE [~2]\""),
+          ("/items/1/value/parentKey", "0")
+        ]
+
+    Spec.it s "inline pragma with conlike modifier" $ do
+      check
+        s
+        """
+        k2 = ()
+        {-# inline conlike k2 #-}
+        """
+        [ ("/items/1/value/kind/type", "\"InlineSignature\""),
+          ("/items/1/value/signature", "\"INLINE CONLIKE\""),
           ("/items/1/value/parentKey", "0")
         ]
 

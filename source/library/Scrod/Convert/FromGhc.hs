@@ -469,7 +469,7 @@ convertSigDeclM doc docSince lDecl sig = case sig of
         combinedDoc = combineDoc doc fixityDoc
      in Maybe.catMaybes <$> traverse (convertFixityNameM combinedDoc) names
   Syntax.InlineSig _ lName inlinePragma ->
-    let sigText = Just . inlineSpecToText $ Basic.inl_inline inlinePragma
+    let sigText = Just $ inlinePragmaToText inlinePragma
      in Maybe.maybeToList <$> convertInlineNameM doc docSince sigText lName
   Syntax.SpecSig _ lName sigTypes _ ->
     let sigText = Just . Text.pack . Internal.showSDocShort $ Outputable.hsep (Outputable.punctuate (Outputable.text ",") (fmap Outputable.ppr sigTypes))
@@ -576,14 +576,26 @@ fixityDirectionToText dir = case dir of
   SyntaxBasic.InfixR -> Text.pack "infixr"
   SyntaxBasic.InfixN -> Text.pack "infix"
 
--- | Convert a GHC 'InlineSpec' to its pragma keyword text.
-inlineSpecToText :: Basic.InlineSpec -> Text.Text
-inlineSpecToText inlineSpec = case inlineSpec of
-  Basic.Inline {} -> Text.pack "INLINE"
-  Basic.Inlinable {} -> Text.pack "INLINABLE"
-  Basic.NoInline {} -> Text.pack "NOINLINE"
-  Basic.Opaque {} -> Text.pack "OPAQUE"
-  Basic.NoUserInlinePrag -> Text.pack "INLINE"
+-- | Convert a GHC 'InlinePragma' to text, including the keyword,
+-- CONLIKE modifier, and phase activation.
+inlinePragmaToText :: Basic.InlinePragma -> Text.Text
+inlinePragmaToText pragma =
+  let keyword = case Basic.inl_inline pragma of
+        Basic.Inline {} -> Text.pack "INLINE"
+        Basic.Inlinable {} -> Text.pack "INLINABLE"
+        Basic.NoInline {} -> Text.pack "NOINLINE"
+        Basic.Opaque {} -> Text.pack "OPAQUE"
+        Basic.NoUserInlinePrag -> Text.pack "INLINE"
+      conlike = case Basic.inl_rule pragma of
+        Basic.ConLike -> Text.pack " CONLIKE"
+        Basic.FunLike -> Text.empty
+      phase = case Basic.inl_act pragma of
+        Basic.AlwaysActive -> Text.empty
+        Basic.ActiveAfter _ n -> Text.pack $ " [" <> show n <> "]"
+        Basic.ActiveBefore _ n -> Text.pack $ " [~" <> show n <> "]"
+        Basic.FinalActive -> Text.empty
+        Basic.NeverActive -> Text.empty
+   in keyword <> conlike <> phase
 
 -- | Convert a simple declaration without special handling.
 convertDeclSimpleM ::

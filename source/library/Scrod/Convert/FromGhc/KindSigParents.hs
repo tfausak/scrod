@@ -13,6 +13,7 @@ module Scrod.Convert.FromGhc.KindSigParents where
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import qualified Scrod.Convert.FromGhc.Internal as Internal
 import qualified Scrod.Core.Item as Item
 import qualified Scrod.Core.ItemKind as ItemKind
@@ -105,6 +106,11 @@ mergeOrRemoveKindSig kindSigMap declNames locItem =
 -- precedence when present, and documentation is combined (kind
 -- signature first, then declaration). The earlier source location of
 -- the two items is used.
+--
+-- When the kind signature provides a signature and the declaration
+-- had type variables in its signature (e.g. @data A b@ has signature
+-- @"b"@), the type variables are folded into the declaration's name
+-- (producing @"A b"@) so they are not lost.
 mergeKindSigInto ::
   Located.Located Item.Item ->
   Located.Located Item.Item ->
@@ -112,9 +118,22 @@ mergeKindSigInto ::
 mergeKindSigInto kindSigItem declItem =
   let kindSigVal = Located.value kindSigItem
       declVal = Located.value declItem
-      mergedSig = case Item.signature kindSigVal of
-        Just s -> Just s
-        Nothing -> Item.signature declVal
+      hasTypeVarsInSig = case Item.kind declVal of
+        ItemKind.DataType -> True
+        ItemKind.Newtype -> True
+        ItemKind.TypeData -> True
+        _ -> False
+      (mergedName, mergedSig) = case Item.signature kindSigVal of
+        Just s
+          | hasTypeVarsInSig ->
+              -- For data/newtype/type-data, fold type variables into the name
+              let nameWithVars = case (Item.name declVal, Item.signature declVal) of
+                    (Just n, Just vars) ->
+                      Just . ItemName.MkItemName $ ItemName.unwrap n <> Text.pack " " <> vars
+                    _ -> Item.name declVal
+               in (nameWithVars, Just s)
+        Just s -> (Item.name declVal, Just s)
+        Nothing -> (Item.name declVal, Item.signature declVal)
       mergedDoc =
         Internal.appendDoc
           (Item.documentation kindSigVal)
@@ -129,7 +148,8 @@ mergeKindSigInto kindSigItem declItem =
         { Located.location = mergedLocation,
           Located.value =
             declVal
-              { Item.signature = mergedSig,
+              { Item.name = mergedName,
+                Item.signature = mergedSig,
                 Item.documentation = mergedDoc,
                 Item.since = mergedSince
               }

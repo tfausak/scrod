@@ -128,12 +128,12 @@ extractConDeclSignature mParentType conDecl = case conDecl of
                 Just ad -> Outputable.hsep [ad, Outputable.text "->", Outputable.text (Text.unpack parentType)]
            in Just . Text.pack . Internal.showSDocShort $
                 Outputable.hsep [forallDoc, cxtDoc, bodyDoc]
-  c@Syntax.ConDeclGADT {} ->
+  c@Syntax.ConDeclGADT {Syntax.con_g_args = gArgs} ->
     let full =
           Text.pack . Internal.showSDocShort . Outputable.ppr $
             c
               { Syntax.con_doc = Nothing,
-                Syntax.con_g_args = stripGADTDetailsDocs (Syntax.con_g_args c)
+                Syntax.con_g_args = stripGADTDetailsDocs gArgs
               }
         sep = Text.pack " :: "
         (_, rest) = Text.breakOn sep full

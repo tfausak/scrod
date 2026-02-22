@@ -6,8 +6,8 @@ version="$2"
 sha="$3"
 artifact_prefix="${name}-${sha}"
 
-tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 --wildcards '*.tar.gz'
-tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 artifact/schema.json
+tar --extract --file "${artifact_prefix}-linux-x86_64/artifact.tar" --strip-components=1 --wildcards '*.tar.gz'
+tar --extract --file "${artifact_prefix}-linux-x86_64/artifact.tar" --strip-components=1 artifact/schema.json
 mv schema.json "${name}-${version}-schema.json"
 
 shopt -s nullglob
@@ -20,11 +20,11 @@ fi
 for dir in "${dirs[@]}"
 do
   platform="${dir%/}"
-  platform="${platform##*-}"
+  platform="${platform#"${artifact_prefix}-"}"
   case "$platform" in
-    macOS) platform=darwin; file="${name}" ;;
-    Linux) platform=linux; file="${name}" ;;
-    Windows) platform=win32; file="${name}.exe" ;;
+    darwin-*) file="${name}" ;;
+    linux-*) file="${name}" ;;
+    mingw32-*) platform="${platform/mingw32/win32}"; file="${name}.exe" ;;
     wasm)
       tar --extract --file "$dir/artifact.tar"
       tar --create --gzip --file "${name}-${version}-wasm.tar.gz" -C artifact "${name}-wasm.wasm" ghc_wasm_jsffi.js browser_wasi_shim.js

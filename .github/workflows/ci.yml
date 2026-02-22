@@ -9,24 +9,30 @@ on:
   workflow_dispatch: {}
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
+    name: Build ${{ matrix.runner }}
+    runs-on: ${{ matrix.runner }}
     needs: meta
     strategy:
       matrix:
         include:
-          - os: macos
-          - os: ubuntu
+          - runner: macos-latest
+          - runner: ubuntu-latest
             bench: true
             doc: true
             test: true
-          - os: windows
+          - runner: ubuntu-24.04-arm
+          - runner: windows-latest
     steps:
       - uses: actions/checkout@v6
       - id: haskell
         uses: haskell-actions/setup@v2
         with:
           ghc-version: 9.14.1
+      - id: info
+        run: |
+          echo "os=$(ghc -e 'putStrLn System.Info.os')" >> "$GITHUB_OUTPUT"
+          echo "arch=$(ghc -e 'putStrLn System.Info.arch')" >> "$GITHUB_OUTPUT"
+        shell: bash
       - run: mkdir artifact
       - run: ghc-pkg list
       - run: cabal sdist --output-dir artifact
@@ -39,9 +45,9 @@ jobs:
       - run: cabal outdated --v2-freeze-file
       - uses: actions/cache@v5
         with:
-          key: ${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}-${{ hashFiles('cabal.project.freeze') }}
           path: ${{ steps.haskell.outputs.cabal-store }}
-          restore-keys: ${{ runner.os }}-
+          restore-keys: ${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}-
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
@@ -57,7 +63,7 @@ jobs:
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}
           path: artifact.tar
       - run: echo | artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }}
         shell: bash
@@ -112,7 +118,7 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --verbose
       - run: artifact/${{ needs.meta.outputs.name }}-test-suite
   bench:
@@ -124,7 +130,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v7
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --verbose
       - run: chmod +x artifact/${{ needs.meta.outputs.name }}-benchmark
       - run: artifact/${{ needs.meta.outputs.name }}-benchmark --csv bench.csv +RTS -T
@@ -209,7 +215,7 @@ jobs:
       - run: extra/github-pages/build.sh
       - uses: actions/download-artifact@v7
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-Linux
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --strip-components=1 artifact/schema.json
       - run: cp schema.json extra/github-pages/dist/
       - uses: actions/upload-pages-artifact@v4

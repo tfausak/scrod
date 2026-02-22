@@ -6,8 +6,8 @@ version="$2"
 sha="$3"
 artifact_prefix="${name}-${sha}"
 
-tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 --wildcards '*.tar.gz'
-tar --extract --file "${artifact_prefix}-Linux/artifact.tar" --strip-components=1 artifact/schema.json
+tar --extract --file "${artifact_prefix}-Linux-x86_64/artifact.tar" --strip-components=1 --wildcards '*.tar.gz'
+tar --extract --file "${artifact_prefix}-Linux-x86_64/artifact.tar" --strip-components=1 artifact/schema.json
 mv schema.json "${name}-${version}-schema.json"
 
 shopt -s nullglob
@@ -23,7 +23,8 @@ do
   platform="${platform##*-}"
   case "$platform" in
     macOS) platform=darwin; file="${name}" ;;
-    Linux) platform=linux; file="${name}" ;;
+    x86_64) platform=linux-x86_64; file="${name}" ;;
+    aarch64) platform=linux-aarch64; file="${name}" ;;
     Windows) platform=win32; file="${name}.exe" ;;
     wasm)
       tar --extract --file "$dir/artifact.tar"

@@ -9,29 +9,30 @@ on:
   workflow_dispatch: {}
 jobs:
   build:
-    name: Build ${{ matrix.suffix }}
+    name: Build ${{ matrix.runner }}
     runs-on: ${{ matrix.runner }}
     needs: meta
     strategy:
       matrix:
         include:
           - runner: macos-latest
-            suffix: macOS
           - runner: ubuntu-latest
-            suffix: Linux-x86_64
             bench: true
             doc: true
             test: true
           - runner: ubuntu-24.04-arm
-            suffix: Linux-aarch64
           - runner: windows-latest
-            suffix: Windows
     steps:
       - uses: actions/checkout@v6
       - id: haskell
         uses: haskell-actions/setup@v2
         with:
           ghc-version: 9.14.1
+      - id: info
+        run: |
+          echo "os=$(ghc -e 'putStrLn System.Info.os')" >> "$GITHUB_OUTPUT"
+          echo "arch=$(ghc -e 'putStrLn System.Info.arch')" >> "$GITHUB_OUTPUT"
+        shell: bash
       - run: mkdir artifact
       - run: ghc-pkg list
       - run: cabal sdist --output-dir artifact
@@ -44,9 +45,9 @@ jobs:
       - run: cabal outdated --v2-freeze-file
       - uses: actions/cache@v5
         with:
-          key: ${{ matrix.suffix }}-${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}-${{ hashFiles('cabal.project.freeze') }}
           path: ${{ steps.haskell.outputs.cabal-store }}
-          restore-keys: ${{ matrix.suffix }}-
+          restore-keys: ${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}-
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
@@ -62,7 +63,7 @@ jobs:
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ matrix.suffix }}
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}
           path: artifact.tar
       - run: echo | artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }}
         shell: bash

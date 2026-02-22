@@ -1,11 +1,12 @@
 {
   inputs = {
     ghc-wasm-meta.url = "gitlab:haskell-wasm/ghc-wasm-meta?host=gitlab.haskell.org";
+    hooky.url = "github:tfausak/hooky-nix";
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
   outputs =
-    { ghc-wasm-meta, nixpkgs, ... }:
+    { ghc-wasm-meta, hooky, nixpkgs, ... }:
     let
       forAllSystems = nixpkgs.lib.genAttrs [
         "aarch64-darwin"
@@ -19,13 +20,12 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          hooky = import ./nix/hooky.nix { inherit pkgs; };
         in
         {
           default = pkgs.mkShell {
             nativeBuildInputs = [
               ghc-wasm-meta.packages.${system}.default
-              hooky
+              hooky.packages.${system}.default
               pkgs.cabal-install
               pkgs.fzf
               pkgs.gh

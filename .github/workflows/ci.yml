@@ -9,18 +9,23 @@ on:
   workflow_dispatch: {}
 jobs:
   build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}-latest
+    name: Build ${{ matrix.suffix }}
+    runs-on: ${{ matrix.runner }}
     needs: meta
     strategy:
       matrix:
         include:
-          - os: macos
-          - os: ubuntu
+          - runner: macos-latest
+            suffix: macOS
+          - runner: ubuntu-latest
+            suffix: Linux-x86_64
             bench: true
             doc: true
             test: true
-          - os: windows
+          - runner: ubuntu-24.04-arm
+            suffix: Linux-aarch64
+          - runner: windows-latest
+            suffix: Windows
     steps:
       - uses: actions/checkout@v6
       - id: haskell
@@ -39,9 +44,9 @@ jobs:
       - run: cabal outdated --v2-freeze-file
       - uses: actions/cache@v5
         with:
-          key: ${{ runner.os }}-${{ hashFiles('cabal.project.freeze') }}
+          key: ${{ matrix.suffix }}-${{ hashFiles('cabal.project.freeze') }}
           path: ${{ steps.haskell.outputs.cabal-store }}
-          restore-keys: ${{ runner.os }}-
+          restore-keys: ${{ matrix.suffix }}-
       - run: cabal build --only-download
       - run: cabal build --only-dependencies
       - run: cabal build
@@ -57,7 +62,7 @@ jobs:
       - run: tar --create --file artifact.tar --verbose artifact
       - uses: actions/upload-artifact@v6
         with:
-          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ runner.os }}
+          name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ matrix.suffix }}
           path: artifact.tar
       - run: echo | artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }}
         shell: bash

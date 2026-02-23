@@ -21,9 +21,10 @@ Download the latest release from [GitHub Releases](https://github.com/tfausak/sc
 
 | Asset | Description |
 | --- | --- |
-| `scrod-*-linux.tar.gz` | Linux binary |
-| `scrod-*-darwin.tar.gz` | macOS binary |
-| `scrod-*-win32.tar.gz` | Windows binary |
+| `scrod-*-linux-x86_64.tar.gz` | Linux x86_64 binary |
+| `scrod-*-linux-aarch64.tar.gz` | Linux AArch64 binary |
+| `scrod-*-darwin-aarch64.tar.gz` | macOS binary |
+| `scrod-*-win32-x86_64.tar.gz` | Windows binary |
 | `scrod-*.vsix` | VSCode extension for live documentation preview |
 | `scrod-*-wasm.tar.gz` | WASM build (for use in browsers) |
 | `scrod-*-wasi.tar.gz` | WASI build (for use with runtimes like Wasmtime) |

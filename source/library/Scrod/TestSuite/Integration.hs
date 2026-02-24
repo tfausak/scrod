@@ -2655,11 +2655,34 @@ spec s = Spec.describe s "integration" $ do
           ("/items/0/value/name", "\"f\""),
           ("/items/0/value/signature", "\"a -> a\""),
           ("/items/0/value/documentation/type", "\"Empty\""),
-          ("/items/1/value/kind/type", "\"ReturnType\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
+          ("/items/1/value/parentKey", "0"),
+          ("/items/1/value/signature", "\"a\""),
+          ("/items/1/value/documentation/type", "\"Empty\""),
+          ("/items/2/value/kind/type", "\"ReturnType\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"a\""),
+          ("/items/2/value/documentation/type", "\"Paragraph\""),
+          ("/items/2/value/documentation/value/value", "\"lost\"")
+        ]
+
+    Spec.it s "function with arg doc but no return doc" $ do
+      check
+        s
+        "f :: a {- ^ x -} -> b"
+        [ ("/items/0/value/kind/type", "\"Function\""),
+          ("/items/0/value/name", "\"f\""),
+          ("/items/0/value/signature", "\"a -> b\""),
+          ("/items/0/value/documentation/type", "\"Empty\""),
+          ("/items/1/value/kind/type", "\"Argument\""),
           ("/items/1/value/parentKey", "0"),
           ("/items/1/value/signature", "\"a\""),
           ("/items/1/value/documentation/type", "\"Paragraph\""),
-          ("/items/1/value/documentation/value/value", "\"lost\"")
+          ("/items/1/value/documentation/value/value", "\"x \""),
+          ("/items/2/value/kind/type", "\"ReturnType\""),
+          ("/items/2/value/parentKey", "0"),
+          ("/items/2/value/signature", "\"b\""),
+          ("/items/2/value/documentation/type", "\"Empty\"")
         ]
 
     Spec.it s "data constructor with arg doc has argument children" $ do

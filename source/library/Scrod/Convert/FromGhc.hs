@@ -442,9 +442,8 @@ convertSigDeclM doc docSince lDecl sig = case sig of
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
-              argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
-              retItem <- convertReturnType (Just parentKey) (Annotation.getLocA lName) retType
-              pure $ [parentItem] <> argItems <> retItem
+              childItems <- convertArgumentsAndReturnType (Just parentKey) (Annotation.getLocA lName) args retType
+              pure $ parentItem : childItems
   Syntax.PatSynSig _ names _ ->
     let sigText = Names.extractSigSignature sig
         (args, retType) = SigArguments.extractSigArguments sig
@@ -461,9 +460,8 @@ convertSigDeclM doc docSince lDecl sig = case sig of
           case parentResult of
             Nothing -> pure []
             Just (parentItem, parentKey) -> do
-              argItems <- convertArguments (Just parentKey) (Annotation.getLocA lName) args
-              retItem <- convertReturnType (Just parentKey) (Annotation.getLocA lName) retType
-              pure $ [parentItem] <> argItems <> retItem
+              childItems <- convertArgumentsAndReturnType (Just parentKey) (Annotation.getLocA lName) args retType
+              pure $ parentItem : childItems
   Syntax.FixSig _ (Syntax.FixitySig _ names (SyntaxBasic.Fixity prec dir)) ->
     let fixityDoc = Doc.Paragraph . Doc.String $ fixityDirectionToText dir <> Text.pack (" " <> show prec)
         combinedDoc = combineDoc doc fixityDoc
@@ -483,16 +481,20 @@ convertSigDeclM doc docSince lDecl sig = case sig of
      in Maybe.maybeToList <$> Internal.mkItemM (Annotation.getLocA lDecl) Nothing Nothing doc docSince sigText ItemKind.CompletePragma
   _ -> Maybe.maybeToList <$> convertDeclWithDocM Nothing doc docSince (Names.extractSigName sig) Nothing lDecl
 
--- | Convert extracted argument data into child Argument items.
--- Returns no items if none of the arguments have documentation.
-convertArguments ::
+-- | Convert extracted argument and return-type data into child items.
+-- Shows all arguments and the return type as a group: if any argument
+-- or the return type has documentation, all are included; otherwise none.
+convertArgumentsAndReturnType ::
   Maybe ItemKey.ItemKey ->
   SrcLoc.SrcSpan ->
   [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))] ->
+  Maybe (Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs)) ->
   Internal.ConvertM [Located.Located Item.Item]
-convertArguments parentKey srcSpan args
-  | any (Maybe.isJust . snd) args =
-      Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+convertArgumentsAndReturnType parentKey srcSpan args mRet
+  | any (Maybe.isJust . snd) args || maybe False (Maybe.isJust . snd) mRet = do
+      argItems <- Maybe.catMaybes <$> traverse (convertOneArgument parentKey srcSpan) args
+      retItem <- convertReturnType parentKey srcSpan mRet
+      pure $ argItems <> retItem
   | otherwise = pure []
 
 -- | Convert a single argument to an Argument item.
@@ -746,9 +748,8 @@ convertClassDeclWithDocM parentKey doc docSince lDecl = case SrcLoc.unLoc lDecl 
             case parentResult of
               Nothing -> pure []
               Just (methodItem, methodKey) -> do
-                argItems <- convertArguments (Just methodKey) (Annotation.getLocA lName) args
-                retItem <- convertReturnType (Just methodKey) (Annotation.getLocA lName) retType
-                pure $ [methodItem] <> argItems <> retItem
+                childItems <- convertArgumentsAndReturnType (Just methodKey) (Annotation.getLocA lName) args retType
+                pure $ methodItem : childItems
     _ -> pure []
   _ -> pure []
 

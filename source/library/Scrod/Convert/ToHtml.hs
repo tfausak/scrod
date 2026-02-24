@@ -610,13 +610,13 @@ itemContent item argChildren otherChildren =
                         Just n -> [element "code" [("class", "text-break")] [Xml.text $ ItemName.unwrap n]]
                     )
                 ]
-                <> earlySignature
                 <> [ element
                        "div"
                        [("class", "mx-1")]
                        [ element "span" [("class", "badge " <> badgeColor)] [Xml.string $ kindToString kind]
                        ]
                    ]
+                <> earlySignature
                 <> lateSignature
                 <> [ element
                        "div"

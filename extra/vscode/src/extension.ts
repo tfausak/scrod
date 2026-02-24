@@ -183,6 +183,7 @@ function wrapperHtml(): string {
       border-color: var(--vscode-widget-border) !important;
     }
     .card-header {
+      background-color: transparent !important;
       border-color: var(--vscode-widget-border) !important;
     }
     .badge.text-bg-secondary {

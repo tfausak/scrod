@@ -18,7 +18,8 @@ import qualified Scrod.Convert.FromGhc.Internal as Internal
 -- | Extract argument types and their optional doc comments from a type
 -- signature. Walks the 'HsFunTy' chain, collecting each argument's
 -- pretty-printed type text and its 'LHsDoc' (if the argument was wrapped
--- in 'HsDocTy'). The return type is included only when it has documentation.
+-- in 'HsDocTy'). The return type is always included when the signature has
+-- function arrows.
 --
 -- Returns a pair of (arguments, optional return type).
 --
@@ -40,7 +41,7 @@ extractSigArguments sig = case sig of
 
 -- | Skip through 'HsForAllTy' and 'HsQualTy' to reach the arrow chain,
 -- then extract arguments from the 'HsFunTy' chain. Returns the arguments
--- and the optional documented return type separately.
+-- and the return type separately.
 extractArgsFromBody ::
   Syntax.LHsType Ghc.GhcPs ->
   ( [(Text.Text, Maybe (HsDoc.LHsDoc Ghc.GhcPs))],
@@ -57,7 +58,7 @@ extractArgsFromBody lTy = case SrcLoc.unLoc lTy of
       let (args, ret) = extractArgsFromBody res
        in (extractArg arg : args, ret)
     _ -> ([], Just (extractArg lTy))
-  _ -> ([], Nothing)
+  _ -> ([], Just (extractArg lTy))
 
 -- | Extract the type text and optional doc comment from a single argument.
 -- If the argument is wrapped in 'HsDocTy', the doc is extracted and the

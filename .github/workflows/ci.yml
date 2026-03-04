@@ -116,7 +116,7 @@ jobs:
       - meta
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --verbose
@@ -128,7 +128,7 @@ jobs:
       - build
       - meta
     steps:
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --verbose
@@ -167,7 +167,7 @@ jobs:
       - wasm
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
@@ -202,7 +202,7 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
       - run: tar --extract --file artifact.tar
@@ -213,7 +213,7 @@ jobs:
         with:
           node-version: 22
       - run: extra/github-pages/build.sh
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --strip-components=1 artifact/schema.json
@@ -236,7 +236,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           pattern: ${{ needs.meta.outputs.name }}-${{ github.sha }}-*
       - run: .github/workflows/release.sh ${{ needs.meta.outputs.name }} ${{ needs.meta.outputs.version }} ${{ github.sha }}

@@ -73,15 +73,19 @@ import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
+import qualified Scrod.Ghc.PragmaInfo as PragmaInfo
 
 -- | Convert a parsed GHC module to the internal 'Module' type.
 fromGhc ::
   Bool ->
-  ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension], SafeHaskell.SafeHaskellMode),
+  ( PragmaInfo.PragmaInfo,
     SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
   ) ->
   Either String Module.Module
-fromGhc isSignature ((language, extensions, safeHaskellMode), lHsModule) = do
+fromGhc isSignature (pragmaInfo, lHsModule) = do
+  let language = PragmaInfo.language pragmaInfo
+      extensions = PragmaInfo.extensions pragmaInfo
+      safeHaskellMode = PragmaInfo.safeHaskell pragmaInfo
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
       namedDocChunks = extractNamedDocChunks lHsModule

@@ -37,7 +37,7 @@ spec s = Spec.describe s "integration" $ do
       -- Note that we don't want this test to be too specific, otherwise we'd
       -- have to update it every time we change the version number. So instead
       -- we just check the first component.
-      check s "" [("/version/0", "0")]
+      check s "" [("/version/0", "1")]
 
   Spec.describe s "language" $ do
     Spec.it s "defaults to absent" $ do

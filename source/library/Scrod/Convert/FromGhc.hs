@@ -143,11 +143,17 @@ extensionsToMap =
 
 -- | Convert a Safe Haskell mode to an extension entry, if applicable.
 safeHaskellExtension :: SafeHaskell.SafeHaskellMode -> Map.Map Extension.Extension Bool
-safeHaskellExtension mode = case mode of
-  SafeHaskell.Sf_Safe -> Map.singleton (Extension.MkExtension $ Text.pack "Safe") True
-  SafeHaskell.Sf_Unsafe -> Map.singleton (Extension.MkExtension $ Text.pack "Unsafe") True
-  SafeHaskell.Sf_Trustworthy -> Map.singleton (Extension.MkExtension $ Text.pack "Trustworthy") True
-  _ -> Map.empty
+safeHaskellExtension mode = case safeHaskellName mode of
+  Nothing -> Map.empty
+  Just name -> Map.singleton (Extension.MkExtension $ Text.pack name) True
+
+-- | Map a Safe Haskell mode to its extension name.
+safeHaskellName :: SafeHaskell.SafeHaskellMode -> Maybe String
+safeHaskellName mode = case mode of
+  SafeHaskell.Sf_Safe -> Just "Safe"
+  SafeHaskell.Sf_Unsafe -> Just "Unsafe"
+  SafeHaskell.Sf_Trustworthy -> Just "Trustworthy"
+  _ -> Nothing
 
 -- | Extract module name from the parsed module.
 extractModuleName ::

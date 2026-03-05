@@ -24,6 +24,7 @@ import qualified GHC.LanguageExtensions.Type as Extension
 import qualified GHC.Parser as Parser
 import qualified GHC.Parser.Header as Header
 import qualified GHC.Parser.Lexer as Lexer
+import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SourceError as SourceError
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Logger as Logger
@@ -44,14 +45,14 @@ parse ::
   String ->
   Either
     String
-    ( (Maybe Session.Language, [DynFlags.OnOff Extension.Extension]),
+    ( (Maybe Session.Language, [DynFlags.OnOff Extension.Extension], SafeHaskell.SafeHaskellMode),
       SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
     )
 parse isSignature extraOptions string = do
   let originalStringBuffer = StringBuffer.stringToStringBuffer string
   let cabalOptions = cabalExtensionOptions string
   let options = fmap SrcLoc.noLoc $ extraOptions <> cabalOptions
-  languageAndExtensions <- Bifunctor.first Exception.displayException $ discoverExtensions options originalStringBuffer
+  (languageAndExtensions, safeHaskellMode) <- Bifunctor.first Exception.displayException $ discoverExtensions options originalStringBuffer
   let extensions = uncurry resolveExtensions languageAndExtensions
   source <-
     if EnumSet.member Extension.Cpp extensions
@@ -65,7 +66,9 @@ parse isSignature extraOptions string = do
   let parser = if isSignature then Parser.parseSignature else Parser.parseModule
   case Lexer.unP parser pState of
     Lexer.PFailed newPState -> Left . Outputable.showSDocUnsafe . Outputable.ppr $ Lexer.getPsErrorMessages newPState
-    Lexer.POk _ lHsModule -> pure (languageAndExtensions, lHsModule)
+    Lexer.POk _ lHsModule ->
+      let (lang, exts) = languageAndExtensions
+       in pure ((lang, exts, safeHaskellMode), lHsModule)
 
 cabalExtensionOptions :: String -> [String]
 cabalExtensionOptions = fmap ("-X" <>) . Cabal.discoverExtensions
@@ -75,7 +78,7 @@ discoverExtensions ::
   StringBuffer.StringBuffer ->
   Either
     SourceError.SourceError
-    (Maybe Flags.Language, [DynFlags.OnOff Extension.Extension])
+    ((Maybe Flags.Language, [DynFlags.OnOff Extension.Extension]), SafeHaskell.SafeHaskellMode)
 discoverExtensions cabalOptions =
   Unsafe.unsafePerformIO
     . Exception.try
@@ -84,11 +87,11 @@ discoverExtensions cabalOptions =
 discoverExtensionsIO ::
   [SrcLoc.Located String] ->
   StringBuffer.StringBuffer ->
-  IO (Maybe Flags.Language, [DynFlags.OnOff Extension.Extension])
+  IO ((Maybe Flags.Language, [DynFlags.OnOff Extension.Extension]), SafeHaskell.SafeHaskellMode)
 discoverExtensionsIO cabalOptions stringBuffer = do
   logger <- Logger.initLogger
   (dynFlags, _, _) <- Session.parseDynamicFilePragma logger DynFlags.empty $ cabalOptions <> discoverOptions stringBuffer
-  pure (DynFlags.language dynFlags, DynFlags.extensions dynFlags)
+  pure ((DynFlags.language dynFlags, DynFlags.extensions dynFlags), DynFlags.safeHaskell dynFlags)
 
 discoverOptions :: StringBuffer.StringBuffer -> [SrcLoc.Located String]
 discoverOptions stringBuffer =
@@ -113,7 +116,7 @@ spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'parse $ do
     Spec.it s "succeeds with empty input" $ do
-      Spec.assertEq s (fst <$> parse False [] "") $ Right (Nothing, [])
+      Spec.assertEq s (fst <$> parse False [] "") $ Right (Nothing, [], SafeHaskell.Sf_None)
 
     Spec.it s "fails with invalid input" $ do
       Spec.assertEq s (fst <$> parse False [] "!") $ Left "{Resolved: ErrorWithoutFlag\n ErrorWithoutFlag\n   parse error on input `!'}"
@@ -122,22 +125,31 @@ spec s = do
       Spec.assertEq s (fst <$> parse False [] "{-# language Unknown #-}") $ Left "<interactive>:1:14: error: [GHC-46537]\n    Unsupported extension: Unknown"
 
     Spec.it s "succeeds with a language" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language Haskell98 #-}") $ Right (Just Session.Haskell98, [])
+      Spec.assertEq s (fst <$> parse False [] "{-# language Haskell98 #-}") $ Right (Just Session.Haskell98, [], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with an enabled extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language CPP #-}") $ Right (Nothing, [Session.On Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False [] "{-# language CPP #-}") $ Right (Nothing, [Session.On Extension.Cpp], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with a disabled extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language NoCPP #-}") $ Right (Nothing, [Session.Off Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False [] "{-# language NoCPP #-}") $ Right (Nothing, [Session.Off Extension.Cpp], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with a signature" $ do
-      Spec.assertEq s (fst <$> parse True [] "signature Foo where") $ Right (Nothing, [])
+      Spec.assertEq s (fst <$> parse True [] "signature Foo where") $ Right (Nothing, [], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with cabal script header extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (Nothing, [Session.On Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (Nothing, [Session.On Extension.Cpp], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with extra options" $ do
-      Spec.assertEq s (fst <$> parse False ["-XOverloadedStrings"] "") $ Right (Nothing, [Session.On Extension.OverloadedStrings])
+      Spec.assertEq s (fst <$> parse False ["-XOverloadedStrings"] "") $ Right (Nothing, [Session.On Extension.OverloadedStrings], SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
-      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp])
+      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (Nothing, [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp], SafeHaskell.Sf_None)
+
+    Spec.it s "succeeds with Safe" $ do
+      Spec.assertEq s (fst <$> parse False [] "{-# language Safe #-}") $ Right (Nothing, [], SafeHaskell.Sf_Safe)
+
+    Spec.it s "succeeds with Unsafe" $ do
+      Spec.assertEq s (fst <$> parse False [] "{-# language Unsafe #-}") $ Right (Nothing, [], SafeHaskell.Sf_Unsafe)
+
+    Spec.it s "succeeds with Trustworthy" $ do
+      Spec.assertEq s (fst <$> parse False [] "{-# language Trustworthy #-}") $ Right (Nothing, [], SafeHaskell.Sf_Trustworthy)

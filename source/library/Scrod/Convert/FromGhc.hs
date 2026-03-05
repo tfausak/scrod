@@ -26,6 +26,7 @@ import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.Basic as Basic
 import qualified GHC.Types.PkgQual as PkgQual
+import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
@@ -76,11 +77,11 @@ import qualified Scrod.Ghc.OnOff as OnOff
 -- | Convert a parsed GHC module to the internal 'Module' type.
 fromGhc ::
   Bool ->
-  ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension]),
+  ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension], SafeHaskell.SafeHaskellMode),
     SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
   ) ->
   Either String Module.Module
-fromGhc isSignature ((language, extensions), lHsModule) = do
+fromGhc isSignature ((language, extensions, safeHaskellMode), lHsModule) = do
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
       namedDocChunks = extractNamedDocChunks lHsModule
@@ -91,7 +92,7 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
     Module.MkModule
       { Module.version = version,
         Module.language = languageFromGhc <$> language,
-        Module.extensions = extensionsToMap extensions,
+        Module.extensions = safeHaskellExtension safeHaskellMode <> extensionsToMap extensions,
         Module.documentation = moduleDocumentation,
         Module.since = moduleSince,
         Module.signature = isSignature,
@@ -135,6 +136,14 @@ extensionsToMap ::
 extensionsToMap =
   Map.fromListWith (\_ x -> x)
     . fmap (Tuple.swap . fmap extensionFromGhc . OnOff.onOff ((,) True) ((,) False))
+
+-- | Convert a Safe Haskell mode to an extension entry, if applicable.
+safeHaskellExtension :: SafeHaskell.SafeHaskellMode -> Map.Map Extension.Extension Bool
+safeHaskellExtension mode = case mode of
+  SafeHaskell.Sf_Safe -> Map.singleton (Extension.MkExtension $ Text.pack "Safe") True
+  SafeHaskell.Sf_Unsafe -> Map.singleton (Extension.MkExtension $ Text.pack "Unsafe") True
+  SafeHaskell.Sf_Trustworthy -> Map.singleton (Extension.MkExtension $ Text.pack "Trustworthy") True
+  _ -> Map.empty
 
 -- | Extract module name from the parsed module.
 extractModuleName ::

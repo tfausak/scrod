@@ -61,7 +61,7 @@ jobs:
       - run: artifact/${{ needs.meta.outputs.name }}${{ runner.os == 'Windows' && '.exe' || '' }} --schema > artifact/schema.json
         shell: bash
       - run: tar --create --file artifact.tar --verbose artifact
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}
           path: artifact.tar
@@ -134,7 +134,7 @@ jobs:
       - run: tar --extract --file artifact.tar --verbose
       - run: chmod +x artifact/${{ needs.meta.outputs.name }}-benchmark
       - run: artifact/${{ needs.meta.outputs.name }}-benchmark --csv bench.csv +RTS -T
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-bench
           path: bench.csv
@@ -154,7 +154,7 @@ jobs:
       - run: nix develop --command wasm32-wasi-cabal --project-file=extra/wasm/cabal.project build ${{ needs.meta.outputs.name }}-wasi
       - run: cp $( nix develop --command wasm32-wasi-cabal --project-file=extra/wasm/cabal.project list-bin ${{ needs.meta.outputs.name }}-wasi ) artifact
       - run: tar --create --file artifact.tar --verbose artifact
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
           path: artifact.tar
@@ -179,7 +179,7 @@ jobs:
           node-version: 22
       - working-directory: extra/vscode
         run: ./build.sh
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-vscode
           path: extra/vscode/*.vsix

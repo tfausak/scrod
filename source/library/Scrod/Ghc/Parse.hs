@@ -119,19 +119,13 @@ resolveExtensions =
     . EnumSet.fromList
     . Session.languageExtensions
 
-mkPragmaInfo :: Maybe Session.Language -> [DynFlags.OnOff Extension.Extension] -> SafeHaskell.SafeHaskellMode -> PragmaInfo.PragmaInfo
-mkPragmaInfo lang exts safe =
-  PragmaInfo.MkPragmaInfo
-    { PragmaInfo.language = lang,
-      PragmaInfo.extensions = exts,
-      PragmaInfo.safeHaskell = safe
-    }
-
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
   Spec.named s 'parse $ do
+    let f = PragmaInfo.MkPragmaInfo
+
     Spec.it s "succeeds with empty input" $ do
-      Spec.assertEq s (fst <$> parse False [] "") $ Right (mkPragmaInfo Nothing [] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "") $ Right (f Nothing [] SafeHaskell.Sf_None)
 
     Spec.it s "fails with invalid input" $ do
       Spec.assertEq s (fst <$> parse False [] "!") $ Left "{Resolved: ErrorWithoutFlag\n ErrorWithoutFlag\n   parse error on input `!'}"
@@ -140,31 +134,31 @@ spec s = do
       Spec.assertEq s (fst <$> parse False [] "{-# language Unknown #-}") $ Left "<interactive>:1:14: error: [GHC-46537]\n    Unsupported extension: Unknown"
 
     Spec.it s "succeeds with a language" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language Haskell98 #-}") $ Right (mkPragmaInfo (Just Session.Haskell98) [] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "{-# language Haskell98 #-}") $ Right (f (Just Session.Haskell98) [] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with an enabled extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language CPP #-}") $ Right (mkPragmaInfo Nothing [Session.On Extension.Cpp] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "{-# language CPP #-}") $ Right (f Nothing [Session.On Extension.Cpp] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with a disabled extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language NoCPP #-}") $ Right (mkPragmaInfo Nothing [Session.Off Extension.Cpp] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "{-# language NoCPP #-}") $ Right (f Nothing [Session.Off Extension.Cpp] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with a signature" $ do
-      Spec.assertEq s (fst <$> parse True [] "signature Foo where") $ Right (mkPragmaInfo Nothing [] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse True [] "signature Foo where") $ Right (f Nothing [] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with cabal script header extension" $ do
-      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (mkPragmaInfo Nothing [Session.On Extension.Cpp] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}") $ Right (f Nothing [Session.On Extension.Cpp] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with extra options" $ do
-      Spec.assertEq s (fst <$> parse False ["-XOverloadedStrings"] "") $ Right (mkPragmaInfo Nothing [Session.On Extension.OverloadedStrings] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False ["-XOverloadedStrings"] "") $ Right (f Nothing [Session.On Extension.OverloadedStrings] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with cabal script header and LANGUAGE pragma" $ do
-      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (mkPragmaInfo Nothing [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp] SafeHaskell.Sf_None)
+      Spec.assertEq s (fst <$> parse False [] "{- cabal:\ndefault-extensions: CPP\n-}\n{-# language OverloadedStrings #-}") $ Right (f Nothing [Session.On Extension.OverloadedStrings, Session.On Extension.Cpp] SafeHaskell.Sf_None)
 
     Spec.it s "succeeds with Safe" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language Safe #-}") $ Right (mkPragmaInfo Nothing [] SafeHaskell.Sf_Safe)
+      Spec.assertEq s (fst <$> parse False [] "{-# language Safe #-}") $ Right (f Nothing [] SafeHaskell.Sf_Safe)
 
     Spec.it s "succeeds with Unsafe" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language Unsafe #-}") $ Right (mkPragmaInfo Nothing [] SafeHaskell.Sf_Unsafe)
+      Spec.assertEq s (fst <$> parse False [] "{-# language Unsafe #-}") $ Right (f Nothing [] SafeHaskell.Sf_Unsafe)
 
     Spec.it s "succeeds with Trustworthy" $ do
-      Spec.assertEq s (fst <$> parse False [] "{-# language Trustworthy #-}") $ Right (mkPragmaInfo Nothing [] SafeHaskell.Sf_Trustworthy)
+      Spec.assertEq s (fst <$> parse False [] "{-# language Trustworthy #-}") $ Right (f Nothing [] SafeHaskell.Sf_Trustworthy)

@@ -176,6 +176,7 @@ library
     Scrod.Ghc.ParserOpts
     Scrod.Ghc.Platform
     Scrod.Ghc.PlatformMisc
+    Scrod.Ghc.PragmaInfo
     Scrod.Ghc.ToolSettings
     Scrod.Ghc.Uninitialized
     Scrod.Ghc.UnitId

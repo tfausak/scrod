@@ -26,6 +26,7 @@ import qualified GHC.LanguageExtensions.Type as GhcExtension
 import qualified GHC.Parser.Annotation as Annotation
 import qualified GHC.Types.Basic as Basic
 import qualified GHC.Types.PkgQual as PkgQual
+import qualified GHC.Types.SafeHaskell as SafeHaskell
 import qualified GHC.Types.SourceText as SourceText
 import qualified GHC.Types.SrcLoc as SrcLoc
 import qualified GHC.Utils.Outputable as Outputable
@@ -72,15 +73,19 @@ import qualified Scrod.Core.Since as Since
 import qualified Scrod.Core.Version as Version
 import qualified Scrod.Core.Warning as Warning
 import qualified Scrod.Ghc.OnOff as OnOff
+import qualified Scrod.Ghc.PragmaInfo as PragmaInfo
 
 -- | Convert a parsed GHC module to the internal 'Module' type.
 fromGhc ::
   Bool ->
-  ( (Maybe Session.Language, [DynFlags.OnOff GhcExtension.Extension]),
+  ( PragmaInfo.PragmaInfo,
     SrcLoc.Located (Hs.HsModule Ghc.GhcPs)
   ) ->
   Either String Module.Module
-fromGhc isSignature ((language, extensions), lHsModule) = do
+fromGhc isSignature (pragmaInfo, lHsModule) = do
+  let language = PragmaInfo.language pragmaInfo
+      extensions = PragmaInfo.extensions pragmaInfo
+      safeHaskellMode = PragmaInfo.safeHaskell pragmaInfo
   version <- maybe (Left "invalid version") Right $ versionFromBase PackageInfo.version
   let (moduleDocumentation, moduleSince) = extractModuleDocAndSince lHsModule
       namedDocChunks = extractNamedDocChunks lHsModule
@@ -91,7 +96,7 @@ fromGhc isSignature ((language, extensions), lHsModule) = do
     Module.MkModule
       { Module.version = version,
         Module.language = languageFromGhc <$> language,
-        Module.extensions = extensionsToMap extensions,
+        Module.extensions = safeHaskellExtension safeHaskellMode <> extensionsToMap extensions,
         Module.documentation = moduleDocumentation,
         Module.since = moduleSince,
         Module.signature = isSignature,
@@ -135,6 +140,20 @@ extensionsToMap ::
 extensionsToMap =
   Map.fromListWith (\_ x -> x)
     . fmap (Tuple.swap . fmap extensionFromGhc . OnOff.onOff ((,) True) ((,) False))
+
+-- | Convert a Safe Haskell mode to an extension entry, if applicable.
+safeHaskellExtension :: SafeHaskell.SafeHaskellMode -> Map.Map Extension.Extension Bool
+safeHaskellExtension mode = case safeHaskellName mode of
+  Nothing -> Map.empty
+  Just name -> Map.singleton (Extension.MkExtension $ Text.pack name) True
+
+-- | Map a Safe Haskell mode to its extension name.
+safeHaskellName :: SafeHaskell.SafeHaskellMode -> Maybe String
+safeHaskellName mode = case mode of
+  SafeHaskell.Sf_Safe -> Just "Safe"
+  SafeHaskell.Sf_Unsafe -> Just "Unsafe"
+  SafeHaskell.Sf_Trustworthy -> Just "Trustworthy"
+  _ -> Nothing
 
 -- | Extract module name from the parsed module.
 extractModuleName ::

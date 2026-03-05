@@ -153,6 +153,15 @@ spec s = Spec.describe s "integration" $ do
         "{-# language NoOverloadedStrings #-}"
         [("/extensions/OverloadedStrings", "false")]
 
+    Spec.it s "works with Safe" $ do
+      check s "{-# language Safe #-}" [("/extensions/Safe", "true")]
+
+    Spec.it s "works with Unsafe" $ do
+      check s "{-# language Unsafe #-}" [("/extensions/Unsafe", "true")]
+
+    Spec.it s "works with Trustworthy" $ do
+      check s "{-# language Trustworthy #-}" [("/extensions/Trustworthy", "true")]
+
   Spec.describe s "documentation" $ do
     Spec.it s "defaults to Empty" $ do
       check s "" [("/documentation/type", "\"Empty\"")]

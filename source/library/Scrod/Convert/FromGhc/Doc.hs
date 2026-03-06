@@ -70,14 +70,7 @@ parseModuleDoc input =
                     }
               )
               fields
-   in (prependDoc fieldsDoc doc, since)
-
--- | Prepend a doc node before another, handling empty cases.
-prependDoc :: Doc.Doc -> Doc.Doc -> Doc.Doc
-prependDoc Doc.Empty d = d
-prependDoc d Doc.Empty = d
-prependDoc a (Doc.Append xs) = Doc.Append (a : xs)
-prependDoc a b = Doc.Append [a, b]
+   in (Internal.appendDoc fieldsDoc doc, since)
 
 -- | Trim leading and trailing whitespace from a field value.
 trimValue :: String -> String
@@ -128,7 +121,8 @@ parseFieldLines allLines@(l : rest) =
 parseFieldHeader :: String -> Maybe (String, String)
 parseFieldHeader line =
   let stripped = dropWhile Char.isSpace line
-   in case List.find (\name -> (name <> ":") `List.isPrefixOf` stripped) moduleHeaderFieldNames of
+      lowered = fmap Char.toLower stripped
+   in case List.find (\name -> fmap Char.toLower (name <> ":") `List.isPrefixOf` lowered) moduleHeaderFieldNames of
         Just name ->
           let after = drop (length name + 1) stripped
            in Just (name, after)

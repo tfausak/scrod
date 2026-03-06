@@ -659,6 +659,23 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/1/value/value", "\"Some docs.\"")
         ]
 
+    Spec.it s "works with case-insensitive field names" $ do
+      check
+        s
+        """
+        {-|
+        description: hello
+        LICENSE: BSD3
+        -}
+        module M where
+        """
+        [ ("/documentation/type", "\"DefList\""),
+          ("/documentation/value/0/term/value", "\"Description\""),
+          ("/documentation/value/0/definition/value", "\"hello\""),
+          ("/documentation/value/1/term/value", "\"License\""),
+          ("/documentation/value/1/definition/value", "\"BSD3\"")
+        ]
+
     Spec.it s "works with multi-line field values" $ do
       check
         s

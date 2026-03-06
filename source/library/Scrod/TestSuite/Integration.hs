@@ -600,6 +600,83 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/bodyRows/1/1/contents/value", "\"g\"")
         ]
 
+  Spec.describe s "module description fields" $ do
+    Spec.it s "works with a single field" $ do
+      check
+        s
+        """
+        {-|
+        Description: some text
+        -}
+        module M where
+        """
+        [ ("/documentation/type", "\"DefList\""),
+          ("/documentation/value/0/term/type", "\"String\""),
+          ("/documentation/value/0/term/value", "\"Description\""),
+          ("/documentation/value/0/definition/type", "\"String\""),
+          ("/documentation/value/0/definition/value", "\"some text\"")
+        ]
+
+    Spec.it s "works with all fields" $ do
+      check
+        s
+        """
+        {-|
+        Module: a
+        Description: b
+        Copyright: c
+        License: d
+        Maintainer: e
+        Stability: f
+        Portability: g
+        -}
+        module M where
+        """
+        [ ("/documentation/type", "\"DefList\""),
+          ("/documentation/value/0/term/value", "\"Module\""),
+          ("/documentation/value/0/definition/value", "\"a\""),
+          ("/documentation/value/6/term/value", "\"Portability\""),
+          ("/documentation/value/6/definition/value", "\"g\"")
+        ]
+
+    Spec.it s "works with fields followed by documentation" $ do
+      check
+        s
+        """
+        {-|
+        Description: hello
+
+        Some docs.
+        -}
+        module M where
+        """
+        [ ("/documentation/type", "\"Append\""),
+          ("/documentation/value/0/type", "\"DefList\""),
+          ("/documentation/value/0/value/0/term/value", "\"Description\""),
+          ("/documentation/value/0/value/0/definition/value", "\"hello\""),
+          ("/documentation/value/1/type", "\"Paragraph\""),
+          ("/documentation/value/1/value/type", "\"String\""),
+          ("/documentation/value/1/value/value", "\"Some docs.\"")
+        ]
+
+    Spec.it s "works with multi-line field values" $ do
+      check
+        s
+        """
+        {-|
+        Copyright: (c) Someone, 2023
+                   Someone Else, 2024
+        License: BSD3
+        -}
+        module M where
+        """
+        [ ("/documentation/type", "\"DefList\""),
+          ("/documentation/value/0/term/value", "\"Copyright\""),
+          ("/documentation/value/0/definition/value", "\"(c) Someone, 2023\\n           Someone Else, 2024\""),
+          ("/documentation/value/1/term/value", "\"License\""),
+          ("/documentation/value/1/definition/value", "\"BSD3\"")
+        ]
+
   Spec.describe s "since" $ do
     Spec.it s "defaults to absent" $ do
       check s "" [("/since", "")]

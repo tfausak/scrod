@@ -171,7 +171,7 @@ extractModuleDocAndSince ::
   SrcLoc.Located (Syntax.HsModule Ghc.GhcPs) ->
   (Doc.Doc, Maybe Since.Since)
 extractModuleDocAndSince lHsModule =
-  maybe (Doc.Empty, Nothing) GhcDoc.parseDoc (extractRawDocString lHsModule)
+  maybe (Doc.Empty, Nothing) GhcDoc.parseModuleDoc (extractRawDocString lHsModule)
 
 -- | Extract raw documentation string from the module header.
 extractRawDocString ::

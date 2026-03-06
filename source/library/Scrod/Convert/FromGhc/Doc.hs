@@ -118,14 +118,19 @@ parseFieldLines allLines@(l : rest) =
     Nothing -> ([], allLines)
 
 -- | Try to parse a line as a field header (@FieldName: value@).
+--
+-- Allows optional whitespace between the field name and the colon,
+-- e.g. both @Description: foo@ and @Description : foo@.
 parseFieldHeader :: String -> Maybe (String, String)
 parseFieldHeader line =
   let stripped = dropWhile Char.isSpace line
       lowered = fmap Char.toLower stripped
-   in case List.find (\name -> fmap Char.toLower (name <> ":") `List.isPrefixOf` lowered) moduleHeaderFieldNames of
+   in case List.find (\name -> fmap Char.toLower name `List.isPrefixOf` lowered) moduleHeaderFieldNames of
         Just name ->
-          let after = drop (length name + 1) stripped
-           in Just (name, after)
+          let afterName = dropWhile Char.isSpace $ drop (length name) stripped
+           in case afterName of
+                ':' : after -> Just (name, after)
+                _ -> Nothing
         Nothing -> Nothing
 
 -- | A continuation line starts with whitespace and is not blank.

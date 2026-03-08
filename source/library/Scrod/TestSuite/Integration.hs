@@ -568,7 +568,55 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/header/level", "2"),
           ("/documentation/value/header/title/type", "\"String\""),
           ("/documentation/value/header/title/value", "\"Examples:\""),
-          ("/documentation/value/body/0/type", "\"Paragraph\"")
+          ("/documentation/value/body/type", "\"Paragraph\"")
+        ]
+
+    Spec.it s "works with nested collapsible headers" $ do
+      check
+        s
+        """
+        -- |
+        -- = __a__
+        --
+        -- b
+        --
+        -- == __c__
+        --
+        -- d
+        module M where
+        """
+        [ ("/documentation/type", "\"CollapsibleHeader\""),
+          ("/documentation/value/header/level", "1"),
+          ("/documentation/value/header/title/type", "\"String\""),
+          ("/documentation/value/header/title/value", "\"a\""),
+          ("/documentation/value/body/type", "\"Append\""),
+          ("/documentation/value/body/value/1/type", "\"CollapsibleHeader\""),
+          ("/documentation/value/body/value/1/value/header/level", "2"),
+          ("/documentation/value/body/value/1/value/header/title/type", "\"String\""),
+          ("/documentation/value/body/value/1/value/header/title/value", "\"c\"")
+        ]
+
+    Spec.it s "escapes collapsible header with a larger header" $ do
+      check
+        s
+        """
+        -- |
+        -- == __a__
+        --
+        -- b
+        --
+        -- = c
+        --
+        -- d
+        module M where
+        """
+        [ ("/documentation/type", "\"Append\""),
+          ("/documentation/value/0/type", "\"CollapsibleHeader\""),
+          ("/documentation/value/0/value/header/level", "2"),
+          ("/documentation/value/0/value/header/title/value", "\"a\""),
+          ("/documentation/value/0/value/body/type", "\"Paragraph\""),
+          ("/documentation/value/1/type", "\"Header\""),
+          ("/documentation/value/1/value/level", "1")
         ]
 
     Spec.it s "works with a table" $ do

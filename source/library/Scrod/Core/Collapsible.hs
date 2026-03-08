@@ -13,7 +13,7 @@ import qualified Scrod.Schema as Schema
 -- is wrapped in bold syntax (@__title__@).
 data Collapsible doc = MkCollapsible
   { header :: Header.Header doc,
-    body :: [doc]
+    body :: doc
   }
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically (Collapsible doc)

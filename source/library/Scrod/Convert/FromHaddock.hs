@@ -133,16 +133,22 @@ groupCollapsible doc = case doc of
   Doc.Append xs -> case groupHeaders $ flattenAppend xs of
     [single] -> single
     grouped -> Doc.Append grouped
-  Doc.Paragraph x -> Doc.Paragraph $ groupCollapsible x
-  Doc.Emphasis x -> Doc.Emphasis $ groupCollapsible x
-  Doc.Monospaced x -> Doc.Monospaced $ groupCollapsible x
-  Doc.Bold x -> Doc.Bold $ groupCollapsible x
-  Doc.UnorderedList xs -> Doc.UnorderedList $ fmap groupCollapsible xs
-  Doc.OrderedList xs -> Doc.OrderedList $ fmap (\ni -> ni {NumberedItem.item = groupCollapsible $ NumberedItem.item ni}) xs
-  Doc.DefList xs -> Doc.DefList $ fmap (\d -> d {Definition.term = groupCollapsible $ Definition.term d, Definition.definition = groupCollapsible $ Definition.definition d}) xs
-  Doc.CodeBlock x -> Doc.CodeBlock $ groupCollapsible x
-  Doc.Header h -> Doc.Header h {Header.title = groupCollapsible $ Header.title h}
-  _ -> doc
+  _ -> mapDocChildren groupCollapsible doc
+
+-- | Apply a function to all immediate 'Doc.Doc' children of a node.
+mapDocChildren :: (Doc.Doc -> Doc.Doc) -> Doc.Doc -> Doc.Doc
+mapDocChildren f doc = case doc of
+  Doc.Paragraph x -> Doc.Paragraph $ f x
+  Doc.Emphasis x -> Doc.Emphasis $ f x
+  Doc.Monospaced x -> Doc.Monospaced $ f x
+  Doc.Bold x -> Doc.Bold $ f x
+  Doc.UnorderedList xs -> Doc.UnorderedList $ fmap f xs
+  Doc.OrderedList xs -> Doc.OrderedList $ fmap (\ni -> ni {NumberedItem.item = f $ NumberedItem.item ni}) xs
+  Doc.DefList xs -> Doc.DefList $ fmap (\d -> d {Definition.term = f $ Definition.term d, Definition.definition = f $ Definition.definition d}) xs
+  Doc.CodeBlock x -> Doc.CodeBlock $ f x
+  Doc.Header h -> Doc.Header h {Header.title = f $ Header.title h}
+  Doc.CollapsibleHeader c -> Doc.CollapsibleHeader c {Collapsible.header = (Collapsible.header c) {Header.title = f . Header.title $ Collapsible.header c}, Collapsible.body = f $ Collapsible.body c}
+  other -> other
 
 flattenAppend :: [Doc.Doc] -> [Doc.Doc]
 flattenAppend = concatMap go
@@ -156,10 +162,14 @@ groupHeaders (Doc.Header h : rest)
   | Doc.Bold title <- Header.title h =
       let level = Header.level h
           (body, remaining) = break (isHeaderAtOrAbove level) rest
+          groupedBody = groupHeaders body
        in Doc.CollapsibleHeader
             Collapsible.MkCollapsible
               { Collapsible.header = h {Header.title = title},
-                Collapsible.body = body
+                Collapsible.body = case groupedBody of
+                  [] -> Doc.Empty
+                  [single] -> single
+                  multiple -> Doc.Append multiple
               }
             : groupHeaders remaining
 groupHeaders (x : rest) = x : groupHeaders rest
@@ -315,7 +325,7 @@ spec s = do
             Doc.CollapsibleHeader
               Collapsible.MkCollapsible
                 { Collapsible.header = Header.MkHeader {Header.level = Level.Two, Header.title = Doc.String $ Text.pack "Examples:"},
-                  Collapsible.body = [Doc.Paragraph . Doc.String $ Text.pack "content"]
+                  Collapsible.body = Doc.Paragraph . Doc.String $ Text.pack "content"
                 }
       Spec.assertEq s (fromHaddock input) expected
 

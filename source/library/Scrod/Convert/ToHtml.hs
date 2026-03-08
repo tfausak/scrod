@@ -862,15 +862,26 @@ headerContent x =
 
 collapsibleHeaderContent :: Collapsible.Collapsible Doc.Doc -> Content.Content Element.Element
 collapsibleHeaderContent x =
-  element
-    "details"
-    []
-    [ element
-        "summary"
+  let header = Collapsible.header x
+      lvl = Header.level header
+   in element
+        "details"
         []
-        [element (levelToName . Header.level $ Collapsible.header x) [] . docContents . Header.title $ Collapsible.header x],
-      element "div" [] $ foldMap docContents (Collapsible.body x)
-    ]
+        [ element
+            "summary"
+            []
+            [element "span" [("role", "heading"), ("aria-level", levelToNumber lvl), ("class", levelToName lvl)] . docContents $ Header.title header],
+          element "div" [] $ docContents (Collapsible.body x)
+        ]
+
+levelToNumber :: Level.Level -> String
+levelToNumber x = case x of
+  Level.One -> "1"
+  Level.Two -> "2"
+  Level.Three -> "3"
+  Level.Four -> "4"
+  Level.Five -> "5"
+  Level.Six -> "6"
 
 levelToName :: Level.Level -> String
 levelToName x = case x of

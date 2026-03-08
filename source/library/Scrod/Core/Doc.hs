@@ -6,6 +6,7 @@ module Scrod.Core.Doc where
 import qualified Data.List.NonEmpty as NonEmpty
 import qualified Data.Text as Text
 import qualified GHC.Generics as Generics
+import qualified Scrod.Core.Collapsible as Collapsible
 import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Example as Example
 import qualified Scrod.Core.Header as Header
@@ -41,6 +42,7 @@ data Doc
   | Property Text.Text
   | Examples (NonEmpty.NonEmpty Example.Example)
   | Header (Header.Header Doc)
+  | CollapsibleHeader (Collapsible.Collapsible Doc)
   | Table (Table.Table Doc)
   deriving (Eq, Generics.Generic, Ord, Show)
   deriving (ToJson.ToJson, Schema.ToSchema) via Generics.Generically Doc

@@ -555,6 +555,22 @@ spec s = Spec.describe s "integration" $ do
           ("/documentation/value/level", "3")
         ]
 
+    Spec.it s "works with a collapsible header" $ do
+      check
+        s
+        """
+        -- |
+        -- == __Examples:__
+        -- content
+        module M where
+        """
+        [ ("/documentation/type", "\"CollapsibleHeader\""),
+          ("/documentation/value/header/level", "2"),
+          ("/documentation/value/header/title/type", "\"String\""),
+          ("/documentation/value/header/title/value", "\"Examples:\""),
+          ("/documentation/value/body/0/type", "\"Paragraph\"")
+        ]
+
     Spec.it s "works with a table" $ do
       check
         s

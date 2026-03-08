@@ -114,6 +114,7 @@ library
     Scrod.Convert.ToHtml
     Scrod.Convert.ToJsonSchema
     Scrod.Core.Category
+    Scrod.Core.Collapsible
     Scrod.Core.Column
     Scrod.Core.Definition
     Scrod.Core.Doc

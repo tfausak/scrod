@@ -12,6 +12,7 @@ import qualified Data.Text as Text
 import qualified Data.Void as Void
 import qualified Documentation.Haddock.Parser as Haddock
 import qualified Documentation.Haddock.Types as Haddock
+import qualified Scrod.Core.Collapsible as Collapsible
 import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Doc as Doc
 import qualified Scrod.Core.Example as Example
@@ -29,7 +30,7 @@ import qualified Scrod.Core.TableCell as TableCell
 import qualified Scrod.Spec as Spec
 
 fromHaddock :: Haddock.DocH Void.Void Haddock.Identifier -> Doc.Doc
-fromHaddock = convertDoc . Haddock.overIdentifier convertIdentifier
+fromHaddock = groupCollapsible . convertDoc . Haddock.overIdentifier convertIdentifier
 
 convertIdentifier :: Haddock.Namespace -> String -> Maybe Identifier.Identifier
 convertIdentifier ns str =
@@ -122,6 +123,51 @@ convertTableCell cell =
       TableCell.rowspan = fromIntegral $ Haddock.tableCellRowspan cell,
       TableCell.contents = convertDoc $ Haddock.tableCellContents cell
     }
+
+-- | Post-processes a 'Doc.Doc' tree to detect collapsible headers.
+-- A collapsible header is a 'Doc.Header' whose title is wrapped in
+-- 'Doc.Bold'. The collapsible section extends until a header of equal
+-- or higher level (smaller level number), or the end of the list.
+groupCollapsible :: Doc.Doc -> Doc.Doc
+groupCollapsible doc = case doc of
+  Doc.Append xs -> case groupHeaders $ flattenAppend xs of
+    [single] -> single
+    grouped -> Doc.Append grouped
+  Doc.Paragraph x -> Doc.Paragraph $ groupCollapsible x
+  Doc.Emphasis x -> Doc.Emphasis $ groupCollapsible x
+  Doc.Monospaced x -> Doc.Monospaced $ groupCollapsible x
+  Doc.Bold x -> Doc.Bold $ groupCollapsible x
+  Doc.UnorderedList xs -> Doc.UnorderedList $ fmap groupCollapsible xs
+  Doc.OrderedList xs -> Doc.OrderedList $ fmap (\ni -> ni {NumberedItem.item = groupCollapsible $ NumberedItem.item ni}) xs
+  Doc.DefList xs -> Doc.DefList $ fmap (\d -> d {Definition.term = groupCollapsible $ Definition.term d, Definition.definition = groupCollapsible $ Definition.definition d}) xs
+  Doc.CodeBlock x -> Doc.CodeBlock $ groupCollapsible x
+  Doc.Header h -> Doc.Header h {Header.title = groupCollapsible $ Header.title h}
+  _ -> doc
+
+flattenAppend :: [Doc.Doc] -> [Doc.Doc]
+flattenAppend = concatMap go
+  where
+    go (Doc.Append xs) = flattenAppend xs
+    go x = [groupCollapsible x]
+
+groupHeaders :: [Doc.Doc] -> [Doc.Doc]
+groupHeaders [] = []
+groupHeaders (Doc.Header h : rest)
+  | Doc.Bold title <- Header.title h =
+      let level = Header.level h
+          (body, remaining) = break (isHeaderAtOrAbove level) rest
+       in Doc.CollapsibleHeader
+            Collapsible.MkCollapsible
+              { Collapsible.header = h {Header.title = title},
+                Collapsible.body = body
+              }
+            : groupHeaders remaining
+groupHeaders (x : rest) = x : groupHeaders rest
+
+isHeaderAtOrAbove :: Level.Level -> Doc.Doc -> Bool
+isHeaderAtOrAbove level doc = case doc of
+  Doc.Header h -> Header.level h <= level
+  _ -> False
 
 spec :: (Applicative m, Monad n) => Spec.Spec m n -> n ()
 spec s = do
@@ -257,6 +303,20 @@ spec s = do
       let input :: Haddock.DocH Void.Void Haddock.Identifier
           input = Haddock.DocHeader Haddock.Header {Haddock.headerLevel = 2, Haddock.headerTitle = Haddock.DocString "Section"}
       let expected = Doc.Header Header.MkHeader {Header.level = Level.Two, Header.title = Doc.String $ Text.pack "Section"}
+      Spec.assertEq s (fromHaddock input) expected
+
+    Spec.it s "works with collapsible header" $ do
+      let input :: Haddock.DocH Void.Void Haddock.Identifier
+          input =
+            Haddock.DocAppend
+              (Haddock.DocHeader Haddock.Header {Haddock.headerLevel = 2, Haddock.headerTitle = Haddock.DocBold (Haddock.DocString "Examples:")})
+              (Haddock.DocParagraph (Haddock.DocString "content"))
+      let expected =
+            Doc.CollapsibleHeader
+              Collapsible.MkCollapsible
+                { Collapsible.header = Header.MkHeader {Header.level = Level.Two, Header.title = Doc.String $ Text.pack "Examples:"},
+                  Collapsible.body = [Doc.Paragraph . Doc.String $ Text.pack "content"]
+                }
       Spec.assertEq s (fromHaddock input) expected
 
     Spec.it s "works with table" $ do

@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Data.Text as Text
 import qualified Scrod.Core.Category as Category
+import qualified Scrod.Core.Collapsible as Collapsible
 import qualified Scrod.Core.Column as Column
 import qualified Scrod.Core.Definition as Definition
 import qualified Scrod.Core.Doc as Doc
@@ -705,6 +706,7 @@ docContents doc = case doc of
   Doc.Property x -> [propertyContent x]
   Doc.Examples xs -> exampleContent <$> NonEmpty.toList xs
   Doc.Header x -> [headerContent x]
+  Doc.CollapsibleHeader x -> [collapsibleHeaderContent x]
   Doc.Table x -> [tableContent x]
 
 definitionContents :: Definition.Definition Doc.Doc -> [Content.Content Element.Element]
@@ -857,6 +859,18 @@ exampleContent x =
 headerContent :: Header.Header Doc.Doc -> Content.Content Element.Element
 headerContent x =
   element (levelToName $ Header.level x) [] . docContents $ Header.title x
+
+collapsibleHeaderContent :: Collapsible.Collapsible Doc.Doc -> Content.Content Element.Element
+collapsibleHeaderContent x =
+  element
+    "details"
+    []
+    [ element
+        "summary"
+        []
+        [element (levelToName . Header.level $ Collapsible.header x) [] . docContents . Header.title $ Collapsible.header x],
+      element "div" [] $ foldMap docContents (Collapsible.body x)
+    ]
 
 levelToName :: Level.Level -> String
 levelToName x = case x of

@@ -144,7 +144,7 @@ jobs:
     needs: meta
     steps:
       - uses: actions/checkout@v6
-      - uses: DeterminateSystems/nix-installer-action@v21
+      - uses: DeterminateSystems/nix-installer-action@v22
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command extra/wasm/build.hs
       - run: mkdir artifact

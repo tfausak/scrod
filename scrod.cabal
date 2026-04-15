@@ -73,8 +73,8 @@ library
   import: library
   autogen-modules: PackageInfo_scrod
   build-depends:
-    Cabal-syntax ^>=3.16.0,
     bytestring ^>=0.12.2,
+    Cabal-syntax ^>=3.16.0,
     containers ^>=0.8,
     exceptions ^>=0.10.11,
     ghc ^>=9.14.1,

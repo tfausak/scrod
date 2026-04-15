@@ -218,7 +218,7 @@ jobs:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
       - run: tar --extract --file artifact.tar --strip-components=1 artifact/schema.json
       - run: cp schema.json extra/github-pages/dist/
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: extra/github-pages/dist/
       - id: deploy

@@ -23,7 +23,7 @@ jobs:
           - runner: ubuntu-24.04-arm
           - runner: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: haskell
         uses: haskell-actions/setup@v2
         with:
@@ -71,21 +71,21 @@ jobs:
     name: Cabal
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - run: cabal check
   gild:
     name: Gild
     runs-on: ubuntu-latest
     needs: meta
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: tfausak/cabal-gild-setup-action@v2
       - run: cabal-gild --input ${{ needs.meta.outputs.name }}.cabal --mode check
   hlint:
     name: HLint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: haskell-actions/hlint-setup@v2
       - uses: haskell-actions/hlint-run@v2
         with:
@@ -94,7 +94,7 @@ jobs:
     name: Meta
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - id: name
         run: "echo name=$( awk '/^name:/ {print $2}' *.cabal ) >> $GITHUB_OUTPUT"
       - id: version
@@ -106,7 +106,7 @@ jobs:
     name: Ormolu
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: haskell-actions/run-ormolu@v18
   test:
     name: Test
@@ -115,7 +115,7 @@ jobs:
       - build
       - meta
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-linux-x86_64
@@ -143,7 +143,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: meta
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: DeterminateSystems/nix-installer-action@v22
       - run: nix develop --command wasm32-wasi-cabal update
       - run: nix develop --command extra/wasm/build.hs
@@ -166,7 +166,7 @@ jobs:
       - meta
       - wasm
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
@@ -201,7 +201,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           name: ${{ needs.meta.outputs.name }}-${{ github.sha }}-wasm
@@ -235,7 +235,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           pattern: ${{ needs.meta.outputs.name }}-${{ github.sha }}-*

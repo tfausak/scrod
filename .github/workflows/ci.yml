@@ -43,7 +43,7 @@ jobs:
       - run: cat cabal.project.freeze
       - run: cp cabal.project.freeze artifact
       - run: cabal outdated --v2-freeze-file
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           key: ${{ steps.info.outputs.os }}-${{ steps.info.outputs.arch }}-${{ hashFiles('cabal.project.freeze') }}
           path: ${{ steps.haskell.outputs.cabal-store }}

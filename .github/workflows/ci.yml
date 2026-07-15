@@ -174,7 +174,7 @@ jobs:
       - run: mkdir -p extra/wasm/dist
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/
       - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - working-directory: extra/vscode
@@ -209,7 +209,7 @@ jobs:
       - run: mkdir -p extra/wasm/dist
       - run: cp artifact/${{ needs.meta.outputs.name }}-wasm.wasm extra/wasm/dist/scrod-wasm.wasm
       - run: cp artifact/ghc_wasm_jsffi.js extra/wasm/dist/
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: extra/github-pages/build.sh
